@@ -1,0 +1,27 @@
+:root {
+    --sp-green: #1db954;
+    --sp-green-hover: #1ed760;
+
+    --sp-dark-bg: #121212;
+    --sp-dark-bg-alt: #181818;
+    --sp-dark-text: #ffffff;
+
+    --sp-light-bg: #ffffff;
+    --sp-light-bg-alt: #f6f6f6;
+    --sp-light-text: #000000;
+
+    --transition-fast: 150ms;
+    --transition-medium: 250ms;
+}
+
+[data-theme='dark'] {
+    --bg: var(--sp-dark-bg);
+    --bg-alt: var(--sp-dark-bg-alt);
+    --text: var(--sp-dark-text);
+}
+
+[data-theme='light'] {
+    --bg: var(--sp-light-bg);
+    --bg-alt: var(--sp-light-bg-alt);
+    --text: var(--sp-light-text);
+}

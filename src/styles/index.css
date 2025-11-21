@@ -1,0 +1,13 @@
+@import 'theme.scss';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+    background-color: var(--bg);
+    color: var(--text);
+    transition:
+        background-color var(--transition-fast),
+        color var(--transition-fast);
+}

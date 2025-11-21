@@ -10,7 +10,8 @@ export default function App() {
     if (authed === null) {
         return <Spinner />;
     }
-
+    return <Spinner />;
+    /*
     if (!authed) {
         return <LoginView onLogin={login} />;
     }
@@ -19,5 +20,5 @@ export default function App() {
         return <Spinner />;
     }
 
-    return <ProfileView profile={profile} onLogout={logout} />;
+    return <ProfileView profile={profile} onLogout={logout} />;*/
 }

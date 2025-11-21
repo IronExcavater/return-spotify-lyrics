@@ -3,9 +3,7 @@
     "version": "0.0.1",
     "type": "module",
     "scripts": {
-        "dev": "vite build",
-        "build": "vite build --mode production",
-        "preview": "vite preview",
+        "build": "vite build",
         "clean": "rimraf dist",
         "lint": "eslint --fix",
         "lint:diff": "git diff --name-only HEAD | xargs eslint --fix",
@@ -35,6 +33,7 @@
         "postcss": "^8.5.6",
         "prettier": "^3.0.0",
         "rimraf": "^6.1.0",
+        "sass-embedded": "^1.93.3",
         "tailwindcss": "^4.1.17",
         "vite": "^7.2.4"
     },
