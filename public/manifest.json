@@ -1,0 +1,14 @@
+{
+    "manifest_version": 3,
+    "name": "Return Spotify Lyrics",
+    "version": "0.0.1",
+    "description": "Prototype: authenticate with Spotify and read currently playing track.",
+    "permissions": ["identity", "storage"],
+    "background": {
+        "service_worker": "background.js",
+        "type": "module"
+    },
+    "action": {
+        "default_popup": "popup.html"
+    }
+}

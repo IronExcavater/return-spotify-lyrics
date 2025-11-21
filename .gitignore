@@ -1,0 +1,11 @@
+node_modules/
+dist
+package-lock.json
+
+# IDEs
+.idea
+.vs
+.vscode
+
+# Platform
+.DS_Store
