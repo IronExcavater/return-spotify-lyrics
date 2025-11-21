@@ -9,8 +9,8 @@
         "clean": "rimraf dist",
         "lint": "eslint --fix",
         "lint:diff": "git diff --name-only HEAD | xargs eslint --fix",
-        "format": "prettier --write .",
-        "format:diff": "git diff --name-only HEAD | xargs prettier --write",
+        "format": "prettier --ignore-unknown --write .",
+        "format:diff": "git diff --name-only HEAD | xargs prettier --ignore-unknown --write",
         "prepare": "husky"
     },
     "dependencies": {
@@ -37,5 +37,12 @@
         "rimraf": "^6.1.0",
         "tailwindcss": "^4.1.17",
         "vite": "^7.2.4"
+    },
+    "lint-staged": {
+        "*.{ts,tsx,js,jsx}": [
+            "eslint --fix",
+            "prettier --ignore-unknown --write"
+        ],
+        "*": "prettier --ignore-unknown --write"
     }
 }
