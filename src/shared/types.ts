@@ -1,3 +1,5 @@
+import { Episode, Track } from '@spotify/web-api-ts-sdk';
+
 export interface SpotifyTokenResponse {
     access_token: string;
     token_type: string;
@@ -10,11 +12,12 @@ export interface SpotifyToken extends SpotifyTokenResponse {
     expires_by: number;
 }
 
-export interface SpotifyProfileResponse {
-    display_name: string | null;
-    id: string;
-    images?: { url: string }[];
-    product?: string;
+export function asTrack(item: Track | Episode | undefined): Track | undefined {
+    return item && item.type === 'track' ? (item as Track) : undefined;
 }
 
-export interface SpotifyProfile extends SpotifyProfileResponse {}
+export function asEpisode(
+    item: Track | Episode | undefined
+): Episode | undefined {
+    return item && item.type === 'episode' ? (item as Episode) : undefined;
+}

@@ -1,20 +1,17 @@
 import { useEffect, useState } from 'react';
 import { Msg } from '../../shared/messaging';
-import { SpotifyProfile } from '../../shared/types';
+import { User } from '@spotify/web-api-ts-sdk';
 
 export function useAuth() {
     const [authed, setAuthed] = useState<boolean | undefined>(undefined);
-    const [profile, setProfile] = useState<SpotifyProfile | undefined>(undefined);
+    const [profile, setProfile] = useState<User | undefined>(undefined);
 
-    const syncAuth = () => {
-        chrome.runtime.sendMessage(
-            { type: Msg.GET_PROFILE },
-            (resp: SpotifyProfile | undefined) => {
-                const isAuthed = !!resp;
-                setAuthed(isAuthed);
-                setProfile(resp);
-            }
-        );
+    const sync = () => {
+        chrome.runtime.sendMessage({ type: Msg.GET_PROFILE }, (resp) => {
+            const isAuthed = resp != null;
+            setAuthed(isAuthed);
+            setProfile(resp);
+        });
     };
 
     const login = () => {
@@ -32,7 +29,7 @@ export function useAuth() {
             area: string
         ) => {
             if (area === 'local' && changes.spotifyToken) {
-                syncAuth();
+                sync();
             }
         };
 
@@ -41,7 +38,9 @@ export function useAuth() {
     }, []);
 
     // Initial auth sync
-    useEffect(() => syncAuth());
+    useEffect(() => {
+        sync();
+    }, []);
 
     return { authed, profile, login, logout };
 }
