@@ -41,9 +41,12 @@ export function PlaybackBar({ playback, play, pause, next, previous }: Props) {
     const image = track?.album?.images?.[0]?.url ?? episode?.images?.[0]?.url;
     const link = playback?.item?.external_urls?.spotify;
 
+    console.log(playback);
+    if (!playback) return <></>;
+
     return (
         <Grid
-            columns="3"
+            columns="2fr 1fr 2fr"
             px="3"
             py="2"
             align="center"
@@ -87,7 +90,7 @@ export function PlaybackBar({ playback, play, pause, next, previous }: Props) {
             </Flex>
 
             {/* Center: Controls */}
-            <Flex align="center" justify="center" gap="1">
+            <Flex align="center" justify="center" gap="2">
                 <IconButton
                     variant="ghost"
                     size="2"

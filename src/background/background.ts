@@ -81,5 +81,11 @@ async function fetchSpotify<T>(
             Authorization: `Bearer ${token}`,
         },
     });
-    return resp.ok ? ((await resp.json()) as T) : undefined;
+
+    if (resp.status !== 200 && resp.status !== 201) return undefined;
+
+    const text = await resp.text();
+    if (!text) return undefined;
+
+    return JSON.parse(text) as T;
 }

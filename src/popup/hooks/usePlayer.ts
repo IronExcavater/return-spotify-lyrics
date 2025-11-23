@@ -4,9 +4,7 @@ import { type PlaybackState } from '@spotify/web-api-ts-sdk';
 import { Msg } from '../../shared/messaging';
 
 export function usePlayer() {
-    const [playback, setPlayback] = useState<PlaybackState | null | undefined>(
-        undefined
-    );
+    const [playback, setPlayback] = useState<PlaybackState | null>(null);
     const lastUpdate = useRef<number | null>(null);
 
     const sync = useCallback(() => {
