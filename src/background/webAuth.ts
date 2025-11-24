@@ -13,10 +13,13 @@ import {
 } from '../shared/storage';
 import { SpotifyToken, SpotifyTokenResponse } from '../shared/types';
 
+const PKCE_VERIFIER_KEY = 'pkceVerifier';
+const SPOTIFY_TOKEN_KEY = 'spotifyToken';
+
 export async function buildAuthUrl(): Promise<URL> {
     const { verifier, challenge } = await createPkcePair();
 
-    await setInStorage('pkceVerifier', verifier);
+    await setInStorage(PKCE_VERIFIER_KEY, verifier);
     const redirectUri = chrome.identity.getRedirectURL(REDIRECT_PATH);
 
     const params = new URLSearchParams({
@@ -63,7 +66,7 @@ export function launchWebAuth(authUrl: URL): Promise<string> {
 }
 
 export async function requestAccessToken(code: string): Promise<SpotifyToken> {
-    const pkceVerifier = await mustGetFromStorage<string>('pkceVerifier');
+    const pkceVerifier = await mustGetFromStorage<string>(PKCE_VERIFIER_KEY);
     const redirectUri = chrome.identity.getRedirectURL(REDIRECT_PATH);
 
     const response = await fetch(SPOTIFY_TOKEN_URL, {
@@ -88,7 +91,7 @@ export async function requestAccessToken(code: string): Promise<SpotifyToken> {
         expires_by: Date.now() + raw.expires_in * 1000,
     };
 
-    await setInStorage('spotifyToken', token);
+    await setInStorage(SPOTIFY_TOKEN_KEY, token);
     return token;
 }
 
@@ -115,16 +118,16 @@ export async function refreshAccessToken(
         expires_by: Date.now() + raw.expires_in * 1000,
     };
 
-    await setInStorage('spotifyToken', token);
+    await setInStorage(SPOTIFY_TOKEN_KEY, token);
     return token;
 }
 
 export async function getAccessToken(): Promise<SpotifyToken | undefined> {
-    let token = await getFromStorage<SpotifyToken>('spotifyToken');
+    let token = await getFromStorage<SpotifyToken>(SPOTIFY_TOKEN_KEY);
 
     if (token && Date.now() >= token.expires_by) {
         token = await refreshAccessToken(token.refresh_token);
-        await setInStorage('spotifyToken', token);
+        await setInStorage(SPOTIFY_TOKEN_KEY, token);
     }
 
     return token;

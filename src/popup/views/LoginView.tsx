@@ -6,7 +6,7 @@ interface Props {
 
 export function LoginView({ onLogin }: Props) {
     return (
-        <Flex align="center" justify="center" p="4">
+        <Flex flexGrow="1" justify="center">
             <Card size="1">
                 <Flex direction="column" gap="2">
                     <Text size="5" weight="bold">

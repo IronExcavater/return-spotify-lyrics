@@ -1,16 +1,20 @@
 import { useEffect, useState } from 'react';
 import { Msg } from '../../shared/messaging';
 import { User } from '@spotify/web-api-ts-sdk';
+import { getFromStorage, setInStorage } from '../../shared/storage';
+
+const SPOTIFY_USER_KEY = 'spotifyUser';
 
 export function useAuth() {
     const [authed, setAuthed] = useState<boolean | undefined>(undefined);
-    const [profile, setProfile] = useState<User | undefined>(undefined);
+    const [user, setUser] = useState<User | undefined>(undefined);
 
     const sync = () => {
         chrome.runtime.sendMessage({ type: Msg.GET_PROFILE }, (resp) => {
             const isAuthed = resp != null;
             setAuthed(isAuthed);
-            setProfile(resp);
+            setUser(resp);
+            void setInStorage<User>(SPOTIFY_USER_KEY, resp);
         });
     };
 
@@ -39,8 +43,11 @@ export function useAuth() {
 
     // Initial auth sync
     useEffect(() => {
+        getFromStorage<User>(SPOTIFY_USER_KEY, (user) => {
+            setUser(user);
+        });
         sync();
     }, []);
 
-    return { authed, profile, login, logout };
+    return { authed, profile: user, login, logout };
 }

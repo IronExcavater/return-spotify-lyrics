@@ -12,7 +12,8 @@ import { PlaybackState, User } from '@spotify/web-api-ts-sdk';
 addOnMessage(Msg.LOGIN_SPOTIFY, async () => {
     const authUrl = await buildAuthUrl();
     const code = await launchWebAuth(authUrl);
-    return await requestAccessToken(code);
+    const token = await requestAccessToken(code);
+    return token;
 });
 
 addOnMessage(Msg.LOGOUT_SPOTIFY, async () => {

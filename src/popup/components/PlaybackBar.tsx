@@ -23,10 +23,22 @@ interface Props {
     pause: () => void;
     next: () => void;
     previous: () => void;
+    seek: (positionMs: number) => void;
+    toggleShuffle: () => void;
 }
 
-export function PlaybackBar({ playback, play, pause, next, previous }: Props) {
+export function PlaybackBar({
+    playback,
+    play,
+    pause,
+    next,
+    previous,
+    seek,
+    toggleShuffle,
+}: Props) {
     const navigate = useNavigate();
+
+    if (!playback) return <></>;
 
     const loading = !playback?.item;
 
@@ -40,9 +52,7 @@ export function PlaybackBar({ playback, play, pause, next, previous }: Props) {
         'John Does Nuts';
     const image = track?.album?.images?.[0]?.url ?? episode?.images?.[0]?.url;
     const link = playback?.item?.external_urls?.spotify;
-
-    console.log(playback);
-    if (!playback) return <></>;
+    const durationms = playback?.item?.duration_ms ?? 0;
 
     return (
         <Grid

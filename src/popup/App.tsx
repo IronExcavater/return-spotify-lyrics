@@ -1,9 +1,15 @@
 import React from 'react';
 import { useAuth } from './hooks/useAuth';
 import { ProfileView } from './views/ProfileView';
-import { Theme } from '@radix-ui/themes';
+import { Flex, Theme } from '@radix-ui/themes';
 import { Navbar } from './components/Navbar';
-import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import {
+    Navigate,
+    redirect,
+    Route,
+    Routes,
+    useLocation,
+} from 'react-router-dom';
 import { HomeView } from './views/HomeView';
 import { LyricsView } from './views/LyricsView';
 import { usePlayer } from './hooks/usePlayer';
@@ -21,34 +27,58 @@ export default function App() {
             panelBackground="translucent"
         >
             <Navbar profile={profile} />
-            <Routes>
-                <Route
-                    path="/"
-                    element={
-                        <ProtectedLayout isAuthed={authed}>
-                            <HomeView />
-                        </ProtectedLayout>
-                    }
-                />
-                <Route path="/login" element={<LoginView onLogin={login} />} />
-                <Route
-                    path="/profile"
-                    element={
-                        <ProtectedLayout isAuthed={authed}>
-                            <ProfileView profile={profile} onLogout={logout} />
-                        </ProtectedLayout>
-                    }
-                />
-                <Route
-                    path="/lyrics"
-                    element={
-                        <ProtectedLayout isAuthed={authed}>
-                            <LyricsView />
-                        </ProtectedLayout>
-                    }
-                />
-                <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
+            <Flex m="3" flexGrow="1" flexShrink="0">
+                <Routes>
+                    <Route
+                        path="/"
+                        element={
+                            <ProtectedLayout
+                                when={authed == true}
+                                redirectTo="/login"
+                            >
+                                <HomeView />
+                            </ProtectedLayout>
+                        }
+                    />
+                    <Route
+                        path="/login"
+                        element={
+                            <ProtectedLayout
+                                when={authed == false}
+                                redirectTo="/"
+                            >
+                                <LoginView onLogin={login} />
+                            </ProtectedLayout>
+                        }
+                    />
+                    <Route
+                        path="/profile"
+                        element={
+                            <ProtectedLayout
+                                when={authed == true}
+                                redirectTo="/login"
+                            >
+                                <ProfileView
+                                    profile={profile}
+                                    onLogout={logout}
+                                />
+                            </ProtectedLayout>
+                        }
+                    />
+                    <Route
+                        path="/lyrics"
+                        element={
+                            <ProtectedLayout
+                                when={authed == true}
+                                redirectTo="/login"
+                            >
+                                <LyricsView />
+                            </ProtectedLayout>
+                        }
+                    />
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+            </Flex>
             <PlaybackBar
                 playback={playback}
                 play={play}
@@ -61,18 +91,20 @@ export default function App() {
 }
 
 interface ProtectedLayoutProps {
-    isAuthed: boolean | undefined;
+    when: boolean;
+    redirectTo: string;
     children: React.ReactNode;
 }
 
 const ProtectedLayout: React.FC<ProtectedLayoutProps> = ({
-    isAuthed,
+    when,
+    redirectTo,
     children,
 }) => {
     const location = useLocation();
 
-    if (!isAuthed)
-        return <Navigate to="/login" replace state={{ from: location }} />;
+    if (!when)
+        return <Navigate to={redirectTo} replace state={{ from: location }} />;
 
     return <>{children}</>;
 };
