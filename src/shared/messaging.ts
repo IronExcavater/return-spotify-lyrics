@@ -7,6 +7,8 @@ export enum Msg {
     PLAYER_PAUSE = 'PLAYER_PAUSE',
     PLAYER_NEXT = 'PLAYER_NEXT',
     PLAYER_PREVIOUS = 'PLAYER_PREVIOUS',
+    PLAYER_SEEK = 'PLAYER_SEEK',
+    PLAYER_SHUFFLE = 'PLAYER_SHUFFLE',
 }
 
 type Handler = (msg: any) => any | Promise<any>;

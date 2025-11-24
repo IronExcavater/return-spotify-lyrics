@@ -24,6 +24,12 @@ export function usePlayer() {
     const previous = () =>
         chrome.runtime.sendMessage({ type: Msg.PLAYER_PREVIOUS });
 
+    const seek = (positionMs: number) =>
+        chrome.runtime.sendMessage({ type: Msg.PLAYER_SEEK, positionMs });
+
+    const shuffle = () =>
+        chrome.runtime.sendMessage({ type: Msg.PLAYER_SHUFFLE });
+
     /** Sync playback every 3 seconds */
     useEffect(() => {
         sync();
@@ -61,5 +67,7 @@ export function usePlayer() {
         pause,
         next,
         previous,
+        seek,
+        shuffle,
     };
 }

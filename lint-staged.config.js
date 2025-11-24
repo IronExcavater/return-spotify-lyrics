@@ -1,4 +1,5 @@
 export default {
-    '!(*.ts)': 'prettier --write',
-    '*.ts': ['eslint --fix', 'prettier --write'],
+    '*.{ts,tsx,js,jsx}': ['eslint --fix', 'prettier --write --ignore-unknown'],
+    '*.{css,scss}': ['stylelint --fix', 'prettier --write --ignore-unknown'],
+    '*': 'prettier --write --ignore-unknown',
 };

@@ -24,7 +24,7 @@ interface Props {
     next: () => void;
     previous: () => void;
     seek: (positionMs: number) => void;
-    toggleShuffle: () => void;
+    shuffle: () => void;
 }
 
 export function PlaybackBar({
@@ -34,7 +34,7 @@ export function PlaybackBar({
     next,
     previous,
     seek,
-    toggleShuffle,
+    shuffle,
 }: Props) {
     const navigate = useNavigate();
 
