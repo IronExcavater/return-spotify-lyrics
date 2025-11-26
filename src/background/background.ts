@@ -8,17 +8,6 @@ import {
     SpotifyRpcReturn,
 } from './spotifyRpc';
 
-chrome.action.onClicked.addListener(async (tab) => {
-    try {
-        await chrome.scripting.executeScript({
-            target: { tabId: tab.id! },
-            files: ['content.js'],
-        });
-    } catch (e) {
-        console.warn('Cannot run on this page:', tab.url);
-    }
-});
-
 addOnMessage(Msg.LOGIN_SPOTIFY, async () => {
     const authUrl = await buildAuthUrl();
     const code = await launchWebAuth(authUrl);

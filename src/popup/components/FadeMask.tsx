@@ -1,4 +1,5 @@
 import { ReactNode } from 'react';
+import clsx from 'clsx';
 
 interface FadeMaskProps {
     children: ReactNode;
@@ -11,8 +12,7 @@ interface FadeMaskProps {
         | 'horizontal'
         | 'vertical'
         | 'all';
-    size?: number; // px
-    color?: string; // fallback background color
+    size?: number;
     className?: string;
 }
 
@@ -20,62 +20,40 @@ export function FadeMask({
     children,
     fade = 'horizontal',
     size = 32,
-    color = 'var(--fade-bg, #000)',
     className,
 }: FadeMaskProps) {
-    const directions = new Set(
-        fade === 'all'
-            ? ['left', 'right', 'top', 'bottom']
-            : fade === 'horizontal'
-              ? ['left', 'right']
-              : fade === 'vertical'
-                ? ['top', 'bottom']
-                : [fade]
-    );
+    const DIRECTIONS: Record<string, string[]> = {
+        none: [],
+        left: ['left'],
+        right: ['right'],
+        top: ['top'],
+        bottom: ['bottom'],
+        horizontal: ['left', 'right'],
+        vertical: ['top', 'bottom'],
+        all: ['left', 'right', 'top', 'bottom'],
+    };
+
+    const GRADIENTS: Record<string, string> = {
+        left: `linear-gradient(to right, transparent, black ${size}px)`,
+        right: `linear-gradient(to left, transparent, black ${size}px)`,
+        top: `linear-gradient(to bottom, transparent, black ${size}px)`,
+        bottom: `linear-gradient(to top, transparent, black ${size}px)`,
+    };
+
+    const maskImage =
+        DIRECTIONS[fade]?.map((dir) => GRADIENTS[dir]).join(',') || undefined;
 
     return (
-        <div className={`relative overflow-hidden ${className || ''}`}>
+        <div
+            className={clsx('relative overflow-hidden', className)}
+            style={{
+                maskImage,
+                maskComposite: 'intersect',
+                WebkitMaskImage: maskImage,
+                WebkitMaskComposite: 'intersect',
+            }}
+        >
             {children}
-
-            {directions.has('left') && (
-                <div
-                    className="fade-mask left"
-                    style={{
-                        width: size,
-                        background: `linear-gradient(to right, ${color} 0%, transparent 100%)`,
-                    }}
-                />
-            )}
-
-            {directions.has('right') && (
-                <div
-                    className="fade-mask right"
-                    style={{
-                        width: size,
-                        background: `linear-gradient(to left, ${color} 0%, transparent 100%)`,
-                    }}
-                />
-            )}
-
-            {directions.has('top') && (
-                <div
-                    className="fade-mask top"
-                    style={{
-                        height: size,
-                        background: `linear-gradient(to bottom, ${color} 0%, transparent 100%)`,
-                    }}
-                />
-            )}
-
-            {directions.has('bottom') && (
-                <div
-                    className="fade-mask bottom"
-                    style={{
-                        height: size,
-                        background: `linear-gradient(to top, ${color} 0%, transparent 100%)`,
-                    }}
-                />
-            )}
         </div>
     );
 }

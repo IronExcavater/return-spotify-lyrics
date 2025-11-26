@@ -1,11 +1,10 @@
 @import '@radix-ui/themes/styles.css';
-@import 'tailwindcss';
-@import 'tailwindcss/preflight';
+@import 'radix-themes-tw';
 @import './marquee.css';
 @import './fade.css';
 @tailwind utilities;
 
-body {
+:root {
     display: flex;
     overflow: hidden;
 }

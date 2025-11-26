@@ -1,43 +1,97 @@
-import {
-    Flex,
-    IconButton,
-    Avatar,
-    Skeleton,
-    Text,
-    Grid,
-} from '@radix-ui/themes';
-import {
-    PauseIcon,
-    PlayIcon,
-    TrackNextIcon,
-    TrackPreviousIcon,
-} from '@radix-ui/react-icons';
-import { useNavigate } from 'react-router-dom';
-import { MdMusicNote, MdQueueMusic } from 'react-icons/md';
+import { Flex, IconButton, Avatar, Text } from '@radix-ui/themes';
+import { PauseIcon, PlayIcon } from '@radix-ui/react-icons';
+import { MdMusicNote } from 'react-icons/md';
 import { asEpisode, asTrack } from '../../shared/types';
-import { ReactNode } from 'react';
 import { usePlayer } from '../hooks/usePlayer';
-
-interface QuickAction {
-    id: string;
-    label: string;
-    icon: ReactNode;
-    onClick: () => void;
-}
+import { FadeMask } from './FadeMask';
+import { Scrollable } from './Scrollable';
+import { SimplifiedArtist, SimplifiedShow } from '@spotify/web-api-ts-sdk';
 
 export function PlaybackBar() {
-    const { playback, play, pause, next, previous, seek, shuffle } =
-        usePlayer();
-    const navigate = useNavigate();
+    const { playback, controls } = usePlayer(5000);
 
-    if (!playback) return <></>;
-
-    const loading = !playback?.item;
+    const loading = playback === undefined;
 
     const track = asTrack(playback?.item);
     const episode = asEpisode(playback?.item);
 
-    const name = playback?.item?.name ?? 'Suck Deez';
+    const isPlaying = playback?.is_playing ?? false;
+    const title = playback?.item?.name ?? 'Suck Deez';
+    const artists: (SimplifiedArtist | SimplifiedShow)[] =
+        track?.artists ?? (episode?.show ? [episode.show] : []);
+    const albumImage =
+        track?.album?.images?.[0]?.url ?? episode?.images?.[0]?.url;
+    const bgImage = albumImage;
+
+    return (
+        <Flex className="relative overflow-hidden bg-cover bg-center">
+            {/* Album Cover */}
+            <Avatar
+                fallback={<MdMusicNote />}
+                radius="small"
+                src={albumImage}
+                className={'cursor-pointer'}
+            >
+                <IconButton
+                    onClick={isPlaying ? controls.pause : controls.play}
+                >
+                    {isPlaying ? <PauseIcon /> : <PlayIcon />}
+                </IconButton>
+            </Avatar>
+
+            <Flex>
+                {/* Title */}
+                <FadeMask>
+                    <Scrollable>
+                        <Text
+                            size="3"
+                            weight="bold"
+                            onClick={() =>
+                                window.open(
+                                    track?.external_urls?.spotify,
+                                    '_blank'
+                                )
+                            }
+                        >
+                            {title}
+                        </Text>
+                    </Scrollable>
+                </FadeMask>
+
+                {/* Action Menu */}
+            </Flex>
+
+            <Flex>
+                {/* Artists */}
+                <FadeMask>
+                    <Scrollable>
+                        {artists.map((artist) => {
+                            const label =
+                                'publisher' in artist
+                                    ? artist.publisher
+                                    : artist.name;
+
+                            return (
+                                <Text
+                                    size="2"
+                                    onClick={() =>
+                                        window.open(
+                                            artist?.external_urls?.spotify,
+                                            '_blank'
+                                        )
+                                    }
+                                >
+                                    {label}
+                                </Text>
+                            );
+                        })}
+                    </Scrollable>
+                </FadeMask>
+            </Flex>
+        </Flex>
+    );
+
+    /*const name = playback?.item?.name ?? 'Suck Deez';
     const artist =
         track?.artists.map((artist) => artist.name).join(', ') ??
         episode?.show?.publisher ??
@@ -48,7 +102,7 @@ export function PlaybackBar() {
 
     return (
         <Grid columns="2fr 1fr 2fr" align="center" justify="between">
-            {/* Left: Info */}
+            {/!* Left: Info *!/}
             <Flex gap="2" align="start" overflow="hidden">
                 <Skeleton loading={loading}>
                     <Avatar
@@ -77,7 +131,7 @@ export function PlaybackBar() {
                 </Flex>
             </Flex>
 
-            {/* Center: Controls */}
+            {/!* Center: Controls *!/}
             <Flex align="center" justify="center" gap="1">
                 <IconButton
                     variant="ghost"
@@ -106,7 +160,7 @@ export function PlaybackBar() {
                 </IconButton>
             </Flex>
 
-            {/* Right: Context */}
+            {/!* Right: Context *!/}
             <Flex justify="end" align="end" gap="3">
                 <IconButton
                     size="1"
@@ -117,5 +171,5 @@ export function PlaybackBar() {
                 </IconButton>
             </Flex>
         </Grid>
-    );
+    );*/
 }
