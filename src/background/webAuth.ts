@@ -11,10 +11,15 @@ import {
     mustGetFromStorage,
     setInStorage,
 } from '../shared/storage';
-import { SpotifyToken, SpotifyTokenResponse } from '../shared/types';
+import { AccessToken } from '@spotify/web-api-ts-sdk';
 
 const PKCE_VERIFIER_KEY = 'pkceVerifier';
 const SPOTIFY_TOKEN_KEY = 'spotifyToken';
+
+export interface SpotifyToken extends AccessToken {
+    expires_by: number;
+    scope: string;
+}
 
 export async function buildAuthUrl(): Promise<URL> {
     const { verifier, challenge } = await createPkcePair();
@@ -83,7 +88,7 @@ export async function requestAccessToken(code: string): Promise<SpotifyToken> {
         }),
     });
 
-    const raw = (await response.json()) as SpotifyTokenResponse;
+    const raw = (await response.json()) as SpotifyToken;
     if (!response.ok || !raw) throw new Error('Token exchange failed');
 
     const token: SpotifyToken = {
@@ -110,7 +115,7 @@ export async function refreshAccessToken(
         }),
     });
 
-    const raw = (await response.json()) as SpotifyTokenResponse;
+    const raw = (await response.json()) as SpotifyToken;
     if (!response.ok || !raw) throw new Error('Token exchange failed');
 
     const token: SpotifyToken = {

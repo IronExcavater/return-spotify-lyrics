@@ -55,7 +55,10 @@ export function mustGetFromStorage<T>(
     });
 }
 
-export async function setInStorage<T>(key: string, value: T): Promise<void> {
+export async function setInStorage<T>(
+    key: string,
+    value: T | undefined
+): Promise<void> {
     await chrome.storage.local.set({ [key]: value });
 }
 

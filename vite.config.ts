@@ -8,15 +8,12 @@ export default defineConfig({
         outDir: 'dist',
         rollupOptions: {
             input: {
-                popup: 'popup.html',
                 background: 'src/background/background.ts',
+                popup: 'popup.html',
             },
             output: {
-                entryFileNames: (assetInfo) => {
-                    if (assetInfo.name.includes('background'))
-                        return 'background.js';
-                    return '[name].js';
-                },
+                entryFileNames: '[name].js',
+                chunkFileNames: '[name].js',
             },
         },
     },

@@ -1,9 +1,0 @@
-@import '@radix-ui/themes/styles.css';
-@import 'tailwindcss';
-@import 'tailwindcss/preflight';
-@tailwind utilities;
-
-html,
-body {
-    overflow: hidden;
-}

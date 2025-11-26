@@ -1,92 +1,106 @@
 import React from 'react';
 import { useAuth } from './hooks/useAuth';
 import { ProfileView } from './views/ProfileView';
-import { Flex, Theme } from '@radix-ui/themes';
-import { Navbar } from './components/Navbar';
-import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
-import { HomeView } from './views/HomeView';
+import { Avatar, Flex } from '@radix-ui/themes';
+import {
+    Navigate,
+    Route,
+    Routes,
+    useLocation,
+    useMatch,
+    useNavigate,
+} from 'react-router-dom';
 import { LyricsView } from './views/LyricsView';
-import { usePlayer } from './hooks/usePlayer';
 import { PlaybackBar } from './components/PlaybackBar';
 import { LoginView } from './views/LoginView';
-import { PopupSizer } from './PopupSizer';
+import { Resizer } from './Resizer';
+import { PersonIcon } from '@radix-ui/react-icons';
 
 export default function App() {
     const { authed, profile, login, logout } = useAuth();
-    const { playback, play, pause, next, previous, seek, shuffle } =
-        usePlayer();
+    const navigate = useNavigate();
+    const isHome = useMatch('/');
+
+    const widthSize = { min: 300, max: 600 };
+    const heightSize = { min: isHome ? 100 : 300, max: 400 };
+    const heightOverride = isHome ? 0 : undefined;
+
+    const image = profile?.images?.[0]?.url;
 
     return (
-        <Theme
-            appearance="dark"
-            accentColor="grass"
-            panelBackground="translucent"
+        <Resizer
+            widthSize={widthSize}
+            heightSize={heightSize}
+            heightOverride={heightOverride}
         >
-            <PopupSizer>
-                <Navbar profile={profile} />
-                <Flex m="3" flexGrow="1" flexShrink="0">
-                    <Routes>
-                        <Route
-                            path="/"
-                            element={
-                                <ProtectedLayout
-                                    when={authed == true}
-                                    redirectTo="/login"
-                                >
-                                    <HomeView />
-                                </ProtectedLayout>
-                            }
-                        />
-                        <Route
-                            path="/login"
-                            element={
-                                <ProtectedLayout
-                                    when={authed == false}
-                                    redirectTo="/"
-                                >
-                                    <LoginView onLogin={login} />
-                                </ProtectedLayout>
-                            }
-                        />
-                        <Route
-                            path="/profile"
-                            element={
-                                <ProtectedLayout
-                                    when={authed == true}
-                                    redirectTo="/login"
-                                >
-                                    <ProfileView
-                                        profile={profile}
-                                        onLogout={logout}
-                                    />
-                                </ProtectedLayout>
-                            }
-                        />
-                        <Route
-                            path="/lyrics"
-                            element={
-                                <ProtectedLayout
-                                    when={authed == true}
-                                    redirectTo="/login"
-                                >
-                                    <LyricsView />
-                                </ProtectedLayout>
-                            }
-                        />
-                        <Route path="*" element={<Navigate to="/" replace />} />
-                    </Routes>
-                </Flex>
-                <PlaybackBar
-                    playback={playback}
-                    play={play}
-                    pause={pause}
-                    next={next}
-                    previous={previous}
-                    seek={seek}
-                    shuffle={shuffle}
+            <Flex
+                align="center"
+                px="3"
+                py="2"
+                gap="2"
+                justify="end"
+                style={{
+                    background: 'var(--color-panel-solid)',
+                    borderBottom: '2px solid var(--gray-a6)',
+                }}
+            >
+                <PlaybackBar />
+                <Avatar
+                    fallback={<PersonIcon />}
+                    radius="full"
+                    src={image}
+                    className={'cursor-pointer'}
+                    onClick={() => navigate('/profile')}
                 />
-            </PopupSizer>
-        </Theme>
+            </Flex>
+            <Routes>
+                <Route
+                    path="/"
+                    element={
+                        <ProtectedLayout
+                            when={authed == false && authed !== undefined}
+                            redirectTo="/login"
+                        >
+                            <></>
+                        </ProtectedLayout>
+                    }
+                />
+                <Route
+                    path="/login"
+                    element={
+                        <ProtectedLayout
+                            when={authed == true && authed !== undefined}
+                            redirectTo="/"
+                        >
+                            <LoginView onLogin={login} />
+                        </ProtectedLayout>
+                    }
+                />
+                <Route
+                    path="/profile"
+                    element={
+                        <ProtectedLayout
+                            when={authed == false && authed !== undefined}
+                            redirectTo="/login"
+                        >
+                            <ProfileView profile={profile} onLogout={logout} />
+                        </ProtectedLayout>
+                    }
+                />
+                <Route
+                    path="/lyrics"
+                    element={
+                        <ProtectedLayout
+                            when={authed == false && authed !== undefined}
+                            redirectTo="/login"
+                        >
+                            <LyricsView />
+                        </ProtectedLayout>
+                    }
+                />
+                <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+        </Resizer>
     );
 }
 
@@ -103,7 +117,7 @@ const ProtectedLayout: React.FC<ProtectedLayoutProps> = ({
 }) => {
     const location = useLocation();
 
-    if (!when)
+    if (when)
         return <Navigate to={redirectTo} replace state={{ from: location }} />;
 
     return <>{children}</>;

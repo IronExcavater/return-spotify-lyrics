@@ -15,27 +15,19 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { MdMusicNote, MdQueueMusic } from 'react-icons/md';
 import { asEpisode, asTrack } from '../../shared/types';
-import { PlaybackState } from '@spotify/web-api-ts-sdk';
+import { ReactNode } from 'react';
+import { usePlayer } from '../hooks/usePlayer';
 
-interface Props {
-    playback: PlaybackState | null;
-    play: () => void;
-    pause: () => void;
-    next: () => void;
-    previous: () => void;
-    seek: (positionMs: number) => void;
-    shuffle: () => void;
+interface QuickAction {
+    id: string;
+    label: string;
+    icon: ReactNode;
+    onClick: () => void;
 }
 
-export function PlaybackBar({
-    playback,
-    play,
-    pause,
-    next,
-    previous,
-    seek,
-    shuffle,
-}: Props) {
+export function PlaybackBar() {
+    const { playback, play, pause, next, previous, seek, shuffle } =
+        usePlayer();
     const navigate = useNavigate();
 
     if (!playback) return <></>;
@@ -55,21 +47,7 @@ export function PlaybackBar({
     const durationms = playback?.item?.duration_ms ?? 0;
 
     return (
-        <Grid
-            columns="2fr 1fr 2fr"
-            px="3"
-            py="2"
-            align="center"
-            justify="between"
-            style={{
-                borderTop: '1px solid var(--gray-a6)',
-                background: 'var(--color-panel-solid)',
-                backdropFilter: 'blur(8px)',
-                position: 'sticky',
-                bottom: 0,
-                zIndex: 10,
-            }}
-        >
+        <Grid columns="2fr 1fr 2fr" align="center" justify="between">
             {/* Left: Info */}
             <Flex gap="2" align="start" overflow="hidden">
                 <Skeleton loading={loading}>
@@ -100,10 +78,10 @@ export function PlaybackBar({
             </Flex>
 
             {/* Center: Controls */}
-            <Flex align="center" justify="center" gap="2">
+            <Flex align="center" justify="center" gap="1">
                 <IconButton
                     variant="ghost"
-                    size="2"
+                    size="1"
                     radius="full"
                     onClick={previous}
                 >
@@ -120,7 +98,7 @@ export function PlaybackBar({
 
                 <IconButton
                     variant="ghost"
-                    size="2"
+                    size="1"
                     radius="full"
                     onClick={next}
                 >
@@ -131,7 +109,7 @@ export function PlaybackBar({
             {/* Right: Context */}
             <Flex justify="end" align="end" gap="3">
                 <IconButton
-                    size="2"
+                    size="1"
                     variant="ghost"
                     onClick={() => navigate('/lyrics')}
                 >

@@ -1,0 +1,49 @@
+:root {
+    --speed: 0s;
+    --delay: 0s;
+}
+
+.marquee-base {
+    will-change: transform;
+    transition: animation-play-state 0.25s ease;
+}
+
+.marquee-hover-pause:hover {
+    animation-play-state: paused;
+}
+
+/* LOOP MODE (continuous leftward scroll) */
+@keyframes marquee-loop {
+    0% {
+        transform: translateX(0);
+    }
+
+    100% {
+        transform: translateX(-50%);
+    }
+}
+
+.marquee-loop {
+    animation: marquee-loop var(--speed) linear infinite;
+    animation-delay: var(--delay);
+}
+
+/* BOUNCE MODE (ping-pong scroll) */
+@keyframes marquee-bounce {
+    0% {
+        transform: translateX(0);
+    }
+
+    50% {
+        transform: translateX(-50%);
+    }
+
+    100% {
+        transform: translateX(0);
+    }
+}
+
+.marquee-bounce {
+    animation: marquee-bounce var(--speed) ease-in-out infinite;
+    animation-delay: var(--delay);
+}

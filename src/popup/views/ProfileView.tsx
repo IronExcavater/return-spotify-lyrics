@@ -25,7 +25,7 @@ export function ProfileView({ profile, onLogout }: Props) {
     const followers = profile?.followers?.total;
 
     return (
-        <Flex flexGrow="1" justify="center">
+        <Flex m="3" flexGrow="1" justify="center">
             <Card size="1">
                 <Flex direction="column" gap="2">
                     {/* Avatar + display name */}

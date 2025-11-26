@@ -1,73 +1,67 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
-import { type PlaybackState } from '@spotify/web-api-ts-sdk';
-
-import { Msg } from '../../shared/messaging';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { PlaybackState } from '@spotify/web-api-ts-sdk';
+import { sendSpotifyMessage } from '../../shared/messaging';
 
 export function usePlayer() {
     const [playback, setPlayback] = useState<PlaybackState | null>(null);
     const lastUpdate = useRef<number | null>(null);
 
-    const sync = useCallback(() => {
-        chrome.runtime.sendMessage({ type: Msg.GET_PLAYER }, (resp) => {
-            setPlayback(resp);
-            lastUpdate.current = Date.now();
-        });
+    // Sync playback state
+    const sync = useCallback(async () => {
+        const state = await sendSpotifyMessage('getPlaybackState');
+        setPlayback(state ?? null);
+        lastUpdate.current = Date.now();
     }, []);
 
-    /** Player controls */
-    const play = () => chrome.runtime.sendMessage({ type: Msg.PLAYER_PLAY });
-
-    const pause = () => chrome.runtime.sendMessage({ type: Msg.PLAYER_PAUSE });
-
-    const next = () => chrome.runtime.sendMessage({ type: Msg.PLAYER_NEXT });
-
-    const previous = () =>
-        chrome.runtime.sendMessage({ type: Msg.PLAYER_PREVIOUS });
-
-    const seek = (positionMs: number) =>
-        chrome.runtime.sendMessage({ type: Msg.PLAYER_SEEK, positionMs });
-
-    const shuffle = () =>
-        chrome.runtime.sendMessage({ type: Msg.PLAYER_SHUFFLE });
-
-    /** Sync playback every 3 seconds */
+    // Auto-sync every 5 seconds
     useEffect(() => {
-        sync();
-        const id = setInterval(sync, 3000);
-        return () => clearInterval(id);
-    }, [sync]);
-
-    /* Interpolate playback between syncs */
-    useEffect(() => {
-        const timer = setInterval(() => {
-            setPlayback((prev) => {
-                // only increment if playing
-                if (!prev || !prev.is_playing) return prev;
-
-                const now = Date.now();
-                if (!lastUpdate.current) lastUpdate.current = now;
-
-                const delta = now - lastUpdate.current;
-                const newProgress = prev.progress_ms + delta;
-                lastUpdate.current = now;
-
-                return {
-                    ...prev,
-                    progress_ms: newProgress,
-                };
-            });
-        }, 950);
-
+        void sync();
+        const timer = setInterval(sync, 5000);
         return () => clearInterval(timer);
-    }, []);
+    }, [sync]);
 
     return {
         playback,
-        play,
-        pause,
-        next,
-        previous,
-        seek,
-        shuffle,
+
+        // ----- Player controls -----
+        play: () => sendSpotifyMessage('startResumePlayback').then(sync),
+
+        pause: () => sendSpotifyMessage('pausePlayback').then(sync),
+
+        next: () => sendSpotifyMessage('skipToNext').then(sync),
+
+        previous: () => sendSpotifyMessage('skipToPrevious').then(sync),
+
+        seek: (ms: number) =>
+            sendSpotifyMessage('seekToPosition', ms).then(sync),
+
+        shuffle: (state: boolean) =>
+            sendSpotifyMessage('toggleShuffle', state).then(sync),
+
+        repeat: (mode: 'off' | 'track' | 'context') =>
+            sendSpotifyMessage('setRepeatMode', mode).then(sync),
+
+        setVolume: (volume: number) =>
+            sendSpotifyMessage('setPlaybackVolume', volume).then(sync),
+
+        // ----- Queue -----
+        addToQueue: (uri: string) =>
+            sendSpotifyMessage('addToQueue', uri).then(sync),
+
+        // ----- Library -----
+        saveTrack: (ids: string[]) =>
+            sendSpotifyMessage('saveTracks', ids).then(sync),
+
+        unsaveTrack: (ids: string[]) =>
+            sendSpotifyMessage('unsaveTracks', ids).then(sync),
+
+        isTrackSaved: (ids: string[]) =>
+            sendSpotifyMessage('hasSavedTracks', ids),
+
+        // ----- Device switching -----
+        listDevices: () => sendSpotifyMessage('getAvailableDevices'),
+
+        transferToDevice: (deviceId: string) =>
+            sendSpotifyMessage('transferPlayback', { deviceId }),
     };
 }

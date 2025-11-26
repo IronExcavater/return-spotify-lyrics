@@ -1,0 +1,28 @@
+@import '@radix-ui/themes/styles.css';
+@import 'tailwindcss';
+@import 'tailwindcss/preflight';
+@import './marquee.css';
+@import './fade.css';
+@tailwind utilities;
+
+body {
+    display: flex;
+    overflow: hidden;
+}
+
+#root {
+    height: 100%;
+    width: 100%;
+}
+
+.radix-themes {
+    height: 100%;
+    min-height: 0 !important;
+}
+
+.rt-IconButton:where(.rt-variant-ghost) {
+    margin: 0;
+    padding: 0;
+    height: var(--base-button-height);
+    width: var(--base-button-height);
+}
