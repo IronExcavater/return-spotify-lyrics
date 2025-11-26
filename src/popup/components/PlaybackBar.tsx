@@ -6,6 +6,7 @@ import { usePlayer } from '../hooks/usePlayer';
 import { FadeMask } from './FadeMask';
 import { Scrollable } from './Scrollable';
 import { SimplifiedArtist, SimplifiedShow } from '@spotify/web-api-ts-sdk';
+import { AvatarButton } from './AvatarButton';
 
 export function PlaybackBar() {
     const { playback, controls } = usePlayer(5000);
@@ -26,18 +27,14 @@ export function PlaybackBar() {
     return (
         <Flex className="relative overflow-hidden bg-cover bg-center">
             {/* Album Cover */}
-            <Avatar
+            <AvatarButton
+                src={albumImage}
                 fallback={<MdMusicNote />}
                 radius="small"
-                src={albumImage}
-                className={'cursor-pointer'}
+                onClick={isPlaying ? controls.pause : controls.play}
             >
-                <IconButton
-                    onClick={isPlaying ? controls.pause : controls.play}
-                >
-                    {isPlaying ? <PauseIcon /> : <PlayIcon />}
-                </IconButton>
-            </Avatar>
+                {isPlaying ? <PauseIcon /> : <PlayIcon />}
+            </AvatarButton>
 
             <Flex>
                 {/* Title */}
