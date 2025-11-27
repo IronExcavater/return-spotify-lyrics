@@ -3,8 +3,8 @@ import { PauseIcon, PlayIcon } from '@radix-ui/react-icons';
 import { MdMusicNote } from 'react-icons/md';
 import { asEpisode, asTrack } from '../../shared/types';
 import { usePlayer } from '../hooks/usePlayer';
-import { FadeMask } from './FadeMask';
-import { Scrollable } from './Scrollable';
+import { Fade } from './Fade';
+import { Marquee } from './Marquee';
 import { SimplifiedArtist, SimplifiedShow } from '@spotify/web-api-ts-sdk';
 import { AvatarButton } from './AvatarButton';
 
@@ -17,51 +17,51 @@ export function PlaybackBar() {
     const episode = asEpisode(playback?.item);
 
     const isPlaying = playback?.is_playing ?? false;
-    const title = playback?.item?.name ?? 'Suck Deez';
+    const title = playback?.item?.name ?? 'Suck Deez WRahhhh aahhh';
+    const link = playback?.item?.external_urls?.spotify;
+
     const artists: (SimplifiedArtist | SimplifiedShow)[] =
         track?.artists ?? (episode?.show ? [episode.show] : []);
+
     const albumImage =
         track?.album?.images?.[0]?.url ?? episode?.images?.[0]?.url;
     const bgImage = albumImage;
 
     return (
-        <Flex className="relative overflow-hidden bg-cover bg-center">
+        // className="relative bg-cover bg-center"
+        <Flex>
             {/* Album Cover */}
             <AvatarButton
-                src={albumImage}
-                fallback={<MdMusicNote />}
-                radius="small"
-                onClick={isPlaying ? controls.pause : controls.play}
+                avatar={{
+                    src: albumImage,
+                    fallback: <MdMusicNote />,
+                    radius: 'small',
+                    onClick: isPlaying ? controls.pause : controls.play,
+                }}
             >
                 {isPlaying ? <PauseIcon /> : <PlayIcon />}
             </AvatarButton>
 
-            <Flex>
-                {/* Title */}
-                <FadeMask>
-                    <Scrollable>
+            <Flex className="overflow-hidden">
+                <Fade>
+                    <Marquee>
                         <Text
                             size="3"
                             weight="bold"
-                            onClick={() =>
-                                window.open(
-                                    track?.external_urls?.spotify,
-                                    '_blank'
-                                )
-                            }
+                            onClick={() => {
+                                if (link) window.open(link, '_blank');
+                            }}
                         >
                             {title}
                         </Text>
-                    </Scrollable>
-                </FadeMask>
-
-                {/* Action Menu */}
+                    </Marquee>
+                </Fade>
             </Flex>
 
             <Flex>
                 {/* Artists */}
-                <FadeMask>
-                    <Scrollable>
+                <Fade>
+                    <Marquee>
                         {artists.map((artist) => {
                             const label =
                                 'publisher' in artist
@@ -82,8 +82,8 @@ export function PlaybackBar() {
                                 </Text>
                             );
                         })}
-                    </Scrollable>
-                </FadeMask>
+                    </Marquee>
+                </Fade>
             </Flex>
         </Flex>
     );

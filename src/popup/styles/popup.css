@@ -5,13 +5,7 @@
 @tailwind utilities;
 
 :root {
-    display: flex;
     overflow: hidden;
-}
-
-#root {
-    height: 100%;
-    width: 100%;
 }
 
 .radix-themes {

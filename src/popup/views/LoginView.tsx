@@ -1,4 +1,6 @@
 import { Button, Card, Flex, Text } from '@radix-ui/themes';
+import { Marquee } from '../components/Marquee';
+import { Fade } from '../components/Fade';
 
 interface Props {
     onLogin: () => void;
@@ -6,7 +8,15 @@ interface Props {
 
 export function LoginView({ onLogin }: Props) {
     return (
-        <Flex flexGrow="1" justify="center">
+        <Flex m="3" flexGrow="1" justify="center" direction="column">
+            <Fade>
+                <Marquee>
+                    <Text>Hi</Text>
+                    <Text>Again</Text>
+                    <Text>Its Me</Text>
+                    <Text>Markiplier</Text>
+                </Marquee>
+            </Fade>
             <Card size="1">
                 <Flex direction="column" gap="2">
                     <Text size="5" weight="bold">

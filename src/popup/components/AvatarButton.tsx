@@ -7,30 +7,26 @@ import {
 import clsx from 'clsx';
 import { ReactNode } from 'react';
 
-interface Props {
+interface AvatarButtonProps {
+    avatar: AvatarProps;
+    button?: IconButtonProps;
     children?: ReactNode;
-
-    avatarProps?: AvatarProps;
-    buttonProps?: IconButtonProps;
 }
 
 export function AvatarButton({
+    avatar,
+    button = {},
     children,
-    avatarProps = {},
-    buttonProps = {},
-}: Props) {
-    const isEnabled = !buttonProps.disabled;
+}: AvatarButtonProps) {
+    const isEnabled = !button.disabled;
 
     return (
         <IconButton
-            {...buttonProps}
+            {...button}
             asChild
-            className={clsx(
-                isEnabled && 'cursor-pointer',
-                buttonProps.className
-            )}
+            className={clsx(isEnabled && 'cursor-pointer', button.className)}
         >
-            <Avatar {...avatarProps} className={avatarProps.className}>
+            <Avatar {...avatar} className={avatar.className}>
                 {children}
             </Avatar>
         </IconButton>

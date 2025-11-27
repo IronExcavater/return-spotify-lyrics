@@ -1,6 +1,6 @@
 import { Flex, Text } from '@radix-ui/themes';
-import { Scrollable } from '../components/Scrollable';
-import { FadeMask } from '../components/FadeMask';
+import { Marquee } from '../components/Marquee';
+import { Fade } from '../components/Fade';
 
 export function LyricsView() {
     return (
@@ -11,14 +11,6 @@ export function LyricsView() {
             <Text size="2" color="gray">
                 Lyrics will be shown here.
             </Text>
-            <FadeMask fade="horizontal" color="#121212" size={32}>
-                <Scrollable>
-                    <p>Hi</p>
-                    <p>Again</p>
-                    <p>Its Me</p>
-                    <p>Markiplier</p>
-                </Scrollable>
-            </FadeMask>
         </Flex>
     );
 }

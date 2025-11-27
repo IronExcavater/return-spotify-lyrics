@@ -16,10 +16,10 @@ interface FadeMaskProps {
     className?: string;
 }
 
-export function FadeMask({
+export function Fade({
     children,
     fade = 'horizontal',
-    size = 32,
+    size = 24,
     className,
 }: FadeMaskProps) {
     const DIRECTIONS: Record<string, string[]> = {
@@ -45,7 +45,7 @@ export function FadeMask({
 
     return (
         <div
-            className={clsx('relative overflow-hidden', className)}
+            className={clsx('relative', className)}
             style={{
                 maskImage,
                 maskComposite: 'intersect',
