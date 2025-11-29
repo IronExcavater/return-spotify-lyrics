@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth } from './hooks/useAuth';
 import { ProfileView } from './views/ProfileView';
 import { Avatar, Flex } from '@radix-ui/themes';
@@ -11,15 +11,21 @@ import {
     useNavigate,
 } from 'react-router-dom';
 import { LyricsView } from './views/LyricsView';
-import { PlaybackBar } from './components/PlaybackBar';
+import { SimpleBar } from './components/SimpleBar';
 import { LoginView } from './views/LoginView';
 import { Resizer } from './Resizer';
 import { PersonIcon } from '@radix-ui/react-icons';
+
+function AdvancedBar() {
+    return null;
+}
 
 export default function App() {
     const { authed, profile, login, logout } = useAuth();
     const navigate = useNavigate();
     const isHome = useMatch('/');
+
+    const [expanded, setExpanded] = useState(false);
 
     const widthSize = { min: 300, max: 600 };
     const heightSize = { min: isHome ? 100 : 300, max: 400 };
@@ -35,8 +41,6 @@ export default function App() {
         >
             <Flex
                 align="center"
-                px="3"
-                py="2"
                 gap="2"
                 justify="end"
                 style={{
@@ -44,14 +48,17 @@ export default function App() {
                     borderBottom: '2px solid var(--gray-a6)',
                 }}
             >
-                <PlaybackBar />
-                <Avatar
-                    fallback={<PersonIcon />}
-                    radius="full"
-                    src={image}
-                    className={'cursor-pointer'}
-                    onClick={() => navigate('/profile')}
-                />
+                <div>
+                    <SimpleBar expanded={expanded} setExpanded={setExpanded} />
+                    <Avatar
+                        fallback={<PersonIcon />}
+                        radius="full"
+                        src={image}
+                        className={'cursor-pointer'}
+                        onClick={() => navigate('/profile')}
+                    />
+                </div>
+                <div>{expanded && <AdvancedBar />}</div>
             </Flex>
             <Routes>
                 <Route
