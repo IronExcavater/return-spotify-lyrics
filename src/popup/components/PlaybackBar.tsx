@@ -1,4 +1,4 @@
-import { Flex, IconButton, Avatar, Text } from '@radix-ui/themes';
+import { Flex, Link, Text } from '@radix-ui/themes';
 import { PauseIcon, PlayIcon } from '@radix-ui/react-icons';
 import { MdMusicNote } from 'react-icons/md';
 import { asEpisode, asTrack } from '../../shared/types';
@@ -7,9 +7,13 @@ import { Fade } from './Fade';
 import { Marquee } from './Marquee';
 import { SimplifiedArtist, SimplifiedShow } from '@spotify/web-api-ts-sdk';
 import { AvatarButton } from './AvatarButton';
+import { ExternalLink } from './ExternalLink';
+import { useRef, useState } from 'react';
 
 export function PlaybackBar() {
     const { playback, controls } = usePlayer(5000);
+
+    const [expanded, setExpanded] = useState(false);
 
     const loading = playback === undefined;
 
@@ -27,9 +31,18 @@ export function PlaybackBar() {
         track?.album?.images?.[0]?.url ?? episode?.images?.[0]?.url;
     const bgImage = albumImage;
 
+    const durationMs = playback?.item?.duration_ms ?? 0;
+    const progressMs = playback?.progress_ms ?? 0;
+
+    const volumePercent = playback?.device?.volume_percent ?? 100;
+    const lastNonZero = useRef(volumePercent);
+
+    const isMuted = volumePercent === 0;
+    if (!isMuted) lastNonZero.current = volumePercent;
+
     return (
         // className="relative bg-cover bg-center"
-        <Flex>
+        <>
             {/* Album Cover */}
             <AvatarButton
                 avatar={{
@@ -43,25 +56,25 @@ export function PlaybackBar() {
             </AvatarButton>
 
             <Flex className="overflow-hidden">
+                {/* Title */}
                 <Fade>
-                    <Marquee>
-                        <Text
+                    <Marquee mode="bounce">
+                        <ExternalLink
+                            noAccent
                             size="3"
                             weight="bold"
-                            onClick={() => {
-                                if (link) window.open(link, '_blank');
-                            }}
+                            href={link}
                         >
                             {title}
-                        </Text>
+                        </ExternalLink>
                     </Marquee>
                 </Fade>
             </Flex>
 
-            <Flex>
+            <Flex className="overflow-hidden">
                 {/* Artists */}
                 <Fade>
-                    <Marquee>
+                    <Marquee mode="right">
                         {artists.map((artist) => {
                             const label =
                                 'publisher' in artist
@@ -69,23 +82,19 @@ export function PlaybackBar() {
                                     : artist.name;
 
                             return (
-                                <Text
+                                <ExternalLink
+                                    noAccent
                                     size="2"
-                                    onClick={() =>
-                                        window.open(
-                                            artist?.external_urls?.spotify,
-                                            '_blank'
-                                        )
-                                    }
+                                    href={artist?.external_urls?.spotify}
                                 >
                                     {label}
-                                </Text>
+                                </ExternalLink>
                             );
                         })}
                     </Marquee>
                 </Fade>
             </Flex>
-        </Flex>
+        </>
     );
 
     /*const name = playback?.item?.name ?? 'Suck Deez';

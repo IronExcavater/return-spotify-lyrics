@@ -1,78 +1,84 @@
-import {
-    ReactNode,
-    useLayoutEffect,
-    useRef,
-    useState,
-    CSSProperties,
-} from 'react';
+import { CSSProperties, ReactNode, useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
 
-interface Props {
+interface MarqueeProps {
     children: ReactNode;
     speed?: number;
-    delay?: number;
-    mode?: 'loop' | 'bounce';
-    gap?: number;
+    mode?: 'left' | 'right' | 'bounce';
     pauseOnHover?: boolean;
     className?: string;
 }
 
 export function Marquee({
     children,
-    speed = 12,
-    delay = 0,
-    mode = 'loop',
-    gap = 12,
+    speed = 10,
+    mode = 'left',
     pauseOnHover = true,
     className,
-}: Props) {
+}: MarqueeProps) {
     const containerRef = useRef<HTMLDivElement>(null);
-    const contentRef = useRef<HTMLDivElement>(null);
-    const [scrollNeeded, setScrollNeeded] = useState(false);
+    const originalRef = useRef<HTMLDivElement>(null);
+
     const [duration, setDuration] = useState(0);
+    const [hidden, setHidden] = useState(0);
+    const [buffer, setBuffer] = useState(0);
+    const [scroll, setScroll] = useState(false);
 
-    useLayoutEffect(() => {
-        const c = containerRef.current;
-        const t = contentRef.current;
-        if (!c || !t) return;
+    useEffect(() => {
+        const compute = () => {
+            const containerW = containerRef.current?.clientWidth ?? 0;
+            const originalW = originalRef.current?.scrollWidth ?? 0;
 
-        const overflow = t.scrollWidth > c.clientWidth;
-        setScrollNeeded(overflow);
+            const shouldScroll = originalW > containerW;
+            setScroll(shouldScroll);
 
-        if (overflow) {
-            const distance = t.scrollWidth - c.clientWidth;
-            const seconds = (distance / 100) * speed;
-            setDuration(seconds);
-        }
-    }, [children]);
+            const hidden = Math.max(0, originalW - containerW);
+            setHidden(hidden);
+
+            setBuffer(originalW * 0.01);
+
+            setDuration(containerW / speed);
+        };
+
+        compute();
+
+        const observer = new ResizeObserver(compute);
+        if (containerRef.current) observer.observe(containerRef.current);
+
+        return () => observer.disconnect();
+    }, [speed]);
 
     return (
         <div
             ref={containerRef}
-            className={clsx('relative overflow-hidden', className)}
-            style={
-                {
-                    '--marquee-duration': `${duration}s`,
-                    '--marquee-delay': `${delay}s`,
-                    '--marquee-gap': `${gap}px`,
-                } as CSSProperties
-            }
+            className={clsx(
+                'flex overflow-hidden whitespace-nowrap',
+                className
+            )}
         >
             <div
-                ref={contentRef}
                 className={clsx(
-                    'marquee-inner',
-                    scrollNeeded &&
-                        (mode === 'loop' ? 'marquee-loop' : 'marquee-bounce'),
-                    pauseOnHover && 'marquee-pause-on-hover'
+                    scroll && `animate-marquee-${mode}`,
+                    pauseOnHover && 'marquee-pause'
                 )}
+                style={
+                    {
+                        '--marquee-distance': `${-hidden - buffer}px`,
+                        animationDuration: `${duration}s`,
+                    } as CSSProperties
+                }
             >
-                {children}
-
-                {/* Duplicate only for loop mode */}
-                {scrollNeeded && mode === 'loop' && (
-                    <div className="ml-[var(--marquee-gap)]">{children}</div>
-                )}
+                <div ref={originalRef} className="inline-block">
+                    {children}
+                </div>
+                <div
+                    className={clsx(
+                        'mx-3 inline-block',
+                        (!scroll || mode === 'bounce') && 'invisible'
+                    )}
+                >
+                    {children}
+                </div>
             </div>
         </div>
     );

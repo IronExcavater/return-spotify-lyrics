@@ -1,47 +1,58 @@
 :root {
-    --marquee-duration: 0s;
-    --marquee-delay: 0s;
-    --marquee-gap: 0px;
+    --marquee-distance: 0;
 }
 
-.marquee-inner {
-    align-items: center;
-    gap: var(--marquee-gap);
-    will-change: transform;
-}
-
-/* Loop mode */
-.marquee-loop {
-    animation: marquee-loop var(--marquee-duration) linear infinite;
-    animation-delay: var(--marquee-delay);
-}
-
-/* Bounce mode */
-.marquee-bounce {
-    animation: marquee-bounce var(--marquee-duration) ease-in-out infinite
-        alternate;
-    animation-delay: var(--marquee-delay);
-}
-
-/* Pause on hover */
-.marquee-pause-on-hover:hover {
-    animation-play-state: paused;
-}
-
-@keyframes marquee-loop {
-    from {
+@keyframes marquee-left {
+    0% {
         transform: translateX(0);
     }
-    to {
-        transform: translateX(calc(-100% - var(--marquee-gap)));
+
+    100% {
+        transform: translateX(-50%);
+    }
+}
+
+@keyframes marquee-right {
+    0% {
+        transform: translateX(-50%);
+    }
+
+    100% {
+        transform: translateX(0);
     }
 }
 
 @keyframes marquee-bounce {
-    from {
-        transform: translateX(0);
+    0% {
+        transform: translateX(1%);
     }
-    to {
-        transform: translateX(-50%);
+
+    50% {
+        transform: translateX(var(--marquee-distance));
     }
+
+    100% {
+        transform: translateX(1%);
+    }
+}
+
+.animate-marquee-left {
+    animation: marquee-left linear infinite;
+}
+
+.animate-marquee-right {
+    animation: marquee-right linear infinite;
+}
+
+.animate-marquee-bounce {
+    animation: marquee-bounce ease-in-out infinite;
+}
+
+.marquee-reset {
+    transform: translateX(0);
+    transition: transform 0.3s ease-out;
+}
+
+.marquee-pause:hover {
+    animation-play-state: paused;
 }

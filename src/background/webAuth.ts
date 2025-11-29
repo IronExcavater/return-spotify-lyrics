@@ -16,6 +16,9 @@ import { AccessToken } from '@spotify/web-api-ts-sdk';
 const PKCE_VERIFIER_KEY = 'pkceVerifier';
 const SPOTIFY_TOKEN_KEY = 'spotifyToken';
 
+const EXPIRY_BUFFER_MS = 60_000;
+let refreshTimer: number | undefined;
+
 export interface SpotifyToken extends AccessToken {
     expires_by: number;
     scope: string;
@@ -132,8 +135,37 @@ export async function getAccessToken(): Promise<SpotifyToken | undefined> {
 
     if (token && Date.now() >= token.expires_by) {
         token = await refreshAccessToken(token.refresh_token);
-        await setInStorage(SPOTIFY_TOKEN_KEY, token);
     }
 
     return token;
 }
+
+function refreshClear() {
+    if (refreshTimer) clearTimeout(refreshTimer);
+    refreshTimer = undefined;
+}
+
+function refreshSoon(token: SpotifyToken) {
+    refreshClear();
+
+    const delay = token.expires_by - Date.now() - EXPIRY_BUFFER_MS;
+
+    refreshTimer = setTimeout(refreshNow, Math.max(0, delay));
+}
+
+async function refreshNow(token: SpotifyToken) {
+    refreshSoon(await refreshAccessToken(token.refresh_token));
+}
+
+const listener = (
+    changes: Record<string, chrome.storage.StorageChange>,
+    area: string
+) => {
+    if (area === 'local' && changes.spotifyToken) {
+        if (changes.spotifyToken.oldValue === undefined)
+            refreshSoon(changes.spotifyToken.newValue as SpotifyToken);
+        if (changes.spotifyToken.newValue === undefined) refreshClear();
+    }
+};
+
+chrome.storage.onChanged.addListener(listener);
