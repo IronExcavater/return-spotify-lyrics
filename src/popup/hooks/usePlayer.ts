@@ -24,21 +24,64 @@ export function usePlayer(pollMs?: number) {
         return () => clearInterval(timer);
     }, [sync, pollMs]);
 
+    const isPlaying = playback?.is_playing ?? false;
+    const durationMs = playback?.item?.duration_ms ?? 0;
+    const progressMs = playback?.progress_ms ?? 0;
+
+    const volumePercent = playback?.device?.volume_percent ?? 100;
+    const muted = volumePercent === 0;
+    const lastNonZero = useRef(volumePercent || 50);
+    if (!muted) lastNonZero.current = volumePercent;
+
+    const setVolume = (v: number) => {
+        void sendSpotifyMessage('setPlaybackVolume', v);
+    };
+
+    const toggleMute = () => {
+        if (muted)
+            void sendSpotifyMessage(
+                'setPlaybackVolume',
+                lastNonZero.current || 50
+            );
+        else void sendSpotifyMessage('setPlaybackVolume', 0);
+    };
+
+    const isShuffle = playback?.shuffle_state ?? false;
+
+    const toggleShuffle = () => {
+        void sendSpotifyMessage('toggleShuffle', !isShuffle);
+    };
+
+    const repeatMode = playback?.repeat_state ?? 'off';
+
+    const toggleRepeat = () => {
+        void sendSpotifyMessage(
+            'setRepeatMode',
+            repeatMode === 'off' ? 'context' : 'off'
+        );
+    };
+
     const controls = {
         play: () => sendSpotifyMessage('startResumePlayback'),
         pause: () => sendSpotifyMessage('pausePlayback'),
         next: () => sendSpotifyMessage('skipToNext'),
         previous: () => sendSpotifyMessage('skipToPrevious'),
         seek: (ms: number) => sendSpotifyMessage('seekToPosition', ms),
-        shuffle: (state: boolean) => sendSpotifyMessage('toggleShuffle', state),
-        repeat: (mode: 'off' | 'track' | 'context') =>
-            sendSpotifyMessage('setRepeatMode', mode),
-        setVolume: (volume: number) =>
-            sendSpotifyMessage('setPlaybackVolume', volume),
+        setVolume,
+        toggleMute,
+        toggleShuffle,
+        toggleRepeat,
     };
 
     return {
         playback,
+        isPlaying,
+        durationMs,
+        progressMs,
+        volumePercent,
+        muted,
+        isShuffle,
+        repeatMode,
         controls,
     };
 }

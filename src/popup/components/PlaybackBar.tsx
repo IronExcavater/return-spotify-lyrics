@@ -1,17 +1,39 @@
-import { Flex, Link, Text } from '@radix-ui/themes';
-import { PauseIcon, PlayIcon } from '@radix-ui/react-icons';
+import { useState } from 'react';
+import { Flex, IconButton, Slider } from '@radix-ui/themes';
+import {
+    PauseIcon,
+    PlayIcon,
+    TrackNextIcon,
+    TrackPreviousIcon,
+    SpeakerOffIcon,
+    SpeakerLoudIcon,
+    ShuffleIcon,
+    LoopIcon,
+    DotsHorizontalIcon,
+} from '@radix-ui/react-icons';
 import { MdMusicNote } from 'react-icons/md';
-import { asEpisode, asTrack } from '../../shared/types';
+import { SimplifiedArtist, SimplifiedShow } from '@spotify/web-api-ts-sdk';
+
 import { usePlayer } from '../hooks/usePlayer';
+import { asEpisode, asTrack } from '../../shared/types';
+
 import { Fade } from './Fade';
 import { Marquee } from './Marquee';
-import { SimplifiedArtist, SimplifiedShow } from '@spotify/web-api-ts-sdk';
-import { AvatarButton } from './AvatarButton';
 import { ExternalLink } from './ExternalLink';
-import { useRef, useState } from 'react';
+import { AvatarButton } from './AvatarButton';
 
 export function PlaybackBar() {
-    const { playback, controls } = usePlayer(5000);
+    const {
+        playback,
+        isPlaying,
+        durationMs,
+        progressMs,
+        volumePercent,
+        muted,
+        isShuffle,
+        repeatMode,
+        controls,
+    } = usePlayer(4000);
 
     const [expanded, setExpanded] = useState(false);
 
@@ -20,8 +42,7 @@ export function PlaybackBar() {
     const track = asTrack(playback?.item);
     const episode = asEpisode(playback?.item);
 
-    const isPlaying = playback?.is_playing ?? false;
-    const title = playback?.item?.name ?? 'Suck Deez WRahhhh aahhh';
+    const title = playback?.item?.name ?? '';
     const link = playback?.item?.external_urls?.spotify;
 
     const artists: (SimplifiedArtist | SimplifiedShow)[] =
@@ -31,151 +52,132 @@ export function PlaybackBar() {
         track?.album?.images?.[0]?.url ?? episode?.images?.[0]?.url;
     const bgImage = albumImage;
 
-    const durationMs = playback?.item?.duration_ms ?? 0;
-    const progressMs = playback?.progress_ms ?? 0;
-
-    const volumePercent = playback?.device?.volume_percent ?? 100;
-    const lastNonZero = useRef(volumePercent);
-
-    const isMuted = volumePercent === 0;
-    if (!isMuted) lastNonZero.current = volumePercent;
-
     return (
-        // className="relative bg-cover bg-center"
-        <>
-            {/* Album Cover */}
-            <AvatarButton
-                avatar={{
-                    src: albumImage,
-                    fallback: <MdMusicNote />,
-                    radius: 'small',
-                    onClick: isPlaying ? controls.pause : controls.play,
-                }}
-            >
-                {isPlaying ? <PauseIcon /> : <PlayIcon />}
-            </AvatarButton>
+        <Flex direction="column" gap="2" className="w-full select-none">
+            <Flex align="center" gap="2" className="overflow-hidden">
+                <AvatarButton
+                    avatar={{
+                        src: albumImage,
+                        fallback: <MdMusicNote />,
+                        radius: 'small',
+                        onClick: isPlaying ? controls.pause : controls.play,
+                    }}
+                >
+                    {isPlaying ? <PauseIcon /> : <PlayIcon />}
+                </AvatarButton>
 
-            <Flex className="overflow-hidden">
-                {/* Title */}
-                <Fade>
-                    <Marquee mode="bounce">
-                        <ExternalLink
-                            noAccent
-                            size="3"
-                            weight="bold"
-                            href={link}
-                        >
-                            {title}
-                        </ExternalLink>
-                    </Marquee>
-                </Fade>
-            </Flex>
+                <Flex direction="column" flexGrow="1" overflow="hidden">
+                    <Fade>
+                        <Marquee mode="bounce">
+                            <ExternalLink
+                                noAccent
+                                size="3"
+                                weight="bold"
+                                href={link}
+                            >
+                                {title}
+                            </ExternalLink>
+                        </Marquee>
+                    </Fade>
 
-            <Flex className="overflow-hidden">
-                {/* Artists */}
-                <Fade>
-                    <Marquee mode="right">
-                        {artists.map((artist) => {
-                            const label =
-                                'publisher' in artist
-                                    ? artist.publisher
-                                    : artist.name;
+                    <Fade>
+                        <Marquee mode="right">
+                            {artists.map((artist) => {
+                                const label =
+                                    'publisher' in artist
+                                        ? artist.publisher
+                                        : artist.name;
 
-                            return (
-                                <ExternalLink
-                                    noAccent
-                                    size="2"
-                                    href={artist?.external_urls?.spotify}
-                                >
-                                    {label}
-                                </ExternalLink>
-                            );
-                        })}
-                    </Marquee>
-                </Fade>
-            </Flex>
-        </>
-    );
-
-    /*const name = playback?.item?.name ?? 'Suck Deez';
-    const artist =
-        track?.artists.map((artist) => artist.name).join(', ') ??
-        episode?.show?.publisher ??
-        'John Does Nuts';
-    const image = track?.album?.images?.[0]?.url ?? episode?.images?.[0]?.url;
-    const link = playback?.item?.external_urls?.spotify;
-    const durationms = playback?.item?.duration_ms ?? 0;
-
-    return (
-        <Grid columns="2fr 1fr 2fr" align="center" justify="between">
-            {/!* Left: Info *!/}
-            <Flex gap="2" align="start" overflow="hidden">
-                <Skeleton loading={loading}>
-                    <Avatar
-                        fallback={<MdMusicNote />}
-                        radius="small"
-                        src={image}
-                        className={'cursor-pointer'}
-                        asChild
-                    >
-                        <IconButton
-                            onClick={() => link && window.open(link, '_blank')}
-                        />
-                    </Avatar>
-                </Skeleton>
-                <Flex direction="column" align="start" overflow="hidden">
-                    <Skeleton loading={loading}>
-                        <Text size="3" weight="bold" truncate>
-                            {name}
-                        </Text>
-                    </Skeleton>
-                    <Skeleton loading={loading}>
-                        <Text size="1" color="gray" truncate>
-                            {artist}
-                        </Text>
-                    </Skeleton>
+                                return (
+                                    <ExternalLink
+                                        noAccent
+                                        size="2"
+                                        href={artist?.external_urls?.spotify}
+                                    >
+                                        {label}
+                                    </ExternalLink>
+                                );
+                            })}
+                        </Marquee>
+                    </Fade>
                 </Flex>
-            </Flex>
-
-            {/!* Center: Controls *!/}
-            <Flex align="center" justify="center" gap="1">
-                <IconButton
-                    variant="ghost"
-                    size="1"
-                    radius="full"
-                    onClick={previous}
-                >
-                    <TrackPreviousIcon />
-                </IconButton>
-
-                <IconButton
-                    size="2"
-                    radius="full"
-                    onClick={playback?.is_playing ? pause : play}
-                >
-                    {playback?.is_playing ? <PauseIcon /> : <PlayIcon />}
-                </IconButton>
 
                 <IconButton
                     variant="ghost"
-                    size="1"
                     radius="full"
-                    onClick={next}
+                    size="1"
+                    onClick={() => setExpanded((v) => !v)}
                 >
-                    <TrackNextIcon />
+                    <DotsHorizontalIcon />
                 </IconButton>
             </Flex>
 
-            {/!* Right: Context *!/}
-            <Flex justify="end" align="end" gap="3">
-                <IconButton
-                    size="1"
-                    variant="ghost"
-                    onClick={() => navigate('/lyrics')}
+            {expanded && (
+                <Flex
+                    direction="column"
+                    gap="3"
+                    px="2"
+                    py="2"
+                    style={{ borderTop: '1px solid var(--gray-a6)' }}
                 >
-                    <MdQueueMusic />
-                </IconButton>
-            </Flex>
-        </Grid>
-    );*/
+                    <Flex align="center" justify="center" gap="2">
+                        <IconButton
+                            variant="ghost"
+                            radius="full"
+                            size="1"
+                            onClick={controls.previous}
+                        >
+                            <TrackPreviousIcon />
+                        </IconButton>
+
+                        <IconButton
+                            radius="full"
+                            size="2"
+                            onClick={isPlaying ? controls.pause : controls.play}
+                        >
+                            {isPlaying ? <PauseIcon /> : <PlayIcon />}
+                        </IconButton>
+
+                        <IconButton
+                            variant="ghost"
+                            radius="full"
+                            size="1"
+                            onClick={controls.next}
+                        >
+                            <TrackNextIcon />
+                        </IconButton>
+                    </Flex>
+
+                    <Flex align="center" gap="3">
+                        <IconButton onClick={controls.toggleMute}>
+                            {muted ? <SpeakerOffIcon /> : <SpeakerLoudIcon />}
+                        </IconButton>
+
+                        <Slider
+                            value={[muted ? 0 : volumePercent]}
+                            onValueChange={(v) => controls.setVolume(v[0] ?? 0)}
+                            min={0}
+                            max={100}
+                            step={1}
+                            className="w-full"
+                        />
+                    </Flex>
+
+                    <Flex align="center" justify="center" gap="3">
+                        <IconButton onClick={controls.toggleShuffle}>
+                            <ShuffleIcon />
+                        </IconButton>
+
+                        <IconButton onClick={controls.toggleRepeat}>
+                            <LoopIcon
+                                style={{
+                                    opacity: repeatMode === 'off' ? 0.5 : 1,
+                                }}
+                            />
+                        </IconButton>
+                    </Flex>
+                </Flex>
+            )}
+        </Flex>
+    );
 }
