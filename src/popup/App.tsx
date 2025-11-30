@@ -40,25 +40,27 @@ export default function App() {
             heightOverride={heightOverride}
         >
             <Flex
-                align="center"
-                gap="2"
-                justify="end"
+                direction="column"
                 style={{
                     background: 'var(--color-panel-solid)',
                     borderBottom: '2px solid var(--gray-a6)',
                 }}
             >
-                <div>
+                {/* Top row */}
+                <Flex align="center" gap="2" justify="between">
                     <SimpleBar expanded={expanded} setExpanded={setExpanded} />
+
                     <Avatar
                         fallback={<PersonIcon />}
                         radius="full"
                         src={image}
-                        className={'cursor-pointer'}
+                        className="cursor-pointer"
                         onClick={() => navigate('/profile')}
                     />
-                </div>
-                <div>{expanded && <AdvancedBar />}</div>
+                </Flex>
+
+                {/* Advanced bar row */}
+                {expanded && <AdvancedBar />}
             </Flex>
             <Routes>
                 <Route

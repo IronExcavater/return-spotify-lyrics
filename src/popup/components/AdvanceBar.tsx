@@ -1,76 +1,41 @@
-import { Flex, IconButton, Slider } from '@radix-ui/themes';
-import {
-    PauseIcon,
-    PlayIcon,
-    TrackNextIcon,
-    TrackPreviousIcon,
-    SpeakerOffIcon,
-    SpeakerLoudIcon,
-    ShuffleIcon,
-    LoopIcon,
-} from '@radix-ui/react-icons';
+import { Flex } from '@radix-ui/themes';
+import { ShuffleIcon, LoopIcon } from '@radix-ui/react-icons';
 import { usePlayer } from '../hooks/usePlayer';
+import { IconToggle } from './IconToggle';
 
 export function AdvancedBar() {
-    const { isPlaying, volumePercent, muted, isShuffle, repeatMode, controls } =
-        usePlayer();
+    const { isShuffle, repeatMode, controls } = usePlayer();
+
+    const repeatActive = repeatMode !== 'off';
 
     return (
-        <Flex direction="column" gap="3" px="2" py="2" className="w-[200px]">
-            <Flex align="center" justify="center" gap="2">
-                <IconButton
-                    variant="ghost"
-                    size="1"
-                    radius="full"
-                    onClick={controls.previous}
-                >
-                    <TrackPreviousIcon />
-                </IconButton>
+        <Flex
+            align="center"
+            justify="end"
+            gap="3"
+            px="3"
+            py="2"
+            className="border-t border-[var(--gray-a6)]"
+        >
+            <IconToggle
+                variant="ghost"
+                radius="full"
+                size="1"
+                isPressed={isShuffle}
+                onClick={controls.toggleShuffle}
+            >
+                <ShuffleIcon />
+            </IconToggle>
 
-                <IconButton
-                    size="2"
-                    radius="full"
-                    onClick={isPlaying ? controls.pause : controls.play}
-                >
-                    {isPlaying ? <PauseIcon /> : <PlayIcon />}
-                </IconButton>
-
-                <IconButton
-                    variant="ghost"
-                    size="1"
-                    radius="full"
-                    onClick={controls.next}
-                >
-                    <TrackNextIcon />
-                </IconButton>
-            </Flex>
-
-            <Flex align="center" gap="3">
-                <IconButton onClick={controls.toggleMute}>
-                    {muted ? <SpeakerOffIcon /> : <SpeakerLoudIcon />}
-                </IconButton>
-
-                <Slider
-                    value={[muted ? 0 : volumePercent]}
-                    onValueChange={(v) => controls.setVolume(v[0] ?? 0)}
-                    min={0}
-                    max={100}
-                    step={1}
-                    className="w-full"
-                />
-            </Flex>
-
-            <Flex align="center" justify="center" gap="3">
-                <IconButton onClick={controls.toggleShuffle}>
-                    <ShuffleIcon style={{ opacity: isShuffle ? 1 : 0.5 }} />
-                </IconButton>
-
-                <IconButton onClick={controls.toggleRepeat}>
-                    <LoopIcon
-                        style={{ opacity: repeatMode !== 'off' ? 1 : 0.5 }}
-                    />
-                </IconButton>
-            </Flex>
+            <IconToggle
+                variant="ghost"
+                radius="full"
+                size="1"
+                isPressed={repeatActive}
+                onClick={controls.toggleRepeat}
+            >
+                <LoopIcon />
+            </IconToggle>
         </Flex>
     );
 }
