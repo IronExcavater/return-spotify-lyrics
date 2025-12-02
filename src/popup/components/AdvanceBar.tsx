@@ -12,9 +12,8 @@ export function AdvancedBar() {
         <Flex
             align="center"
             justify="end"
-            gap="3"
-            px="3"
-            py="2"
+            gap="1"
+            pt="1"
             className="border-t border-[var(--gray-a6)]"
         >
             <IconToggle
