@@ -33,16 +33,21 @@ export function SimpleBar({ expanded, setExpanded }: Props) {
     const { profile } = useAuth();
     const navigate = useNavigate();
 
+    const loading = playback === undefined;
+
     const profileImage = profile?.images?.[0]?.url;
 
     const track = asTrack(playback?.item);
     const episode = asEpisode(playback?.item);
 
-    const title = playback?.item?.name ?? '';
+    const title = playback?.item?.name ?? 'Placeholder';
     const link = playback?.item?.external_urls?.spotify;
 
     const artists: (SimplifiedArtist | SimplifiedShow)[] =
-        track?.artists ?? (episode?.show ? [episode.show] : []);
+        track?.artists ??
+        (episode?.show
+            ? [episode.show]
+            : [{ name: 'Placeholder' } as SimplifiedArtist]);
 
     const albumImage =
         track?.album?.images?.[0]?.url ?? episode?.images?.[0]?.url;
@@ -60,6 +65,9 @@ export function SimpleBar({ expanded, setExpanded }: Props) {
                         fallback: <MdMusicNote />,
                         radius: 'small',
                         onClick: isPlaying ? controls.pause : controls.play,
+                        size: '4',
+                    }}
+                    button={{
                         size: '4',
                     }}
                 >
