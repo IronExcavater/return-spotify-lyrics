@@ -64,14 +64,18 @@ export function SimpleBar({ expanded, setExpanded }: Props) {
                         src: albumImage,
                         fallback: <MdMusicNote />,
                         radius: 'small',
-                        onClick: isPlaying ? controls.pause : controls.play,
                         size: '4',
                     }}
-                    button={{
-                        size: '4',
-                    }}
+                    aria-label={isPlaying ? 'Pause playback' : 'Start playback'}
+                    onClick={isPlaying ? controls.pause : controls.play}
+                    disabled={loading}
+                    className="group p-0"
                 >
-                    {isPlaying ? <PauseIcon /> : <PlayIcon />}
+                    {albumImage && (
+                        <div className="opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+                            {isPlaying ? <PauseIcon /> : <PlayIcon />}
+                        </div>
+                    )}
                 </AvatarButton>
 
                 <Flex direction="column" flexGrow="1">

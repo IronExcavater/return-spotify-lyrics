@@ -1,0 +1,26 @@
+.radix-themes {
+    height: 100%;
+    min-height: 0 !important;
+}
+
+.rt-IconButton:where(.rt-variant-ghost) {
+    margin: 0;
+    padding: 0;
+    height: var(--base-button-height);
+    width: var(--base-button-height);
+}
+
+.rt-AvatarRoot {
+    position: relative;
+}
+
+.rt-AvatarOverlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    border-radius: inherit;
+    z-index: 1;
+}

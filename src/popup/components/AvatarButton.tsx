@@ -7,39 +7,30 @@ import {
 import clsx from 'clsx';
 import { ReactNode } from 'react';
 
-interface AvatarButtonProps {
+interface AvatarButtonProps extends Omit<IconButtonProps, 'asChild'> {
     avatar: AvatarProps;
-    button?: IconButtonProps;
     children?: ReactNode;
 }
 
 export function AvatarButton({
     avatar,
-    button = {},
     children,
+    className,
+    disabled,
+    ...button
 }: AvatarButtonProps) {
-    const isEnabled = !button.disabled;
+    const isEnabled = !disabled;
 
     return (
         <IconButton
             {...button}
+            disabled={disabled}
             asChild
-            className={clsx(isEnabled && 'cursor-pointer', button.className)}
+            className={clsx(isEnabled && 'cursor-pointer', className)}
         >
-            <div className="relative inline-flex items-center justify-center">
-                <Avatar
-                    {...avatar}
-                    className={clsx(
-                        'pointer-events-none block',
-                        avatar.className
-                    )}
-                />
-                {children && (
-                    <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                        {children}
-                    </div>
-                )}
-            </div>
+            <Avatar {...avatar} className={clsx('block', avatar.className)}>
+                {children}
+            </Avatar>
         </IconButton>
     );
 }
