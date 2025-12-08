@@ -9,8 +9,6 @@ import {
 } from '@radix-ui/themes';
 import { PersonIcon } from '@radix-ui/react-icons';
 import { User } from '@spotify/web-api-ts-sdk';
-import { Marquee } from '../components/Marquee';
-import { Fade } from '../components/Fade';
 
 interface Props {
     profile: User | undefined;
@@ -28,7 +26,7 @@ export function ProfileView({ profile, onLogout }: Props) {
 
     return (
         <Flex m="3" flexGrow="1" justify="center">
-            <Card size="1">
+            <Card size="1" className="flex-shrink-0">
                 <Flex direction="column" gap="2">
                     {/* Avatar + display name */}
                     <Flex

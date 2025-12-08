@@ -40,7 +40,8 @@ export function SimpleBar({ expanded, setExpanded }: Props) {
     const track = asTrack(playback?.item);
     const episode = asEpisode(playback?.item);
 
-    const title = playback?.item?.name ?? 'Placeholder';
+    const title =
+        playback?.item?.name ?? 'Placeholder 10xDeveloper React Native';
     const link = playback?.item?.external_urls?.spotify;
 
     const artists: (SimplifiedArtist | SimplifiedShow)[] =
@@ -78,11 +79,11 @@ export function SimpleBar({ expanded, setExpanded }: Props) {
                     )}
                 </AvatarButton>
 
-                <Flex direction="column" flexGrow="1">
+                <Flex direction="column" flexGrow="1" className="min-w-0">
                     <Flex direction="row" flexGrow="1">
                         {/* Title */}
                         <Fade className="grow">
-                            <Marquee mode="bounce">
+                            <Marquee mode="bounce" className="mx-1">
                                 <ExternalLink
                                     noAccent
                                     size="3"
@@ -107,7 +108,7 @@ export function SimpleBar({ expanded, setExpanded }: Props) {
                     <Flex direction="row" flexGrow="1">
                         {/* Artists */}
                         <Fade className="grow">
-                            <Marquee mode="right">
+                            <Marquee mode="right" className="mx-1">
                                 {artists.map((artist) => {
                                     const label =
                                         'publisher' in artist

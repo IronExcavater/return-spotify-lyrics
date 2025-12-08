@@ -21,7 +21,6 @@ export function Marquee({
 
     const [duration, setDuration] = useState(0);
     const [hidden, setHidden] = useState(0);
-    const [buffer, setBuffer] = useState(0);
     const [scroll, setScroll] = useState(false);
 
     useEffect(() => {
@@ -34,8 +33,6 @@ export function Marquee({
 
             const hidden = Math.max(0, originalW - containerW);
             setHidden(hidden);
-
-            setBuffer(originalW * 0.01);
 
             setDuration(containerW / speed);
         };
@@ -52,7 +49,7 @@ export function Marquee({
         <div
             ref={containerRef}
             className={clsx(
-                'flex overflow-hidden whitespace-nowrap',
+                'flex flex-shrink overflow-hidden whitespace-nowrap',
                 className
             )}
         >
@@ -63,17 +60,17 @@ export function Marquee({
                 )}
                 style={
                     {
-                        '--marquee-distance': `${-hidden - buffer}px`,
+                        '--marquee-distance': `${-hidden}px`,
                         animationDuration: `${duration}s`,
                     } as CSSProperties
                 }
             >
-                <div ref={originalRef} className="inline-block">
+                <div ref={originalRef} className="relative">
                     {children}
                 </div>
                 <div
                     className={clsx(
-                        'mx-3 inline-block',
+                        'absolute top-0 left-full mx-3',
                         (!scroll || mode === 'bounce') && 'invisible'
                     )}
                 >
