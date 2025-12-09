@@ -1,11 +1,9 @@
 // src/components/SeekBar.tsx
 import { useCallback, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
+import { usePlayer } from '../hooks/usePlayer';
 
 interface Props {
-    currentMs: number;
-    durationMs: number;
-    onSeek?: (ms: number) => void;
     className?: string;
 }
 
@@ -20,20 +18,17 @@ function formatTime(ms: number) {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 }
 
-export function SeekControl({
-    currentMs,
-    durationMs,
-    onSeek,
-    className,
-}: Props) {
+export function SeekControl({ className }: Props) {
+    const { progressMs, durationMs, controls } = usePlayer();
+
     const trackRef = useRef<HTMLDivElement | null>(null);
     const [hoverRatio, setHoverRatio] = useState<number | null>(null);
     const [dragRatio, setDragRatio] = useState<number | null>(null);
 
     const progressRatio = useMemo(() => {
         if (durationMs <= 0) return 0;
-        return clamp01(currentMs / durationMs);
-    }, [currentMs, durationMs]);
+        return clamp01(progressMs / durationMs);
+    }, [progressMs, durationMs]);
 
     const effectiveRatio = dragRatio ?? progressRatio;
 
@@ -65,9 +60,7 @@ export function SeekControl({
             document.removeEventListener('pointerup', handleUp);
 
             const r = updateFromEvent(ev.clientX);
-            if (onSeek && durationMs > 0) {
-                onSeek(r * durationMs);
-            }
+            if (durationMs > 0) void controls.seek(r * durationMs);
             setDragRatio(null);
         };
 
@@ -127,7 +120,7 @@ export function SeekControl({
 
             {/* Current / total time, bottom-right */}
             <div className="text-gray-11 mt-1 text-right font-mono text-[11px]">
-                {formatTime(currentMs)} / {formatTime(durationMs)}
+                {formatTime(progressMs)} / {formatTime(durationMs)}
             </div>
         </div>
     );

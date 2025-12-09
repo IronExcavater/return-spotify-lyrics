@@ -6,6 +6,7 @@ import {
     SpeakerLoudIcon,
 } from '@radix-ui/react-icons';
 import { usePlayer } from '../hooks/usePlayer';
+import clsx from 'clsx';
 
 interface Props {
     className?: string;
@@ -26,8 +27,11 @@ export function VolumeControl({ className }: Props) {
     return (
         <Flex
             align="center"
-            gap="2"
-            className={['group relative', className].filter(Boolean).join(' ')}
+            gap="1"
+            className={clsx(
+                'group grow-0 transition-all duration-150 ease-out hover:grow',
+                className
+            )}
         >
             <IconButton
                 variant="ghost"
@@ -38,10 +42,10 @@ export function VolumeControl({ className }: Props) {
                 {getVolumeIcon(volumePercent, muted)}
             </IconButton>
 
-            {/* Hover / focus–reveal slider */}
             <Slider
                 aria-label="Volume"
-                className="no-thumb volume-slider pointer-events-none w-0 opacity-0 transition-all duration-150 ease-out group-focus-within:pointer-events-auto group-focus-within:w-24 group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:w-24 group-hover:opacity-100"
+                size="1"
+                className="opacity-0 group-hover:opacity-100"
                 value={[currentVolume]}
                 onValueChange={(v) => controls.setVolume(v[0] ?? 0)}
                 min={0}

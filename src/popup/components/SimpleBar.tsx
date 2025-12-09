@@ -1,4 +1,4 @@
-import { Avatar, Flex, IconButton } from '@radix-ui/themes';
+import { Avatar, Flex, IconButton, Skeleton } from '@radix-ui/themes';
 import {
     PauseIcon,
     PlayIcon,
@@ -40,8 +40,7 @@ export function SimpleBar({ expanded, setExpanded }: Props) {
     const track = asTrack(playback?.item);
     const episode = asEpisode(playback?.item);
 
-    const title =
-        playback?.item?.name ?? 'Placeholder 10xDeveloper React Native';
+    const title = playback?.item?.name ?? 'Placeholder';
     const link = playback?.item?.external_urls?.spotify;
 
     const artists: (SimplifiedArtist | SimplifiedShow)[] =
@@ -84,14 +83,16 @@ export function SimpleBar({ expanded, setExpanded }: Props) {
                         {/* Title */}
                         <Fade className="grow">
                             <Marquee mode="bounce" className="mx-1">
-                                <ExternalLink
-                                    noAccent
-                                    size="3"
-                                    weight="bold"
-                                    href={link}
-                                >
-                                    {title}
-                                </ExternalLink>
+                                <Skeleton loading={loading}>
+                                    <ExternalLink
+                                        noAccent
+                                        size="3"
+                                        weight="bold"
+                                        href={link}
+                                    >
+                                        {title}
+                                    </ExternalLink>
+                                </Skeleton>
                             </Marquee>
                         </Fade>
 
@@ -116,16 +117,19 @@ export function SimpleBar({ expanded, setExpanded }: Props) {
                                             : artist.name;
 
                                     return (
-                                        <ExternalLink
-                                            key={artist.id ?? label}
-                                            noAccent
-                                            size="2"
-                                            href={
-                                                artist?.external_urls?.spotify
-                                            }
-                                        >
-                                            {label}
-                                        </ExternalLink>
+                                        <Skeleton loading={loading}>
+                                            <ExternalLink
+                                                key={artist.id ?? label}
+                                                noAccent
+                                                size="2"
+                                                href={
+                                                    artist?.external_urls
+                                                        ?.spotify
+                                                }
+                                            >
+                                                {label}
+                                            </ExternalLink>
+                                        </Skeleton>
                                     );
                                 })}
                             </Marquee>
@@ -163,12 +167,7 @@ export function SimpleBar({ expanded, setExpanded }: Props) {
             </Flex>
             <Flex direction="row" align="center" gap="1" flexGrow="1">
                 <VolumeControl />
-
-                <SeekControl
-                    currentMs={progressMs}
-                    durationMs={durationMs}
-                    onSeek={(ms) => controls.seek(ms)}
-                />
+                <SeekControl />
             </Flex>
         </Flex>
     );
