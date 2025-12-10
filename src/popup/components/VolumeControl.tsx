@@ -1,4 +1,4 @@
-import { Flex, IconButton, Slider } from '@radix-ui/themes';
+import { IconButton, Slider } from '@radix-ui/themes';
 import {
     SpeakerOffIcon,
     SpeakerQuietIcon,
@@ -25,11 +25,9 @@ export function VolumeControl({ className }: Props) {
     const currentVolume = muted ? 0 : volumePercent;
 
     return (
-        <Flex
-            align="center"
-            gap="1"
+        <div
             className={clsx(
-                'group grow-0 transition-all duration-150 ease-out hover:grow',
+                'group relative inline-flex items-center',
                 className
             )}
         >
@@ -38,20 +36,28 @@ export function VolumeControl({ className }: Props) {
                 radius="full"
                 size="1"
                 onClick={controls.toggleMute}
+                className="relative before:pointer-events-none before:absolute before:-inset-2 before:content-['']"
             >
                 {getVolumeIcon(volumePercent, muted)}
             </IconButton>
 
-            <Slider
-                aria-label="Volume"
-                size="1"
-                className="opacity-0 group-hover:opacity-100"
-                value={[currentVolume]}
-                onValueChange={(v) => controls.setVolume(v[0] ?? 0)}
-                min={0}
-                max={100}
-                step={1}
-            />
-        </Flex>
+            <div
+                className={clsx(
+                    'pointer-events-none absolute top-1/2 left-full z-10 -translate-y-1/2 items-center rounded-md px-1 py-3 opacity-0 transition-opacity duration-150 ease-out',
+                    'group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100'
+                )}
+            >
+                <Slider
+                    aria-label="Volume"
+                    size="1"
+                    className="min-w-[7rem]"
+                    value={[currentVolume]}
+                    onValueChange={(v) => controls.setVolume(v[0] ?? 0)}
+                    min={0}
+                    max={100}
+                    step={1}
+                />
+            </div>
+        </div>
     );
 }
