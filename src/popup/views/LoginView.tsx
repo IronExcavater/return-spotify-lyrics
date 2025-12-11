@@ -9,14 +9,6 @@ interface Props {
 export function LoginView({ onLogin }: Props) {
     return (
         <Flex m="3" flexGrow="1" justify="center" direction="column">
-            <Fade>
-                <Marquee>
-                    <Text>Hi</Text>
-                    <Text>Again</Text>
-                    <Text>Its Me</Text>
-                    <Text>Markiplier</Text>
-                </Marquee>
-            </Fade>
             <Card size="1">
                 <Flex direction="column" gap="2">
                     <Text size="5" weight="bold">

@@ -19,7 +19,7 @@ function getVolumeIcon(volumePercent: number, muted: boolean) {
     return <SpeakerLoudIcon />;
 }
 
-export function VolumeControl({ className }: Props) {
+export function SoundDial({ className }: Props) {
     const { volumePercent, muted, controls } = usePlayer();
 
     const currentVolume = muted ? 0 : volumePercent;
@@ -43,20 +43,27 @@ export function VolumeControl({ className }: Props) {
 
             <div
                 className={clsx(
-                    'pointer-events-none absolute top-1/2 left-full z-10 -translate-y-1/2 items-center rounded-md px-1 py-3 opacity-0 transition-opacity duration-150 ease-out',
-                    'group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100'
+                    'pointer-events-none absolute top-1/2 left-full z-1 -translate-y-1/2 items-center p-1',
+                    'group-focus-within:pointer-events-auto group-hover:pointer-events-auto'
                 )}
             >
-                <Slider
-                    aria-label="Volume"
-                    size="1"
-                    className="min-w-[7rem]"
-                    value={[currentVolume]}
-                    onValueChange={(v) => controls.setVolume(v[0] ?? 0)}
-                    min={0}
-                    max={100}
-                    step={1}
-                />
+                <div
+                    className={clsx(
+                        'rounded-full bg-black/60 p-2 opacity-0 backdrop-blur-xs transition-all duration-150 ease-out',
+                        'group-focus-within:opacity-100 group-hover:opacity-100'
+                    )}
+                >
+                    <Slider
+                        aria-label="Volume"
+                        size="1"
+                        className="min-w-[7rem]"
+                        value={[currentVolume]}
+                        onValueChange={(v) => controls.setVolume(v[0] ?? 0)}
+                        min={0}
+                        max={100}
+                        step={1}
+                    />
+                </div>
             </div>
         </div>
     );

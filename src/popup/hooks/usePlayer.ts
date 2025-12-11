@@ -2,17 +2,25 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { PlaybackState } from '@spotify/web-api-ts-sdk';
 import { sendSpotifyMessage } from '../../shared/messaging';
 
-export function usePlayer(pollMs?: number) {
+export function usePlayer(pollMs = 4000) {
     const [playback, setPlayback] = useState<PlaybackState | null | undefined>(
         undefined
     );
-    const lastUpdate = useRef<number | null>(null);
+    const [progressMs, setProgressMs] = useState(0);
+    const [durationMs, setDurationMs] = useState(0);
+    const baseProgress = useRef(0);
+    const lastSyncRef = useRef<number | null>(null);
+    const pendingEndSync = useRef(false);
 
     // Sync playback state
     const sync = useCallback(async () => {
         const state = await sendSpotifyMessage('getPlaybackState');
         setPlayback(state ?? null);
-        lastUpdate.current = Date.now();
+        const latestProgress = state?.progress_ms ?? 0;
+        baseProgress.current = latestProgress;
+        lastSyncRef.current = Date.now();
+        setProgressMs(latestProgress);
+        setDurationMs(state?.item?.duration_ms ?? 0);
     }, []);
 
     // Auto-sync every 5 seconds
@@ -25,8 +33,54 @@ export function usePlayer(pollMs?: number) {
     }, [sync, pollMs]);
 
     const isPlaying = playback?.is_playing ?? false;
-    const durationMs = playback?.item?.duration_ms ?? 0;
-    const progressMs = playback?.progress_ms ?? 0;
+
+    useEffect(() => {
+        const latestProgress = playback?.progress_ms ?? 0;
+        baseProgress.current = latestProgress;
+        lastSyncRef.current = Date.now();
+        setProgressMs(latestProgress);
+        setDurationMs(playback?.item?.duration_ms ?? 0);
+    }, [playback?.progress_ms, playback?.item?.id]);
+
+    useEffect(() => {
+        let frame: number;
+        const tick = () => {
+            if (durationMs > 0) {
+                const elapsed =
+                    isPlaying && lastSyncRef.current
+                        ? Date.now() - lastSyncRef.current
+                        : 0;
+                const next = Math.min(
+                    durationMs,
+                    baseProgress.current + elapsed
+                );
+                setProgressMs((prev) =>
+                    Math.abs(prev - next) > 16 ? next : prev
+                );
+            }
+            frame = requestAnimationFrame(tick);
+        };
+
+        frame = requestAnimationFrame(tick);
+        return () => cancelAnimationFrame(frame);
+    }, [durationMs, isPlaying]);
+
+    useEffect(() => {
+        if (!isPlaying || durationMs <= 0) {
+            pendingEndSync.current = false;
+            return;
+        }
+
+        const remaining = durationMs - progressMs;
+        if (remaining <= 400 && !pendingEndSync.current) {
+            pendingEndSync.current = true;
+            void sync().finally(() => {
+                pendingEndSync.current = false;
+            });
+        } else if (remaining > 1000) {
+            pendingEndSync.current = false;
+        }
+    }, [durationMs, progressMs, isPlaying, sync]);
 
     const volumePercent = playback?.device?.volume_percent ?? 100;
     const muted = volumePercent === 0;
@@ -61,12 +115,20 @@ export function usePlayer(pollMs?: number) {
         );
     };
 
+    const refreshAfter = useCallback(
+        async (action: string, payload?: number | boolean) => {
+            await sendSpotifyMessage(action as any, payload as any);
+            void sync();
+        },
+        [sync]
+    );
+
     const controls = {
-        play: () => sendSpotifyMessage('startResumePlayback'),
-        pause: () => sendSpotifyMessage('pausePlayback'),
-        next: () => sendSpotifyMessage('skipToNext'),
-        previous: () => sendSpotifyMessage('skipToPrevious'),
-        seek: (ms: number) => sendSpotifyMessage('seekToPosition', ms),
+        play: () => refreshAfter('startResumePlayback'),
+        pause: () => refreshAfter('pausePlayback'),
+        next: () => refreshAfter('skipToNext'),
+        previous: () => refreshAfter('skipToPrevious'),
+        seek: (ms: number) => refreshAfter('seekToPosition', ms),
         setVolume,
         toggleMute,
         toggleShuffle,
