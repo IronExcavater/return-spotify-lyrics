@@ -1,13 +1,26 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Msg, sendMessage, sendSpotifyMessage } from '../../shared/messaging';
 import { UserProfile } from '@spotify/web-api-ts-sdk';
 import { getFromStorage, setInStorage } from '../../shared/storage';
 
 const SPOTIFY_USER_KEY = 'spotifyUser';
+const SPOTIFY_CONNECTION_KEY = 'spotifyConnectionMeta';
+
+export interface SpotifyConnectionMeta {
+    userId: string;
+    connectedAt: number;
+    lastActiveAt: number;
+    sessionCount: number;
+}
 
 export function useAuth() {
     const [authed, setAuthed] = useState<boolean | undefined>(undefined);
     const [user, setUser] = useState<UserProfile | undefined>(undefined);
+    const [connection, setConnection] = useState<
+        SpotifyConnectionMeta | undefined
+    >(undefined);
+    const connectionRef = useRef<SpotifyConnectionMeta | undefined>(undefined);
+    const sessionActiveRef = useRef(false);
 
     const sync = () => {
         sendSpotifyMessage('currentUser').then((resp) => {
@@ -15,6 +28,34 @@ export function useAuth() {
             setAuthed(isAuthed);
             setUser(resp);
             void setInStorage<UserProfile>(SPOTIFY_USER_KEY, resp);
+
+            if (resp) {
+                const prev = connectionRef.current;
+                const sameUser = prev?.userId === resp.id;
+                const now = Date.now();
+                const baseSessions = sameUser ? (prev?.sessionCount ?? 0) : 0;
+                const nextSessions = Math.max(
+                    1,
+                    !sessionActiveRef.current || !sameUser
+                        ? baseSessions + 1
+                        : baseSessions
+                );
+
+                const nextMeta: SpotifyConnectionMeta = {
+                    userId: resp.id,
+                    connectedAt:
+                        sameUser && prev?.connectedAt ? prev.connectedAt : now,
+                    lastActiveAt: now,
+                    sessionCount: nextSessions,
+                };
+
+                connectionRef.current = nextMeta;
+                setConnection(nextMeta);
+                sessionActiveRef.current = true;
+                void setInStorage(SPOTIFY_CONNECTION_KEY, nextMeta);
+            } else {
+                sessionActiveRef.current = false;
+            }
         });
     };
 
@@ -44,8 +85,15 @@ export function useAuth() {
     // Initial auth sync
     useEffect(() => {
         getFromStorage<UserProfile>(SPOTIFY_USER_KEY, (user) => setUser(user));
+        getFromStorage<SpotifyConnectionMeta>(
+            SPOTIFY_CONNECTION_KEY,
+            (meta) => {
+                connectionRef.current = meta;
+                setConnection(meta);
+            }
+        );
         sync();
     }, []);
 
-    return { authed, profile: user, login, logout };
+    return { authed, profile: user, login, logout, connection };
 }

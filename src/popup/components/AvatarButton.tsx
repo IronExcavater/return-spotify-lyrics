@@ -28,6 +28,8 @@ export function AvatarButton({
             {...button}
             disabled={disabled}
             asChild
+            role="button"
+            tabIndex={0}
             className={clsx(isEnabled && 'cursor-pointer', className)}
         >
             <Avatar

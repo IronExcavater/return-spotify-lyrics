@@ -26,7 +26,7 @@ const NAV_EXPANDED_KEY = 'playbackExpanded';
 const LAST_ROUTE_KEY = 'lastNavRoute';
 
 export default function App() {
-    const { authed, profile, login, logout } = useAuth();
+    const { authed, profile, login, logout, connection } = useAuth();
     const { playback } = usePlayer();
     const navigate = useNavigate();
     const location = useLocation();
@@ -63,12 +63,14 @@ export default function App() {
         void setInStorage(LAST_ROUTE_KEY, path);
     }, [authed, location.pathname]);
 
+    const profileFallbackPath = hasPlayback ? '/' : '/home';
     const { isActive: isProfileActive, toggle: toggleProfileRoute } =
-        useRouteToggle('/profile');
+        useRouteToggle('/profile', { fallbackPath: profileFallbackPath });
     const showBar = authed === true;
+
     const widthSize = { min: 300, max: 600 };
     const heightSize = { min: showBar ? 300 : 200, max: 400 };
-    const heightOverride = showBar && isBlankRoute ? 0 : undefined;
+    const heightOverride = isBlankRoute ? 0 : undefined;
 
     const profileImage = profile?.images?.[0]?.url;
     const profileSlot = useMemo(
@@ -160,7 +162,11 @@ export default function App() {
                             when={authed == false && authed !== undefined}
                             redirectTo="/login"
                         >
-                            <ProfileView profile={profile} onLogout={logout} />
+                            <ProfileView
+                                profile={profile}
+                                onLogout={logout}
+                                connection={connection}
+                            />
                         </ProtectedLayout>
                     }
                 />

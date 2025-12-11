@@ -13,12 +13,11 @@ export function HomeBar({ profileSlot }: Props) {
     return (
         <Flex align="center" justify="between" gap="2">
             <Heading
-                as="h1"
                 size="5"
                 role="button"
                 tabIndex={0}
                 onClick={() => navigate('/home')}
-                className="flex cursor-pointer items-center gap-2 px-3 py-1 text-left font-semibold select-none"
+                className="flex cursor-pointer items-center gap-2 py-1 select-none"
             >
                 <HomeIcon width="20" height="20" />
                 <span>Return Spotify Lyrics</span>
