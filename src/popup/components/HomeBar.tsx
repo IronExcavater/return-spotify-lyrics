@@ -4,17 +4,19 @@ import {
     HomeIcon,
     MagnifyingGlassIcon,
 } from '@radix-ui/react-icons';
-import { RefCallback } from 'react';
+import { ReactNode } from 'react';
 
 interface Props {
-    profileSlotRef?: RefCallback<HTMLDivElement>;
+    profileSlot?: ReactNode;
+    navSlot?: ReactNode;
     searchQuery: string;
     onSearchChange: (query: string) => void;
     onClearSearch: () => void;
 }
 
 export function HomeBar({
-    profileSlotRef,
+    profileSlot,
+    navSlot,
     searchQuery,
     onSearchChange,
     onClearSearch,
@@ -22,14 +24,14 @@ export function HomeBar({
     const hasQuery = searchQuery.trim().length > 0;
 
     return (
-        <Flex align="center" gap="2" className="w-full px-3 py-2">
+        <Flex align="center" gap="2" p="2" flexGrow="1">
             <TextField.Root
                 value={searchQuery}
                 onChange={(event) => onSearchChange(event.target.value)}
                 size="2"
                 radius="full"
                 placeholder="Search controls or tweaks"
-                className="flex-1 bg-[var(--gray-a3)] transition-colors duration-150 focus-within:bg-[var(--gray-a4)]"
+                className="flex grow bg-[var(--gray-a3)] transition-colors duration-150 focus-within:bg-[var(--gray-a4)]"
             >
                 <TextField.Slot
                     side="left"
@@ -60,11 +62,10 @@ export function HomeBar({
                     </TextField.Slot>
                 )}
             </TextField.Root>
-            <div
-                ref={profileSlotRef}
-                className="flex items-center"
-                style={{ minHeight: 'var(--space-7)' }}
-            />
+
+            {profileSlot}
+
+            {navSlot}
         </Flex>
     );
 }

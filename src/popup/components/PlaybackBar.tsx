@@ -16,7 +16,7 @@ import {
 } from '@radix-ui/react-icons';
 import { MdMusicNote } from 'react-icons/md';
 import { SimplifiedArtist, SimplifiedShow } from '@spotify/web-api-ts-sdk';
-import { RefCallback } from 'react';
+import { ReactNode, useMemo, useState } from 'react';
 import clsx from 'clsx';
 
 import { usePlayer } from '../hooks/usePlayer';
@@ -32,16 +32,16 @@ import { TimelineRail } from './TimelineRail';
 import { IconToggle } from './IconToggle';
 
 interface Props {
-    expanded: boolean;
-    setExpanded: (expanded: boolean) => void;
-    profileSlotRef?: RefCallback<HTMLDivElement>;
+    profileSlot?: ReactNode;
+    navSlot?: ReactNode;
 }
 
-export function PlaybackBar({ expanded, setExpanded, profileSlotRef }: Props) {
+export function PlaybackBar({ profileSlot, navSlot }: Props) {
     const { playback, isPlaying, controls, isShuffle, repeatMode } =
         usePlayer();
     const { isActive: isLyricsRoute, toggle: toggleLyricsRoute } =
         useRouteToggle('/lyrics');
+    const [expanded, setExpanded] = useState(false);
 
     const loading = playback === undefined;
 
@@ -51,26 +51,31 @@ export function PlaybackBar({ expanded, setExpanded, profileSlotRef }: Props) {
     const title = playback?.item?.name ?? 'Placeholder';
     const link = playback?.item?.external_urls?.spotify;
 
-    const artists: (SimplifiedArtist | SimplifiedShow)[] =
-        track?.artists ??
-        (episode?.show
-            ? [episode.show]
-            : [{ name: 'Placeholder' } as SimplifiedArtist]);
+    const artists: (SimplifiedArtist | SimplifiedShow)[] = useMemo(() => {
+        if (track?.artists) return track.artists;
+        if (episode?.show) return [episode.show];
+        return [{ name: 'Placeholder' } as SimplifiedArtist];
+    }, [track?.artists, episode?.show]);
 
     const albumImage =
         track?.album?.images?.[0]?.url ?? episode?.images?.[0]?.url;
-    const repeatActive = repeatMode !== 'off';
     const heroImage =
         track?.album?.images?.[0]?.url ??
         episode?.show?.images?.[0]?.url ??
         episode?.images?.[0]?.url;
+    const repeatActive = repeatMode !== 'off';
+
+    const handlePlayPause = () => {
+        if (isPlaying) void controls.pause();
+        else void controls.play();
+    };
 
     return (
         <Flex
             direction="column"
-            gap="0"
+            gap="2"
             flexGrow="1"
-            className={clsx('relative overflow-hidden text-white')}
+            className={clsx('overflow-hidden text-white')}
             style={
                 heroImage
                     ? {
@@ -84,11 +89,8 @@ export function PlaybackBar({ expanded, setExpanded, profileSlotRef }: Props) {
                       }
             }
         >
-            {heroImage && (
-                <div className="pointer-events-none absolute inset-0 bg-black/45" />
-            )}
-            <Flex direction="column" gap="1" p="3" className="relative z-10">
-                <Flex direction="row" align="center" gap="1" flexGrow="1">
+            <Flex direction="column" gap="1" p="2" flexGrow="1">
+                <Flex direction="row" align="center" gap="2" flexGrow="1">
                     {/* Album + pause/play */}
                     <AvatarButton
                         avatar={{
@@ -100,26 +102,22 @@ export function PlaybackBar({ expanded, setExpanded, profileSlotRef }: Props) {
                         aria-label={
                             isPlaying ? 'Pause playback' : 'Start playback'
                         }
-                        onClick={isPlaying ? controls.pause : controls.play}
+                        onClick={handlePlayPause}
                         disabled={loading}
-                        className="group"
+                        className="group p-0"
                     >
-                        {!loading && (
-                            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-black/60 text-white opacity-0 backdrop-blur-xs transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100">
+                        {albumImage && (
+                            <div className="opacity-0 transition-opacity duration-150 group-hover:opacity-100">
                                 {isPlaying ? <PauseIcon /> : <PlayIcon />}
                             </div>
                         )}
                     </AvatarButton>
 
-                    <Flex direction="column" flexGrow="1" className="min-w-0">
-                        <Flex direction="row" flexGrow="1">
+                    <Flex direction="column" flexGrow="1">
+                        <Flex align="center">
                             {/* Title */}
                             <Fade className="grow">
-                                <Marquee
-                                    mode="bounce"
-                                    className="mx-1"
-                                    gap={12}
-                                >
+                                <Marquee mode="bounce" className="mx-1">
                                     <Skeleton loading={loading}>
                                         <ExternalLink
                                             noAccent
@@ -133,22 +131,22 @@ export function PlaybackBar({ expanded, setExpanded, profileSlotRef }: Props) {
                                 </Marquee>
                             </Fade>
 
-                            <Flex align="center">
-                                <IconButton
-                                    variant="ghost"
-                                    radius="full"
-                                    size="1"
-                                    onClick={() => setExpanded(!expanded)}
-                                    aria-pressed={expanded}
-                                >
-                                    <DotsHorizontalIcon />
-                                </IconButton>
-                            </Flex>
+                            {/* Expand button */}
+                            <IconButton
+                                variant="ghost"
+                                radius="full"
+                                size="1"
+                                onClick={() => setExpanded(!expanded)}
+                                aria-pressed={expanded}
+                            >
+                                <DotsHorizontalIcon />
+                            </IconButton>
                         </Flex>
-                        <Flex direction="row" flexGrow="1">
+
+                        <Flex align="center" gap="1">
                             {/* Artists */}
                             <Fade className="grow">
-                                <Marquee mode="right" className="mx-1" gap={10}>
+                                <Marquee mode="right" className="mx-1">
                                     {artists.map((artist) => {
                                         const label =
                                             'publisher' in artist
@@ -157,8 +155,8 @@ export function PlaybackBar({ expanded, setExpanded, profileSlotRef }: Props) {
 
                                         return (
                                             <Skeleton
-                                                key={artist.id ?? label}
                                                 loading={loading}
+                                                key={artist.id ?? label}
                                             >
                                                 <ExternalLink
                                                     noAccent
@@ -182,6 +180,7 @@ export function PlaybackBar({ expanded, setExpanded, profileSlotRef }: Props) {
                                 radius="full"
                                 size="1"
                                 onClick={controls.previous}
+                                aria-label="Previous track"
                             >
                                 <TrackPreviousIcon />
                             </IconButton>
@@ -192,22 +191,23 @@ export function PlaybackBar({ expanded, setExpanded, profileSlotRef }: Props) {
                                 radius="full"
                                 size="1"
                                 onClick={controls.next}
+                                aria-label="Next track"
                             >
                                 <TrackNextIcon />
                             </IconButton>
                         </Flex>
                     </Flex>
 
-                    <div
-                        ref={profileSlotRef}
-                        className="flex items-center"
-                        style={{ minHeight: 'var(--space-7)' }}
-                    />
+                    {profileSlot}
+
+                    {navSlot}
                 </Flex>
-                <Flex direction="row" align="center" gap="2" flexGrow="1">
+
+                <Flex direction="row" align="center" gap="1">
                     <SoundDial />
                     <TimelineRail />
                 </Flex>
+
                 {expanded && (
                     <Flex direction="column" gap="1">
                         <Separator size="4" />
@@ -218,6 +218,7 @@ export function PlaybackBar({ expanded, setExpanded, profileSlotRef }: Props) {
                                 size="1"
                                 isPressed={isShuffle}
                                 onClick={controls.toggleShuffle}
+                                aria-label="Toggle shuffle"
                             >
                                 <ShuffleIcon />
                             </IconToggle>
@@ -228,6 +229,7 @@ export function PlaybackBar({ expanded, setExpanded, profileSlotRef }: Props) {
                                 size="1"
                                 isPressed={repeatActive}
                                 onClick={controls.toggleRepeat}
+                                aria-label="Toggle repeat"
                             >
                                 <LoopIcon />
                             </IconToggle>

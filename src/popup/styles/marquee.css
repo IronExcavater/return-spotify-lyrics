@@ -8,13 +8,13 @@
     }
 
     100% {
-        transform: translateX(-50%);
+        transform: translateX(var(--marquee-distance));
     }
 }
 
 @keyframes marquee-right {
     0% {
-        transform: translateX(-50%);
+        transform: translateX(var(--marquee-distance));
     }
 
     100% {

@@ -1,92 +1,29 @@
-import React, {
-    useCallback,
-    useEffect,
-    useMemo,
-    useRef,
-    useState,
-} from 'react';
-import { useAuth } from './hooks/useAuth';
-import { ProfileView } from './views/ProfileView';
+import { useMemo, useState } from 'react';
 import { Flex } from '@radix-ui/themes';
-import {
-    Navigate,
-    Route,
-    Routes,
-    useLocation,
-    useMatch,
-    useNavigate,
-} from 'react-router-dom';
-import { createPortal } from 'react-dom';
+import { Navigate, Route, Routes, useNavigate } from 'react-router-dom';
+import { PersonIcon } from '@radix-ui/react-icons';
+
+import { useAuth } from './hooks/useAuth';
+import { usePlayer } from './hooks/usePlayer';
+import { HomeView } from './views/HomeView';
 import { LyricsView } from './views/LyricsView';
 import { LoginView } from './views/LoginView';
-import { Resizer } from './Resizer';
+import { ProfileView } from './views/ProfileView';
 import { PlaybackBar } from './components/PlaybackBar';
 import { HomeBar } from './components/HomeBar';
-import { AvatarButton } from './components/AvatarButton';
-import { PersonIcon } from '@radix-ui/react-icons';
-import { usePlayer } from './hooks/usePlayer';
-import { useRouteToggle } from './hooks/useRouteToggle';
-import { HomeView } from './views/HomeView';
-import { getFromStorage, setInStorage } from '../shared/storage';
 import { NavBar } from './components/NavBar';
-
-const NAV_EXPANDED_KEY = 'playbackExpanded';
-const LAST_ROUTE_KEY = 'lastNavRoute';
+import { Resizer } from './Resizer';
+import { AvatarButton } from './components/AvatarButton';
 
 export default function App() {
-    const { authed, profile, login, logout } = useAuth();
+    const { profile, login, logout } = useAuth();
     const { playback } = usePlayer();
     const navigate = useNavigate();
-    const location = useLocation();
-    const isBlankRoute = !!useMatch('/');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [activeBar, setActiveBar] = useState<'home' | 'playback'>('home');
 
-    const [expanded, setExpanded] = useState(false);
-    const [homeSearchQuery, setHomeSearchQuery] = useState('');
-    const [barOverride, setBarOverride] = useState<
-        'home' | 'playback' | undefined
-    >(undefined);
-    const hasPlayback = playback?.item != null;
-    const restoredRouteRef = useRef(false);
-    const [profileSlotAnchor, setProfileSlotAnchor] =
-        useState<HTMLDivElement | null>(null);
-    const profileSlotAnchors = useRef<{
-        home: HTMLDivElement | null;
-        playback: HTMLDivElement | null;
-    }>({ home: null, playback: null });
-
-    useEffect(() => {
-        getFromStorage<boolean>(NAV_EXPANDED_KEY, (stored) => {
-            if (typeof stored === 'boolean') setExpanded(stored);
-        });
-    }, []);
-
-    useEffect(() => {
-        void setInStorage(NAV_EXPANDED_KEY, expanded);
-    }, [expanded]);
-
-    useEffect(() => {
-        if (authed !== true || restoredRouteRef.current) return;
-        getFromStorage<string>(LAST_ROUTE_KEY, (stored) => {
-            if (stored && stored !== location.pathname) {
-                navigate(stored, { replace: true });
-            }
-            restoredRouteRef.current = true;
-        });
-    }, [authed, location.pathname, navigate]);
-
-    useEffect(() => {
-        if (authed !== true) return;
-        const path = location.pathname;
-        if (path === '/login') return;
-        void setInStorage(LAST_ROUTE_KEY, path);
-    }, [authed, location.pathname]);
-
-    const { isActive: isProfileActive, toggle: toggleProfileRoute } =
-        useRouteToggle('/profile');
-    const showBar = authed === true;
-    const widthSize = { min: 300, max: 600 };
-    const heightSize = { min: showBar ? 300 : 200, max: 400 };
-    const heightOverride = showBar && isBlankRoute ? 0 : undefined;
+    const widthSize = { min: 320, max: 640 };
+    const heightSize = { min: 280, max: 480 };
 
     const profileImage = profile?.images?.[0]?.url;
     const profileSlot = useMemo(
@@ -100,187 +37,69 @@ export default function App() {
                 }}
                 variant="ghost"
                 size="2"
-                active={isProfileActive}
                 aria-label="Open profile"
-                onClick={toggleProfileRoute}
+                onClick={() => navigate('/profile')}
             />
         ),
-        [isProfileActive, profileImage, toggleProfileRoute]
+        [navigate, profileImage]
     );
 
-    const defaultBar = hasPlayback ? 'playback' : 'home';
-    const activeBar = barOverride ?? defaultBar;
-    const isPlaybackBarActive = activeBar === 'playback';
-    const isHomeBarActive = activeBar === 'home';
-
-    useEffect(() => {
-        const anchor =
-            activeBar === 'home'
-                ? profileSlotAnchors.current.home
-                : profileSlotAnchors.current.playback;
-        setProfileSlotAnchor(anchor ?? null);
-    }, [activeBar]);
-
-    const registerPlaybackSlot = useCallback(
-        (node: HTMLDivElement | null) => {
-            profileSlotAnchors.current.playback = node;
-            if (isPlaybackBarActive) {
-                setProfileSlotAnchor(node);
-            }
-        },
-        [isPlaybackBarActive]
+    const navSlot = useMemo(
+        () => (
+            <NavBar
+                active={activeBar}
+                canShowPlayback
+                onShowHome={() => setActiveBar('home')}
+                onShowPlayback={() => setActiveBar('playback')}
+            />
+        ),
+        [activeBar]
     );
-
-    const registerHomeSlot = useCallback(
-        (node: HTMLDivElement | null) => {
-            profileSlotAnchors.current.home = node;
-            if (isHomeBarActive) {
-                setProfileSlotAnchor(node);
-            }
-        },
-        [isHomeBarActive]
-    );
-
-    const profileSlotPortal =
-        profileSlotAnchor != null
-            ? createPortal(profileSlot, profileSlotAnchor)
-            : null;
-
-    const showPlaybackBar = () => {
-        if (!hasPlayback) return;
-        setBarOverride('playback');
-    };
-
-    const showHomeBar = () => {
-        setBarOverride('home');
-    };
 
     return (
-        <Resizer
-            widthSize={widthSize}
-            heightSize={heightSize}
-            heightOverride={heightOverride}
-        >
-            {profileSlotPortal}
-            {/* Playback and navigation bar */}
-            {showBar && (
-                <Flex
-                    direction="column"
-                    style={{
-                        background: 'var(--color-panel-solid)',
-                        borderBottom: '2px solid var(--gray-a6)',
-                    }}
-                >
-                    <NavBar
-                        active={activeBar}
-                        canShowPlayback={hasPlayback}
-                        onShowHome={showHomeBar}
-                        onShowPlayback={showPlaybackBar}
-                    />
-                    <div
-                        style={{
-                            display: isPlaybackBarActive ? 'block' : 'none',
-                            width: '100%',
-                        }}
-                    >
+        <Resizer widthSize={widthSize} heightSize={heightSize}>
+            <Flex direction="column">
+                <Flex direction="row">
+                    {activeBar === 'playback' && (
                         <PlaybackBar
-                            expanded={expanded}
-                            setExpanded={setExpanded}
-                            profileSlotRef={registerPlaybackSlot}
+                            profileSlot={profileSlot}
+                            navSlot={navSlot}
                         />
-                    </div>
-                    <div
-                        style={{
-                            display: isHomeBarActive ? 'block' : 'none',
-                            width: '100%',
-                        }}
-                    >
+                    )}
+                    {activeBar === 'home' && (
                         <HomeBar
-                            profileSlotRef={registerHomeSlot}
-                            searchQuery={homeSearchQuery}
-                            onSearchChange={setHomeSearchQuery}
-                            onClearSearch={() => setHomeSearchQuery('')}
+                            profileSlot={profileSlot}
+                            navSlot={navSlot}
+                            searchQuery={searchQuery}
+                            onSearchChange={setSearchQuery}
+                            onClearSearch={() => setSearchQuery('')}
                         />
-                    </div>
+                    )}
                 </Flex>
-            )}
-            <Routes>
-                <Route
-                    path="/"
-                    element={
-                        <ProtectedLayout
-                            when={authed == false && authed !== undefined}
-                            redirectTo="/login"
-                        >
-                            <></>
-                        </ProtectedLayout>
-                    }
-                />
-                <Route
-                    path="/home"
-                    element={
-                        <ProtectedLayout
-                            when={authed == false && authed !== undefined}
-                            redirectTo="/login"
-                        >
-                            <HomeView searchQuery={homeSearchQuery} />
-                        </ProtectedLayout>
-                    }
-                />
-                <Route
-                    path="/login"
-                    element={
-                        <ProtectedLayout
-                            when={authed == true && authed !== undefined}
-                            redirectTo="/"
-                        >
-                            <LoginView onLogin={login} />
-                        </ProtectedLayout>
-                    }
-                />
-                <Route
-                    path="/profile"
-                    element={
-                        <ProtectedLayout
-                            when={authed == false && authed !== undefined}
-                            redirectTo="/login"
-                        >
+
+                <Routes>
+                    <Route
+                        path="/"
+                        element={<HomeView searchQuery={searchQuery} />}
+                    />
+                    <Route
+                        path="/home"
+                        element={<HomeView searchQuery={searchQuery} />}
+                    />
+                    <Route path="/lyrics" element={<LyricsView />} />
+                    <Route
+                        path="/profile"
+                        element={
                             <ProfileView profile={profile} onLogout={logout} />
-                        </ProtectedLayout>
-                    }
-                />
-                <Route
-                    path="/lyrics"
-                    element={
-                        <ProtectedLayout
-                            when={authed == false && authed !== undefined}
-                            redirectTo="/login"
-                        >
-                            <LyricsView />
-                        </ProtectedLayout>
-                    }
-                />
-                <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
+                        }
+                    />
+                    <Route
+                        path="/login"
+                        element={<LoginView onLogin={login} />}
+                    />
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+            </Flex>
         </Resizer>
     );
 }
-
-interface ProtectedLayoutProps {
-    when: boolean;
-    redirectTo: string;
-    children: React.ReactNode;
-}
-
-const ProtectedLayout: React.FC<ProtectedLayoutProps> = ({
-    when,
-    redirectTo,
-    children,
-}) => {
-    const location = useLocation();
-
-    if (when)
-        return <Navigate to={redirectTo} replace state={{ from: location }} />;
-
-    return <>{children}</>;
-};

@@ -66,6 +66,7 @@ export function Marquee({
         >
             <div
                 className={clsx(
+                    'inline-flex items-center',
                     scroll && `animate-marquee-${mode}`,
                     pauseOnHover && 'marquee-pause'
                 )}
@@ -78,14 +79,14 @@ export function Marquee({
             >
                 <div
                     ref={originalRef}
-                    className="relative inline-flex items-center"
+                    className="relative"
                     style={contentStyle}
                 >
                     {children}
                 </div>
                 <div
                     className={clsx(
-                        'absolute top-0 left-full inline-flex items-center',
+                        'absolute top-0 left-full',
                         (!scroll || mode === 'bounce') && 'invisible'
                     )}
                     style={{
