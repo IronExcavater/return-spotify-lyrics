@@ -1,10 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Flex } from '@radix-ui/themes';
 import { Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 import { PersonIcon } from '@radix-ui/react-icons';
 
 import { useAuth } from './hooks/useAuth';
-import { usePlayer } from './hooks/usePlayer';
 import { HomeView } from './views/HomeView';
 import { LyricsView } from './views/LyricsView';
 import { LoginView } from './views/LoginView';
@@ -14,16 +13,18 @@ import { HomeBar } from './components/HomeBar';
 import { NavBar } from './components/NavBar';
 import { Resizer } from './Resizer';
 import { AvatarButton } from './components/AvatarButton';
+import { ProtectedLayout } from './components/ProtectedLayout';
 
 export default function App() {
-    const { profile, login, logout } = useAuth();
-    const { playback } = usePlayer();
+    const { authed, profile, login, logout } = useAuth();
     const navigate = useNavigate();
     const [searchQuery, setSearchQuery] = useState('');
-    const [activeBar, setActiveBar] = useState<'home' | 'playback'>('home');
+    const [activeBar, setActiveBar] = useState<'home' | 'playback' | undefined>(
+        'home'
+    );
 
-    const widthSize = { min: 320, max: 640 };
-    const heightSize = { min: 280, max: 480 };
+    const widthSize = { min: 300, max: 500 };
+    const heightSize = { min: 400, max: 600 };
 
     const profileImage = profile?.images?.[0]?.url;
     const profileSlot = useMemo(
@@ -56,46 +57,104 @@ export default function App() {
         [activeBar]
     );
 
+    useEffect(() => {
+        if (authed === false) {
+            setActiveBar(undefined);
+            return;
+        }
+
+        if (authed === true) {
+            setActiveBar((prev) => (prev === undefined ? 'home' : prev));
+        }
+    }, [authed]);
+
+    const showBars = activeBar !== undefined;
+
     return (
         <Resizer widthSize={widthSize} heightSize={heightSize}>
             <Flex direction="column">
-                <Flex direction="row">
-                    {activeBar === 'playback' && (
-                        <PlaybackBar
-                            profileSlot={profileSlot}
-                            navSlot={navSlot}
-                        />
-                    )}
-                    {activeBar === 'home' && (
-                        <HomeBar
-                            profileSlot={profileSlot}
-                            navSlot={navSlot}
-                            searchQuery={searchQuery}
-                            onSearchChange={setSearchQuery}
-                            onClearSearch={() => setSearchQuery('')}
-                        />
-                    )}
-                </Flex>
+                {showBars && (
+                    <Flex
+                        direction="row"
+                        align="center"
+                        className="border-b-2 border-[var(--gray-a6)] bg-[var(--color-panel-solid)]"
+                    >
+                        {activeBar === 'playback' && (
+                            <PlaybackBar
+                                profileSlot={profileSlot}
+                                navSlot={navSlot}
+                            />
+                        )}
+                        {activeBar === 'home' && (
+                            <HomeBar
+                                profileSlot={profileSlot}
+                                navSlot={navSlot}
+                                searchQuery={searchQuery}
+                                onSearchChange={setSearchQuery}
+                                onClearSearch={() => setSearchQuery('')}
+                            />
+                        )}
+                    </Flex>
+                )}
 
                 <Routes>
                     <Route
                         path="/"
-                        element={<HomeView searchQuery={searchQuery} />}
+                        element={
+                            <ProtectedLayout
+                                when={authed == false && authed !== undefined}
+                                redirectTo="/login"
+                            >
+                                <></>
+                            </ProtectedLayout>
+                        }
                     />
                     <Route
                         path="/home"
-                        element={<HomeView searchQuery={searchQuery} />}
+                        element={
+                            <ProtectedLayout
+                                when={authed == false && authed !== undefined}
+                                redirectTo="/login"
+                            >
+                                <HomeView searchQuery={searchQuery} />
+                            </ProtectedLayout>
+                        }
                     />
-                    <Route path="/lyrics" element={<LyricsView />} />
+                    <Route
+                        path="/lyrics"
+                        element={
+                            <ProtectedLayout
+                                when={authed == false && authed !== undefined}
+                                redirectTo="/login"
+                            >
+                                <LyricsView />
+                            </ProtectedLayout>
+                        }
+                    />
                     <Route
                         path="/profile"
                         element={
-                            <ProfileView profile={profile} onLogout={logout} />
+                            <ProtectedLayout
+                                when={authed == false && authed !== undefined}
+                                redirectTo="/login"
+                            >
+                                <ProfileView
+                                    profile={profile}
+                                    onLogout={logout}
+                                />
+                            </ProtectedLayout>
                         }
                     />
                     <Route
                         path="/login"
-                        element={<LoginView onLogin={login} />}
+                        element={
+                            <ProtectedLayout
+                                when={authed == true && authed !== undefined}
+                                redirectTo="/login"
+                            >
+                                <LoginView onLogin={login} />
+                            </ProtectedLayout>
+                        }
                     />
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>

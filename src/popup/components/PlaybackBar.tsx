@@ -84,9 +84,7 @@ export function PlaybackBar({ profileSlot, navSlot }: Props) {
                           backgroundPosition: 'center',
                           backgroundRepeat: 'no-repeat',
                       }
-                    : {
-                          backgroundColor: 'var(--color-panel-solid)',
-                      }
+                    : {}
             }
         >
             <Flex direction="column" gap="1" p="2" flexGrow="1">
