@@ -6,51 +6,62 @@ interface Props {
 }
 
 export function LoginView({ onLogin }: Props) {
-    const highlights = [
-        'Live lyrics sync and playback controls in one panel',
-        'Works even when Spotify free tier hides the lyric button',
-        'Keeps your session remembered until you explicitly log out',
+    const features = [
+        'Unblocks lyrics for free accounts',
+        'Modern mini player controls',
+        'Quick tweaks without opening Spotify',
     ];
 
     return (
-        <Flex flexGrow="1" justify="center" className="px-4 py-6">
-            <div className="w-full max-w-md space-y-6 rounded-3xl border border-white/10 bg-gradient-to-b from-[#0b101a] via-[#0e1424] to-[#05070c] p-6 text-white shadow-[0_35px_60px_rgba(0,0,0,0.45)]">
-                <div className="space-y-1">
-                    <Text
-                        size="1"
-                        weight="bold"
-                        className="text-[0.7rem] font-semibold tracking-[0.4em] text-white/60 uppercase"
-                    >
-                        Return Spotify Lyrics
-                    </Text>
-                    <Text size="6" weight="bold">
-                        Connect to Spotify
-                    </Text>
-                    <Text size="2" className="text-white/70">
-                        Sign in once to unlock pinned lyrics and remote controls
-                        across every popup.
-                    </Text>
+        <Flex
+            flexGrow="1"
+            justify="center"
+            align="center"
+            className="relative bg-slate-950 px-4 py-6 text-white"
+        >
+            <div className="relative flex w-full max-w-lg flex-col gap-6">
+                <div className="flex flex-col gap-1 text-[0.65rem] tracking-[0.5em] text-white/60 uppercase">
+                    <span className="text-white">Return Spotify Lyrics</span>
+                    <span className="text-white/60">Mini player companion</span>
                 </div>
+                <Text size="2" className="text-white/80">
+                    Keep lyrics and playback controls docked in the popup, so
+                    the music keeps its voice even when Spotify free loses the
+                    lyric button.
+                </Text>
 
-                <div className="space-y-2 text-sm text-white/80">
-                    {highlights.map((item) => (
-                        <div key={item} className="flex items-start gap-2">
-                            <span className="mt-0.5 text-emerald-300">
+                <div className="flex flex-col gap-2 text-white/70">
+                    {features.map((feature) => (
+                        <div
+                            key={feature}
+                            className="group flex flex-row items-center gap-2 transition-colors duration-200 hover:text-white"
+                        >
+                            <span className="text-emerald-300 transition-colors group-hover:text-white">
                                 <CheckIcon />
                             </span>
-                            <span>{item}</span>
+                            <Text
+                                size="2"
+                                className="transition-colors group-hover:text-white"
+                            >
+                                {feature}
+                            </Text>
                         </div>
                     ))}
                 </div>
 
-                <Button
-                    size="3"
-                    variant="solid"
-                    onClick={onLogin}
-                    className="shadow-[0_10px_25px_rgba(0,0,0,0.35)]"
-                >
-                    Login with Spotify
-                </Button>
+                <div className="flex flex-col gap-2">
+                    <Button
+                        size="3"
+                        variant="solid"
+                        onClick={onLogin}
+                        className="w-fit px-6 text-base shadow-[0_20px_35px_rgba(0,0,0,0.35)] transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-[0_25px_45px_rgba(0,0,0,0.45)] active:translate-y-0"
+                    >
+                        Continue with Spotify
+                    </Button>
+                    <Text size="1" className="text-center text-white/60">
+                        Stays on this browser until you log out.
+                    </Text>
+                </div>
             </div>
         </Flex>
     );

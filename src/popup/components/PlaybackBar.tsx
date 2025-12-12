@@ -13,11 +13,10 @@ import {
     TrackPreviousIcon,
     ShuffleIcon,
     LoopIcon,
-    HomeIcon,
 } from '@radix-ui/react-icons';
 import { MdMusicNote } from 'react-icons/md';
 import { SimplifiedArtist, SimplifiedShow } from '@spotify/web-api-ts-sdk';
-import { ReactNode } from 'react';
+import { RefCallback } from 'react';
 import clsx from 'clsx';
 
 import { usePlayer } from '../hooks/usePlayer';
@@ -35,16 +34,12 @@ import { IconToggle } from './IconToggle';
 interface Props {
     expanded: boolean;
     setExpanded: (expanded: boolean) => void;
-    profileSlot?: ReactNode;
+    profileSlotRef?: RefCallback<HTMLDivElement>;
 }
 
-export function PlaybackBar({ expanded, setExpanded, profileSlot }: Props) {
+export function PlaybackBar({ expanded, setExpanded, profileSlotRef }: Props) {
     const { playback, isPlaying, controls, isShuffle, repeatMode } =
         usePlayer();
-    const { isActive: isHomeRoute, toggle: toggleHomeRoute } = useRouteToggle(
-        '/home',
-        { trackHistory: false, fallbackPath: '/' }
-    );
     const { isActive: isLyricsRoute, toggle: toggleLyricsRoute } =
         useRouteToggle('/lyrics');
 
@@ -69,34 +64,30 @@ export function PlaybackBar({ expanded, setExpanded, profileSlot }: Props) {
         track?.album?.images?.[0]?.url ??
         episode?.show?.images?.[0]?.url ??
         episode?.images?.[0]?.url;
-    const heroStyle = heroImage
-        ? {
-              backgroundImage: `linear-gradient(120deg, rgba(5,7,14,0.9), rgba(9,12,22,0.7)), url(${heroImage})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              backgroundRepeat: 'no-repeat',
-          }
-        : undefined;
 
     return (
         <Flex
             direction="column"
             gap="0"
             flexGrow="1"
-            className={clsx(
-                'relative overflow-hidden rounded-2xl border border-white/10 bg-[var(--color-panel-solid)] p-3 shadow-[0_20px_45px_rgba(0,0,0,0.35)]',
-                heroImage && 'text-white'
-            )}
-            style={heroStyle}
+            className={clsx('relative overflow-hidden text-white')}
+            style={
+                heroImage
+                    ? {
+                          backgroundImage: `linear-gradient(120deg, rgba(5,7,14,0.9), rgba(9,12,22,0.7)), url(${heroImage})`,
+                          backgroundSize: 'cover',
+                          backgroundPosition: 'center',
+                          backgroundRepeat: 'no-repeat',
+                      }
+                    : {
+                          backgroundColor: 'var(--color-panel-solid)',
+                      }
+            }
         >
             {heroImage && (
-                <div className="pointer-events-none absolute inset-0 bg-black/45 backdrop-blur-[2px]" />
+                <div className="pointer-events-none absolute inset-0 bg-black/45" />
             )}
-            <Flex
-                direction="column"
-                gap="2"
-                className="relative z-10 flex-grow"
-            >
+            <Flex direction="column" gap="1" p="3" className="relative z-10">
                 <Flex direction="row" align="center" gap="1" flexGrow="1">
                     {/* Album + pause/play */}
                     <AvatarButton
@@ -124,7 +115,11 @@ export function PlaybackBar({ expanded, setExpanded, profileSlot }: Props) {
                         <Flex direction="row" flexGrow="1">
                             {/* Title */}
                             <Fade className="grow">
-                                <Marquee mode="bounce" className="mx-1">
+                                <Marquee
+                                    mode="bounce"
+                                    className="mx-1"
+                                    gap={12}
+                                >
                                     <Skeleton loading={loading}>
                                         <ExternalLink
                                             noAccent
@@ -140,15 +135,6 @@ export function PlaybackBar({ expanded, setExpanded, profileSlot }: Props) {
 
                             <Flex align="center">
                                 <IconButton
-                                    variant={isHomeRoute ? 'solid' : 'ghost'}
-                                    radius="full"
-                                    size="1"
-                                    onClick={toggleHomeRoute}
-                                    aria-pressed={isHomeRoute}
-                                >
-                                    <HomeIcon />
-                                </IconButton>
-                                <IconButton
                                     variant="ghost"
                                     radius="full"
                                     size="1"
@@ -162,7 +148,7 @@ export function PlaybackBar({ expanded, setExpanded, profileSlot }: Props) {
                         <Flex direction="row" flexGrow="1">
                             {/* Artists */}
                             <Fade className="grow">
-                                <Marquee mode="right" className="mx-1 gap-1">
+                                <Marquee mode="right" className="mx-1" gap={10}>
                                     {artists.map((artist) => {
                                         const label =
                                             'publisher' in artist
@@ -212,7 +198,11 @@ export function PlaybackBar({ expanded, setExpanded, profileSlot }: Props) {
                         </Flex>
                     </Flex>
 
-                    {profileSlot ?? null}
+                    <div
+                        ref={profileSlotRef}
+                        className="flex items-center"
+                        style={{ minHeight: 'var(--space-7)' }}
+                    />
                 </Flex>
                 <Flex direction="row" align="center" gap="2" flexGrow="1">
                     <SoundDial />

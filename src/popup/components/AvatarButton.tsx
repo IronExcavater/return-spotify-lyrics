@@ -38,7 +38,7 @@ export function AvatarButton({
                     'block',
                     'ring-2 ring-transparent ring-offset-[var(--color-panel-solid)] transition-shadow',
                     isEnabled &&
-                        'hover:ring-[var(--accent-9)] hover:ring-offset-2 focus-visible:ring-[var(--accent-10)] focus-visible:ring-offset-2',
+                        'hover:ring-[var(--accent-9)] hover:ring-offset-2 focus-visible:ring-[var(--accent-12)] focus-visible:ring-offset-2',
                     isEnabled &&
                         active &&
                         '!ring-[var(--accent-10)] ring-offset-2',

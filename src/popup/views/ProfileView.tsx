@@ -2,7 +2,6 @@ import {
     AlertDialog,
     Avatar,
     Button,
-    DataList,
     Flex,
     Skeleton,
     Text,
@@ -59,7 +58,7 @@ export function ProfileView({ profile, onLogout, connection }: Props) {
     useEffect(() => {
         const interval = window.setInterval(() => {
             setRelativeNow(Date.now());
-        }, 30000);
+        }, 1000);
 
         return () => window.clearInterval(interval);
     }, []);
@@ -123,14 +122,12 @@ export function ProfileView({ profile, onLogout, connection }: Props) {
                     onClick={() => window.open(link, '_blank')}
                     style={{ cursor: 'pointer' }}
                 >
-                    <Skeleton loading={loading}>
-                        <Avatar
-                            radius="full"
-                            src={image}
-                            fallback={<PersonIcon />}
-                            size="4"
-                        />
-                    </Skeleton>
+                    <Avatar
+                        radius="full"
+                        src={image}
+                        fallback={<PersonIcon />}
+                        size="4"
+                    />
                     <Flex direction="column" gap="1" align="start">
                         <Skeleton loading={loading}>
                             <Text size="4" weight="bold">
@@ -145,41 +142,39 @@ export function ProfileView({ profile, onLogout, connection }: Props) {
                     </Flex>
                 </Flex>
 
-                <DataList.Root className="rounded-2xl border border-white/10 bg-white/5 p-4 text-white/80">
+                <ul className="space-y-1 text-white/80">
                     {stats.map((stat) => (
-                        <DataList.Item
+                        <li
                             key={stat.label}
-                            className="items-start border-b border-white/5 last:border-none"
+                            className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-1"
+                            title={stat.hint ?? undefined}
                         >
-                            <DataList.Label className="text-[0.65rem] tracking-[0.35em] text-white/50 uppercase">
+                            <Text
+                                size="1"
+                                className="tracking-[0.3em] text-white/50 uppercase"
+                            >
                                 {stat.label}
-                            </DataList.Label>
-                            <DataList.Value className="flex flex-col items-end gap-1 text-lg text-white">
-                                <span>{stat.value}</span>
-                                {stat.hint && (
-                                    <Text size="1" color="gray">
-                                        {stat.hint}
-                                    </Text>
-                                )}
-                            </DataList.Value>
-                        </DataList.Item>
+                            </Text>
+                            <Text size="2" weight="bold" className="text-white">
+                                {stat.value}
+                            </Text>
+                        </li>
                     ))}
-                </DataList.Root>
+                </ul>
 
-                {/* Disconnect */}
                 <AlertDialog.Root>
                     <AlertDialog.Trigger>
                         <Button color="red" variant="soft">
                             Disconnect Spotify
                         </Button>
                     </AlertDialog.Trigger>
-                    <AlertDialog.Content maxWidth="360px">
-                        <AlertDialog.Title>
+                    <AlertDialog.Content maxWidth="280px" size="1">
+                        <AlertDialog.Title size="3">
                             Disconnect Spotify
                         </AlertDialog.Title>
-                        <AlertDialog.Description>
-                            This will sign you out and disable playback controls
-                            until you log back in.
+                        <AlertDialog.Description size="2">
+                            Signing out disables playback controls until you log
+                            back in.
                         </AlertDialog.Description>
                         <Flex mt="3" justify="end" gap="2">
                             <AlertDialog.Cancel>
@@ -187,6 +182,7 @@ export function ProfileView({ profile, onLogout, connection }: Props) {
                             </AlertDialog.Cancel>
                             <AlertDialog.Action>
                                 <Button
+                                    variant="soft"
                                     color="red"
                                     onClick={onLogout}
                                     autoFocus

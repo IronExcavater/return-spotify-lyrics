@@ -1,28 +1,70 @@
-import { Flex, Heading } from '@radix-ui/themes';
-import { HomeIcon } from '@radix-ui/react-icons';
-import { ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Flex, IconButton, TextField } from '@radix-ui/themes';
+import {
+    Cross2Icon,
+    HomeIcon,
+    MagnifyingGlassIcon,
+} from '@radix-ui/react-icons';
+import { RefCallback } from 'react';
 
 interface Props {
-    profileSlot?: ReactNode;
+    profileSlotRef?: RefCallback<HTMLDivElement>;
+    searchQuery: string;
+    onSearchChange: (query: string) => void;
+    onClearSearch: () => void;
 }
 
-export function HomeBar({ profileSlot }: Props) {
-    const navigate = useNavigate();
+export function HomeBar({
+    profileSlotRef,
+    searchQuery,
+    onSearchChange,
+    onClearSearch,
+}: Props) {
+    const hasQuery = searchQuery.trim().length > 0;
 
     return (
-        <Flex align="center" justify="between" gap="2">
-            <Heading
-                size="5"
-                role="button"
-                tabIndex={0}
-                onClick={() => navigate('/home')}
-                className="flex cursor-pointer items-center gap-2 py-1 select-none"
+        <Flex align="center" gap="2" className="w-full px-3 py-2">
+            <TextField.Root
+                value={searchQuery}
+                onChange={(event) => onSearchChange(event.target.value)}
+                size="2"
+                radius="full"
+                placeholder="Search controls or tweaks"
+                className="flex-1 bg-[var(--gray-a3)] transition-colors duration-150 focus-within:bg-[var(--gray-a4)]"
             >
-                <HomeIcon width="20" height="20" />
-                <span>Return Spotify Lyrics</span>
-            </Heading>
-            {profileSlot ?? null}
+                <TextField.Slot
+                    side="left"
+                    className="text-[var(--accent-11)] transition-all duration-200"
+                >
+                    <span
+                        className={`inline-flex items-center transition-all duration-200 ${
+                            hasQuery
+                                ? 'scale-100 text-[var(--accent-12)]'
+                                : 'scale-95 opacity-80'
+                        }`}
+                    >
+                        {hasQuery ? <MagnifyingGlassIcon /> : <HomeIcon />}
+                    </span>
+                </TextField.Slot>
+                {hasQuery && (
+                    <TextField.Slot side="right">
+                        <IconButton
+                            type="button"
+                            size="1"
+                            variant="ghost"
+                            aria-label="Clear search"
+                            onClick={onClearSearch}
+                            className="transition-transform duration-150 hover:scale-110"
+                        >
+                            <Cross2Icon />
+                        </IconButton>
+                    </TextField.Slot>
+                )}
+            </TextField.Root>
+            <div
+                ref={profileSlotRef}
+                className="flex items-center"
+                style={{ minHeight: 'var(--space-7)' }}
+            />
         </Flex>
     );
 }

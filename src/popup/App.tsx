@@ -1,4 +1,10 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, {
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+} from 'react';
 import { useAuth } from './hooks/useAuth';
 import { ProfileView } from './views/ProfileView';
 import { Flex } from '@radix-ui/themes';
@@ -10,6 +16,7 @@ import {
     useMatch,
     useNavigate,
 } from 'react-router-dom';
+import { createPortal } from 'react-dom';
 import { LyricsView } from './views/LyricsView';
 import { LoginView } from './views/LoginView';
 import { Resizer } from './Resizer';
@@ -21,20 +28,31 @@ import { usePlayer } from './hooks/usePlayer';
 import { useRouteToggle } from './hooks/useRouteToggle';
 import { HomeView } from './views/HomeView';
 import { getFromStorage, setInStorage } from '../shared/storage';
+import { NavBar } from './components/NavBar';
 
 const NAV_EXPANDED_KEY = 'playbackExpanded';
 const LAST_ROUTE_KEY = 'lastNavRoute';
 
 export default function App() {
-    const { authed, profile, login, logout, connection } = useAuth();
+    const { authed, profile, login, logout } = useAuth();
     const { playback } = usePlayer();
     const navigate = useNavigate();
     const location = useLocation();
     const isBlankRoute = !!useMatch('/');
 
     const [expanded, setExpanded] = useState(false);
+    const [homeSearchQuery, setHomeSearchQuery] = useState('');
+    const [barOverride, setBarOverride] = useState<
+        'home' | 'playback' | undefined
+    >(undefined);
     const hasPlayback = playback?.item != null;
     const restoredRouteRef = useRef(false);
+    const [profileSlotAnchor, setProfileSlotAnchor] =
+        useState<HTMLDivElement | null>(null);
+    const profileSlotAnchors = useRef<{
+        home: HTMLDivElement | null;
+        playback: HTMLDivElement | null;
+    }>({ home: null, playback: null });
 
     useEffect(() => {
         getFromStorage<boolean>(NAV_EXPANDED_KEY, (stored) => {
@@ -63,14 +81,12 @@ export default function App() {
         void setInStorage(LAST_ROUTE_KEY, path);
     }, [authed, location.pathname]);
 
-    const profileFallbackPath = hasPlayback ? '/' : '/home';
     const { isActive: isProfileActive, toggle: toggleProfileRoute } =
-        useRouteToggle('/profile', { fallbackPath: profileFallbackPath });
+        useRouteToggle('/profile');
     const showBar = authed === true;
-
     const widthSize = { min: 300, max: 600 };
     const heightSize = { min: showBar ? 300 : 200, max: 400 };
-    const heightOverride = isBlankRoute ? 0 : undefined;
+    const heightOverride = showBar && isBlankRoute ? 0 : undefined;
 
     const profileImage = profile?.images?.[0]?.url;
     const profileSlot = useMemo(
@@ -92,33 +108,100 @@ export default function App() {
         [isProfileActive, profileImage, toggleProfileRoute]
     );
 
+    const defaultBar = hasPlayback ? 'playback' : 'home';
+    const activeBar = barOverride ?? defaultBar;
+    const isPlaybackBarActive = activeBar === 'playback';
+    const isHomeBarActive = activeBar === 'home';
+
+    useEffect(() => {
+        const anchor =
+            activeBar === 'home'
+                ? profileSlotAnchors.current.home
+                : profileSlotAnchors.current.playback;
+        setProfileSlotAnchor(anchor ?? null);
+    }, [activeBar]);
+
+    const registerPlaybackSlot = useCallback(
+        (node: HTMLDivElement | null) => {
+            profileSlotAnchors.current.playback = node;
+            if (isPlaybackBarActive) {
+                setProfileSlotAnchor(node);
+            }
+        },
+        [isPlaybackBarActive]
+    );
+
+    const registerHomeSlot = useCallback(
+        (node: HTMLDivElement | null) => {
+            profileSlotAnchors.current.home = node;
+            if (isHomeBarActive) {
+                setProfileSlotAnchor(node);
+            }
+        },
+        [isHomeBarActive]
+    );
+
+    const profileSlotPortal =
+        profileSlotAnchor != null
+            ? createPortal(profileSlot, profileSlotAnchor)
+            : null;
+
+    const showPlaybackBar = () => {
+        if (!hasPlayback) return;
+        setBarOverride('playback');
+    };
+
+    const showHomeBar = () => {
+        setBarOverride('home');
+    };
+
     return (
         <Resizer
             widthSize={widthSize}
             heightSize={heightSize}
             heightOverride={heightOverride}
         >
+            {profileSlotPortal}
             {/* Playback and navigation bar */}
             {showBar && (
                 <Flex
                     direction="column"
-                    py="2"
-                    px="3"
-                    gap="2"
                     style={{
                         background: 'var(--color-panel-solid)',
                         borderBottom: '2px solid var(--gray-a6)',
                     }}
                 >
-                    {hasPlayback ? (
+                    <NavBar
+                        active={activeBar}
+                        canShowPlayback={hasPlayback}
+                        onShowHome={showHomeBar}
+                        onShowPlayback={showPlaybackBar}
+                    />
+                    <div
+                        style={{
+                            display: isPlaybackBarActive ? 'block' : 'none',
+                            width: '100%',
+                        }}
+                    >
                         <PlaybackBar
                             expanded={expanded}
                             setExpanded={setExpanded}
-                            profileSlot={profileSlot}
+                            profileSlotRef={registerPlaybackSlot}
                         />
-                    ) : (
-                        <HomeBar profileSlot={profileSlot} />
-                    )}
+                    </div>
+                    <div
+                        style={{
+                            display: isHomeBarActive ? 'block' : 'none',
+                            width: '100%',
+                        }}
+                    >
+                        <HomeBar
+                            profileSlotRef={registerHomeSlot}
+                            searchQuery={homeSearchQuery}
+                            onSearchChange={setHomeSearchQuery}
+                            onClearSearch={() => setHomeSearchQuery('')}
+                        />
+                    </div>
                 </Flex>
             )}
             <Routes>
@@ -140,7 +223,7 @@ export default function App() {
                             when={authed == false && authed !== undefined}
                             redirectTo="/login"
                         >
-                            <HomeView />
+                            <HomeView searchQuery={homeSearchQuery} />
                         </ProtectedLayout>
                     }
                 />
@@ -162,11 +245,7 @@ export default function App() {
                             when={authed == false && authed !== undefined}
                             redirectTo="/login"
                         >
-                            <ProfileView
-                                profile={profile}
-                                onLogout={logout}
-                                connection={connection}
-                            />
+                            <ProfileView profile={profile} onLogout={logout} />
                         </ProtectedLayout>
                     }
                 />

@@ -13,8 +13,10 @@ export function useRouteToggle(
     const navigate = useNavigate();
     const location = useLocation();
     const lastNonTargetRoute = useRef<string | null>(null);
+    const locationPathRef = useRef(location.pathname);
 
     useEffect(() => {
+        locationPathRef.current = location.pathname;
         if (!trackHistory) return;
         if (location.pathname !== targetPath) {
             lastNonTargetRoute.current = location.pathname;
@@ -22,7 +24,8 @@ export function useRouteToggle(
     }, [location.pathname, targetPath, trackHistory]);
 
     const toggle = useCallback(() => {
-        if (location.pathname === targetPath) {
+        const currentPath = locationPathRef.current;
+        if (currentPath === targetPath) {
             const fallback = trackHistory
                 ? (lastNonTargetRoute.current ?? fallbackPath)
                 : fallbackPath;
@@ -30,7 +33,7 @@ export function useRouteToggle(
         } else {
             navigate(targetPath);
         }
-    }, [fallbackPath, location.pathname, navigate, targetPath, trackHistory]);
+    }, [fallbackPath, navigate, targetPath, trackHistory]);
 
     const isActive = location.pathname === targetPath;
 
