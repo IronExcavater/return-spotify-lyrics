@@ -3,7 +3,7 @@ import clsx from 'clsx';
 import { ReactNode } from 'react';
 
 interface Props {
-    active: 'home' | 'playback' | undefined;
+    active: 'home' | 'playback';
     canShowPlayback: boolean;
     onShowHome: () => void;
     onShowPlayback: () => void;
