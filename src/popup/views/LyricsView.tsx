@@ -1,7 +1,6 @@
 import { Flex, Text } from '@radix-ui/themes';
 import { usePlayer } from '../hooks/usePlayer';
 import { asTrack } from '../../shared/types';
-import { useAverageColor } from '../hooks/useAverageColor';
 
 const FALLBACK_LYRICS = [
     'Falling into midnight lines,',
@@ -14,7 +13,7 @@ export function LyricsView() {
     const { playback } = usePlayer();
     const track = asTrack(playback?.item);
     const cover = track?.album?.images?.[0]?.url;
-    const averageColor = useAverageColor(cover);
+    const averageColor = false; //useAverageColor(cover);
 
     return (
         <Flex

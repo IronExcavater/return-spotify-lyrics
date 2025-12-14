@@ -1,8 +1,10 @@
 {
     "name": "return-spotify-lyrics",
     "version": "0.0.1",
+    "description": "A modern Spotify mini-player to unblock Spotify free restrictions",
     "type": "module",
     "scripts": {
+        "dev": "vite",
         "build": "vite build",
         "clean": "rimraf dist",
         "lint:all": "eslint . --fix && stylelint \"**/*.{css,scss}\" --fix && prettier . -wu --log-level warn",
@@ -21,9 +23,11 @@
         "react": "^18.3.1",
         "react-dom": "^18.3.1",
         "react-icons": "^5.5.0",
-        "react-router-dom": "^7.9.6"
+        "react-router-dom": "^7.9.6",
+        "vite-plugin-zip-pack": "^1.2.4"
     },
     "devDependencies": {
+        "@crxjs/vite-plugin": "^2.3.0",
         "@spotify/web-api-ts-sdk": "^1.2.0",
         "@tailwindcss/vite": "^4.1.17",
         "@types/chrome": "^0.1.30",

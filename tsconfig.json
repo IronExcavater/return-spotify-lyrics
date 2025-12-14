@@ -1,16 +1,28 @@
+//{
+//    "compilerOptions": {
+//        "jsx": "react-jsx",
+//        "target": "ES2022",
+//        "module": "ESNext",
+//        "moduleResolution": "bundler",
+//        "strict": true,
+//        "allowJs": false,
+//        "skipLibCheck": true,
+//        "esModuleInterop": true,
+//        "forceConsistentCasingInFileNames": true,
+//        "resolveJsonModule": true,
+//        "types": ["chrome"]
+//    },
+//    "include": ["src/**/*"]
+//}
 {
     "compilerOptions": {
         "jsx": "react-jsx",
         "target": "ES2022",
         "module": "ESNext",
         "moduleResolution": "bundler",
-        "strict": true,
-        "allowJs": false,
-        "skipLibCheck": true,
         "esModuleInterop": true,
-        "forceConsistentCasingInFileNames": true,
         "resolveJsonModule": true,
-        "types": ["chrome"]
-    },
-    "include": ["src/**/*"]
+        "allowImportingTsExtensions": true,
+        "forceConsistentCasingInFileNames": true
+    }
 }

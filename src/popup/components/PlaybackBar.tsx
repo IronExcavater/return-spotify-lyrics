@@ -27,8 +27,8 @@ import { Fade } from './Fade';
 import { Marquee } from './Marquee';
 import { ExternalLink } from './ExternalLink';
 import { AvatarButton } from './AvatarButton';
-import { SoundDial } from './SoundDial';
-import { TimelineRail } from './TimelineRail';
+import { PlaybackVolume } from './PlaybackVolume';
+import { PlaybackSeek } from './PlaybackSeek';
 import { IconToggle } from './IconToggle';
 
 interface Props {
@@ -48,13 +48,16 @@ export function PlaybackBar({ profileSlot, navSlot }: Props) {
     const track = asTrack(playback?.item);
     const episode = asEpisode(playback?.item);
 
-    const title = playback?.item?.name ?? 'Placeholder';
+    const title = playback?.item?.name ?? 'Placeholder title which is long';
     const link = playback?.item?.external_urls?.spotify;
 
     const artists: (SimplifiedArtist | SimplifiedShow)[] = useMemo(() => {
         if (track?.artists) return track.artists;
         if (episode?.show) return [episode.show];
-        return [{ name: 'Placeholder' } as SimplifiedArtist];
+        return [
+            { name: 'Placeholder' },
+            { name: 'Faker' },
+        ] as SimplifiedArtist[];
     }, [track?.artists, episode?.show]);
 
     const albumImage =
@@ -111,22 +114,24 @@ export function PlaybackBar({ profileSlot, navSlot }: Props) {
                         )}
                     </AvatarButton>
 
-                    <Flex direction="column" flexGrow="1">
-                        <Flex align="center">
+                    <Flex direction="column" flexGrow="1" className="min-w-0">
+                        <Flex align="center" flexGrow="1">
                             {/* Title */}
                             <Fade className="grow">
-                                <Marquee mode="bounce" className="mx-1">
-                                    <Skeleton loading={loading}>
-                                        <ExternalLink
-                                            noAccent
-                                            size="3"
-                                            weight="bold"
-                                            href={link}
-                                        >
-                                            {title}
-                                        </ExternalLink>
-                                    </Skeleton>
-                                </Marquee>
+                                <div style={{ paddingInline: '4px' }}>
+                                    <Marquee mode="bounce">
+                                        <Skeleton loading={loading}>
+                                            <ExternalLink
+                                                noAccent
+                                                size="3"
+                                                weight="bold"
+                                                href={link}
+                                            >
+                                                {title}
+                                            </ExternalLink>
+                                        </Skeleton>
+                                    </Marquee>
+                                </div>
                             </Fade>
 
                             {/* Expand button */}
@@ -144,32 +149,40 @@ export function PlaybackBar({ profileSlot, navSlot }: Props) {
                         <Flex align="center" gap="1">
                             {/* Artists */}
                             <Fade className="grow">
-                                <Marquee mode="right" className="mx-1">
-                                    {artists.map((artist) => {
-                                        const label =
-                                            'publisher' in artist
-                                                ? artist.publisher
-                                                : artist.name;
+                                <div style={{ paddingInline: '4px' }}>
+                                    <Marquee mode="right">
+                                        <Flex
+                                            align="center"
+                                            style={{ gap: '8px' }}
+                                        >
+                                            {artists.map((artist) => {
+                                                const label =
+                                                    'publisher' in artist
+                                                        ? artist.publisher
+                                                        : artist.name;
 
-                                        return (
-                                            <Skeleton
-                                                loading={loading}
-                                                key={artist.id ?? label}
-                                            >
-                                                <ExternalLink
-                                                    noAccent
-                                                    size="2"
-                                                    href={
-                                                        artist?.external_urls
-                                                            ?.spotify
-                                                    }
-                                                >
-                                                    {label}
-                                                </ExternalLink>
-                                            </Skeleton>
-                                        );
-                                    })}
-                                </Marquee>
+                                                return (
+                                                    <Skeleton
+                                                        loading={loading}
+                                                        key={artist.id ?? label}
+                                                    >
+                                                        <ExternalLink
+                                                            noAccent
+                                                            size="2"
+                                                            href={
+                                                                artist
+                                                                    ?.external_urls
+                                                                    ?.spotify
+                                                            }
+                                                        >
+                                                            {label}
+                                                        </ExternalLink>
+                                                    </Skeleton>
+                                                );
+                                            })}
+                                        </Flex>
+                                    </Marquee>
+                                </div>
                             </Fade>
 
                             {/* Previous button */}
@@ -202,8 +215,8 @@ export function PlaybackBar({ profileSlot, navSlot }: Props) {
                 </Flex>
 
                 <Flex direction="row" align="center" gap="1">
-                    <SoundDial />
-                    <TimelineRail />
+                    <PlaybackVolume />
+                    <PlaybackSeek />
                 </Flex>
 
                 {expanded && (

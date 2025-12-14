@@ -1,17 +1,7 @@
-import {
-    ReactNode,
-    useCallback,
-    useEffect,
-    useLayoutEffect,
-    useMemo,
-    useRef,
-    useState,
-} from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Flex } from '@radix-ui/themes';
 import { Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 import { PersonIcon } from '@radix-ui/react-icons';
-import { createPortal } from 'react-dom';
-
 import { useAuth } from './hooks/useAuth';
 import { HomeView } from './views/HomeView';
 import { LyricsView } from './views/LyricsView';
@@ -23,8 +13,10 @@ import { NavBar } from './components/NavBar';
 import { Resizer } from './Resizer';
 import { AvatarButton } from './components/AvatarButton';
 import { ProtectedLayout } from './components/ProtectedLayout';
+import { usePortalSlot } from './hooks/usePortalSlot';
 
 type BarKey = 'home' | 'playback';
+const BAR_KEYS: readonly BarKey[] = ['home', 'playback'];
 
 export default function App() {
     const { authed, profile, login, logout } = useAuth();
@@ -78,8 +70,20 @@ export default function App() {
     }, [authed]);
 
     const showBars = activeBar !== undefined;
-    const profileFloating = useFloatingSlot(profileSlot, activeBar, showBars);
-    const navFloating = useFloatingSlot(navSlot, activeBar, showBars);
+    const profileFloating = usePortalSlot<BarKey>({
+        keys: BAR_KEYS,
+        content: profileSlot,
+        activeKey: activeBar,
+        defaultKey: 'home',
+        enabled: showBars,
+    });
+    const navFloating = usePortalSlot<BarKey>({
+        keys: BAR_KEYS,
+        content: navSlot,
+        activeKey: activeBar,
+        defaultKey: 'home',
+        enabled: showBars,
+    });
 
     return (
         <Resizer widthSize={widthSize} heightSize={heightSize}>
@@ -90,27 +94,14 @@ export default function App() {
                         align="center"
                         className="border-b-2 border-[var(--gray-a6)] bg-[var(--color-panel-solid)]"
                     >
-                        <div
-                            className="flex flex-1"
-                            style={{
-                                display:
-                                    activeBar === 'playback' ? 'flex' : 'none',
-                            }}
-                            aria-hidden={activeBar !== 'playback'}
-                        >
+                        {activeBar === 'playback' && (
                             <PlaybackBar
                                 profileSlot={profileFloating.anchors.playback}
                                 navSlot={navFloating.anchors.playback}
                             />
-                        </div>
+                        )}
 
-                        <div
-                            className="flex flex-1"
-                            style={{
-                                display: activeBar === 'home' ? 'flex' : 'none',
-                            }}
-                            aria-hidden={activeBar !== 'home'}
-                        >
+                        {activeBar === 'home' && (
                             <HomeBar
                                 profileSlot={profileFloating.anchors.home}
                                 navSlot={navFloating.anchors.home}
@@ -118,7 +109,7 @@ export default function App() {
                                 onSearchChange={setSearchQuery}
                                 onClearSearch={() => setSearchQuery('')}
                             />
-                        </div>
+                        )}
                     </Flex>
                 )}
 
@@ -189,64 +180,4 @@ export default function App() {
             </Flex>
         </Resizer>
     );
-}
-
-function useFloatingSlot(
-    content: ReactNode,
-    activeBar: BarKey | undefined,
-    enabled: boolean
-) {
-    const hostRef = useRef<HTMLDivElement | null>(null);
-    const anchorsRef = useRef<Record<BarKey, HTMLDivElement | null>>({
-        home: null,
-        playback: null,
-    });
-
-    if (!hostRef.current) {
-        hostRef.current = document.createElement('div');
-        hostRef.current.className = 'contents';
-    }
-
-    const attachToAnchor = useCallback(
-        (key: BarKey) => (node: HTMLDivElement | null) => {
-            anchorsRef.current[key] = node;
-            const host = hostRef.current;
-            if (!host || !node || !enabled) return;
-
-            const currentKey: BarKey = activeBar ?? 'home';
-            if (key === currentKey && host.parentElement !== node) {
-                node.appendChild(host);
-            }
-        },
-        [activeBar, enabled]
-    );
-
-    useLayoutEffect(() => {
-        const host = hostRef.current;
-        if (!host) return;
-
-        if (!enabled) {
-            if (host.parentElement) host.parentElement.remove();
-            return;
-        }
-
-        const target = anchorsRef.current[activeBar ?? 'home'];
-        if (target && host.parentElement !== target) {
-            target.appendChild(host);
-        }
-    }, [activeBar, enabled]);
-
-    const anchors = {
-        home: <div className="flex-shrink-0" ref={attachToAnchor('home')} />,
-        playback: (
-            <div className="flex-shrink-0" ref={attachToAnchor('playback')} />
-        ),
-    } as const;
-
-    const portal =
-        enabled && hostRef.current
-            ? createPortal(content, hostRef.current)
-            : null;
-
-    return { anchors, portal };
 }

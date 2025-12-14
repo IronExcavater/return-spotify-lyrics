@@ -2,6 +2,7 @@ import {
     AlertDialog,
     Avatar,
     Button,
+    Card,
     Flex,
     Skeleton,
     Text,
@@ -142,25 +143,31 @@ export function ProfileView({ profile, onLogout, connection }: Props) {
                     </Flex>
                 </Flex>
 
-                <ul className="space-y-1 text-white/80">
-                    {stats.map((stat) => (
-                        <li
-                            key={stat.label}
-                            className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-1"
-                            title={stat.hint ?? undefined}
-                        >
-                            <Text
-                                size="1"
-                                className="tracking-[0.3em] text-white/50 uppercase"
+                <Card size="2" variant="surface">
+                    <ul className="divide-y divide-white/10">
+                        {stats.map((stat) => (
+                            <li
+                                key={stat.label}
+                                className="flex items-center justify-between px-3 py-1"
+                                title={stat.hint ?? undefined}
                             >
-                                {stat.label}
-                            </Text>
-                            <Text size="2" weight="bold" className="text-white">
-                                {stat.value}
-                            </Text>
-                        </li>
-                    ))}
-                </ul>
+                                <Text
+                                    size="1"
+                                    className="tracking-[0.3em] text-white/50 uppercase"
+                                >
+                                    {stat.label}
+                                </Text>
+                                <Text
+                                    size="2"
+                                    weight="bold"
+                                    className="text-white"
+                                >
+                                    {stat.value}
+                                </Text>
+                            </li>
+                        ))}
+                    </ul>
+                </Card>
 
                 <AlertDialog.Root>
                     <AlertDialog.Trigger>

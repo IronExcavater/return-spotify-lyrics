@@ -17,7 +17,7 @@ function formatTime(ms: number) {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 }
 
-export function TimelineRail({ className }: Props) {
+export function PlaybackSeek({ className }: Props) {
     const { progressMs, durationMs, controls } = usePlayer();
 
     const trackRef = useRef<HTMLDivElement | null>(null);

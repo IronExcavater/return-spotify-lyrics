@@ -12,6 +12,7 @@
 
 .rt-AvatarRoot {
     position: relative;
+    user-select: none;
 }
 
 .rt-AvatarOverlay {
@@ -23,4 +24,10 @@
     pointer-events: none;
     border-radius: inherit;
     z-index: 1;
+}
+
+.rt-AvatarImage,
+.rt-AvatarFallback {
+    user-select: none;
+    -webkit-user-drag: none;
 }

@@ -7,7 +7,6 @@ interface MarqueeProps {
     mode?: 'left' | 'right' | 'bounce';
     pauseOnHover?: boolean;
     className?: string;
-    gap?: number | string;
 }
 
 export function Marquee({
@@ -16,7 +15,6 @@ export function Marquee({
     mode = 'left',
     pauseOnHover = true,
     className,
-    gap,
 }: MarqueeProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const originalRef = useRef<HTMLDivElement>(null);
@@ -47,15 +45,6 @@ export function Marquee({
         return () => observer.disconnect();
     }, [speed]);
 
-    const normalizedGap =
-        typeof gap === 'number' ? `${gap}px` : (gap ?? undefined);
-    const contentStyle: CSSProperties | undefined = normalizedGap
-        ? {
-              columnGap: normalizedGap,
-              rowGap: normalizedGap,
-          }
-        : undefined;
-
     return (
         <div
             ref={containerRef}
@@ -77,11 +66,7 @@ export function Marquee({
                     } as CSSProperties
                 }
             >
-                <div
-                    ref={originalRef}
-                    className="relative"
-                    style={contentStyle}
-                >
+                <div ref={originalRef} className="relative">
                     {children}
                 </div>
                 <div
@@ -90,8 +75,7 @@ export function Marquee({
                         (!scroll || mode === 'bounce') && 'invisible'
                     )}
                     style={{
-                        marginLeft: normalizedGap ?? '12px',
-                        ...contentStyle,
+                        marginLeft: '12px',
                     }}
                 >
                     {children}
