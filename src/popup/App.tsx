@@ -131,74 +131,69 @@ export default function App() {
                 )}
 
                 {/* Routes */}
-                <div className="app-routes">
-                    <Routes>
-                        {/* Idle root */}
-                        <Route
-                            path="/"
-                            element={
-                                <ProtectedLayout
-                                    when={mustLogin}
-                                    redirectTo="/login"
-                                >
-                                    <></>
-                                </ProtectedLayout>
-                            }
-                        />
+                <Routes>
+                    {/* Idle root */}
+                    <Route
+                        path="/"
+                        element={
+                            <ProtectedLayout
+                                when={mustLogin}
+                                redirectTo="/login"
+                            >
+                                <></>
+                            </ProtectedLayout>
+                        }
+                    />
 
-                        <Route
-                            path="/home"
-                            element={
-                                <ProtectedLayout
-                                    when={mustLogin}
-                                    redirectTo="/login"
-                                >
-                                    <HomeView searchQuery={searchQuery} />
-                                </ProtectedLayout>
-                            }
-                        />
+                    <Route
+                        path="/home"
+                        element={
+                            <ProtectedLayout
+                                when={mustLogin}
+                                redirectTo="/login"
+                            >
+                                <HomeView searchQuery={searchQuery} />
+                            </ProtectedLayout>
+                        }
+                    />
 
-                        <Route
-                            path="/lyrics"
-                            element={
-                                <ProtectedLayout
-                                    when={mustLogin}
-                                    redirectTo="/login"
-                                >
-                                    <LyricsView />
-                                </ProtectedLayout>
-                            }
-                        />
+                    <Route
+                        path="/lyrics"
+                        element={
+                            <ProtectedLayout
+                                when={mustLogin}
+                                redirectTo="/login"
+                            >
+                                <LyricsView />
+                            </ProtectedLayout>
+                        }
+                    />
 
-                        <Route
-                            path="/profile"
-                            element={
-                                <ProtectedLayout
-                                    when={mustLogin}
-                                    redirectTo="/login"
-                                >
-                                    <ProfileView
-                                        profile={profile}
-                                        onLogout={logout}
-                                    />
-                                </ProtectedLayout>
-                            }
-                        />
+                    <Route
+                        path="/profile"
+                        element={
+                            <ProtectedLayout
+                                when={mustLogin}
+                                redirectTo="/login"
+                            >
+                                <ProfileView
+                                    profile={profile}
+                                    onLogout={logout}
+                                />
+                            </ProtectedLayout>
+                        }
+                    />
 
-                        <Route
-                            path="/login"
-                            element={
-                                <ProtectedLayout
-                                    when={mustLogout}
-                                    redirectTo="/"
-                                >
-                                    <LoginView onLogin={login} />
-                                </ProtectedLayout>
-                            }
-                        />
-                        <Route path="*" element={<Navigate to="/" replace />} />
-                    </Routes>
-                </div>
+                    <Route
+                        path="/login"
+                        element={
+                            <ProtectedLayout when={mustLogout} redirectTo="/">
+                                <LoginView onLogin={login} />
+                            </ProtectedLayout>
+                        }
+                    />
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
 
                 {profileFloating.portal}
                 {navFloating.portal}
