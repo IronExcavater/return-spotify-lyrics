@@ -1,6 +1,7 @@
 import {
     ReactNode,
     useCallback,
+    useId,
     useLayoutEffect,
     useMemo,
     useRef,
@@ -29,6 +30,7 @@ export function usePortalSlot<Key extends string>({
     enabled,
     anchorClassName = 'flex-shrink-0',
 }: UsePortalSlotOptions<Key>): PortalSlotResult<Key> {
+    const instanceId = useId();
     const hostRef = useRef<HTMLDivElement | null>(null);
     const anchorsRef = useRef<Record<Key, HTMLDivElement | null>>(
         {} as Record<Key, HTMLDivElement | null>
@@ -80,7 +82,7 @@ export function usePortalSlot<Key extends string>({
             (result, key) => {
                 result[key] = (
                     <div
-                        key={key}
+                        key={`${instanceId}-${key}`}
                         className={anchorClassName}
                         ref={attachToAnchor(key)}
                     />
@@ -89,7 +91,7 @@ export function usePortalSlot<Key extends string>({
             },
             {} as Record<Key, JSX.Element>
         );
-    }, [anchorClassName, attachToAnchor, keys]);
+    }, [anchorClassName, attachToAnchor, keys, instanceId]);
 
     const portal =
         enabled && hostRef.current

@@ -15,24 +15,25 @@ export function NavBar({
     onShowHome,
     onShowPlayback,
 }: Props) {
-    const items = [
-        canShowPlayback
-            ? {
-                  key: 'playback' as const,
-                  label: 'Player',
-                  icon: <PlayIcon />,
-              }
-            : null,
-        {
-            key: 'home' as const,
-            label: 'Home',
-            icon: <HomeIcon />,
-        },
-    ].filter(Boolean) as {
+    const items: Array<{
         key: 'home' | 'playback';
         label: string;
         icon: ReactNode;
-    }[];
+        disabled: boolean;
+    }> = [
+        {
+            key: 'playback',
+            label: 'Player',
+            icon: <PlayIcon />,
+            disabled: !canShowPlayback,
+        },
+        {
+            key: 'home',
+            label: 'Home',
+            icon: <HomeIcon />,
+            disabled: false,
+        },
+    ];
 
     const current = items.some((item) => item.key === active)
         ? active
@@ -75,12 +76,16 @@ export function NavBar({
                     aria-label={item.label}
                     aria-pressed={item.key === current}
                     aria-selected={item.key === current}
-                    onClick={() => handleSelect(item.key)}
+                    aria-disabled={item.disabled}
+                    disabled={item.disabled}
+                    onClick={() => !item.disabled && handleSelect(item.key)}
                     className={clsx(
                         'relative z-10 flex h-6 w-6 items-center justify-center rounded-full text-[var(--gray-11)] transition-colors duration-150',
                         item.key === current
                             ? 'text-[var(--accent-12)]'
-                            : 'text-[var(--gray-12)]/70 hover:text-[var(--gray-12)]'
+                            : 'text-[var(--gray-12)]/70 hover:text-[var(--gray-12)]',
+                        item.disabled &&
+                            'opacity-50 hover:text-[var(--gray-12)]/70'
                     )}
                 >
                     {item.icon}

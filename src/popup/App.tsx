@@ -1,33 +1,43 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Flex } from '@radix-ui/themes';
-import { Navigate, Route, Routes, useNavigate } from 'react-router-dom';
+import { Navigate, Route, Routes } from 'react-router-dom';
 import { PersonIcon } from '@radix-ui/react-icons';
+
 import { useAuth } from './hooks/useAuth';
+import { usePlayer } from './hooks/usePlayer';
+import { useAppState, BarKey } from './hooks/useAppState';
+
 import { HomeView } from './views/HomeView';
 import { LyricsView } from './views/LyricsView';
 import { LoginView } from './views/LoginView';
 import { ProfileView } from './views/ProfileView';
+
 import { PlaybackBar } from './components/PlaybackBar';
 import { HomeBar } from './components/HomeBar';
 import { NavBar } from './components/NavBar';
-import { Resizer } from './Resizer';
 import { AvatarButton } from './components/AvatarButton';
 import { ProtectedLayout } from './components/ProtectedLayout';
 import { usePortalSlot } from './hooks/usePortalSlot';
+import { Resizer } from './hooks/useResize.tsx';
 
-type BarKey = 'home' | 'playback';
 const BAR_KEYS: readonly BarKey[] = ['home', 'playback'];
 
 export default function App() {
     const { authed, profile, login, logout } = useAuth();
-    const navigate = useNavigate();
-    const [searchQuery, setSearchQuery] = useState('');
-    const [activeBar, setActiveBar] = useState<BarKey | undefined>('home');
+    const { playback } = usePlayer();
 
-    const widthSize = { min: 300, max: 500 };
-    const heightSize = { min: 400, max: 600 };
+    const isPlaying = Boolean(playback?.is_playing && playback?.item);
+    const appState = useAppState();
+
+    const [searchQuery, setSearchQuery] = useState('');
 
     const profileImage = profile?.images?.[0]?.url;
+
+    // Auth semantics
+    const mustLogin = authed === false && authed !== undefined;
+    const mustLogout = authed === true;
+
+    // Slots
     const profileSlot = useMemo(
         () => (
             <AvatarButton
@@ -39,69 +49,76 @@ export default function App() {
                 }}
                 variant="ghost"
                 size="2"
-                aria-label="Open profile"
-                onClick={() => navigate('/profile')}
+                onClick={appState.toggleProfile}
+                active={appState.isProfileRoute}
             />
         ),
-        [navigate, profileImage]
+        [appState.toggleProfile, appState.isProfileRoute, profileImage]
     );
 
     const navSlot = useMemo(
         () => (
             <NavBar
-                active={activeBar ?? 'home'}
-                canShowPlayback
-                onShowHome={() => setActiveBar('home')}
-                onShowPlayback={() => setActiveBar('playback')}
+                active={appState.activeBar ?? 'home'}
+                canShowPlayback={isPlaying}
+                onShowHome={appState.goHome}
+                onShowPlayback={appState.goLyrics}
             />
         ),
-        [activeBar]
+        [appState.activeBar, appState.goHome, appState.goLyrics, isPlaying]
     );
 
-    useEffect(() => {
-        if (authed === false) {
-            setActiveBar(undefined);
-            return;
-        }
-
-        if (authed === true) {
-            setActiveBar((prev) => (prev === undefined ? 'home' : prev));
-        }
-    }, [authed]);
-
-    const showBars = activeBar !== undefined;
     const profileFloating = usePortalSlot<BarKey>({
         keys: BAR_KEYS,
         content: profileSlot,
-        activeKey: activeBar,
+        activeKey: appState.activeBar,
         defaultKey: 'home',
-        enabled: showBars,
+        enabled: appState.showBars,
     });
+
     const navFloating = usePortalSlot<BarKey>({
         keys: BAR_KEYS,
         content: navSlot,
-        activeKey: activeBar,
+        activeKey: appState.activeBar,
         defaultKey: 'home',
-        enabled: showBars,
+        enabled: appState.showBars,
     });
 
+    const widthBounds = { min: 350, max: 500 } as const;
+    const heightBounds = { min: 300, max: 600 } as const;
+
     return (
-        <Resizer widthSize={widthSize} heightSize={heightSize}>
-            <Flex direction="column">
-                {showBars && (
-                    <Flex
-                        direction="row"
-                        align="center"
-                        className="border-b-2 border-[var(--gray-a6)] bg-[var(--color-panel-solid)]"
-                    >
-                        {activeBar === 'playback' && (
+        <Resizer
+            width={{
+                value: appState.layout.width,
+                min: widthBounds.min,
+                max: widthBounds.max,
+                override: appState.layout.widthOverride,
+            }}
+            height={{
+                value: appState.layout.height,
+                min:
+                    appState.layout.heightOverride === 'auto'
+                        ? 'auto'
+                        : heightBounds.min,
+                max: heightBounds.max,
+                override: appState.layout.heightOverride,
+            }}
+            onWidthChange={appState.setWidth}
+            onHeightChange={appState.setHeight}
+        >
+            <Flex direction="column" className="h-full">
+                {/* Top bar */}
+                {appState.showBars && (
+                    <Flex className="border-b-2 border-[var(--gray-a6)] bg-[var(--color-panel-solid)]">
+                        {appState.activeBar === 'playback' && (
                             <PlaybackBar
                                 profileSlot={profileFloating.anchors.playback}
                                 navSlot={navFloating.anchors.playback}
                             />
                         )}
 
-                        {activeBar === 'home' && (
+                        {appState.activeBar === 'home' && (
                             <HomeBar
                                 profileSlot={profileFloating.anchors.home}
                                 navSlot={navFloating.anchors.home}
@@ -113,67 +130,75 @@ export default function App() {
                     </Flex>
                 )}
 
-                <Routes>
-                    <Route
-                        path="/"
-                        element={
-                            <ProtectedLayout
-                                when={authed == false && authed !== undefined}
-                                redirectTo="/login"
-                            >
-                                <></>
-                            </ProtectedLayout>
-                        }
-                    />
-                    <Route
-                        path="/home"
-                        element={
-                            <ProtectedLayout
-                                when={authed == false && authed !== undefined}
-                                redirectTo="/login"
-                            >
-                                <HomeView searchQuery={searchQuery} />
-                            </ProtectedLayout>
-                        }
-                    />
-                    <Route
-                        path="/lyrics"
-                        element={
-                            <ProtectedLayout
-                                when={authed == false && authed !== undefined}
-                                redirectTo="/login"
-                            >
-                                <LyricsView />
-                            </ProtectedLayout>
-                        }
-                    />
-                    <Route
-                        path="/profile"
-                        element={
-                            <ProtectedLayout
-                                when={authed == false && authed !== undefined}
-                                redirectTo="/login"
-                            >
-                                <ProfileView
-                                    profile={profile}
-                                    onLogout={logout}
-                                />
-                            </ProtectedLayout>
-                        }
-                    />
-                    <Route
-                        path="/login"
-                        element={
-                            <ProtectedLayout
-                                when={authed == true && authed !== undefined}
-                                redirectTo="/login"
-                            >
-                                <LoginView onLogin={login} />
-                            </ProtectedLayout>
-                        }
-                    />
-                    <Route path="*" element={<Navigate to="/" replace />} />
-                </Routes>
+                {/* Routes */}
+                <div className="app-routes">
+                    <Routes>
+                        {/* Idle root */}
+                        <Route
+                            path="/"
+                            element={
+                                <ProtectedLayout
+                                    when={mustLogin}
+                                    redirectTo="/login"
+                                >
+                                    <></>
+                                </ProtectedLayout>
+                            }
+                        />
+
+                        <Route
+                            path="/home"
+                            element={
+                                <ProtectedLayout
+                                    when={mustLogin}
+                                    redirectTo="/login"
+                                >
+                                    <HomeView searchQuery={searchQuery} />
+                                </ProtectedLayout>
+                            }
+                        />
+
+                        <Route
+                            path="/lyrics"
+                            element={
+                                <ProtectedLayout
+                                    when={mustLogin}
+                                    redirectTo="/login"
+                                >
+                                    <LyricsView />
+                                </ProtectedLayout>
+                            }
+                        />
+
+                        <Route
+                            path="/profile"
+                            element={
+                                <ProtectedLayout
+                                    when={mustLogin}
+                                    redirectTo="/login"
+                                >
+                                    <ProfileView
+                                        profile={profile}
+                                        onLogout={logout}
+                                    />
+                                </ProtectedLayout>
+                            }
+                        />
+
+                        <Route
+                            path="/login"
+                            element={
+                                <ProtectedLayout
+                                    when={mustLogout}
+                                    redirectTo="/"
+                                >
+                                    <LoginView onLogin={login} />
+                                </ProtectedLayout>
+                            }
+                        />
+                        <Route path="*" element={<Navigate to="/" replace />} />
+                    </Routes>
+                </div>
 
                 {profileFloating.portal}
                 {navFloating.portal}

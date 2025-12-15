@@ -150,7 +150,7 @@ function refreshSoon(token: SpotifyToken) {
 
     const delay = token.expires_by - Date.now() - EXPIRY_BUFFER_MS;
 
-    refreshTimer = setTimeout(refreshNow, Math.max(0, delay));
+    refreshTimer = setTimeout(() => refreshNow(token), Math.max(0, delay));
 }
 
 async function refreshNow(token: SpotifyToken) {
@@ -162,9 +162,9 @@ const listener = (
     area: string
 ) => {
     if (area === 'local' && changes.spotifyToken) {
-        if (changes.spotifyToken.oldValue === undefined)
-            refreshSoon(changes.spotifyToken.newValue as SpotifyToken);
-        if (changes.spotifyToken.newValue === undefined) refreshClear();
+        const next = changes.spotifyToken.newValue as SpotifyToken | undefined;
+        if (next) refreshSoon(next);
+        else refreshClear();
     }
 };
 

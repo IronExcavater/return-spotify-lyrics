@@ -143,31 +143,25 @@ export function ProfileView({ profile, onLogout, connection }: Props) {
                     </Flex>
                 </Flex>
 
-                <Card size="2" variant="surface">
-                    <ul className="divide-y divide-white/10">
-                        {stats.map((stat) => (
-                            <li
-                                key={stat.label}
-                                className="flex items-center justify-between px-3 py-1"
-                                title={stat.hint ?? undefined}
+                <ul className="divide-y divide-white/10">
+                    {stats.map((stat) => (
+                        <li
+                            key={stat.label}
+                            className="flex items-center justify-between px-3 py-1"
+                            title={stat.hint ?? undefined}
+                        >
+                            <Text
+                                size="1"
+                                className="tracking-[0.3em] text-white/50 uppercase"
                             >
-                                <Text
-                                    size="1"
-                                    className="tracking-[0.3em] text-white/50 uppercase"
-                                >
-                                    {stat.label}
-                                </Text>
-                                <Text
-                                    size="2"
-                                    weight="bold"
-                                    className="text-white"
-                                >
-                                    {stat.value}
-                                </Text>
-                            </li>
-                        ))}
-                    </ul>
-                </Card>
+                                {stat.label}
+                            </Text>
+                            <Text size="2" weight="bold" className="text-white">
+                                {stat.value}
+                            </Text>
+                        </li>
+                    ))}
+                </ul>
 
                 <AlertDialog.Root>
                     <AlertDialog.Trigger>
