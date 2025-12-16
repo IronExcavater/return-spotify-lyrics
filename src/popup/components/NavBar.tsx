@@ -1,6 +1,7 @@
 import { HomeIcon, PlayIcon } from '@radix-ui/react-icons';
 import clsx from 'clsx';
 import { ReactNode } from 'react';
+import { IconButton } from '@radix-ui/themes';
 
 interface Props {
     active: 'home' | 'playback';
@@ -69,7 +70,20 @@ export function NavBar({
             )}
 
             {items.map((item) => (
-                <button
+                <IconButton
+                    key={item.key}
+                    size="1"
+                    radius="full"
+                    variant="ghost"
+                    disabled={item.disabled}
+                    aria-label={item.label}
+                    aria-selected={item.key === current}
+                    aria-disabled={item.disabled}
+                    onClick={() => handleSelect(item.key)}
+                >
+                    {item.icon}
+                </IconButton>
+                /*<button
                     key={item.key}
                     type="button"
                     role="tab"
@@ -80,7 +94,7 @@ export function NavBar({
                     disabled={item.disabled}
                     onClick={() => !item.disabled && handleSelect(item.key)}
                     className={clsx(
-                        'relative z-10 flex h-6 w-6 items-center justify-center rounded-full text-[var(--gray-11)] transition-colors duration-150',
+                        'relative z-10 grid h-6 w-6 place-items-center rounded-full leading-none text-[var(--gray-11)] transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--accent-10)]',
                         item.key === current
                             ? 'text-[var(--accent-12)]'
                             : 'text-[var(--gray-12)]/70 hover:text-[var(--gray-12)]',
@@ -89,7 +103,7 @@ export function NavBar({
                     )}
                 >
                     {item.icon}
-                </button>
+                </button>*/
             ))}
         </nav>
     );

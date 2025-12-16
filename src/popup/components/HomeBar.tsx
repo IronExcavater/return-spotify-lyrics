@@ -4,7 +4,10 @@ import {
     HomeIcon,
     MagnifyingGlassIcon,
 } from '@radix-ui/react-icons';
-import { ReactNode } from 'react';
+import { CSSProperties, ReactNode } from 'react';
+import clsx from 'clsx';
+
+type CSSVariableStyles = CSSProperties & Record<string, string>;
 
 interface Props {
     profileSlot?: ReactNode;
@@ -22,6 +25,10 @@ export function HomeBar({
     onClearSearch,
 }: Props) {
     const hasQuery = searchQuery.trim().length > 0;
+    const textFieldCustomStyles: CSSVariableStyles = {
+        '--text-field-selection-color': 'var(--accent-a4)',
+        '--text-field-focus-color': 'var(--accent-10)',
+    };
 
     return (
         <Flex align="center" gap="2" p="2" flexGrow="1">
@@ -31,36 +38,50 @@ export function HomeBar({
                 size="2"
                 radius="full"
                 placeholder="Search controls or tweaks"
-                className="flex grow bg-[var(--gray-a3)] transition-colors duration-150 focus-within:bg-[var(--gray-a4)]"
+                className="flex grow items-center px-3"
+                style={textFieldCustomStyles}
             >
-                <TextField.Slot
-                    side="left"
-                    className="text-[var(--accent-11)] transition-all duration-200"
-                >
-                    <span
-                        className={`inline-flex items-center transition-all duration-200 ${
-                            hasQuery
-                                ? 'scale-100 text-[var(--accent-12)]'
-                                : 'scale-95 opacity-80'
-                        }`}
+                <TextField.Slot side="left" pr="1">
+                    <IconButton
+                        disabled
+                        size="1"
+                        variant="ghost"
+                        className="relative flex !cursor-default items-center justify-center"
                     >
-                        {hasQuery ? <MagnifyingGlassIcon /> : <HomeIcon />}
-                    </span>
+                        <MagnifyingGlassIcon
+                            className={clsx(
+                                'absolute transition-transform ease-out',
+                                hasQuery
+                                    ? 'scale-100 opacity-100'
+                                    : 'scale-50 opacity-0'
+                            )}
+                        />
+                        <HomeIcon
+                            className={clsx(
+                                'absolute transition-transform ease-out',
+                                hasQuery
+                                    ? 'scale-50 opacity-0'
+                                    : 'scale-100 opacity-100'
+                            )}
+                        />
+                    </IconButton>
                 </TextField.Slot>
-                {hasQuery && (
-                    <TextField.Slot side="right">
-                        <IconButton
-                            type="button"
-                            size="1"
-                            variant="ghost"
-                            aria-label="Clear search"
-                            onClick={onClearSearch}
-                            className="transition-transform duration-150 hover:scale-110"
-                        >
-                            <Cross2Icon />
-                        </IconButton>
-                    </TextField.Slot>
-                )}
+                <TextField.Slot side="right" pl="1">
+                    <IconButton
+                        size="1"
+                        variant="ghost"
+                        aria-label="Clear search"
+                        aria-hidden={!hasQuery}
+                        tabIndex={!hasQuery ? -1 : 0}
+                        onClick={onClearSearch}
+                        className={clsx(
+                            '!transition-transform',
+                            hasQuery ? '!scale-100' : '!scale-0'
+                        )}
+                    >
+                        <Cross2Icon />
+                    </IconButton>
+                </TextField.Slot>
             </TextField.Root>
 
             {profileSlot}

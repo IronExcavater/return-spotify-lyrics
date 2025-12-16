@@ -15,16 +15,9 @@ export function IconToggle({
         <IconButton
             {...rest}
             className={clsx(
-                // Base ghost button text/icon color
-                'text-gray-11 hover:text-gray-12',
-
-                // Active state uses Radix accent tokens
+                'text-gray-11 hover:text-gray-12 transition-colors',
                 isPressed &&
                     'text-[var(--accent-11)] hover:text-[var(--accent-12)]',
-
-                // Increase click precision
-                'transition-colors duration-150',
-
                 className
             )}
         >

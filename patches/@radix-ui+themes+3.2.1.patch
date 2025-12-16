@@ -27,19 +27,142 @@ index 881348e..01719f2 100644
  .rt-AvatarFallback:where(.rt-one-letter) {
      font-size: var(--avatar-fallback-one-letter-font-size);
  }
+diff --git a/node_modules/@radix-ui/themes/dist/cjs/components/avatar.d.ts b/node_modules/@radix-ui/themes/dist/cjs/components/avatar.d.ts
+index 9ab30f6..7e7c1f8 100644
+--- a/node_modules/@radix-ui/themes/dist/cjs/components/avatar.d.ts
++++ b/node_modules/@radix-ui/themes/dist/cjs/components/avatar.d.ts
+@@ -10,6 +10,7 @@ declare const Avatar: React.ForwardRefExoticComponent<AvatarProps & React.RefAtt
+ type AvatarOwnProps = GetPropDefTypes<typeof avatarPropDefs>;
+ interface AvatarImplProps extends ComponentPropsWithout<typeof AvatarPrimitive.Image, RemovedProps>, AvatarOwnProps {
+     fallback: NonNullable<AvatarOwnProps['fallback']>;
++    imageClassName?: AvatarOwnProps['imageClassName'];
+ }
+ export { Avatar };
+ export type { AvatarProps };
 diff --git a/node_modules/@radix-ui/themes/dist/cjs/components/avatar.js b/node_modules/@radix-ui/themes/dist/cjs/components/avatar.js
-index 7206758..ebd9583 100644
+index 7206758..de4fa9e 100644
 --- a/node_modules/@radix-ui/themes/dist/cjs/components/avatar.js
 +++ b/node_modules/@radix-ui/themes/dist/cjs/components/avatar.js
 @@ -1,2 +1,2 @@
 -"use strict";"use client";var h=Object.create;var m=Object.defineProperty;var N=Object.getOwnPropertyDescriptor;var w=Object.getOwnPropertyNames;var C=Object.getPrototypeOf,x=Object.prototype.hasOwnProperty;var D=(r,t)=>{for(var a in t)m(r,a,{get:t[a],enumerable:!0})},v=(r,t,a,p)=>{if(t&&typeof t=="object"||typeof t=="function")for(let o of w(t))!x.call(r,o)&&o!==a&&m(r,o,{get:()=>t[o],enumerable:!(p=N(t,o))||p.enumerable});return r};var f=(r,t,a)=>(a=r!=null?h(C(r)):{},v(t||!r||!r.__esModule?m(a,"default",{value:r,enumerable:!0}):a,r)),S=r=>v(m({},"__esModule",{value:!0}),r);var b={};D(b,{Avatar:()=>n});module.exports=S(b);var e=f(require("react")),i=f(require("classnames")),l=require("radix-ui"),A=require("./avatar.props.js"),P=require("../helpers/extract-props.js"),g=require("../helpers/get-subtree.js"),y=require("../props/margin.props.js");const n=e.forwardRef((r,t)=>{const{asChild:a,children:p,className:o,style:s,color:c,radius:u,...I}=(0,P.extractProps)(r,A.avatarPropDefs,y.marginPropDefs);return e.createElement(l.Avatar.Root,{"data-accent-color":c,"data-radius":u,className:(0,i.default)("rt-reset","rt-AvatarRoot",o),style:s,asChild:a},(0,g.getSubtree)({asChild:a,children:p},e.createElement(d,{ref:t,...I})))});n.displayName="Avatar";const d=e.forwardRef(({fallback:r,...t},a)=>{const[p,o]=e.useState("idle");return e.createElement(e.Fragment,null,p==="idle"||p==="loading"?e.createElement("span",{className:"rt-AvatarFallback"}):null,p==="error"?e.createElement(l.Avatar.Fallback,{className:(0,i.default)("rt-AvatarFallback",{"rt-one-letter":typeof r=="string"&&r.length===1,"rt-two-letters":typeof r=="string"&&r.length===2}),delayMs:0},r):null,e.createElement(l.Avatar.Image,{ref:a,className:"rt-AvatarImage",...t,onLoadingStatusChange:s=>{t.onLoadingStatusChange?.(s),o(s)}}))});d.displayName="AvatarImpl";
-+"use strict";"use client";var h=Object.create;var m=Object.defineProperty;var N=Object.getOwnPropertyDescriptor;var w=Object.getOwnPropertyNames;var C=Object.getPrototypeOf,x=Object.prototype.hasOwnProperty;var D=(r,t)=>{for(var a in t)m(r,a,{get:t[a],enumerable:!0})},v=(r,t,a,p)=>{if(t&&typeof t=="object"||typeof t=="function")for(let o of w(t))!x.call(r,o)&&o!==a&&m(r,o,{get:()=>t[o],enumerable:!(p=N(t,o))||p.enumerable});return r};var f=(r,t,a)=>(a=r!=null?h(C(r)):{},v(t||!r||!r.__esModule?m(a,"default",{value:r,enumerable:!0}):a,r)),S=r=>v(m({},"__esModule",{value:!0}),r);var b={};D(b,{Avatar:()=>n});module.exports=S(b);var e=f(require("react")),i=f(require("classnames")),l=require("radix-ui"),A=require("./avatar.props.js"),P=require("../helpers/extract-props.js"),g=require("../helpers/get-subtree.js"),y=require("../props/margin.props.js");const n=e.forwardRef((r,t)=>{const{asChild:a,children:p,className:o,style:s,color:c,radius:u,...I}=(0,P.extractProps)(r,A.avatarPropDefs,y.marginPropDefs);return e.createElement(l.Avatar.Root,{"data-accent-color":c,"data-radius":u,className:(0,i.default)("rt-reset","rt-AvatarRoot",o),style:s,asChild:a},(0,g.getSubtree)({asChild:a,children:p},c=>e.createElement(d,{ref:t,...I},c)))});n.displayName="Avatar";const d=e.forwardRef(({fallback:r,children:t,...a},p)=>{const[o,s]=e.useState("idle");return e.createElement(e.Fragment,null,o=="idle"||o=="loading"?e.createElement("span",{className:"rt-AvatarFallback"}):null,o=="error"?e.createElement(l.Avatar.Fallback,{className:(0,i.default)("rt-AvatarFallback",{"rt-one-letter":typeof r=="string"&&r.length===1,"rt-two-letters":typeof r=="string"&&r.length===2}),delayMs:0},r):null,e.createElement(l.Avatar.Image,{ref:p,className:"rt-AvatarImage",...a,onLoadingStatusChange:c=>{a.onLoadingStatusChange?.(c),s(c)}}),t?e.createElement("span",{className:"rt-AvatarOverlay"},t):null)});d.displayName="AvatarImpl";
++"use strict";"use client";var h=Object.create;var m=Object.defineProperty;var N=Object.getOwnPropertyDescriptor;var w=Object.getOwnPropertyNames;var C=Object.getPrototypeOf,x=Object.prototype.hasOwnProperty;var D=(r,t)=>{for(var a in t)m(r,a,{get:t[a],enumerable:!0})},v=(r,t,a,p)=>{if(t&&typeof t=="object"||typeof t=="function")for(let o of w(t))!x.call(r,o)&&o!==a&&m(r,o,{get:()=>t[o],enumerable:!(p=N(t,o))||p.enumerable});return r};var f=(r,t,a)=>(a=r!=null?h(C(r)):{},v(t||!r||!r.__esModule?m(a,"default",{value:r,enumerable:!0}):a,r)),S=r=>v(m({},"__esModule",{value:!0}),r);var b={};D(b,{Avatar:()=>n});module.exports=S(b);var e=f(require("react")),i=f(require("classnames")),l=require("radix-ui"),A=require("./avatar.props.js"),P=require("../helpers/extract-props.js"),g=require("../helpers/get-subtree.js"),y=require("../props/margin.props.js");const n=e.forwardRef((r,t)=>{const{asChild:a,children:p,className:o,style:s,color:c,radius:u,imageClassName:I,...R}=(0,P.extractProps)(r,A.avatarPropDefs,y.marginPropDefs);return e.createElement(l.Avatar.Root,{"data-accent-color":c,"data-radius":u,className:(0,i.default)("rt-reset","rt-AvatarRoot",o),style:s,asChild:a},(0,g.getSubtree)({asChild:a,children:p},c=>e.createElement(d,{ref:t,imageClassName:I,...R},c)))});n.displayName="Avatar";const d=e.forwardRef(({fallback:r,children:t,imageClassName:a,...p},o)=>{const[s,I]=e.useState("idle");return e.createElement(e.Fragment,null,s=="idle"||s=="loading"?e.createElement("span",{className:"rt-AvatarFallback"}):null,s=="error"?e.createElement(l.Avatar.Fallback,{className:(0,i.default)("rt-AvatarFallback",{"rt-one-letter":typeof r=="string"&&r.length===1,"rt-two-letters":typeof r=="string"&&r.length===2}),delayMs:0},r):null,e.createElement(l.Avatar.Image,{ref:o,className:(0,i.default)("rt-AvatarImage",a),...p,onLoadingStatusChange:c=>{p.onLoadingStatusChange?.(c),I(c)}}),t?e.createElement("span",{className:"rt-AvatarOverlay"},t):null)});d.displayName="AvatarImpl";
  //# sourceMappingURL=avatar.js.map
+diff --git a/node_modules/@radix-ui/themes/dist/cjs/components/avatar.props.d.ts b/node_modules/@radix-ui/themes/dist/cjs/components/avatar.props.d.ts
+index 08dc304..57211eb 100644
+--- a/node_modules/@radix-ui/themes/dist/cjs/components/avatar.props.d.ts
++++ b/node_modules/@radix-ui/themes/dist/cjs/components/avatar.props.d.ts
+@@ -34,6 +34,7 @@ declare const avatarPropDefs: {
+     asChild: {
+         type: "boolean";
+     };
++    imageClassName: string;
+ };
+ export { avatarPropDefs };
+ //# sourceMappingURL=avatar.props.d.ts.map
+\ No newline at end of file
+diff --git a/node_modules/@radix-ui/themes/dist/esm/components/avatar.d.ts b/node_modules/@radix-ui/themes/dist/esm/components/avatar.d.ts
+index 46a0812..f37e354 100644
+--- a/node_modules/@radix-ui/themes/dist/esm/components/avatar.d.ts
++++ b/node_modules/@radix-ui/themes/dist/esm/components/avatar.d.ts
+@@ -10,6 +10,7 @@ declare const Avatar: React.ForwardRefExoticComponent<Omit<AvatarProps, "ref"> &
+ type AvatarOwnProps = GetPropDefTypes<typeof avatarPropDefs>;
+ interface AvatarImplProps extends ComponentPropsWithout<typeof AvatarPrimitive.Image, RemovedProps>, AvatarOwnProps {
+     fallback: NonNullable<AvatarOwnProps['fallback']>;
++    imageClassName?: AvatarOwnProps['imageClassName'];
+ }
+ export { Avatar };
+ export type { AvatarProps };
 diff --git a/node_modules/@radix-ui/themes/dist/esm/components/avatar.js b/node_modules/@radix-ui/themes/dist/esm/components/avatar.js
-index e3f1b2f..21719ad 100644
+index e3f1b2f..34121cd 100644
 --- a/node_modules/@radix-ui/themes/dist/esm/components/avatar.js
 +++ b/node_modules/@radix-ui/themes/dist/esm/components/avatar.js
 @@ -1,2 +1,2 @@
 -"use client";import*as r from"react";import l from"classnames";import{Avatar as m}from"radix-ui";import{avatarPropDefs as A}from"./avatar.props.js";import{extractProps as P}from"../helpers/extract-props.js";import{getSubtree as g}from"../helpers/get-subtree.js";import{marginPropDefs as y}from"../props/margin.props.js";const i=r.forwardRef((t,e)=>{const{asChild:o,children:a,className:s,style:p,color:v,radius:f,...d}=P(t,A,y);return r.createElement(m.Root,{"data-accent-color":v,"data-radius":f,className:l("rt-reset","rt-AvatarRoot",s),style:p,asChild:o},g({asChild:o,children:a},r.createElement(n,{ref:e,...d})))});i.displayName="Avatar";const n=r.forwardRef(({fallback:t,...e},o)=>{const[a,s]=r.useState("idle");return r.createElement(r.Fragment,null,a==="idle"||a==="loading"?r.createElement("span",{className:"rt-AvatarFallback"}):null,a==="error"?r.createElement(m.Fallback,{className:l("rt-AvatarFallback",{"rt-one-letter":typeof t=="string"&&t.length===1,"rt-two-letters":typeof t=="string"&&t.length===2}),delayMs:0},t):null,r.createElement(m.Image,{ref:o,className:"rt-AvatarImage",...e,onLoadingStatusChange:p=>{e.onLoadingStatusChange?.(p),s(p)}}))});n.displayName="AvatarImpl";export{i as Avatar};
-+"use client";import*as r from"react";import l from"classnames";import{Avatar as m}from"radix-ui";import{avatarPropDefs as A}from"./avatar.props.js";import{extractProps as P}from"../helpers/extract-props.js";import{getSubtree as g}from"../helpers/get-subtree.js";import{marginPropDefs as y}from"../props/margin.props.js";const i=r.forwardRef((t,e)=>{const{asChild:o,children:a,className:s,style:p,color:v,radius:f,...d}=P(t,A,y);return r.createElement(m.Root,{"data-accent-color":v,"data-radius":f,className:l("rt-reset","rt-AvatarRoot",s),style:p,asChild:o},g({asChild:o,children:a},c=>r.createElement(n,{ref:e,...d},c)))});i.displayName="Avatar";const n=r.forwardRef(({fallback:t,children:e,...o},a)=>{const[s,p]=r.useState("idle");return r.createElement(r.Fragment,null,s=="idle"||s=="loading"?r.createElement("span",{className:"rt-AvatarFallback"}):null,s=="error"?r.createElement(m.Fallback,{className:l("rt-AvatarFallback",{"rt-one-letter":typeof t=="string"&&t.length===1,"rt-two-letters":typeof t=="string"&&t.length===2}),delayMs:0},t):null,r.createElement(m.Image,{ref:a,className:"rt-AvatarImage",...o,onLoadingStatusChange:v=>{o.onLoadingStatusChange?.(v),p(v)}}),e?r.createElement("span",{className:"rt-AvatarOverlay"},e):null)});n.displayName="AvatarImpl";export{i as Avatar};
++"use client";import*as r from"react";import l from"classnames";import{Avatar as m}from"radix-ui";import{avatarPropDefs as A}from"./avatar.props.js";import{extractProps as P}from"../helpers/extract-props.js";import{getSubtree as g}from"../helpers/get-subtree.js";import{marginPropDefs as y}from"../props/margin.props.js";const i=r.forwardRef((t,e)=>{const{asChild:o,children:a,className:s,style:p,color:v,radius:f,imageClassName:d,...R}=P(t,A,y);return r.createElement(m.Root,{"data-accent-color":v,"data-radius":f,className:l("rt-reset","rt-AvatarRoot",s),style:p,asChild:o},g({asChild:o,children:a},c=>r.createElement(n,{ref:e,imageClassName:d,...R},c)))});i.displayName="Avatar";const n=r.forwardRef(({fallback:t,children:e,imageClassName:o,...a},s)=>{const[p,v]=r.useState("idle");return r.createElement(r.Fragment,null,p=="idle"||p=="loading"?r.createElement("span",{className:"rt-AvatarFallback"}):null,p=="error"?r.createElement(m.Fallback,{className:l("rt-AvatarFallback",{"rt-one-letter":typeof t=="string"&&t.length===1,"rt-two-letters":typeof t=="string"&&t.length===2}),delayMs:0},t):null,r.createElement(m.Image,{ref:s,className:l("rt-AvatarImage",o),...a,onLoadingStatusChange:f=>{a.onLoadingStatusChange?.(f),v(f)}}),e?r.createElement("span",{className:"rt-AvatarOverlay"},e):null)});n.displayName="AvatarImpl";export{i as Avatar};
  //# sourceMappingURL=avatar.js.map
+diff --git a/node_modules/@radix-ui/themes/dist/esm/components/avatar.props.d.ts b/node_modules/@radix-ui/themes/dist/esm/components/avatar.props.d.ts
+index 08dc304..57211eb 100644
+--- a/node_modules/@radix-ui/themes/dist/esm/components/avatar.props.d.ts
++++ b/node_modules/@radix-ui/themes/dist/esm/components/avatar.props.d.ts
+@@ -34,6 +34,7 @@ declare const avatarPropDefs: {
+     asChild: {
+         type: "boolean";
+     };
++    imageClassName: string;
+ };
+ export { avatarPropDefs };
+ //# sourceMappingURL=avatar.props.d.ts.map
+\ No newline at end of file
+diff --git a/node_modules/@radix-ui/themes/src/components/avatar.props.tsx b/node_modules/@radix-ui/themes/src/components/avatar.props.tsx
+index 3845423..88af8ab 100644
+--- a/node_modules/@radix-ui/themes/src/components/avatar.props.tsx
++++ b/node_modules/@radix-ui/themes/src/components/avatar.props.tsx
+@@ -16,10 +16,12 @@ const avatarPropDefs = {
+   ...highContrastPropDef,
+   ...radiusPropDef,
+   fallback: { type: 'ReactNode', required: true },
++  imageClassName: { type: 'string' }
+ } satisfies {
+   size: PropDef<(typeof sizes)[number]>;
+   variant: PropDef<(typeof variants)[number]>;
+   fallback: PropDef<React.ReactNode>;
++  imageClassName: PropDef<string>;
+ };
+ 
+ export { avatarPropDefs };
+diff --git a/node_modules/@radix-ui/themes/src/components/avatar.tsx b/node_modules/@radix-ui/themes/src/components/avatar.tsx
+index 5545eeb..cad735f 100644
+--- a/node_modules/@radix-ui/themes/src/components/avatar.tsx
++++ b/node_modules/@radix-ui/themes/src/components/avatar.tsx
+@@ -15,7 +15,16 @@ import type { GetPropDefTypes } from '../props/prop-def.js';
+ 
+ interface AvatarProps extends MarginProps, AvatarImplProps {}
+ const Avatar = React.forwardRef<AvatarImplElement, AvatarProps>((props, forwardedRef) => {
+-  const { asChild, children, className, style, color, radius, ...imageProps } = extractProps(
++  const {
++    asChild,
++    children,
++    className,
++    style,
++    color,
++    radius,
++    imageClassName,
++    ...imageProps
++  } = extractProps(
+     props,
+     avatarPropDefs,
+     marginPropDefs
+@@ -30,7 +39,10 @@ const Avatar = React.forwardRef<AvatarImplElement, AvatarProps>((props, forwarde
+       style={style}
+       asChild={asChild}
+     >
+-      {getSubtree({ asChild, children }, <AvatarImpl ref={forwardedRef} {...imageProps} />)}
++      {getSubtree(
++        { asChild, children },
++        <AvatarImpl ref={forwardedRef} imageClassName={imageClassName} {...imageProps} />
++      )}
+     </AvatarPrimitive.Root>
+   );
+ });
+@@ -44,10 +56,11 @@ interface AvatarImplProps
+     AvatarOwnProps {
+   // TODO: See if we can automate making prop defs with `required: true` non nullable
+   fallback: NonNullable<AvatarOwnProps['fallback']>;
++  imageClassName?: string;
+ }
+ 
+ const AvatarImpl = React.forwardRef<AvatarImplElement, AvatarImplProps>(
+-  ({ fallback, ...imageProps }, forwardedRef) => {
++  ({ fallback, imageClassName, ...imageProps }, forwardedRef) => {
+     const [status, setStatus] = React.useState<'idle' | 'loading' | 'loaded' | 'error'>('idle');
+     return (
+       <>
+@@ -67,7 +80,7 @@ const AvatarImpl = React.forwardRef<AvatarImplElement, AvatarImplProps>(
+ 
+         <AvatarPrimitive.Image
+           ref={forwardedRef}
+-          className="rt-AvatarImage"
++          className={classNames('rt-AvatarImage', imageClassName)}
+           {...imageProps}
+           onLoadingStatusChange={(status) => {
+             imageProps.onLoadingStatusChange?.(status);

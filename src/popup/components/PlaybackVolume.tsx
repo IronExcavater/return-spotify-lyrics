@@ -113,7 +113,7 @@ export function PlaybackVolume({
             >
                 <div
                     className={clsx(
-                        'rounded-full bg-black/60 p-2 opacity-0 backdrop-blur-xs transition-opacity duration-150 ease-out',
+                        'rounded-full bg-black/60 p-2 opacity-0 backdrop-blur-xs transition-opacity ease-out',
                         'group-focus-within:opacity-100 group-hover:opacity-100'
                     )}
                 >

@@ -50,7 +50,7 @@ export default function App() {
                 variant="ghost"
                 size="2"
                 onClick={appState.toggleProfile}
-                active={appState.isProfileRoute}
+                aria-pressed={appState.isProfileRoute}
             />
         ),
         [appState.toggleProfile, appState.isProfileRoute, profileImage]
@@ -97,10 +97,7 @@ export default function App() {
             }}
             height={{
                 value: appState.layout.height,
-                min:
-                    appState.layout.heightOverride === 'auto'
-                        ? 'auto'
-                        : heightBounds.min,
+                min: heightBounds.min,
                 max: heightBounds.max,
                 override: appState.layout.heightOverride,
             }}

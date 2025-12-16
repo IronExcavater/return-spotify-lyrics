@@ -10,7 +10,6 @@ import { ReactNode } from 'react';
 interface AvatarButtonProps extends Omit<IconButtonProps, 'asChild'> {
     avatar: AvatarProps;
     children?: ReactNode;
-    active?: boolean;
 }
 
 export function AvatarButton({
@@ -18,10 +17,14 @@ export function AvatarButton({
     children,
     className,
     disabled,
-    active,
     ...button
 }: AvatarButtonProps) {
     const isEnabled = !disabled;
+    const {
+        className: avatarClassName,
+        imageClassName,
+        ...avatarProps
+    } = avatar;
 
     return (
         <IconButton
@@ -33,18 +36,14 @@ export function AvatarButton({
             className={clsx(isEnabled && 'cursor-pointer', className)}
         >
             <Avatar
-                {...avatar}
-                className={clsx(
-                    'block',
-                    'ring-2 ring-transparent ring-offset-[var(--color-panel-solid)] transition-shadow',
-                    isEnabled &&
-                        'hover:ring-[var(--accent-9)] hover:ring-offset-2 focus-visible:ring-[var(--accent-12)] focus-visible:ring-offset-2',
-                    isEnabled &&
-                        active &&
-                        '!ring-[var(--accent-10)] ring-offset-2',
-                    avatar.className
+                {...avatarProps}
+                className={clsx(avatarClassName)}
+                imageClassName={clsx(
+                    'block ring-2 ring-transparent ring-offset-[var(--color-panel-solid)] transition-shadow',
+                    'focus-visible:outline-none',
+                    'focus-visible:ring-2 focus-visible:ring-[var(--accent-10)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-panel-solid)]',
+                    imageClassName
                 )}
-                aria-pressed={active}
             >
                 {children}
             </Avatar>

@@ -108,7 +108,7 @@ export function PlaybackBar({ profileSlot, navSlot }: Props) {
                         className="group p-0"
                     >
                         {albumImage && (
-                            <div className="opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+                            <div className="opacity-0 transition-opacity group-hover:opacity-100">
                                 {isPlaying ? <PauseIcon /> : <PlayIcon />}
                             </div>
                         )}
