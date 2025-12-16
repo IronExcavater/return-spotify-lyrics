@@ -25,10 +25,6 @@ export function HomeBar({
     onClearSearch,
 }: Props) {
     const hasQuery = searchQuery.trim().length > 0;
-    const textFieldCustomStyles: CSSVariableStyles = {
-        '--text-field-selection-color': 'var(--accent-a4)',
-        '--text-field-focus-color': 'var(--accent-10)',
-    };
 
     return (
         <Flex align="center" gap="2" p="2" flexGrow="1">
@@ -39,7 +35,6 @@ export function HomeBar({
                 radius="full"
                 placeholder="Search controls or tweaks"
                 className="flex grow items-center px-3"
-                style={textFieldCustomStyles}
             >
                 <TextField.Slot side="left" pr="1">
                     <IconButton

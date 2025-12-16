@@ -5,7 +5,7 @@ import {
     IconButtonProps,
 } from '@radix-ui/themes';
 import clsx from 'clsx';
-import { ReactNode } from 'react';
+import { KeyboardEventHandler, ReactNode } from 'react';
 
 interface AvatarButtonProps extends Omit<IconButtonProps, 'asChild'> {
     avatar: AvatarProps;
@@ -17,6 +17,10 @@ export function AvatarButton({
     children,
     className,
     disabled,
+    onKeyDown,
+    onKeyUp,
+    'aria-pressed': ariaPressed,
+    'aria-selected': ariaSelected,
     ...button
 }: AvatarButtonProps) {
     const isEnabled = !disabled;
@@ -26,14 +30,40 @@ export function AvatarButton({
         ...avatarProps
     } = avatar;
 
+    const handleKeyDown: KeyboardEventHandler<HTMLButtonElement> = (event) => {
+        onKeyDown?.(event);
+        if (event.defaultPrevented) return;
+
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            event.currentTarget.click();
+        }
+
+        if (event.key === ' ') {
+            event.preventDefault();
+        }
+    };
+
+    const handleKeyUp: KeyboardEventHandler<HTMLButtonElement> = (event) => {
+        onKeyUp?.(event);
+        if (event.defaultPrevented) return;
+
+        if (event.key === ' ') {
+            event.preventDefault();
+            event.currentTarget.click();
+        }
+    };
+
     return (
         <IconButton
             {...button}
             disabled={disabled}
             asChild
             role="button"
-            tabIndex={0}
+            tabIndex={disabled ? -1 : 0}
             className={clsx(isEnabled && 'cursor-pointer', className)}
+            onKeyDown={handleKeyDown}
+            onKeyUp={handleKeyUp}
         >
             <Avatar
                 {...avatarProps}
@@ -41,7 +71,13 @@ export function AvatarButton({
                 imageClassName={clsx(
                     'block ring-2 ring-transparent ring-offset-[var(--color-panel-solid)] transition-shadow',
                     'focus-visible:outline-none',
-                    'focus-visible:ring-2 focus-visible:ring-[var(--accent-10)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-panel-solid)]',
+                    isEnabled &&
+                        'focus-visible:ring-2 focus-visible:ring-[var(--accent-8)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-panel-solid)]',
+                    isEnabled &&
+                        'hover:ring-2 hover:ring-[var(--accent-8)] hover:ring-offset-2 hover:ring-offset-[var(--color-panel-solid)]',
+                    isEnabled &&
+                        (ariaPressed || ariaSelected) &&
+                        '!ring-[var(--accent-10)] ring-offset-2',
                     imageClassName
                 )}
             >

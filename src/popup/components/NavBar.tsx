@@ -83,27 +83,6 @@ export function NavBar({
                 >
                     {item.icon}
                 </IconButton>
-                /*<button
-                    key={item.key}
-                    type="button"
-                    role="tab"
-                    aria-label={item.label}
-                    aria-pressed={item.key === current}
-                    aria-selected={item.key === current}
-                    aria-disabled={item.disabled}
-                    disabled={item.disabled}
-                    onClick={() => !item.disabled && handleSelect(item.key)}
-                    className={clsx(
-                        'relative z-10 grid h-6 w-6 place-items-center rounded-full leading-none text-[var(--gray-11)] transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--accent-10)]',
-                        item.key === current
-                            ? 'text-[var(--accent-12)]'
-                            : 'text-[var(--gray-12)]/70 hover:text-[var(--gray-12)]',
-                        item.disabled &&
-                            'opacity-50 hover:text-[var(--gray-12)]/70'
-                    )}
-                >
-                    {item.icon}
-                </button>*/
             ))}
         </nav>
     );
