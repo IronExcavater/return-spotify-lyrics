@@ -1,6 +1,5 @@
-import { HomeIcon, PlayIcon } from '@radix-ui/react-icons';
-import clsx from 'clsx';
 import { ReactNode } from 'react';
+import { HomeIcon, PlayIcon } from '@radix-ui/react-icons';
 import { IconButton } from '@radix-ui/themes';
 
 interface Props {

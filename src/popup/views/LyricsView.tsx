@@ -1,6 +1,6 @@
 import { Flex, Text } from '@radix-ui/themes';
-import { usePlayer } from '../hooks/usePlayer';
 import { asTrack } from '../../shared/types';
+import { usePlayer } from '../hooks/usePlayer';
 
 const FALLBACK_LYRICS = [
     'Falling into midnight lines,',

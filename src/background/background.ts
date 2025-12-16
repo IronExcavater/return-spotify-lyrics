@@ -1,5 +1,4 @@
 import { addOnMessage, Msg } from '../shared/messaging';
-import { buildAuthUrl, launchWebAuth, requestAccessToken } from './webAuth';
 import { removeInStorage } from '../shared/storage';
 import {
     spotifyRpc,
@@ -7,6 +6,7 @@ import {
     SpotifyRpcName,
     SpotifyRpcReturn,
 } from './spotifyRpc';
+import { buildAuthUrl, launchWebAuth, requestAccessToken } from './webAuth';
 
 addOnMessage(Msg.LOGIN_SPOTIFY, async () => {
     const authUrl = await buildAuthUrl();

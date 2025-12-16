@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { Msg, sendMessage, sendSpotifyMessage } from '../../shared/messaging';
 import { UserProfile } from '@spotify/web-api-ts-sdk';
+import { Msg, sendMessage, sendSpotifyMessage } from '../../shared/messaging';
 import { getFromStorage, setInStorage } from '../../shared/storage';
 
 const SPOTIFY_USER_KEY = 'spotifyUser';

@@ -1,5 +1,5 @@
-import { Button, Flex, Text } from '@radix-ui/themes';
 import { CheckIcon } from '@radix-ui/react-icons';
+import { Button, Flex, Text } from '@radix-ui/themes';
 
 interface Props {
     onLogin: () => void;

@@ -1,11 +1,11 @@
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-import tailwindcss from '@tailwindcss/vite';
-import { crx } from '@crxjs/vite-plugin';
-import manifest from './manifest.config.ts';
-import zip from 'vite-plugin-zip-pack';
-import { name, version } from './package.json';
 import path from 'node:path';
+import { crx } from '@crxjs/vite-plugin';
+import tailwindcss from '@tailwindcss/vite';
+import react from '@vitejs/plugin-react';
+import { defineConfig } from 'vite';
+import zip from 'vite-plugin-zip-pack';
+import manifest from './manifest.config.ts';
+import { name, version } from './package.json';
 
 export default defineConfig({
     plugins: [

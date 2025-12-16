@@ -1,16 +1,15 @@
+import { useEffect, useMemo, useState } from 'react';
+import { PersonIcon } from '@radix-ui/react-icons';
 import {
     AlertDialog,
     Avatar,
     Button,
-    Card,
     Flex,
     Skeleton,
     Text,
 } from '@radix-ui/themes';
-import { PersonIcon } from '@radix-ui/react-icons';
 import { UserProfile } from '@spotify/web-api-ts-sdk';
 import { SpotifyConnectionMeta } from '../hooks/useAuth';
-import { useEffect, useMemo, useState } from 'react';
 
 const relativeFormatter = new Intl.RelativeTimeFormat(undefined, {
     numeric: 'auto',

@@ -1,4 +1,4 @@
-import { createPkcePair } from '../shared/pkce';
+import { AccessToken } from '@spotify/web-api-ts-sdk';
 import {
     REDIRECT_PATH,
     SPOTIFY_AUTH_URL,
@@ -6,12 +6,12 @@ import {
     SPOTIFY_SCOPES,
     SPOTIFY_TOKEN_URL,
 } from '../shared/config';
+import { createPkcePair } from '../shared/pkce';
 import {
     getFromStorage,
     mustGetFromStorage,
     setInStorage,
 } from '../shared/storage';
-import { AccessToken } from '@spotify/web-api-ts-sdk';
 
 const PKCE_VERIFIER_KEY = 'pkceVerifier';
 const SPOTIFY_TOKEN_KEY = 'spotifyToken';

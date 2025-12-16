@@ -31,9 +31,3 @@
     user-select: none;
     -webkit-user-drag: none;
 }
-
-.avatar-button-trigger:where(:focus-visible),
-.avatar-button:where(:focus-visible) {
-    outline: none !important;
-    box-shadow: none !important;
-}

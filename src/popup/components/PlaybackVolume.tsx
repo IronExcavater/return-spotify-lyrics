@@ -1,10 +1,10 @@
-import { IconButton, Slider } from '@radix-ui/themes';
 import {
     SpeakerOffIcon,
     SpeakerQuietIcon,
     SpeakerModerateIcon,
     SpeakerLoudIcon,
 } from '@radix-ui/react-icons';
+import { IconButton, Slider } from '@radix-ui/themes';
 import clsx from 'clsx';
 
 import { usePlayer } from '../hooks/usePlayer';

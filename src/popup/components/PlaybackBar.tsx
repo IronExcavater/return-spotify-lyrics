@@ -1,10 +1,4 @@
-import {
-    Button,
-    Flex,
-    IconButton,
-    Skeleton,
-    Separator,
-} from '@radix-ui/themes';
+import { ReactNode, useMemo, useState } from 'react';
 import {
     PauseIcon,
     PlayIcon,
@@ -14,22 +8,28 @@ import {
     ShuffleIcon,
     LoopIcon,
 } from '@radix-ui/react-icons';
-import { MdMusicNote } from 'react-icons/md';
+import {
+    Button,
+    Flex,
+    IconButton,
+    Skeleton,
+    Separator,
+} from '@radix-ui/themes';
 import { SimplifiedArtist, SimplifiedShow } from '@spotify/web-api-ts-sdk';
-import { ReactNode, useMemo, useState } from 'react';
 import clsx from 'clsx';
+import { MdMusicNote } from 'react-icons/md';
 
-import { usePlayer } from '../hooks/usePlayer';
 import { asEpisode, asTrack } from '../../shared/types';
+import { usePlayer } from '../hooks/usePlayer';
 import { useRouteToggle } from '../hooks/useRouteToggle';
 
-import { Fade } from './Fade';
-import { Marquee } from './Marquee';
-import { ExternalLink } from './ExternalLink';
 import { AvatarButton } from './AvatarButton';
-import { PlaybackVolume } from './PlaybackVolume';
-import { PlaybackSeek } from './PlaybackSeek';
+import { ExternalLink } from './ExternalLink';
+import { Fade } from './Fade';
 import { IconToggle } from './IconToggle';
+import { Marquee } from './Marquee';
+import { PlaybackSeek } from './PlaybackSeek';
+import { PlaybackVolume } from './PlaybackVolume';
 
 interface Props {
     profileSlot?: ReactNode;

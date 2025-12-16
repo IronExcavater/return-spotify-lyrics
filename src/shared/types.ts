@@ -1,5 +1,5 @@
-import { Episode, Track } from '@spotify/web-api-ts-sdk';
 import { ReactElement } from 'react';
+import { Episode, Track } from '@spotify/web-api-ts-sdk';
 
 export function asTrack(item: Track | Episode | undefined): Track | undefined {
     return item && item.type === 'track' ? (item as Track) : undefined;

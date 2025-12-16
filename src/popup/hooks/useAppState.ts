@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { getFromStorage, setInStorage } from '../../shared/storage';
 import { useAuth } from './useAuth.ts';
 import { usePlayer } from './usePlayer.ts';
-import { getFromStorage, setInStorage } from '../../shared/storage';
 
 export type BarKey = 'home' | 'playback';
 

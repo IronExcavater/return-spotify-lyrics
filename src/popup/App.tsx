@@ -1,29 +1,28 @@
 import { useMemo, useState } from 'react';
+import { PersonIcon } from '@radix-ui/react-icons';
 import { Flex } from '@radix-ui/themes';
 import { Navigate, Route, Routes } from 'react-router-dom';
-import { PersonIcon } from '@radix-ui/react-icons';
 
-import { useAuth } from './hooks/useAuth';
-import { usePlayer } from './hooks/usePlayer';
-import { useAppState, BarKey } from './hooks/useAppState';
-
-import { HomeView } from './views/HomeView';
-import { LyricsView } from './views/LyricsView';
-import { LoginView } from './views/LoginView';
-import { ProfileView } from './views/ProfileView';
-
-import { PlaybackBar } from './components/PlaybackBar';
+import { AvatarButton } from './components/AvatarButton';
 import { HomeBar } from './components/HomeBar';
 import { NavBar } from './components/NavBar';
-import { AvatarButton } from './components/AvatarButton';
+import { PlaybackBar } from './components/PlaybackBar';
 import { ProtectedLayout } from './components/ProtectedLayout';
+import { useAppState, BarKey } from './hooks/useAppState';
+import { useAuth } from './hooks/useAuth';
+import { usePlayer } from './hooks/usePlayer';
+
 import { usePortalSlot } from './hooks/usePortalSlot';
 import { Resizer } from './hooks/useResize.tsx';
+import { HomeView } from './views/HomeView';
+import { LoginView } from './views/LoginView';
+import { LyricsView } from './views/LyricsView';
+import { ProfileView } from './views/ProfileView';
 
 const BAR_KEYS: readonly BarKey[] = ['home', 'playback'];
 
 export default function App() {
-    const { authed, profile, login, logout } = useAuth();
+    const { authed, profile, login, logout, connection } = useAuth();
     const { playback } = usePlayer();
 
     const isPlaying = Boolean(playback?.is_playing && playback?.item);
@@ -130,17 +129,7 @@ export default function App() {
                 {/* Routes */}
                 <Routes>
                     {/* Idle root */}
-                    <Route
-                        path="/"
-                        element={
-                            <ProtectedLayout
-                                when={mustLogin}
-                                redirectTo="/login"
-                            >
-                                <></>
-                            </ProtectedLayout>
-                        }
-                    />
+                    <Route path="/" element={<Navigate to="/home" replace />} />
 
                     <Route
                         path="/home"
@@ -175,6 +164,7 @@ export default function App() {
                             >
                                 <ProfileView
                                     profile={profile}
+                                    connection={connection}
                                     onLogout={logout}
                                 />
                             </ProtectedLayout>

@@ -1,3 +1,4 @@
+import { KeyboardEventHandler, ReactNode } from 'react';
 import {
     Avatar,
     AvatarProps,
@@ -5,7 +6,6 @@ import {
     IconButtonProps,
 } from '@radix-ui/themes';
 import clsx from 'clsx';
-import { KeyboardEventHandler, ReactNode } from 'react';
 
 interface AvatarButtonProps extends Omit<IconButtonProps, 'asChild'> {
     avatar: AvatarProps;

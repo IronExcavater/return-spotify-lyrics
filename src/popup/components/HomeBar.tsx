@@ -1,13 +1,11 @@
-import { Flex, IconButton, TextField } from '@radix-ui/themes';
+import { ReactNode } from 'react';
 import {
     Cross2Icon,
     HomeIcon,
     MagnifyingGlassIcon,
 } from '@radix-ui/react-icons';
-import { CSSProperties, ReactNode } from 'react';
+import { Flex, IconButton, TextField } from '@radix-ui/themes';
 import clsx from 'clsx';
-
-type CSSVariableStyles = CSSProperties & Record<string, string>;
 
 interface Props {
     profileSlot?: ReactNode;
@@ -33,7 +31,7 @@ export function HomeBar({
                 onChange={(event) => onSearchChange(event.target.value)}
                 size="2"
                 radius="full"
-                placeholder="Search controls or tweaks"
+                placeholder="Find your groove"
                 className="flex grow items-center px-3"
             >
                 <TextField.Slot side="left" pr="1">
