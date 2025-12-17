@@ -96,3 +96,13 @@ export const sendSpotifyMessage = <N extends SpotifyRpcName>(
         op,
         args,
     }) as Promise<SpotifyRpcReturn<N>>;
+
+export const sendLyricsMessage = <N extends LrcRpcName>(
+    op: N,
+    args: LrcRpcArgs<N>
+) =>
+    sendMessage<Msg.API_LRCLIB>({
+        type: Msg.API_LRCLIB,
+        op,
+        args,
+    }) as Promise<LrcRpcReturn<N>>;

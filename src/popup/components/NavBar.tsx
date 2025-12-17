@@ -61,7 +61,7 @@ export function NavBar({
             {items.length > 0 && (
                 <span
                     aria-hidden="true"
-                    className="pointer-events-none absolute left-1/2 h-6 w-6 -translate-x-1/2 rounded-full bg-[var(--accent-a4)] shadow-[0_4px_8px_var(--gray-a6)] transition-transform duration-200 ease-out"
+                    className="pointer-events-none absolute left-1/2 h-6 w-6 -translate-x-1/2 rounded-full bg-[var(--accent-a4)] transition-transform duration-200 ease-out"
                     style={{
                         transform: `translate(0, ${indicatorOffset}px)`,
                     }}

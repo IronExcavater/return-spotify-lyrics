@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { getFromStorage, setInStorage } from '../../shared/storage';
 import { useAuth } from './useAuth.ts';
@@ -14,17 +14,11 @@ export const ROUTES = {
     profile: '/profile',
 } as const;
 
-type BarRule = {
-    defaultRoute: string;
-};
+export type RouteKey = keyof typeof ROUTES;
+export type RouteValue = (typeof ROUTES)[RouteKey];
 
-const BAR_RULES: Record<BarKey, BarRule> = {
-    home: {
-        defaultRoute: ROUTES.home,
-    },
-    playback: {
-        defaultRoute: ROUTES.lyrics,
-    },
+type BarRule = {
+    defaultRoute: RouteValue;
 };
 
 type RouteRule = {
@@ -33,12 +27,21 @@ type RouteRule = {
     heightOverride?: number | 'auto';
 };
 
-const ROUTE_RULES: Record<string, RouteRule> = {
+const BAR_RULES: Record<BarKey, BarRule> = {
+    home: {
+        defaultRoute: ROUTES.home,
+    },
+    playback: {
+        defaultRoute: ROUTES.root,
+    },
+};
+
+const ROUTE_RULES: Partial<Record<RouteValue, RouteRule>> = {
     [ROUTES.root]: {
         heightOverride: 'auto',
     },
     [ROUTES.home]: {
-        allowedBars: ['home', 'playback'],
+        allowedBars: ['home'],
     },
     [ROUTES.lyrics]: {
         allowedBars: ['playback'],
@@ -49,15 +52,187 @@ const ROUTE_RULES: Record<string, RouteRule> = {
     },
 };
 
-const LAST_ROUTE_KEY = 'lastRoute';
-const WIDTH_KEY = 'popupWidth';
-const HEIGHT_KEY = 'popupHeight';
+const APP_STATE_KEY = 'appState';
+const PLAYBACK_STALE_MS = 60_000;
+
+type AppState = {
+    width?: number;
+    height?: number;
+    playbackExpanded?: boolean;
+    lastBar?: BarKey;
+    lastRoute?: RouteValue;
+};
+
+function isRouteAllowed(pathname: RouteValue, bar: BarKey) {
+    const rule = ROUTE_RULES[pathname];
+    if (!rule?.allowedBars) return true;
+    return rule.allowedBars.includes(bar);
+}
 
 export function useAppState() {
+    const navigate = useNavigate();
+    const location = useLocation();
+
     const { authed } = useAuth();
     const { playback } = usePlayer();
 
+    const [hydrated, setHydrated] = useState(false);
+    const [appState, setAppState] = useState<AppState>({});
+    const [activeBar, setActiveBar] = useState<BarKey>('home');
+
+    const routeRule = ROUTE_RULES[location.pathname];
+
+    // load app state
+    useEffect(() => {
+        getFromStorage<AppState>(APP_STATE_KEY, (saved) => {
+            setAppState(saved);
+
+            const initialBar = saved?.lastBar ?? 'home';
+            setActiveBar(initialBar);
+            navigate(saved?.lastRoute ?? BAR_RULES[initialBar].defaultRoute);
+            setHydrated(true);
+        });
+    }, []);
+
+    // Update app state
+    const updateAppState = useCallback(async (patch: Partial<AppState>) => {
+        setAppState((prev) => {
+            const next = { ...prev, ...patch };
+            void setInStorage(APP_STATE_KEY, next);
+            return next;
+        });
+    }, []);
+
+    // Update last bar to active bar
+    useEffect(() => {
+        if (!hydrated) return;
+
+        void updateAppState({ lastBar: activeBar });
+    }, [hydrated, activeBar, updateAppState]);
+
+    // Update last route to location.pathname
+    useEffect(() => {
+        if (!hydrated) return;
+
+        void updateAppState({ lastRoute: location.pathname as RouteValue });
+    }, [hydrated, location.pathname, updateAppState]);
+
+    // Initialise after load
+    const initialised = useRef(false);
+
+    useEffect(() => {
+        if (!hydrated || initialised.current) return;
+        initialised.current = true;
+
+        // switch into playback bar if playback available
+        if (playback) {
+            setActiveBar('playback');
+            void updateAppState({ lastBar: 'playback' });
+        }
+    }, [hydrated, playback, initialised]);
+
+    // track last playback change
+    const lastPlaybackChange = useRef<number | null>(null);
+
+    useEffect(() => {
+        if (!hydrated) return;
+
+        if (playback) lastPlaybackChange.current = null;
+
+        if (lastPlaybackChange.current === null)
+            lastPlaybackChange.current = Date.now();
+    }, [hydrated, playback]);
+
+    // switch out of playback bar if playback unavailable
+    useEffect(() => {
+        if (!hydrated) return;
+
+        if (
+            activeBar === 'playback' &&
+            Date.now() >= lastPlaybackChange.current + PLAYBACK_STALE_MS
+        ) {
+            setActiveBar('home');
+            void updateAppState({ lastBar: 'home' });
+        }
+    }, [hydrated, activeBar, updateAppState]);
+
+    // Enforce route rules
+    const lastEnforcedNav = useRef<{ bar: BarKey; route: RouteValue } | null>(
+        null
+    );
+
+    useEffect(() => {
+        if (!hydrated) return;
+
+        let path = location.pathname as RouteValue;
+
+        const last = lastEnforcedNav.current;
+        if (last?.bar === activeBar && last.route === path) return;
+
+        if (!isRouteAllowed(path, activeBar)) {
+            const fallback = BAR_RULES[activeBar].defaultRoute;
+
+            if (path !== fallback) {
+                navigate(fallback, { replace: true });
+                path = fallback;
+            }
+        }
+
+        lastEnforcedNav.current = { bar: activeBar, route: path };
+    }, [hydrated, activeBar, location.pathname, navigate]);
+
+    // App size getters
+    const widthOverride = routeRule?.widthOverride;
+    const heightOverride = routeRule?.heightOverride;
+
+    const width = widthOverride ?? appState.width ?? 300;
+    const height = heightOverride ?? appState.height ?? 400;
+
+    // App size setters
+    const setWidth = useCallback(
+        (width: number) => updateAppState({ width }),
+        [updateAppState]
+    );
+
+    const setHeight = useCallback(
+        (height: number) => updateAppState({ height }),
+        [updateAppState]
+    );
+
+    // Playback expanded setter
+    const setPlaybackExpanded = useCallback(
+        (expanded: boolean) => updateAppState({ playbackExpanded: expanded }),
+        [updateAppState]
+    );
+
+    // Show bars getter
+    const showBars = !!authed;
+
+    return {
+        loading: !hydrated,
+
+        showBars,
+        activeBar,
+        setActiveBar,
+
+        layout: {
+            width,
+            height,
+            widthOverride,
+            heightOverride,
+        },
+        setWidth,
+        setHeight,
+
+        playbackExpanded: appState.playbackExpanded ?? false,
+        setPlaybackExpanded,
+    };
+
+    /*
+    const [playbackExpired, setPlaybackExpired] = useState(false);
+
     const isPlaying = Boolean(playback?.is_playing && playback?.item);
+    const hasTrack = Boolean(playback?.item);
 
     const navigate = useNavigate();
     const { pathname } = useLocation();
@@ -65,32 +240,30 @@ export function useAppState() {
 
     const [baseWidth, setBaseWidth] = useState(420);
     const [baseHeight, setBaseHeight] = useState(500);
+    const [playbackExpanded, setPlaybackExpanded] = useState(false);
+    const [persistedRoute, setPersistedRoute] = useState<string | undefined>();
     const [hasBootstrappedRoute, setHasBootstrappedRoute] = useState(false);
-
-    // Active bar
-    const preferredBarForRoute: BarKey = useMemo(() => {
-        return pathname === ROUTES.lyrics ? 'playback' : 'home';
-    }, [pathname]);
-
-    const activeBar: BarKey | undefined = useMemo(() => {
-        if (authed === false) return undefined;
-        if (authed === undefined) return preferredBarForRoute;
-        return isPlaying ? 'playback' : 'home';
-    }, [authed, isPlaying, preferredBarForRoute]);
+    const [activeBar, setActiveBar] = useState<BarKey | undefined>(undefined);
+    const [hasInitializedBar, setHasInitializedBar] = useState(false);
 
     const showBars = activeBar !== undefined;
 
-    // Route enforcement
+    // Playback expiry: if no track for a while, hide the playback bar.
     useEffect(() => {
-        if (!activeBar) return;
+        let timer: number | undefined;
 
-        const rule = ROUTE_RULES[pathname];
-        if (!rule || !rule.allowedBars) return;
-
-        if (!rule.allowedBars.includes(activeBar)) {
-            navigate(BAR_RULES[activeBar].defaultRoute, { replace: true });
+        if (hasTrack) {
+            setPlaybackExpired(false);
+        } else if (!playbackExpired) {
+            timer = window.setTimeout(() => {
+                setPlaybackExpired(true);
+            }, PLAYBACK_STALE_MS);
         }
-    }, [pathname, activeBar, navigate]);
+
+        return () => {
+            if (timer) window.clearTimeout(timer);
+        };
+    }, [hasTrack, playbackExpired]);
 
     // Layout derivation
     const routeRule = ROUTE_RULES[pathname];
@@ -100,16 +273,41 @@ export function useAppState() {
 
     const width = widthOverride !== undefined ? widthOverride : baseWidth;
     const height = heightOverride !== undefined ? heightOverride : baseHeight;
+    const playbackAvailable = !playbackExpired;
 
-    // Persisted dimensions
     useEffect(() => {
-        void getFromStorage<number>(WIDTH_KEY).then((saved) => {
-            if (typeof saved === 'number') setBaseWidth(saved);
-        });
-        void getFromStorage<number>(HEIGHT_KEY).then((saved) => {
-            if (typeof saved === 'number') setBaseHeight(saved);
-        });
+        if (!playbackAvailable && activeBar === 'playback') {
+            setActiveBar('home');
+        }
+    }, [playbackAvailable, activeBar]);
+
+    // Persisted app state
+    useEffect(() => {
+        void getFromStorage<PersistedAppState>(APP_STATE_KEY).then(
+            (saved) => {
+                if (typeof saved?.width === 'number') setBaseWidth(saved.width);
+                if (typeof saved?.height === 'number')
+                    setBaseHeight(saved.height);
+                if (typeof saved?.playbackExpanded === 'boolean')
+                    setPlaybackExpanded(saved.playbackExpanded);
+                if (saved?.lastRoute) setPersistedRoute(saved.lastRoute);
+            }
+        );
     }, []);
+
+    const persistAppState = useCallback(
+        (next: Partial<PersistedAppState>) => {
+            const merged: PersistedAppState = {
+                width: baseWidth,
+                height: baseHeight,
+                playbackExpanded,
+                lastRoute: persistedRoute,
+                ...next,
+            };
+            void setInStorage(APP_STATE_KEY, merged);
+        },
+        [baseWidth, baseHeight, playbackExpanded, persistedRoute]
+    );
 
     // Profile toggle memory
     const lastNonProfileRoute = useRef<string>(ROUTES.home);
@@ -128,45 +326,57 @@ export function useAppState() {
         }
     }, [navigate, pathname]);
 
-    // Explicit navigation intents
-    const goHome = useCallback(() => {
-        navigate(ROUTES.home);
-    }, [navigate]);
-
-    const goLyrics = useCallback(() => {
-        navigate(ROUTES.lyrics);
-    }, [navigate]);
-
-    // Restore previously active route when the popup is reopened.
+    // Initial active bar: only decide once when app is loading.
     useEffect(() => {
-        if (hasBootstrappedRoute) return;
+        if (hasInitializedBar || authed === undefined) return;
+        const initialBar: BarKey | undefined =
+            authed === false
+                ? undefined
+                : isPlaying
+                ? 'playback'
+                : 'home';
+        setActiveBar(initialBar);
+        setHasInitializedBar(true);
+    }, [hasInitializedBar, authed, isPlaying]);
 
-        let cancelled = false;
-        void getFromStorage<string>(LAST_ROUTE_KEY).then((stored) => {
-            if (cancelled) return;
+    // Restore previously active route when the popup is reopened, once activeBar exists.
+    useEffect(() => {
+        if (hasBootstrappedRoute || !activeBar) return;
 
-            const target =
-                stored && stored !== ROUTES.root ? stored : ROUTES.home;
+        const fallbackRoute = BAR_RULES[activeBar].defaultRoute;
+        const candidate = persistedRoute ?? fallbackRoute;
 
-            if (pathname !== target) {
-                navigate(target, { replace: true });
-            }
+        const allowedBars = ROUTE_RULES[candidate]?.allowedBars;
+        const target =
+            allowedBars && !allowedBars.includes(activeBar)
+                ? fallbackRoute
+                : candidate;
 
-            setHasBootstrappedRoute(true);
-        });
+        if (pathname !== target) {
+            navigate(target, { replace: true });
+        }
 
-        return () => {
-            cancelled = true;
-        };
-    }, [hasBootstrappedRoute, navigate, pathname]);
+        setHasBootstrappedRoute(true);
+    }, [activeBar, hasBootstrappedRoute, navigate, pathname, persistedRoute]);
 
     // Persist the latest route so the next popup session can restore it.
     useEffect(() => {
         if (!hasBootstrappedRoute) return;
+        const toPersist = pathname || ROUTES.root;
+        setPersistedRoute(toPersist);
+        persistAppState({ lastRoute: toPersist });
+    }, [pathname, hasBootstrappedRoute, persistAppState]);
 
-        const toPersist = pathname === ROUTES.root ? ROUTES.home : pathname;
-        void setInStorage(LAST_ROUTE_KEY, toPersist);
-    }, [pathname, hasBootstrappedRoute]);
+    useEffect(() => {
+        if (!activeBar) return;
+        const allowedBars = ROUTE_RULES[pathname]?.allowedBars;
+        const fallback = BAR_RULES[activeBar].defaultRoute;
+        if (allowedBars && !allowedBars.includes(activeBar)) {
+            if (pathname !== fallback) {
+                navigate(fallback, { replace: true });
+            }
+        }
+    }, [pathname, activeBar, navigate]);
 
     return {
         activeBar,
@@ -182,15 +392,21 @@ export function useAppState() {
 
         setWidth: useCallback((value: number) => {
             setBaseWidth(value);
-            void setInStorage(WIDTH_KEY, value);
-        }, []),
+            persistAppState({ width: value });
+        }, [persistAppState]),
         setHeight: useCallback((value: number) => {
             setBaseHeight(value);
-            void setInStorage(HEIGHT_KEY, value);
-        }, []),
+            persistAppState({ height: value });
+        }, [persistAppState]),
+        setPlaybackExpanded: useCallback((value: boolean) => {
+            setPlaybackExpanded(value);
+            persistAppState({ playbackExpanded: value });
+        }, [persistAppState]),
+        setActiveBar,
 
-        goHome,
-        goLyrics,
         toggleProfile,
-    };
+
+        playbackExpanded,
+        playbackAvailable,
+    };*/
 }

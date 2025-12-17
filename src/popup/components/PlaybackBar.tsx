@@ -1,4 +1,4 @@
-import { ReactNode, useMemo, useState } from 'react';
+import { ReactNode, useMemo } from 'react';
 import {
     PauseIcon,
     PlayIcon,
@@ -8,13 +8,7 @@ import {
     ShuffleIcon,
     LoopIcon,
 } from '@radix-ui/react-icons';
-import {
-    Button,
-    Flex,
-    IconButton,
-    Skeleton,
-    Separator,
-} from '@radix-ui/themes';
+import { Flex, IconButton, Skeleton, Separator } from '@radix-ui/themes';
 import { SimplifiedArtist, SimplifiedShow } from '@spotify/web-api-ts-sdk';
 import clsx from 'clsx';
 import { MdMusicNote } from 'react-icons/md';
@@ -34,21 +28,27 @@ import { PlaybackVolume } from './PlaybackVolume';
 interface Props {
     profileSlot?: ReactNode;
     navSlot?: ReactNode;
+    expanded: boolean;
+    onExpandedChange: (value: boolean) => void;
 }
 
-export function PlaybackBar({ profileSlot, navSlot }: Props) {
+export function PlaybackBar({
+    profileSlot,
+    navSlot,
+    expanded,
+    onExpandedChange,
+}: Props) {
     const { playback, isPlaying, controls, isShuffle, repeatMode } =
         usePlayer();
     const { isActive: isLyricsRoute, toggle: toggleLyricsRoute } =
-        useRouteToggle('/lyrics');
-    const [expanded, setExpanded] = useState(false);
+        useRouteToggle('/lyrics', { fallbackPath: '/' });
 
     const loading = playback === undefined;
 
     const track = asTrack(playback?.item);
     const episode = asEpisode(playback?.item);
 
-    const title = playback?.item?.name ?? 'Placeholder title which is long';
+    const title = playback?.item?.name ?? 'Placeholder';
     const link = playback?.item?.external_urls?.spotify;
 
     const artists: (SimplifiedArtist | SimplifiedShow)[] = useMemo(() => {
@@ -118,20 +118,18 @@ export function PlaybackBar({ profileSlot, navSlot }: Props) {
                         <Flex align="center" flexGrow="1">
                             {/* Title */}
                             <Fade className="grow">
-                                <div style={{ paddingInline: '4px' }}>
-                                    <Marquee mode="bounce">
-                                        <Skeleton loading={loading}>
-                                            <ExternalLink
-                                                noAccent
-                                                size="3"
-                                                weight="bold"
-                                                href={link}
-                                            >
-                                                {title}
-                                            </ExternalLink>
-                                        </Skeleton>
-                                    </Marquee>
-                                </div>
+                                <Marquee mode="bounce">
+                                    <Skeleton loading={loading}>
+                                        <ExternalLink
+                                            noAccent
+                                            size="3"
+                                            weight="bold"
+                                            href={link}
+                                        >
+                                            {title}
+                                        </ExternalLink>
+                                    </Skeleton>
+                                </Marquee>
                             </Fade>
 
                             {/* Expand button */}
@@ -139,7 +137,7 @@ export function PlaybackBar({ profileSlot, navSlot }: Props) {
                                 variant="ghost"
                                 radius="full"
                                 size="1"
-                                onClick={() => setExpanded(!expanded)}
+                                onClick={() => onExpandedChange(!expanded)}
                                 aria-pressed={expanded}
                             >
                                 <DotsHorizontalIcon />
@@ -149,40 +147,35 @@ export function PlaybackBar({ profileSlot, navSlot }: Props) {
                         <Flex align="center" gap="1">
                             {/* Artists */}
                             <Fade className="grow">
-                                <div style={{ paddingInline: '4px' }}>
-                                    <Marquee mode="right">
-                                        <Flex
-                                            align="center"
-                                            style={{ gap: '8px' }}
-                                        >
-                                            {artists.map((artist) => {
-                                                const label =
-                                                    'publisher' in artist
-                                                        ? artist.publisher
-                                                        : artist.name;
+                                <Marquee mode="right">
+                                    <Flex align="center" style={{ gap: '8px' }}>
+                                        {artists.map((artist) => {
+                                            const label =
+                                                'publisher' in artist
+                                                    ? artist.publisher
+                                                    : artist.name;
 
-                                                return (
-                                                    <Skeleton
-                                                        loading={loading}
-                                                        key={artist.id ?? label}
+                                            return (
+                                                <Skeleton
+                                                    loading={loading}
+                                                    key={artist.id ?? label}
+                                                >
+                                                    <ExternalLink
+                                                        noAccent
+                                                        size="2"
+                                                        href={
+                                                            artist
+                                                                ?.external_urls
+                                                                ?.spotify
+                                                        }
                                                     >
-                                                        <ExternalLink
-                                                            noAccent
-                                                            size="2"
-                                                            href={
-                                                                artist
-                                                                    ?.external_urls
-                                                                    ?.spotify
-                                                            }
-                                                        >
-                                                            {label}
-                                                        </ExternalLink>
-                                                    </Skeleton>
-                                                );
-                                            })}
-                                        </Flex>
-                                    </Marquee>
-                                </div>
+                                                        {label}
+                                                    </ExternalLink>
+                                                </Skeleton>
+                                            );
+                                        })}
+                                    </Flex>
+                                </Marquee>
                             </Fade>
 
                             {/* Previous button */}
@@ -245,14 +238,16 @@ export function PlaybackBar({ profileSlot, navSlot }: Props) {
                                 <LoopIcon />
                             </IconToggle>
 
-                            <Button
+                            <IconToggle
+                                variant="ghost"
+                                radius="full"
                                 size="1"
-                                variant={isLyricsRoute ? 'solid' : 'surface'}
+                                isPressed={isLyricsRoute}
                                 onClick={toggleLyricsRoute}
-                                aria-pressed={isLyricsRoute}
+                                aria-label="Toggle lyrics view"
                             >
-                                Lyrics
-                            </Button>
+                                <MdMusicNote />
+                            </IconToggle>
                         </Flex>
                     </Flex>
                 )}

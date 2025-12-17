@@ -1,6 +1,12 @@
 import { addOnMessage, Msg } from '../shared/messaging';
 import { removeInStorage } from '../shared/storage';
 import {
+    lrcRpc,
+    LrcRpcArgs,
+    LrcRpcName,
+    LrcRpcReturn,
+} from './lrclib/lrcRpc.ts';
+import {
     buildAuthUrl,
     launchWebAuth,
     requestAccessToken,
@@ -38,5 +44,24 @@ addOnMessage(
         }
 
         return (fn as (a: Args) => SpotifyRpcReturn<N>)(msg.args);
+    }
+);
+
+addOnMessage(
+    Msg.API_LRCLIB,
+    async <N extends LrcRpcName>(msg: {
+        type: Msg.API_LRCLIB;
+        op: N;
+        args: LrcRpcArgs<N>;
+    }) => {
+        const fn = lrcRpc[msg.op];
+
+        type Args = LrcRpcArgs<N>;
+
+        if (fn.length === 0) {
+            return (fn as () => LrcRpcReturn<N>)();
+        }
+
+        return (fn as (a: Args) => LrcRpcReturn<N>)(msg.args);
     }
 );

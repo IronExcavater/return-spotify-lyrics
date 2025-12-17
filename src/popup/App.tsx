@@ -1,7 +1,13 @@
 import { useMemo, useState } from 'react';
 import { PersonIcon } from '@radix-ui/react-icons';
 import { Flex } from '@radix-ui/themes';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import {
+    Navigate,
+    Route,
+    Routes,
+    useLocation,
+    useNavigate,
+} from 'react-router-dom';
 
 import { AvatarButton } from './components/AvatarButton';
 import { HomeBar } from './components/HomeBar';
@@ -10,8 +16,8 @@ import { PlaybackBar } from './components/PlaybackBar';
 import { ProtectedLayout } from './components/ProtectedLayout';
 import { useAppState, BarKey } from './hooks/useAppState';
 import { useAuth } from './hooks/useAuth';
-import { usePlayer } from './hooks/usePlayer';
 
+import { usePlayer } from './hooks/usePlayer.ts';
 import { usePortalSlot } from './hooks/usePortalSlot';
 import { Resizer } from './hooks/useResize.tsx';
 import { HomeView } from './views/HomeView';
@@ -22,11 +28,12 @@ import { ProfileView } from './views/ProfileView';
 const BAR_KEYS: readonly BarKey[] = ['home', 'playback'];
 
 export default function App() {
-    const { authed, profile, login, logout, connection } = useAuth();
-    const { playback } = usePlayer();
+    const navigate = useNavigate();
+    const location = useLocation();
 
-    const isPlaying = Boolean(playback?.is_playing && playback?.item);
+    const { authed, profile, login, logout, connection } = useAuth();
     const appState = useAppState();
+    const { playback } = usePlayer();
 
     const [searchQuery, setSearchQuery] = useState('');
 
@@ -48,23 +55,26 @@ export default function App() {
                 }}
                 variant="ghost"
                 size="2"
-                onClick={appState.toggleProfile}
-                aria-pressed={appState.isProfileRoute}
+                onClick={() => {
+                    if (location.pathname === '/profile') navigate(-1);
+                    else navigate('/profile');
+                }}
+                aria-pressed={location.pathname === '/profile'}
             />
         ),
-        [appState.toggleProfile, appState.isProfileRoute, profileImage]
+        [profileImage]
     );
 
     const navSlot = useMemo(
         () => (
             <NavBar
-                active={appState.activeBar ?? 'home'}
-                canShowPlayback={isPlaying}
-                onShowHome={appState.goHome}
-                onShowPlayback={appState.goLyrics}
+                active={appState.activeBar}
+                canShowPlayback={playback != null}
+                onShowHome={() => appState.setActiveBar('home')}
+                onShowPlayback={() => appState.setActiveBar('playback')}
             />
         ),
-        [appState.activeBar, appState.goHome, appState.goLyrics, isPlaying]
+        [appState.activeBar, playback, appState.setActiveBar]
     );
 
     const profileFloating = usePortalSlot<BarKey>({
@@ -111,6 +121,8 @@ export default function App() {
                             <PlaybackBar
                                 profileSlot={profileFloating.anchors.playback}
                                 navSlot={navFloating.anchors.playback}
+                                expanded={appState.playbackExpanded}
+                                onExpandedChange={appState.setPlaybackExpanded}
                             />
                         )}
 
@@ -128,8 +140,17 @@ export default function App() {
 
                 {/* Routes */}
                 <Routes>
-                    {/* Idle root */}
-                    <Route path="/" element={<Navigate to="/home" replace />} />
+                    <Route
+                        path="/"
+                        element={
+                            <ProtectedLayout
+                                when={mustLogin}
+                                redirectTo="/login"
+                            >
+                                <></>
+                            </ProtectedLayout>
+                        }
+                    />
 
                     <Route
                         path="/home"
