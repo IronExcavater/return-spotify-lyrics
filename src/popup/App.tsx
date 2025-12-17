@@ -31,8 +31,14 @@ export default function App() {
     const navigate = useNavigate();
     const location = useLocation();
 
+    const widthBounds = { min: 350, max: 500 } as const;
+    const heightBounds = { min: 300, max: 600 } as const;
+
     const { authed, profile, login, logout, connection } = useAuth();
-    const appState = useAppState();
+    const appState = useAppState({
+        fallbackWidth: widthBounds.min,
+        fallbackHeight: heightBounds.min,
+    });
     const { playback } = usePlayer();
 
     const [searchQuery, setSearchQuery] = useState('');
@@ -92,9 +98,6 @@ export default function App() {
         defaultKey: 'home',
         enabled: appState.showBars,
     });
-
-    const widthBounds = { min: 350, max: 500 } as const;
-    const heightBounds = { min: 300, max: 600 } as const;
 
     return (
         <Resizer

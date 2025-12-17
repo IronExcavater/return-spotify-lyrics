@@ -1,6 +1,6 @@
 import { Client, Query, FindLyricsResponse, LyricLine } from 'lrclib-api';
 
-export const client = new Client();
+export const lrcClient = new Client();
 
 export type LyricsResponse = Omit<
     FindLyricsResponse,
@@ -11,7 +11,7 @@ export type LyricsResponse = Omit<
 
 export const lrcRpc = {
     getLyrics: async (query: Query): Promise<LyricsResponse | null> => {
-        const metadata = await client.findLyrics(query);
+        const metadata = await lrcClient.findLyrics(query);
         if (metadata.instrumental) {
             return {
                 ...metadata,
@@ -19,7 +19,7 @@ export const lrcRpc = {
             };
         }
 
-        const synced = await client.getSynced(query);
+        const synced = await lrcClient.getSynced(query);
         if (synced?.length) {
             return {
                 ...metadata,
@@ -27,7 +27,7 @@ export const lrcRpc = {
             };
         }
 
-        const unsynced = await client.getUnsynced(query);
+        const unsynced = await lrcClient.getUnsynced(query);
         if (unsynced?.length) {
             return {
                 ...metadata,

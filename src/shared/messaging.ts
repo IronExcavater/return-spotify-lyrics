@@ -1,14 +1,10 @@
-import {
-    LrcRpcArgs,
-    LrcRpcName,
-    LrcRpcReturn,
-} from '../background/lrclib/lrcRpc.ts';
-import { SpotifyToken } from '../background/spotify/spotifyAuth.ts';
+import { AuthenticationResponse } from '@spotify/web-api-ts-sdk';
+import { LrcRpcArgs, LrcRpcName, LrcRpcReturn } from '../background/lrcRpc.ts';
 import {
     SpotifyRpcArgs,
     SpotifyRpcName,
     SpotifyRpcReturn,
-} from '../background/spotify/spotifyRpc.ts';
+} from '../background/spotifyRpc.ts';
 
 export enum Msg {
     LOGIN_SPOTIFY = 'LOGIN_SPOTIFY',
@@ -33,7 +29,7 @@ export interface MessageMap {
 }
 
 export interface ResponseMap {
-    [Msg.LOGIN_SPOTIFY]: SpotifyToken;
+    [Msg.LOGIN_SPOTIFY]: AuthenticationResponse;
     [Msg.LOGOUT_SPOTIFY]: void;
     [Msg.API_SPOTIFY]: SpotifyRpcReturn<SpotifyRpcName>;
     [Msg.API_LRCLIB]: LrcRpcReturn<LrcRpcName>;

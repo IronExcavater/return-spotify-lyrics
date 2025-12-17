@@ -1,27 +1,16 @@
 import { addOnMessage, Msg } from '../shared/messaging';
 import { removeInStorage } from '../shared/storage';
+import { lrcRpc, LrcRpcArgs, LrcRpcName, LrcRpcReturn } from './lrcRpc.ts';
 import {
-    lrcRpc,
-    LrcRpcArgs,
-    LrcRpcName,
-    LrcRpcReturn,
-} from './lrclib/lrcRpc.ts';
-import {
-    buildAuthUrl,
-    launchWebAuth,
-    requestAccessToken,
-} from './spotify/spotifyAuth.ts';
-import {
+    spotifyClient,
     spotifyRpc,
     SpotifyRpcArgs,
     SpotifyRpcName,
     SpotifyRpcReturn,
-} from './spotify/spotifyRpc.ts';
+} from './spotifyRpc.ts';
 
 addOnMessage(Msg.LOGIN_SPOTIFY, async () => {
-    const authUrl = await buildAuthUrl();
-    const code = await launchWebAuth(authUrl);
-    return await requestAccessToken(code);
+    return await spotifyClient.authenticate();
 });
 
 addOnMessage(Msg.LOGOUT_SPOTIFY, async () => {
