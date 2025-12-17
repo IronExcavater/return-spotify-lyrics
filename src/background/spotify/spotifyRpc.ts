@@ -1,4 +1,4 @@
-import { getSpotifySdk } from './spotifySdk';
+import { getSpotifySdk } from './spotifyAuth.ts';
 
 export const spotifyRpc = {
     currentUser: async () => {

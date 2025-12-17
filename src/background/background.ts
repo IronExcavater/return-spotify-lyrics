@@ -1,12 +1,16 @@
 import { addOnMessage, Msg } from '../shared/messaging';
 import { removeInStorage } from '../shared/storage';
 import {
+    buildAuthUrl,
+    launchWebAuth,
+    requestAccessToken,
+} from './spotify/spotifyAuth.ts';
+import {
     spotifyRpc,
     SpotifyRpcArgs,
     SpotifyRpcName,
     SpotifyRpcReturn,
-} from './spotifyRpc';
-import { buildAuthUrl, launchWebAuth, requestAccessToken } from './webAuth';
+} from './spotify/spotifyRpc.ts';
 
 addOnMessage(Msg.LOGIN_SPOTIFY, async () => {
     const authUrl = await buildAuthUrl();

@@ -1,14 +1,20 @@
 import {
+    LrcRpcArgs,
+    LrcRpcName,
+    LrcRpcReturn,
+} from '../background/lrclib/lrcRpc.ts';
+import { SpotifyToken } from '../background/spotify/spotifyAuth.ts';
+import {
     SpotifyRpcArgs,
     SpotifyRpcName,
     SpotifyRpcReturn,
-} from '../background/spotifyRpc';
-import { SpotifyToken } from '../background/webAuth';
+} from '../background/spotify/spotifyRpc.ts';
 
 export enum Msg {
     LOGIN_SPOTIFY = 'LOGIN_SPOTIFY',
     LOGOUT_SPOTIFY = 'LOGOUT_SPOTIFY',
     API_SPOTIFY = 'API_SPOTIFY',
+    API_LRCLIB = 'API_LRCLIB',
 }
 
 export interface MessageMap {
@@ -19,12 +25,18 @@ export interface MessageMap {
         op: SpotifyRpcName;
         args: SpotifyRpcArgs<SpotifyRpcName>;
     };
+    [Msg.API_LRCLIB]: {
+        type: Msg.API_LRCLIB;
+        op: LrcRpcName;
+        args: LrcRpcArgs<LrcRpcName>;
+    };
 }
 
 export interface ResponseMap {
     [Msg.LOGIN_SPOTIFY]: SpotifyToken;
     [Msg.LOGOUT_SPOTIFY]: void;
     [Msg.API_SPOTIFY]: SpotifyRpcReturn<SpotifyRpcName>;
+    [Msg.API_LRCLIB]: LrcRpcReturn<LrcRpcName>;
 }
 
 type Handler<K extends Msg> = (

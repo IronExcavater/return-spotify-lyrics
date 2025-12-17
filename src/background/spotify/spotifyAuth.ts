@@ -1,27 +1,38 @@
-import { AccessToken } from '@spotify/web-api-ts-sdk';
+import { AccessToken, SpotifyApi } from '@spotify/web-api-ts-sdk';
 import {
     REDIRECT_PATH,
     SPOTIFY_AUTH_URL,
     SPOTIFY_CLIENT_ID,
     SPOTIFY_SCOPES,
     SPOTIFY_TOKEN_URL,
-} from '../shared/config';
-import { createPkcePair } from '../shared/pkce';
+} from '../../shared/config.ts';
+import { createPkcePair } from '../../shared/pkce.ts';
 import {
     getFromStorage,
     mustGetFromStorage,
     setInStorage,
-} from '../shared/storage';
+} from '../../shared/storage.ts';
 
 const PKCE_VERIFIER_KEY = 'pkceVerifier';
 const SPOTIFY_TOKEN_KEY = 'spotifyToken';
 
 const EXPIRY_BUFFER_MS = 60_000;
 let refreshTimer: number | undefined;
+let sdk: SpotifyApi | null = null;
 
 export interface SpotifyToken extends AccessToken {
     expires_by: number;
     scope: string;
+}
+
+export async function getSpotifySdk() {
+    const token = await getAccessToken();
+    if (!token) return undefined;
+
+    if (!sdk) {
+        sdk = SpotifyApi.withAccessToken(SPOTIFY_CLIENT_ID, token);
+    }
+    return sdk;
 }
 
 export async function buildAuthUrl(): Promise<URL> {
