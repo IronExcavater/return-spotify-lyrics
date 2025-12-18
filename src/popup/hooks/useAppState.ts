@@ -82,13 +82,7 @@ export function useAppState({ fallbackWidth, fallbackHeight }: Props) {
     const { playback } = usePlayer();
 
     const [hydrated, setHydrated] = useState(false);
-    const [appState, setAppState] = useState<AppState>({
-        width: null,
-        height: null,
-        playbackExpanded: false,
-        lastBar: null,
-        lastRoute: null,
-    });
+    const [appState, setAppState] = useState<AppState>({});
     const [activeBar, setActiveBar] = useState<BarKey>('home');
 
     const routeRule = ROUTE_RULES[location.pathname] as RouteRule;
@@ -96,11 +90,12 @@ export function useAppState({ fallbackWidth, fallbackHeight }: Props) {
     // load app state
     useEffect(() => {
         getFromStorage<AppState>(APP_STATE_KEY, (saved) => {
-            setAppState(saved);
+            const nextState: AppState = saved ?? {};
+            setAppState(nextState);
 
-            const initialBar = saved?.lastBar ?? 'home';
+            const initialBar = nextState.lastBar ?? 'home';
             setActiveBar(initialBar);
-            navigate(saved?.lastRoute ?? BAR_RULES[initialBar].defaultRoute);
+            navigate(nextState.lastRoute ?? BAR_RULES[initialBar].defaultRoute);
             setHydrated(true);
         });
     }, []);

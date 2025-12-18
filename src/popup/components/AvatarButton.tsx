@@ -60,6 +60,8 @@ export function AvatarButton({
             disabled={disabled}
             asChild
             role="button"
+            aria-pressed={ariaPressed}
+            aria-selected={ariaSelected}
             tabIndex={disabled ? -1 : 0}
             className={clsx(isEnabled && 'cursor-pointer', className)}
             onKeyDown={handleKeyDown}

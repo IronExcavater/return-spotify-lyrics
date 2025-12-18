@@ -22,8 +22,9 @@ export function useAuth() {
     const connectionRef = useRef<SpotifyConnectionMeta | undefined>(undefined);
     const sessionActiveRef = useRef(false);
 
-    const sync = () => {
-        sendSpotifyMessage('currentUser').then((resp) => {
+    const sync = async () => {
+        try {
+            const resp = await sendSpotifyMessage('currentUser');
             const isAuthed = resp != null;
             setAuthed(isAuthed);
             setUser(resp);
@@ -56,7 +57,12 @@ export function useAuth() {
             } else {
                 sessionActiveRef.current = false;
             }
-        });
+        } catch (error) {
+            console.warn('[auth] Failed to sync Spotify user', error);
+            setAuthed(false);
+            setUser(undefined);
+            sessionActiveRef.current = false;
+        }
     };
 
     const login = () => {
@@ -74,7 +80,7 @@ export function useAuth() {
             area: string
         ) => {
             if (area === 'local' && changes.spotifyToken) {
-                sync();
+                void sync();
             }
         };
 
@@ -92,7 +98,7 @@ export function useAuth() {
                 setConnection(meta);
             }
         );
-        sync();
+        void sync();
     }, []);
 
     return { authed, profile: user, login, logout, connection };

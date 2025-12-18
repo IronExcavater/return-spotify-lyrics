@@ -1,70 +1,82 @@
-import { SpotifyApi } from '@spotify/web-api-ts-sdk';
-import {
-    SPOTIFY_REDIRECT,
-    SPOTIFY_CLIENT_ID,
-    SPOTIFY_SCOPES,
-} from '../shared/config.ts';
+import { getSpotifySdk } from './spotifyAuth.ts';
 
-export const spotifyClient = SpotifyApi.withUserAuthorization(
-    SPOTIFY_CLIENT_ID,
-    SPOTIFY_REDIRECT,
-    SPOTIFY_SCOPES
-);
+async function requireClient() {
+    const client = await getSpotifySdk();
+    if (!client) throw new Error('Spotify session not initialised');
+    return client;
+}
 
 export const spotifyRpc = {
     currentUser: async () => {
-        return spotifyClient.currentUser.profile();
+        const client = await requireClient();
+        return client.currentUser.profile();
     },
 
     getPlaybackState: async () => {
-        return spotifyClient.player.getPlaybackState();
+        const client = await requireClient();
+        return client.player.getPlaybackState();
     },
     pausePlayback: async () => {
-        return spotifyClient.player.pausePlayback('');
+        const client = await requireClient();
+        return client.player.pausePlayback('');
     },
     startResumePlayback: async () => {
-        return spotifyClient.player.startResumePlayback('');
+        const client = await requireClient();
+        return client.player.startResumePlayback('');
     },
     seekToPosition: async (positionMs: number) => {
-        return spotifyClient.player.seekToPosition(positionMs);
+        const client = await requireClient();
+        return client.player.seekToPosition(positionMs);
     },
     skipToNext: async () => {
-        return spotifyClient.player.skipToNext('');
+        const client = await requireClient();
+        return client.player.skipToNext('');
     },
     skipToPrevious: async () => {
-        return spotifyClient.player.skipToPrevious('');
+        const client = await requireClient();
+        return client.player.skipToPrevious('');
     },
     toggleShuffle: async (state: boolean) => {
-        return spotifyClient.player.togglePlaybackShuffle(state);
+        const client = await requireClient();
+        return client.player.togglePlaybackShuffle(state);
     },
     setRepeatMode: async (mode: 'off' | 'track' | 'context') => {
-        return spotifyClient.player.setRepeatMode(mode);
+        const client = await requireClient();
+        return client.player.setRepeatMode(mode);
     },
     setPlaybackVolume: async (volume: number) => {
-        return spotifyClient.player.setPlaybackVolume(volume);
+        const client = await requireClient();
+        return client.player.setPlaybackVolume(volume);
     },
     getAvailableDevices: async () => {
-        return spotifyClient.player.getAvailableDevices();
+        const client = await requireClient();
+        return client.player.getAvailableDevices();
     },
     transferPlayback: async ({ deviceId }: { deviceId: string }) => {
-        return spotifyClient.player.transferPlayback([deviceId], true);
+        const client = await requireClient();
+        return client.player.transferPlayback([deviceId], true);
     },
 
     getQueue: async () => {
-        return spotifyClient.player.getUsersQueue();
+        const client = await requireClient();
+        return client.player.getUsersQueue();
     },
     addToQueue: async (uri: string) => {
-        return spotifyClient.player.addItemToPlaybackQueue(uri);
+        const client = await requireClient();
+        return client.player.addItemToPlaybackQueue(uri);
     },
 
     saveTracks: async (ids: string[]) => {
-        return spotifyClient.currentUser.tracks.saveTracks(ids);
+        const client = await requireClient();
+        return client.currentUser.tracks.saveTracks(ids);
     },
     unsaveTracks: async (ids: string[]) => {
-        return spotifyClient.currentUser.tracks.removeSavedTracks(ids);
+        const client = await requireClient();
+        return client.currentUser.tracks.removeSavedTracks(ids);
     },
     hasSavedTracks: async (ids: string[]) => {
-        return spotifyClient.currentUser.tracks.hasSavedTracks(ids);
+        const client = await requireClient();
+        return client.currentUser.tracks.hasSavedTracks(ids);
     },
 } as const;
 

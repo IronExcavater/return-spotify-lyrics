@@ -1,8 +1,7 @@
 import { addOnMessage, Msg } from '../shared/messaging';
-import { removeInStorage } from '../shared/storage';
 import { lrcRpc, LrcRpcArgs, LrcRpcName, LrcRpcReturn } from './lrcRpc.ts';
+import { authenticate, clearSpotifySession } from './spotifyAuth.ts';
 import {
-    spotifyClient,
     spotifyRpc,
     SpotifyRpcArgs,
     SpotifyRpcName,
@@ -10,11 +9,11 @@ import {
 } from './spotifyRpc.ts';
 
 addOnMessage(Msg.LOGIN_SPOTIFY, async () => {
-    return await spotifyClient.authenticate();
+    return await authenticate();
 });
 
 addOnMessage(Msg.LOGOUT_SPOTIFY, async () => {
-    await removeInStorage('spotifyToken');
+    await clearSpotifySession();
 });
 
 addOnMessage(

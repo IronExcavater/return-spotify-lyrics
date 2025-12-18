@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { PersonIcon } from '@radix-ui/react-icons';
 import { Flex } from '@radix-ui/themes';
 import {
@@ -50,6 +50,13 @@ export default function App() {
     const mustLogout = authed === true;
 
     // Slots
+    const lastContentPathRef = useRef('/home');
+
+    useEffect(() => {
+        if (location.pathname !== '/profile')
+            lastContentPathRef.current = location.pathname;
+    }, [location.pathname]);
+
     const profileSlot = useMemo(
         () => (
             <AvatarButton
@@ -62,13 +69,16 @@ export default function App() {
                 variant="ghost"
                 size="2"
                 onClick={() => {
-                    if (location.pathname === '/profile') navigate(-1);
+                    if (location.pathname === '/profile')
+                        navigate(lastContentPathRef.current || '/home', {
+                            replace: true,
+                        });
                     else navigate('/profile');
                 }}
                 aria-pressed={location.pathname === '/profile'}
             />
         ),
-        [profileImage]
+        [profileImage, location.pathname, navigate]
     );
 
     const navSlot = useMemo(

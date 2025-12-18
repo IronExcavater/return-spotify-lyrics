@@ -77,8 +77,17 @@ export function sendMessage<K extends Msg>(
     return new Promise((resolve, reject) => {
         chrome.runtime.sendMessage(message, (response) => {
             const err = chrome.runtime.lastError;
-            if (err) reject(err);
-            else resolve(response as ResponseMap[K]);
+            if (err) {
+                reject(err);
+                return;
+            }
+
+            const payload = response as ResponseMap[K] & {
+                error?: string;
+            };
+
+            if (payload?.error) reject(new Error(payload.error));
+            else resolve(payload as ResponseMap[K]);
         });
     });
 }
