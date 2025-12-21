@@ -13,7 +13,7 @@ export interface SpotifyConnectionMeta {
     sessionCount: number;
 }
 
-export function useAuth() {
+export function useSpotifyAuth() {
     const [authed, setAuthed] = useState<boolean | undefined>(undefined);
     const [user, setUser] = useState<UserProfile | undefined>(undefined);
     const [connection, setConnection] = useState<
@@ -58,7 +58,7 @@ export function useAuth() {
                 sessionActiveRef.current = false;
             }
         } catch (error) {
-            console.warn('[auth] Failed to sync Spotify user', error);
+            console.warn('[spotifyAuth] Failed to sync Spotify user', error);
             setAuthed(false);
             setUser(undefined);
             sessionActiveRef.current = false;

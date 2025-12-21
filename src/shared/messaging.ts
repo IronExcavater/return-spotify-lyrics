@@ -104,7 +104,7 @@ export const sendSpotifyMessage = <N extends SpotifyRpcName>(
 
 export const sendLyricsMessage = <N extends LrcRpcName>(
     op: N,
-    args: LrcRpcArgs<N>
+    args?: LrcRpcArgs<N>
 ) =>
     sendMessage<Msg.API_LRCLIB>({
         type: Msg.API_LRCLIB,

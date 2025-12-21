@@ -14,18 +14,37 @@ import { HomeBar } from './components/HomeBar';
 import { NavBar } from './components/NavBar';
 import { PlaybackBar } from './components/PlaybackBar';
 import { ProtectedLayout } from './components/ProtectedLayout';
+import { SearchFilters } from './components/SearchFilters';
 import { useAppState, BarKey } from './hooks/useAppState';
-import { useAuth } from './hooks/useAuth';
 
 import { usePlayer } from './hooks/usePlayer.ts';
 import { usePortalSlot } from './hooks/usePortalSlot';
 import { Resizer } from './hooks/useResize.tsx';
+import { HomeRouteState, useRouteHistory } from './hooks/useRouteHistory';
+import { useSpotifyAuth } from './hooks/useSpotifyAuth';
+import { SearchFilters as Filters, SearchType } from './hooks/useSpotifySearch';
 import { HomeView } from './views/HomeView';
 import { LoginView } from './views/LoginView';
 import { LyricsView } from './views/LyricsView';
+import { MediaView } from './views/MediaView';
 import { ProfileView } from './views/ProfileView';
 
 const BAR_KEYS: readonly BarKey[] = ['home', 'playback'];
+const AVAILABLE_TYPES: SearchType[] = [
+    'track',
+    'artist',
+    'album',
+    'playlist',
+    'show',
+    'episode',
+];
+const DEFAULT_TYPES: SearchType[] = ['track', 'artist', 'album', 'playlist'];
+const EMPTY_FILTERS: Filters = {
+    artist: '',
+    album: '',
+    year: '',
+    genre: '',
+};
 
 export default function App() {
     const navigate = useNavigate();
@@ -34,16 +53,20 @@ export default function App() {
     const widthBounds = { min: 350, max: 500 } as const;
     const heightBounds = { min: 300, max: 600 } as const;
 
-    const { authed, profile, login, logout, connection } = useAuth();
+    const { authed, profile, login, logout, connection } = useSpotifyAuth();
     const appState = useAppState({
         fallbackWidth: widthBounds.min,
         fallbackHeight: heightBounds.min,
     });
     const { playback } = usePlayer();
+    const routeHistory = useRouteHistory();
 
     const [searchQuery, setSearchQuery] = useState('');
+    const [searchTypes, setSearchTypes] = useState<SearchType[]>(DEFAULT_TYPES);
+    const [searchFilters, setSearchFilters] = useState<Filters>(EMPTY_FILTERS);
 
     const profileImage = profile?.images?.[0]?.url;
+    const hasSearchQuery = searchQuery.trim().length > 0;
 
     // Auth semantics
     const mustLogin = authed === false && authed !== undefined;
@@ -56,6 +79,20 @@ export default function App() {
         if (location.pathname !== '/profile')
             lastContentPathRef.current = location.pathname;
     }, [location.pathname]);
+
+    useEffect(() => {
+        if (location.pathname !== '/home') return;
+        const state = location.state as HomeRouteState | null;
+        if (state?.searchQuery !== undefined) {
+            setSearchQuery(state.searchQuery);
+        }
+    }, [location.pathname, location.state]);
+
+    useEffect(() => {
+        if (searchQuery.trim().length === 0) {
+            setSearchFilters(EMPTY_FILTERS);
+        }
+    }, [searchQuery]);
 
     const profileSlot = useMemo(
         () => (
@@ -145,7 +182,38 @@ export default function App() {
                                 navSlot={navFloating.anchors.home}
                                 searchQuery={searchQuery}
                                 onSearchChange={setSearchQuery}
-                                onClearSearch={() => setSearchQuery('')}
+                                onClearSearch={() => {
+                                    setSearchQuery('');
+                                    setSearchFilters(EMPTY_FILTERS);
+                                    if (location.pathname === '/home') {
+                                        routeHistory.goTo('/home', {
+                                            searchQuery: '',
+                                        });
+                                    }
+                                }}
+                                onSearchSubmit={() => {
+                                    const next = searchQuery.trim();
+                                    setSearchQuery(next);
+                                    routeHistory.goTo('/home', {
+                                        searchQuery: next,
+                                    });
+                                }}
+                                canGoBack={routeHistory.canGoBack}
+                                onGoBack={routeHistory.goBack}
+                                searchOptionsSlot={
+                                    hasSearchQuery ? (
+                                        <SearchFilters
+                                            types={searchTypes}
+                                            availableTypes={AVAILABLE_TYPES}
+                                            filters={searchFilters}
+                                            onTypesChange={setSearchTypes}
+                                            onFiltersChange={setSearchFilters}
+                                            onClearFilters={() =>
+                                                setSearchFilters(EMPTY_FILTERS)
+                                            }
+                                        />
+                                    ) : null
+                                }
                             />
                         )}
                     </Flex>
@@ -172,7 +240,23 @@ export default function App() {
                                 when={mustLogin}
                                 redirectTo="/login"
                             >
-                                <HomeView searchQuery={searchQuery} />
+                                <HomeView
+                                    searchQuery={searchQuery}
+                                    types={searchTypes}
+                                    filters={searchFilters}
+                                />
+                            </ProtectedLayout>
+                        }
+                    />
+
+                    <Route
+                        path="/media/:type/:id"
+                        element={
+                            <ProtectedLayout
+                                when={mustLogin}
+                                redirectTo="/login"
+                            >
+                                <MediaView />
                             </ProtectedLayout>
                         }
                     />

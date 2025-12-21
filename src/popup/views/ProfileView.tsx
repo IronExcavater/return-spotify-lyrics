@@ -9,7 +9,7 @@ import {
     Text,
 } from '@radix-ui/themes';
 import { UserProfile } from '@spotify/web-api-ts-sdk';
-import { SpotifyConnectionMeta } from '../hooks/useAuth';
+import { SpotifyConnectionMeta } from '../hooks/useSpotifyAuth';
 
 const relativeFormatter = new Intl.RelativeTimeFormat(undefined, {
     numeric: 'auto',

@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { getFromStorage, setInStorage } from '../../shared/storage';
-import { useAuth } from './useAuth.ts';
 import { usePlayer } from './usePlayer.ts';
+import { useSpotifyAuth } from './useSpotifyAuth.ts';
 
 export type BarKey = 'home' | 'playback';
 
 export const ROUTES = {
     root: '/',
     home: '/home',
+    media: '/media',
     login: '/login',
     lyrics: '/lyrics',
     profile: '/profile',
@@ -38,9 +39,13 @@ const BAR_RULES: Record<BarKey, BarRule> = {
 
 const ROUTE_RULES: Partial<Record<RouteValue, RouteRule>> = {
     [ROUTES.root]: {
+        allowedBars: ['playback'],
         heightOverride: 'auto',
     },
     [ROUTES.home]: {
+        allowedBars: ['home'],
+    },
+    [ROUTES.media]: {
         allowedBars: ['home'],
     },
     [ROUTES.lyrics]: {
@@ -50,6 +55,15 @@ const ROUTE_RULES: Partial<Record<RouteValue, RouteRule>> = {
         widthOverride: 300,
         heightOverride: 'auto',
     },
+    [ROUTES.profile]: {
+        heightOverride: 'auto',
+    },
+};
+
+const resolveRouteRule = (pathname: string) => {
+    if (pathname.startsWith(`${ROUTES.media}/`))
+        return ROUTE_RULES[ROUTES.media];
+    return ROUTE_RULES[pathname as RouteValue];
 };
 
 const APP_STATE_KEY = 'appState';
@@ -63,8 +77,8 @@ type AppState = {
     lastRoute?: RouteValue;
 };
 
-function isRouteAllowed(pathname: RouteValue, bar: BarKey) {
-    const rule = ROUTE_RULES[pathname];
+function isRouteAllowed(pathname: string, bar: BarKey) {
+    const rule = resolveRouteRule(pathname);
     if (!rule?.allowedBars) return true;
     return rule.allowedBars.includes(bar);
 }
@@ -78,14 +92,14 @@ export function useAppState({ fallbackWidth, fallbackHeight }: Props) {
     const navigate = useNavigate();
     const location = useLocation();
 
-    const { authed } = useAuth();
+    const { authed } = useSpotifyAuth();
     const { playback } = usePlayer();
 
     const [hydrated, setHydrated] = useState(false);
     const [appState, setAppState] = useState<AppState>({});
     const [activeBar, setActiveBar] = useState<BarKey>('home');
 
-    const routeRule = ROUTE_RULES[location.pathname] as RouteRule;
+    const routeRule = resolveRouteRule(location.pathname) as RouteRule;
 
     // load app state
     useEffect(() => {
