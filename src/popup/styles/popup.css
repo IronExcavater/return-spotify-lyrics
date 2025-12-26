@@ -2,6 +2,7 @@
 @import 'radix-themes-tw';
 @import './marquee.css';
 @import './fade.css';
+@import './scrollbar.css';
 @import './radix-themes.css';
 @tailwind utilities;
 

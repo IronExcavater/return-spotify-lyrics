@@ -5,6 +5,9 @@ import { getFromStorage, setInStorage } from '../../shared/storage';
 
 const SPOTIFY_USER_KEY = 'spotifyUser';
 const SPOTIFY_CONNECTION_KEY = 'spotifyConnectionMeta';
+const SPOTIFY_TOKEN_KEY = 'spotifyToken';
+const RETRY_LIMIT = 3;
+const RETRY_DELAY_MS = 400;
 
 export interface SpotifyConnectionMeta {
     userId: string;
@@ -15,12 +18,22 @@ export interface SpotifyConnectionMeta {
 
 export function useAuth() {
     const [authed, setAuthed] = useState<boolean | undefined>(undefined);
+    const [ready, setReady] = useState(false);
     const [user, setUser] = useState<UserProfile | undefined>(undefined);
     const [connection, setConnection] = useState<
         SpotifyConnectionMeta | undefined
     >(undefined);
     const connectionRef = useRef<SpotifyConnectionMeta | undefined>(undefined);
     const sessionActiveRef = useRef(false);
+    const retryRef = useRef<number | null>(null);
+    const retryCountRef = useRef(0);
+
+    const clearRetry = () => {
+        if (retryRef.current) {
+            window.clearTimeout(retryRef.current);
+            retryRef.current = null;
+        }
+    };
 
     const sync = async () => {
         try {
@@ -57,11 +70,37 @@ export function useAuth() {
             } else {
                 sessionActiveRef.current = false;
             }
+            setReady(true);
+            retryCountRef.current = 0;
+            clearRetry();
         } catch (error) {
             console.warn('[auth] Failed to sync Spotify user', error);
-            setAuthed(false);
-            setUser(undefined);
-            sessionActiveRef.current = false;
+            const token = await getFromStorage(SPOTIFY_TOKEN_KEY);
+            if (!token) {
+                setAuthed(false);
+                setUser(undefined);
+                sessionActiveRef.current = false;
+                setReady(true);
+                retryCountRef.current = 0;
+                clearRetry();
+                return;
+            }
+
+            if (retryCountRef.current < RETRY_LIMIT) {
+                retryCountRef.current += 1;
+                clearRetry();
+                retryRef.current = window.setTimeout(
+                    () => void sync(),
+                    RETRY_DELAY_MS * retryCountRef.current
+                );
+            } else {
+                setAuthed(false);
+                setUser(undefined);
+                sessionActiveRef.current = false;
+                setReady(true);
+                retryCountRef.current = 0;
+                clearRetry();
+            }
         }
     };
 
@@ -80,6 +119,8 @@ export function useAuth() {
             area: string
         ) => {
             if (area === 'local' && changes.spotifyToken) {
+                retryCountRef.current = 0;
+                clearRetry();
                 void sync();
             }
         };
@@ -99,7 +140,8 @@ export function useAuth() {
             }
         );
         void sync();
+        return () => clearRetry();
     }, []);
 
-    return { authed, profile: user, login, logout, connection };
+    return { authed, ready, profile: user, login, logout, connection };
 }

@@ -1,0 +1,28 @@
+* {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(255 255 255 / 28%) transparent;
+}
+
+*::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+}
+
+*::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 999px;
+    backdrop-filter: blur(8px);
+    box-shadow: inset 0 0 0 4px rgb(255 255 255 / 8%);
+}
+
+*::-webkit-scrollbar-thumb {
+    background: rgb(255 255 255 / 28%);
+    border-radius: 999px;
+    border: 4px solid transparent;
+    background-clip: content-box;
+    backdrop-filter: blur(12px);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+    background: rgb(255 255 255 / 40%);
+}

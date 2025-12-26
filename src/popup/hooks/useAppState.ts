@@ -38,6 +38,7 @@ const BAR_RULES: Record<BarKey, BarRule> = {
 
 const ROUTE_RULES: Partial<Record<RouteValue, RouteRule>> = {
     [ROUTES.root]: {
+        allowedBars: ['playback'],
         heightOverride: 'auto',
     },
     [ROUTES.home]: {
@@ -48,6 +49,9 @@ const ROUTE_RULES: Partial<Record<RouteValue, RouteRule>> = {
     },
     [ROUTES.login]: {
         widthOverride: 300,
+        heightOverride: 'auto',
+    },
+    [ROUTES.profile]: {
         heightOverride: 'auto',
     },
 };

@@ -121,6 +121,7 @@ export async function requestAccessToken(code: string): Promise<SpotifyToken> {
 export async function refreshAccessToken(
     refreshToken: string
 ): Promise<SpotifyToken> {
+    const prevToken = await getFromStorage<SpotifyToken>(SPOTIFY_TOKEN_KEY);
     const response = await fetch(SPOTIFY_TOKEN_URL, {
         method: 'POST',
         headers: new Headers({
@@ -139,6 +140,7 @@ export async function refreshAccessToken(
     const token: SpotifyToken = withExpiry({
         ...raw,
         refresh_token: raw.refresh_token ?? refreshToken,
+        scope: raw.scope ?? prevToken?.scope,
     });
 
     await setInStorage(SPOTIFY_TOKEN_KEY, token);
