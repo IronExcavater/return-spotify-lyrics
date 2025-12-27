@@ -3,6 +3,7 @@
 @import './marquee.css';
 @import './fade.css';
 @import './radix-themes.css';
+@import './scrollbar.css';
 @tailwind utilities;
 
 :root {

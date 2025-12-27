@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { PersonIcon } from '@radix-ui/react-icons';
 import { Flex } from '@radix-ui/themes';
 import {
@@ -12,24 +12,46 @@ import {
 import { AvatarButton } from './components/AvatarButton';
 import { HomeBar } from './components/HomeBar';
 import { NavBar } from './components/NavBar';
+import { NotificationItem } from './components/NotificationCenter';
 import { PlaybackBar } from './components/PlaybackBar';
 import { ProtectedLayout } from './components/ProtectedLayout';
+import { Toast } from './components/Toast';
 import { useAppState, BarKey } from './hooks/useAppState';
 import { useAuth } from './hooks/useAuth';
+import { useHistory } from './hooks/useHistory';
 
 import { usePlayer } from './hooks/usePlayer.ts';
 import { usePortalSlot } from './hooks/usePortalSlot';
 import { Resizer } from './hooks/useResize.tsx';
+import { useSpotifyReauthPrompt } from './hooks/useSpotifyReauthPrompt';
+import { SearchFilters as Filters, SearchType } from './hooks/useSpotifySearch';
 import { HomeView } from './views/HomeView';
 import { LoginView } from './views/LoginView';
 import { LyricsView } from './views/LyricsView';
+import { MediaView } from './views/MediaView';
 import { ProfileView } from './views/ProfileView';
 
 const BAR_KEYS: readonly BarKey[] = ['home', 'playback'];
+const AVAILABLE_TYPES: SearchType[] = [
+    'track',
+    'artist',
+    'album',
+    'playlist',
+    'show',
+    'episode',
+];
+const DEFAULT_TYPES: SearchType[] = ['track', 'artist', 'album', 'playlist'];
+const EMPTY_FILTERS: Filters = {
+    artist: '',
+    album: '',
+    year: '',
+    genre: '',
+};
 
 export default function App() {
     const navigate = useNavigate();
     const location = useLocation();
+    const routeHistory = useHistory();
 
     const widthBounds = { min: 350, max: 500 } as const;
     const heightBounds = { min: 300, max: 600 } as const;
@@ -42,8 +64,17 @@ export default function App() {
     const { playback } = usePlayer();
 
     const [searchQuery, setSearchQuery] = useState('');
+    const [searchTypes, setSearchTypes] = useState<SearchType[]>(DEFAULT_TYPES);
+    const [searchFilters, setSearchFilters] = useState<Filters>(EMPTY_FILTERS);
 
     const profileImage = profile?.images?.[0]?.url;
+    const { prompt: reauthPrompt } = useSpotifyReauthPrompt({
+        authed,
+        onReauthorize: login,
+    });
+    const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+
+    const hasSearchQuery = searchQuery.trim().length > 0;
 
     // Auth semantics
     const mustLogin = authed === false && authed !== undefined;
@@ -56,6 +87,74 @@ export default function App() {
         if (location.pathname !== '/profile')
             lastContentPathRef.current = location.pathname;
     }, [location.pathname]);
+
+    useEffect(() => {
+        if (location.pathname !== '/home') return;
+        const state = location.state as { searchQuery?: string } | null;
+        if (state?.searchQuery !== undefined) {
+            setSearchQuery(state.searchQuery);
+        }
+    }, [location.pathname, location.state]);
+
+    useEffect(() => {
+        if (searchQuery.trim().length === 0) {
+            setSearchFilters(EMPTY_FILTERS);
+        }
+    }, [searchQuery]);
+
+    const upsertNotification = useCallback(
+        (next: NotificationItem) =>
+            setNotifications((prev) => {
+                const existingIndex = prev.findIndex(
+                    (item) => item.id === next.id
+                );
+                if (existingIndex >= 0) {
+                    const updated = [...prev];
+                    updated[existingIndex] = {
+                        ...prev[existingIndex],
+                        ...next,
+                    };
+                    return updated;
+                }
+                return [next, ...prev];
+            }),
+        []
+    );
+
+    const handleNotificationDismiss = useCallback((id: string) => {
+        setNotifications((prev) => prev.filter((item) => item.id !== id));
+    }, []);
+
+    const handleNotificationAction = useCallback(
+        (id: string) => {
+            if (id === 'spotify-reauth') {
+                login();
+            }
+            setNotifications((prev) =>
+                prev.map((item) =>
+                    item.id === id ? { ...item, unread: false } : item
+                )
+            );
+        },
+        [login]
+    );
+
+    const handleNotificationClear = useCallback(() => {
+        setNotifications([]);
+    }, []);
+
+    useEffect(() => {
+        if (!reauthPrompt) return;
+        upsertNotification({
+            id: 'spotify-reauth',
+            description: 'Spotify needs new permissions now',
+            timestamp: new Date(reauthPrompt.detectedAt),
+            action: { label: 'Reauthorize', onClick: login },
+            unread: true,
+            tone: 'warning',
+            persistent: true,
+        });
+    }, [login, reauthPrompt?.detectedAt, upsertNotification]);
 
     const profileSlot = useMemo(
         () => (
@@ -126,7 +225,23 @@ export default function App() {
             onWidthChange={appState.setWidth}
             onHeightChange={appState.setHeight}
         >
-            <Flex direction="column" className="h-full">
+            <Flex direction="column" className="relative h-full">
+                {reauthPrompt && (
+                    <div className="pointer-events-none absolute top-3 right-3 z-20 w-[calc(100%-24px)] max-w-[420px]">
+                        <div className="pointer-events-auto">
+                            <Toast
+                                tone="warning"
+                                description="Spotify needs new permissions now"
+                                action={{
+                                    label: 'Reauthorize',
+                                    onClick: reauthPrompt.reauthorize,
+                                }}
+                                onDismiss={reauthPrompt.dismiss}
+                                timestamp={new Date(reauthPrompt.detectedAt)}
+                            />
+                        </div>
+                    </div>
+                )}
                 {/* Top bar */}
                 {appState.showBars && (
                     <Flex className="border-b-2 border-[var(--gray-a6)] bg-[var(--color-panel-solid)]">
@@ -145,7 +260,24 @@ export default function App() {
                                 navSlot={navFloating.anchors.home}
                                 searchQuery={searchQuery}
                                 onSearchChange={setSearchQuery}
-                                onClearSearch={() => setSearchQuery('')}
+                                onClearSearch={() => {
+                                    setSearchQuery('');
+                                    setSearchFilters(EMPTY_FILTERS);
+                                    if (location.pathname === '/home') {
+                                        routeHistory.goTo('/home', {
+                                            searchQuery: '',
+                                        });
+                                    }
+                                }}
+                                onSearchSubmit={() => {
+                                    const next = searchQuery.trim();
+                                    setSearchQuery(next);
+                                    routeHistory.goTo('/home', {
+                                        searchQuery: next,
+                                    });
+                                }}
+                                canGoBack={routeHistory.canGoBack}
+                                onGoBack={routeHistory.goBack}
                             />
                         )}
                     </Flex>
@@ -153,17 +285,7 @@ export default function App() {
 
                 {/* Routes */}
                 <Routes>
-                    <Route
-                        path="/"
-                        element={
-                            <ProtectedLayout
-                                when={mustLogin}
-                                redirectTo="/login"
-                            >
-                                <></>
-                            </ProtectedLayout>
-                        }
-                    />
+                    <Route path="/" element={<Navigate to="/home" replace />} />
 
                     <Route
                         path="/home"
@@ -172,7 +294,11 @@ export default function App() {
                                 when={mustLogin}
                                 redirectTo="/login"
                             >
-                                <HomeView searchQuery={searchQuery} />
+                                <HomeView
+                                    searchQuery={searchQuery}
+                                    types={searchTypes}
+                                    filters={searchFilters}
+                                />
                             </ProtectedLayout>
                         }
                     />
@@ -190,6 +316,18 @@ export default function App() {
                     />
 
                     <Route
+                        path="/media/:type/:id"
+                        element={
+                            <ProtectedLayout
+                                when={mustLogin}
+                                redirectTo="/login"
+                            >
+                                <MediaView />
+                            </ProtectedLayout>
+                        }
+                    />
+
+                    <Route
                         path="/profile"
                         element={
                             <ProtectedLayout
@@ -200,6 +338,16 @@ export default function App() {
                                     profile={profile}
                                     connection={connection}
                                     onLogout={logout}
+                                    notifications={notifications}
+                                    onNotificationAction={
+                                        handleNotificationAction
+                                    }
+                                    onNotificationDismiss={
+                                        handleNotificationDismiss
+                                    }
+                                    onNotificationClear={
+                                        handleNotificationClear
+                                    }
                                 />
                             </ProtectedLayout>
                         }

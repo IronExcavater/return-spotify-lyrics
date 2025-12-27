@@ -9,6 +9,10 @@ import {
     Text,
 } from '@radix-ui/themes';
 import { UserProfile } from '@spotify/web-api-ts-sdk';
+import {
+    NotificationCenter,
+    NotificationItem,
+} from '../components/NotificationCenter';
 import { SpotifyConnectionMeta } from '../hooks/useAuth';
 
 const relativeFormatter = new Intl.RelativeTimeFormat(undefined, {
@@ -49,9 +53,21 @@ interface Props {
     profile: UserProfile | undefined;
     onLogout: () => void;
     connection?: SpotifyConnectionMeta;
+    notifications?: NotificationItem[];
+    onNotificationDismiss?: (id: string) => void;
+    onNotificationAction?: (id: string) => void;
+    onNotificationClear?: () => void;
 }
 
-export function ProfileView({ profile, onLogout, connection }: Props) {
+export function ProfileView({
+    profile,
+    onLogout,
+    connection,
+    notifications = [],
+    onNotificationAction,
+    onNotificationDismiss,
+    onNotificationClear,
+}: Props) {
     const loading = !profile;
     const [relativeNow, setRelativeNow] = useState(Date.now());
 
@@ -113,8 +129,8 @@ export function ProfileView({ profile, onLogout, connection }: Props) {
     ]);
 
     return (
-        <Flex m="3" flexGrow="1" justify="center">
-            <Flex direction="column" gap="2" className="flex-shrink-0">
+        <Flex m="3" flexGrow="1" direction="column" gap="3">
+            <Flex direction="column" gap="2">
                 {/* Avatar + display name */}
                 <Flex
                     gap="3"
@@ -194,6 +210,16 @@ export function ProfileView({ profile, onLogout, connection }: Props) {
                     </AlertDialog.Content>
                 </AlertDialog.Root>
             </Flex>
+
+            <NotificationCenter
+                title="Notifications"
+                items={notifications}
+                emptyMessage="No notifications yet."
+                onDismiss={onNotificationDismiss}
+                onAction={onNotificationAction}
+                onClearAll={onNotificationClear}
+                className="max-h-[360px] w-full max-w-full overflow-hidden"
+            />
         </Flex>
     );
 }

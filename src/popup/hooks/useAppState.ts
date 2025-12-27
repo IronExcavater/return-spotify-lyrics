@@ -9,6 +9,7 @@ export type BarKey = 'home' | 'playback';
 export const ROUTES = {
     root: '/',
     home: '/home',
+    media: '/media',
     login: '/login',
     lyrics: '/lyrics',
     profile: '/profile',
@@ -38,6 +39,7 @@ const BAR_RULES: Record<BarKey, BarRule> = {
 
 const ROUTE_RULES: Partial<Record<RouteValue, RouteRule>> = {
     [ROUTES.root]: {
+        allowedBars: ['playback'],
         heightOverride: 'auto',
     },
     [ROUTES.home]: {
@@ -49,6 +51,12 @@ const ROUTE_RULES: Partial<Record<RouteValue, RouteRule>> = {
     [ROUTES.login]: {
         widthOverride: 300,
         heightOverride: 'auto',
+    },
+    [ROUTES.profile]: {
+        heightOverride: 'auto',
+    },
+    [ROUTES.media]: {
+        allowedBars: ['home'],
     },
 };
 
@@ -130,12 +138,12 @@ export function useAppState({ fallbackWidth, fallbackHeight }: Props) {
         if (!hydrated || initialised.current) return;
         initialised.current = true;
 
-        // switch into playback bar if playback available
-        if (playback) {
+        // If we have no prior bar saved and playback exists, prefer playback
+        if (!appState.lastBar && playback) {
             setActiveBar('playback');
             void updateAppState({ lastBar: 'playback' });
         }
-    }, [hydrated, playback, initialised]);
+    }, [hydrated, playback, appState.lastBar, initialised, updateAppState]);
 
     // track last playback change
     const lastPlaybackChange = useRef<number | null>(null);
@@ -162,7 +170,7 @@ export function useAppState({ fallbackWidth, fallbackHeight }: Props) {
         }
     }, [hydrated, activeBar, updateAppState]);
 
-    // Enforce route rules
+    // Enforce route rules without causing oscillation
     const lastEnforcedNav = useRef<{ bar: BarKey; route: RouteValue } | null>(
         null
     );
@@ -170,17 +178,18 @@ export function useAppState({ fallbackWidth, fallbackHeight }: Props) {
     useEffect(() => {
         if (!hydrated) return;
 
-        let path = location.pathname as RouteValue;
-
+        const path = location.pathname as RouteValue;
         const last = lastEnforcedNav.current;
+
+        // If we already enforced this combo, do nothing
         if (last?.bar === activeBar && last.route === path) return;
 
         if (!isRouteAllowed(path, activeBar)) {
             const fallback = BAR_RULES[activeBar].defaultRoute;
-
             if (path !== fallback) {
                 navigate(fallback, { replace: true });
-                path = fallback;
+                lastEnforcedNav.current = { bar: activeBar, route: fallback };
+                return;
             }
         }
 

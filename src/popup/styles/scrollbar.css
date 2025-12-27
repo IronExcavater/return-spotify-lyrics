@@ -1,0 +1,21 @@
+/* Custom scrollbars */
+*::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+    background: color-mix(in srgb, var(--gray-a3) 40%, transparent);
+    border-radius: 9999px;
+}
+
+*::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--gray-a10) 75%, var(--gray-a8));
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+    background: color-mix(in srgb, var(--gray-a11) 80%, var(--gray-a9));
+}

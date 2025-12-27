@@ -11,7 +11,7 @@ interface MarqueeProps {
 
 export function Marquee({
     children,
-    speed = 10,
+    speed = 1,
     mode = 'left',
     pauseOnHover = true,
     className,
@@ -19,31 +19,48 @@ export function Marquee({
     const containerRef = useRef<HTMLDivElement>(null);
     const originalRef = useRef<HTMLDivElement>(null);
 
+    const [distance, setDistance] = useState(0);
     const [duration, setDuration] = useState(0);
-    const [hidden, setHidden] = useState(0);
     const [scroll, setScroll] = useState(false);
+    const GAP_PX = 16;
+    const MIN_DURATION = 4;
 
     useEffect(() => {
         const compute = () => {
             const containerW = containerRef.current?.clientWidth ?? 0;
             const originalW = originalRef.current?.scrollWidth ?? 0;
 
-            const shouldScroll = originalW > containerW;
+            const shouldScroll = originalW - containerW > 0.5;
             setScroll(shouldScroll);
 
-            const hidden = Math.max(0, originalW - containerW);
-            setHidden(hidden);
+            const overflow = Math.max(0, originalW - containerW);
+            if (!shouldScroll || containerW === 0 || originalW === 0) {
+                setDistance(0);
+                setDuration(0);
+                return;
+            }
 
-            setDuration(containerW / speed);
+            const baseSpeed = Math.max(
+                1,
+                mode === 'bounce' ? speed * 0.85 : speed
+            );
+            const travel = mode === 'bounce' ? overflow : originalW + GAP_PX; // continuous modes travel a full copy + gap
+
+            const seconds = Math.max(travel / baseSpeed, MIN_DURATION);
+            setDistance(travel);
+            setDuration(seconds);
         };
 
         compute();
 
         const observer = new ResizeObserver(compute);
         if (containerRef.current) observer.observe(containerRef.current);
+        if (originalRef.current) observer.observe(originalRef.current);
 
         return () => observer.disconnect();
-    }, [speed]);
+    }, [mode, speed]);
+
+    const showClone = scroll && mode !== 'bounce';
 
     return (
         <div
@@ -61,24 +78,29 @@ export function Marquee({
                 )}
                 style={
                     {
-                        '--marquee-distance': `${-hidden}px`,
+                        '--marquee-distance': `${-distance}px`,
                         animationDuration: `${duration}s`,
                     } as CSSProperties
                 }
             >
-                <div ref={originalRef} className="relative">
-                    {children}
-                </div>
                 <div
-                    className={clsx(
-                        'absolute top-0 left-full',
-                        (!scroll || mode === 'bounce') && 'invisible'
-                    )}
-                    style={{
-                        marginLeft: '12px',
-                    }}
+                    className="inline-flex items-center"
+                    style={{ gap: showClone ? `${GAP_PX}px` : undefined }}
                 >
-                    {children}
+                    <div
+                        ref={originalRef}
+                        className="inline-flex shrink-0 items-center"
+                    >
+                        {children}
+                    </div>
+                    {showClone && (
+                        <div
+                            className="inline-flex shrink-0 items-center"
+                            aria-hidden="true"
+                        >
+                            {children}
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
