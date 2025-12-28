@@ -40,6 +40,11 @@ export function HomeBar({
         type: 'text',
         value: 'Chillwave',
     });
+    const [mockMediaType, setMockMediaType] = useState<PillValue | null>({
+        type: 'options',
+        options: ['Track', 'Album', 'Artist', 'Playlist'],
+        value: ['Track', 'Artist'],
+    });
     const [mockDate, setMockDate] = useState<PillValue | null>({
         type: 'date',
         value: '2024-02-14',
@@ -160,6 +165,15 @@ export function HomeBar({
                         placeholder="Set mood"
                         onChange={setMockMood}
                         onRemove={() => setMockMood(null)}
+                    />
+                )}
+                {!!mockMediaType && (
+                    <Pill
+                        label="Type"
+                        value={mockMediaType}
+                        placeholder="Select categories"
+                        onChange={setMockMediaType}
+                        onRemove={() => setMockMediaType(null)}
                     />
                 )}
                 {mockDate && (

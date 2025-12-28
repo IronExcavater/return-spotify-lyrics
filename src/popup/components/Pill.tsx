@@ -11,7 +11,7 @@ import {
     RefObject,
 } from 'react';
 import { Cross2Icon, MinusIcon, PlusIcon } from '@radix-ui/react-icons';
-import { Flex, IconButton, Text } from '@radix-ui/themes';
+import { DropdownMenu, Flex, IconButton, Text } from '@radix-ui/themes';
 import clsx from 'clsx';
 
 export type PillValue =
@@ -20,7 +20,8 @@ export type PillValue =
     | { type: 'multi-select'; value: string[] }
     | { type: 'number'; value: number | null }
     | { type: 'date'; value: string }
-    | { type: 'date-range'; value: { from?: string; to?: string } };
+    | { type: 'date-range'; value: { from?: string; to?: string } }
+    | { type: 'options'; value: string[]; options: string[] };
 
 type DateRangeValue = Extract<PillValue, { type: 'date-range' }>['value'];
 type DateLikeValue = Extract<PillValue, { type: 'date' | 'date-range' }>;
@@ -214,6 +215,12 @@ export function Pill({
                 return value.value.join(', ');
             case 'number':
                 return value.value != null ? String(value.value) : '';
+            case 'options': {
+                const count = value.value.length;
+                if (!count) return '';
+                if (count <= 2) return value.value.join(', ');
+                return `${value.value.slice(0, 2).join(', ')} +${count - 2}`;
+            }
             default:
                 return '';
         }
@@ -226,6 +233,8 @@ export function Pill({
         mode: 'date',
         range: {},
     });
+    const containerRef = useRef<HTMLDivElement>(null);
+    const dropdownContentRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
     const dateInputRef = useRef<HTMLInputElement>(null);
     const measureRef = useRef<HTMLSpanElement>(null);
@@ -235,9 +244,11 @@ export function Pill({
     const [inputPx, setInputPx] = useState<number | null>(null);
     const isTextValue = value.type === 'text';
     const isDateValue = isDateLikeValue(value);
+    const isOptionsValue = value.type === 'options';
     const isRangeMode = dateDraft.mode === 'date-range';
     const editable =
-        (isTextValue || isDateValue) && typeof onChange === 'function';
+        (isTextValue || isDateValue || isOptionsValue) &&
+        typeof onChange === 'function';
 
     useEffect(() => {
         if (value.type === 'text' && !isEditing) setTextDraft(value.value);
@@ -295,8 +306,13 @@ export function Pill({
         });
     }, [isDateValue, dateDraft, placeholder, displayValue]);
 
-    const commitDraft = () => {
+    const commitDraft = useCallback(() => {
         if (!editable || !onChange) return;
+
+        if (isOptionsValue) {
+            setIsEditing(false);
+            return;
+        }
 
         if (isTextValue) {
             onChange({ ...value, value: textDraft });
@@ -316,7 +332,19 @@ export function Pill({
         }
 
         setIsEditing(false);
-    };
+    }, [
+        editable,
+        onChange,
+        isOptionsValue,
+        isTextValue,
+        value,
+        textDraft,
+        isDateValue,
+        parseDateInput,
+        dateDraft.range.from,
+        dateDraft.range.to,
+        dateDraft.mode,
+    ]);
 
     const cancelDraft = () => {
         if (isTextValue) setTextDraft(value.value);
@@ -340,14 +368,49 @@ export function Pill({
         setIsEditing(false);
     };
 
-    const handleContainerClick = (event: ReactMouseEvent<HTMLDivElement>) => {
-        if (!editable) return;
-        if (
-            event.target instanceof HTMLElement &&
-            event.target.closest('input')
-        )
-            return;
-        if (!isEditing) setIsEditing(true);
+    useEffect(() => {
+        if (!isEditing || !editable) return;
+        const handleOutside = (
+            event: PointerEvent | MouseEvent | TouchEvent
+        ) => {
+            const node = containerRef.current;
+            const menuNode = dropdownContentRef.current;
+            if (!node) return;
+            const target = event.target as Node;
+            if (node.contains(target)) return;
+            if (menuNode && menuNode.contains(target)) return;
+            commitDraft();
+        };
+        const events: Array<keyof DocumentEventMap> = [
+            'pointerdown',
+            'mousedown',
+            'touchstart',
+        ];
+        events.forEach((type) =>
+            document.addEventListener(type, handleOutside)
+        );
+        return () =>
+            events.forEach((type) =>
+                document.removeEventListener(type, handleOutside)
+            );
+    }, [isEditing, editable, commitDraft]);
+
+    const startEditing = useCallback(
+        (event?: ReactMouseEvent<HTMLElement>) => {
+            if (!editable) return;
+            const target = event?.target as HTMLElement | undefined;
+            if (target?.closest('input')) return;
+            event?.preventDefault();
+            event?.stopPropagation();
+            setIsEditing(true);
+        },
+        [editable]
+    );
+
+    const handleContainerPointerDown = (
+        event: ReactMouseEvent<HTMLDivElement>
+    ) => {
+        startEditing(event);
     };
 
     const handleContainerKeyDown = (
@@ -356,11 +419,11 @@ export function Pill({
         if (!editable) return;
         if (event.key !== 'Enter' && event.key !== ' ') return;
         event.preventDefault();
-        if (!isEditing) setIsEditing(true);
+        startEditing();
     };
 
     const handleBlur = (event: ReactFocusEvent<HTMLDivElement>) => {
-        if (!editable || !isEditing) return;
+        if (!editable || !isEditing || isOptionsValue) return;
         const nextFocus = event.relatedTarget as Node | null;
         if (nextFocus && event.currentTarget.contains(nextFocus)) return;
         commitDraft();
@@ -426,18 +489,31 @@ export function Pill({
 
     const handleAddRange = () => setDateMode('date-range');
     const handleRemoveRange = () => setDateMode('date');
+    const transformButtonClassName =
+        'text-gray-12 shrink-0 !h-4 min-h-0 !w-4 min-w-0 bg-[var(--gray-a3)] hover:bg-[var(--gray-a4)]';
+    const handleOptionToggle = (option: string) => {
+        if (!onChange || !isOptionsValue) return;
+        const isSelected = value.value.includes(option);
+        const next = isSelected
+            ? value.value.filter((item) => item !== option)
+            : [...value.value, option];
+        const ordered = value.options.filter((item) => next.includes(item));
+        onChange({ ...value, value: ordered });
+    };
 
-    return (
+    const pillBody = (
         <Flex
             align="center"
             gap="1"
             role={editable ? 'button' : undefined}
             tabIndex={editable ? 0 : -1}
-            onClick={handleContainerClick}
+            ref={containerRef}
+            onPointerDownCapture={handleContainerPointerDown}
+            onClick={startEditing}
             onKeyDown={handleContainerKeyDown}
             onBlur={handleBlur}
             className={clsx(
-                'group text-gray-12 max-w-60 min-w-0 items-center rounded-full bg-[var(--gray-a2)] p-0.5 ring-1 ring-[var(--gray-a6)] transition-colors',
+                'group text-gray-12 max-w-72 min-w-0 items-center rounded-full bg-[var(--gray-a2)] p-0.5 ring-1 ring-[var(--gray-a6)] transition-colors',
                 'focus-within:ring-2 focus-within:ring-[var(--accent-8)] hover:ring-2 hover:ring-[var(--accent-8)] focus-visible:outline-none',
                 editable &&
                     'cursor-text focus-within:border-[var(--accent-8)] hover:border-[var(--accent-8)]',
@@ -450,7 +526,7 @@ export function Pill({
                 </Text>
             )}
 
-            {isEditing && editable ? (
+            {isEditing && editable && !isOptionsValue ? (
                 isTextValue ? (
                     <input
                         ref={inputRef}
@@ -465,8 +541,8 @@ export function Pill({
                 ) : isDateValue ? (
                     <Flex
                         align="center"
-                        gap="0.75"
-                        className="min-w-0 flex-wrap"
+                        gap="1"
+                        className="flex-wrap"
                         onClick={(event: ReactMouseEvent<HTMLDivElement>) =>
                             event.stopPropagation()
                         }
@@ -485,7 +561,7 @@ export function Pill({
                             }
                             onKeyDown={handleInputKeyDown}
                             placeholder={placeholder || editPattern.placeholder}
-                            className="min-w-0 border-none bg-transparent text-xs font-normal [color:inherit] outline-none"
+                            className="min-w-0 border-none bg-transparent text-xs font-normal outline-none"
                             style={
                                 dateWidths.from
                                     ? { width: `${dateWidths.from}px` }
@@ -522,7 +598,8 @@ export function Pill({
                                     size="0"
                                     variant="ghost"
                                     radius="full"
-                                    className="text-gray-12 ml-2 !h-4 min-h-0 !w-4 min-w-0 bg-[var(--gray-a3)] hover:bg-[var(--gray-a4)]"
+                                    color="gray"
+                                    className={transformButtonClassName}
                                     onClick={(event) => {
                                         event.stopPropagation();
                                         handleRemoveRange();
@@ -537,7 +614,8 @@ export function Pill({
                                 size="0"
                                 variant="ghost"
                                 radius="full"
-                                className="text-gray-12 ml-2 !h-4 min-h-0 !w-4 min-w-0 bg-[var(--gray-a3)] hover:bg-[var(--gray-a4)]"
+                                color="gray"
+                                className={transformButtonClassName}
                                 onClick={(event) => {
                                     event.stopPropagation();
                                     handleAddRange();
@@ -554,6 +632,7 @@ export function Pill({
                     size="1"
                     color={displayValue ? undefined : 'gray'}
                     className="min-w-0 truncate"
+                    onPointerDown={startEditing}
                 >
                     {displayValue || placeholder}
                 </Text>
@@ -608,4 +687,45 @@ export function Pill({
             )}
         </Flex>
     );
+
+    if (isOptionsValue && editable) {
+        return (
+            <DropdownMenu.Root
+                open={isEditing}
+                modal={false}
+                onOpenChange={(open) => {
+                    if (open) setIsEditing(true);
+                }}
+            >
+                <DropdownMenu.Trigger asChild onPointerDown={startEditing}>
+                    {pillBody}
+                </DropdownMenu.Trigger>
+                <DropdownMenu.Content
+                    size="1"
+                    align="start"
+                    ref={dropdownContentRef}
+                    onPointerDown={(event) => event.stopPropagation()}
+                    onCloseAutoFocus={(event) => event.preventDefault()}
+                >
+                    {value.options.map((option) => {
+                        const checked = value.value.includes(option);
+                        return (
+                            <DropdownMenu.CheckboxItem
+                                key={option}
+                                checked={checked}
+                                onSelect={(event) => event.preventDefault()}
+                                onCheckedChange={() =>
+                                    handleOptionToggle(option)
+                                }
+                            >
+                                {option}
+                            </DropdownMenu.CheckboxItem>
+                        );
+                    })}
+                </DropdownMenu.Content>
+            </DropdownMenu.Root>
+        );
+    }
+
+    return pillBody;
 }

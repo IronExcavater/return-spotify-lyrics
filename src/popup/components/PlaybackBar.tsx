@@ -117,7 +117,7 @@ export function PlaybackBar({
                     <Flex direction="column" flexGrow="1" className="min-w-0">
                         <Flex align="center" flexGrow="1">
                             {/* Title */}
-                            <Fade className="grow">
+                            <Fade className="grow" enabled={!loading}>
                                 <Marquee mode="bounce">
                                     <Skeleton loading={loading}>
                                         <ExternalLink
@@ -146,9 +146,9 @@ export function PlaybackBar({
 
                         <Flex align="center" gap="1">
                             {/* Artists */}
-                            <Fade className="grow">
+                            <Fade className="grow" enabled={!loading}>
                                 <Marquee mode="right">
-                                    <Flex align="center" style={{ gap: '8px' }}>
+                                    <Flex align="center" gap="2">
                                         {artists.map((artist) => {
                                             const label =
                                                 'publisher' in artist

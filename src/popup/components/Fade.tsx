@@ -1,8 +1,9 @@
 import { ReactNode } from 'react';
 import clsx from 'clsx';
 
-interface FadeMaskProps {
+interface Props {
     children: ReactNode;
+    enabled?: boolean;
     fade?:
         | 'none'
         | 'left'
@@ -18,10 +19,11 @@ interface FadeMaskProps {
 
 export function Fade({
     children,
+    enabled = true,
     fade = 'horizontal',
     size = 4,
     className,
-}: FadeMaskProps) {
+}: Props) {
     const DIRECTIONS: Record<string, string[]> = {
         none: [],
         left: ['left'],
@@ -41,17 +43,24 @@ export function Fade({
     };
 
     const maskImage =
-        DIRECTIONS[fade]?.map((dir) => GRADIENTS[dir]).join(',') || undefined;
+        enabled && fade !== 'none'
+            ? DIRECTIONS[fade]?.map((dir) => GRADIENTS[dir]).join(',')
+            : undefined;
+
+    const maskStyles =
+        maskImage === undefined
+            ? undefined
+            : {
+                  maskImage,
+                  maskComposite: 'intersect',
+                  WebkitMaskImage: maskImage,
+                  WebkitMaskComposite: 'intersect',
+              };
 
     return (
         <div
             className={clsx('relative overflow-hidden', className)}
-            style={{
-                maskImage,
-                maskComposite: 'intersect',
-                WebkitMaskImage: maskImage,
-                WebkitMaskComposite: 'intersect',
-            }}
+            style={maskStyles}
         >
             {children}
         </div>

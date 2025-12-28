@@ -1,12 +1,14 @@
 import { CSSProperties, ReactNode, useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
 
-interface MarqueeProps {
+interface Props {
     children: ReactNode;
     speed?: number;
     mode?: 'left' | 'right' | 'bounce';
     pauseOnHover?: boolean;
     className?: string;
+    sidePadding?: number;
+    gap?: number;
 }
 
 export function Marquee({
@@ -14,20 +16,23 @@ export function Marquee({
     speed = 10,
     mode = 'left',
     pauseOnHover = true,
+    sidePadding = 2,
+    gap = 16,
     className,
-}: MarqueeProps) {
+}: Props) {
     const containerRef = useRef<HTMLDivElement>(null);
     const originalRef = useRef<HTMLDivElement>(null);
 
     const [distance, setDistance] = useState(0);
     const [duration, setDuration] = useState(0);
     const [scroll, setScroll] = useState(false);
-    const GAP_PX = 16;
     const MIN_DURATION = 4;
 
     useEffect(() => {
         const compute = () => {
-            const containerW = containerRef.current?.clientWidth ?? 0;
+            const pad = sidePadding ?? 0;
+            const rawContainerW = containerRef.current?.clientWidth ?? 0;
+            const containerW = Math.max(0, rawContainerW - pad * 2);
             const originalW = originalRef.current?.scrollWidth ?? 0;
 
             const shouldScroll = originalW - containerW > 0.5;
@@ -44,7 +49,7 @@ export function Marquee({
                 1,
                 mode === 'bounce' ? speed * 0.85 : speed
             );
-            const travel = mode === 'bounce' ? overflow : originalW + GAP_PX;
+            const travel = mode === 'bounce' ? overflow : originalW + gap;
             const seconds = Math.max(travel / baseSpeed, MIN_DURATION);
             setDistance(travel);
             setDuration(seconds);
@@ -57,7 +62,7 @@ export function Marquee({
         if (originalRef.current) observer.observe(originalRef.current);
 
         return () => observer.disconnect();
-    }, [mode, speed]);
+    }, [sidePadding, gap, mode, speed]);
 
     const showClone = scroll && mode !== 'bounce';
 
@@ -68,6 +73,7 @@ export function Marquee({
                 'flex flex-shrink overflow-hidden whitespace-nowrap',
                 className
             )}
+            style={{ paddingInline: sidePadding }}
         >
             <div
                 className={clsx(
@@ -84,7 +90,7 @@ export function Marquee({
             >
                 <div
                     className="inline-flex items-center"
-                    style={{ gap: showClone ? `${GAP_PX}px` : undefined }}
+                    style={{ gap: showClone ? `${gap}px` : undefined }}
                 >
                     <div
                         ref={originalRef}

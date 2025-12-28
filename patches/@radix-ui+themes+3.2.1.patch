@@ -1,5 +1,5 @@
 diff --git a/node_modules/@radix-ui/themes/components.css b/node_modules/@radix-ui/themes/components.css
-index 881348e..01719f2 100644
+index 881348e..517e943 100644
 --- a/node_modules/@radix-ui/themes/components.css
 +++ b/node_modules/@radix-ui/themes/components.css
 @@ -1132,6 +1132,7 @@
@@ -27,6 +27,304 @@ index 881348e..01719f2 100644
  .rt-AvatarFallback:where(.rt-one-letter) {
      font-size: var(--avatar-fallback-one-letter-font-size);
  }
+@@ -1768,6 +1779,11 @@
+     height: -moz-fit-content;
+     height: fit-content;
+ }
++.rt-BaseButton:where(.rt-r-size-0) {
++    --base-button-classic-active-padding-top: 0px;
++    --base-button-height: calc(var(--space-2) + var(--space-3));
++    border-radius: max(var(--radius-1), var(--radius-full));
++}
+ .rt-BaseButton:where(.rt-r-size-1) {
+     --base-button-classic-active-padding-top: 1px;
+     --base-button-height: var(--space-5);
+@@ -1788,6 +1804,31 @@
+     --base-button-height: var(--space-8);
+     border-radius: max(var(--radius-4), var(--radius-full));
+ }
++.rt-BaseButton:where(.rt-r-size-5) {
++    --base-button-classic-active-padding-top: 2px;
++    --base-button-height: var(--space-9);
++    border-radius: max(var(--radius-4), var(--radius-full));
++}
++.rt-BaseButton:where(.rt-r-size-6) {
++    --base-button-classic-active-padding-top: 2px;
++    --base-button-height: 80px;
++    border-radius: max(var(--radius-5), var(--radius-full));
++}
++.rt-BaseButton:where(.rt-r-size-7) {
++    --base-button-classic-active-padding-top: 2px;
++    --base-button-height: 96px;
++    border-radius: max(var(--radius-5), var(--radius-full));
++}
++.rt-BaseButton:where(.rt-r-size-8) {
++    --base-button-classic-active-padding-top: 2px;
++    --base-button-height: 128px;
++    border-radius: max(var(--radius-6), var(--radius-full));
++}
++.rt-BaseButton:where(.rt-r-size-9) {
++    --base-button-classic-active-padding-top: 2px;
++    --base-button-height: 160px;
++    border-radius: max(var(--radius-6), var(--radius-full));
++}
+ @media (min-width: 520px) {
+     .rt-BaseButton:where(.xs\:rt-r-size-1) {
+         --base-button-classic-active-padding-top: 1px;
+@@ -2254,7 +2295,25 @@
+ .rt-Button:where(.rt-r-size-1):where(.rt-variant-ghost) {
+     gap: var(--space-1);
+     --button-ghost-padding-x: var(--space-2);
+-    --button-ghost-padding-y: var(--space-1);
++    --button-ghost-padding-y: calc(var(--space-1) * 0.75);
++}
++.rt-Button:where(.rt-r-size-0) {
++    gap: var(--space-1);
++    font-size: var(--font-size-1);
++    line-height: var(--line-height-1);
++    letter-spacing: var(--letter-spacing-1);
++}
++.rt-Button:where(.rt-r-size-0):where(:not(.rt-variant-ghost)) {
++  padding-left: calc(var(--space-1) * 0.75);
++  padding-right: calc(var(--space-1) * 0.75);
++}
++.rt-Button:where(.rt-r-size-0):where(.rt-variant-ghost) {
++    gap: var(--space-1);
++    --button-ghost-padding-x: calc(var(--space-1) * 0.75);
++    --button-ghost-padding-y: calc(var(--space-1) * 0.5);
++}
++.rt-Button:where(.rt-r-size-0) .rt-ButtonInner {
++    gap: calc(var(--space-1) * 0.5);
+ }
+ .rt-Button:where(.rt-r-size-2) {
+     gap: var(--space-2);
+@@ -2269,7 +2328,7 @@
+ .rt-Button:where(.rt-r-size-2):where(.rt-variant-ghost) {
+     gap: var(--space-1);
+     --button-ghost-padding-x: var(--space-2);
+-    --button-ghost-padding-y: var(--space-1);
++    --button-ghost-padding-y: calc(var(--space-1) * 0.75);
+ }
+ .rt-Button:where(.rt-r-size-3) {
+     gap: var(--space-3);
+@@ -2315,7 +2374,7 @@
+     .rt-Button:where(.xs\:rt-r-size-1):where(.rt-variant-ghost) {
+         gap: var(--space-1);
+         --button-ghost-padding-x: var(--space-2);
+-        --button-ghost-padding-y: var(--space-1);
++        --button-ghost-padding-y: calc(var(--space-1) * 0.75);
+     }
+     .rt-Button:where(.xs\:rt-r-size-2) {
+         gap: var(--space-2);
+@@ -2330,7 +2389,7 @@
+     .rt-Button:where(.xs\:rt-r-size-2):where(.rt-variant-ghost) {
+         gap: var(--space-1);
+         --button-ghost-padding-x: var(--space-2);
+-        --button-ghost-padding-y: var(--space-1);
++        --button-ghost-padding-y: calc(var(--space-1) * 0.75);
+     }
+     .rt-Button:where(.xs\:rt-r-size-3) {
+         gap: var(--space-3);
+@@ -2377,7 +2436,7 @@
+     .rt-Button:where(.sm\:rt-r-size-1):where(.rt-variant-ghost) {
+         gap: var(--space-1);
+         --button-ghost-padding-x: var(--space-2);
+-        --button-ghost-padding-y: var(--space-1);
++        --button-ghost-padding-y: calc(var(--space-1) * 0.75);
+     }
+     .rt-Button:where(.sm\:rt-r-size-2) {
+         gap: var(--space-2);
+@@ -2392,7 +2451,7 @@
+     .rt-Button:where(.sm\:rt-r-size-2):where(.rt-variant-ghost) {
+         gap: var(--space-1);
+         --button-ghost-padding-x: var(--space-2);
+-        --button-ghost-padding-y: var(--space-1);
++        --button-ghost-padding-y: calc(var(--space-1) * 0.75);
+     }
+     .rt-Button:where(.sm\:rt-r-size-3) {
+         gap: var(--space-3);
+@@ -2439,7 +2498,7 @@
+     .rt-Button:where(.md\:rt-r-size-1):where(.rt-variant-ghost) {
+         gap: var(--space-1);
+         --button-ghost-padding-x: var(--space-2);
+-        --button-ghost-padding-y: var(--space-1);
++        --button-ghost-padding-y: calc(var(--space-1) * 0.75);
+     }
+     .rt-Button:where(.md\:rt-r-size-2) {
+         gap: var(--space-2);
+@@ -2454,7 +2513,7 @@
+     .rt-Button:where(.md\:rt-r-size-2):where(.rt-variant-ghost) {
+         gap: var(--space-1);
+         --button-ghost-padding-x: var(--space-2);
+-        --button-ghost-padding-y: var(--space-1);
++        --button-ghost-padding-y: calc(var(--space-1) * 0.75);
+     }
+     .rt-Button:where(.md\:rt-r-size-3) {
+         gap: var(--space-3);
+@@ -2501,7 +2560,7 @@
+     .rt-Button:where(.lg\:rt-r-size-1):where(.rt-variant-ghost) {
+         gap: var(--space-1);
+         --button-ghost-padding-x: var(--space-2);
+-        --button-ghost-padding-y: var(--space-1);
++        --button-ghost-padding-y: calc(var(--space-1) * 0.75);
+     }
+     .rt-Button:where(.lg\:rt-r-size-2) {
+         gap: var(--space-2);
+@@ -2516,7 +2575,7 @@
+     .rt-Button:where(.lg\:rt-r-size-2):where(.rt-variant-ghost) {
+         gap: var(--space-1);
+         --button-ghost-padding-x: var(--space-2);
+-        --button-ghost-padding-y: var(--space-1);
++        --button-ghost-padding-y: calc(var(--space-1) * 0.75);
+     }
+     .rt-Button:where(.lg\:rt-r-size-3) {
+         gap: var(--space-3);
+@@ -2563,7 +2622,7 @@
+     .rt-Button:where(.xl\:rt-r-size-1):where(.rt-variant-ghost) {
+         gap: var(--space-1);
+         --button-ghost-padding-x: var(--space-2);
+-        --button-ghost-padding-y: var(--space-1);
++        --button-ghost-padding-y: calc(var(--space-1) * 0.75);
+     }
+     .rt-Button:where(.xl\:rt-r-size-2) {
+         gap: var(--space-2);
+@@ -2578,7 +2637,7 @@
+     .rt-Button:where(.xl\:rt-r-size-2):where(.rt-variant-ghost) {
+         gap: var(--space-1);
+         --button-ghost-padding-x: var(--space-2);
+-        --button-ghost-padding-y: var(--space-1);
++        --button-ghost-padding-y: calc(var(--space-1) * 0.75);
+     }
+     .rt-Button:where(.xl\:rt-r-size-3) {
+         gap: var(--space-3);
+@@ -5499,6 +5558,18 @@
+     --margin-bottom-override: initial;
+     --margin-left-override: initial;
+ }
++.rt-IconButton:where(.rt-r-size-0) {
++    --base-button-height: calc(var(--space-2) + var(--space-3));
++    height: var(--base-button-height);
++    width: var(--base-button-height);
++    font-size: var(--font-size-1);
++    display: inline-flex;
++    align-items: center;
++    justify-content: center;
++}
++.rt-IconButton:where(.rt-variant-ghost):where(.rt-r-size-0) {
++    --icon-button-ghost-padding: calc(var(--space-1) * 0.5);
++}
+ .rt-IconButton:where(.rt-variant-ghost):where(.rt-r-size-1) {
+     --icon-button-ghost-padding: var(--space-1);
+ }
+@@ -5511,6 +5582,21 @@
+ .rt-IconButton:where(.rt-variant-ghost):where(.rt-r-size-4) {
+     --icon-button-ghost-padding: var(--space-3);
+ }
++.rt-IconButton:where(.rt-variant-ghost):where(.rt-r-size-5) {
++    --icon-button-ghost-padding: var(--space-3);
++}
++.rt-IconButton:where(.rt-variant-ghost):where(.rt-r-size-6) {
++    --icon-button-ghost-padding: var(--space-4);
++}
++.rt-IconButton:where(.rt-variant-ghost):where(.rt-r-size-7) {
++    --icon-button-ghost-padding: var(--space-5);
++}
++.rt-IconButton:where(.rt-variant-ghost):where(.rt-r-size-8) {
++    --icon-button-ghost-padding: var(--space-6);
++}
++.rt-IconButton:where(.rt-variant-ghost):where(.rt-r-size-9) {
++    --icon-button-ghost-padding: var(--space-7);
++}
+ @media (min-width: 520px) {
+     .rt-IconButton:where(.rt-variant-ghost):where(.xs\:rt-r-size-1) {
+         --icon-button-ghost-padding: var(--space-1);
+@@ -10366,8 +10452,8 @@
+ }
+ .rt-TextFieldRoot:where(.rt-r-size-1) :where(.rt-TextFieldSlot) {
+     gap: var(--space-2);
+-    padding-left: var(--space-1);
+-    padding-right: var(--space-1);
++    padding-left: calc(var(--space-1) * 0.75);
++    padding-right: calc(var(--space-1) * 0.75);
+ }
+ .rt-TextFieldRoot:where(.rt-r-size-1) :where(.rt-TextFieldInput) {
+     padding-bottom: 0px;
+@@ -10427,8 +10513,8 @@
+     }
+     .rt-TextFieldRoot:where(.xs\:rt-r-size-1) :where(.rt-TextFieldSlot) {
+         gap: var(--space-2);
+-        padding-left: var(--space-1);
+-        padding-right: var(--space-1);
++        padding-left: calc(var(--space-1) * 0.75);
++        padding-right: calc(var(--space-1) * 0.75);
+     }
+     .rt-TextFieldRoot:where(.xs\:rt-r-size-1) :where(.rt-TextFieldInput) {
+         padding-bottom: 0px;
+@@ -10489,8 +10575,8 @@
+     }
+     .rt-TextFieldRoot:where(.sm\:rt-r-size-1) :where(.rt-TextFieldSlot) {
+         gap: var(--space-2);
+-        padding-left: var(--space-1);
+-        padding-right: var(--space-1);
++        padding-left: calc(var(--space-1) * 0.75);
++        padding-right: calc(var(--space-1) * 0.75);
+     }
+     .rt-TextFieldRoot:where(.sm\:rt-r-size-1) :where(.rt-TextFieldInput) {
+         padding-bottom: 0px;
+@@ -10551,8 +10637,8 @@
+     }
+     .rt-TextFieldRoot:where(.md\:rt-r-size-1) :where(.rt-TextFieldSlot) {
+         gap: var(--space-2);
+-        padding-left: var(--space-1);
+-        padding-right: var(--space-1);
++        padding-left: calc(var(--space-1) * 0.75);
++        padding-right: calc(var(--space-1) * 0.75);
+     }
+     .rt-TextFieldRoot:where(.md\:rt-r-size-1) :where(.rt-TextFieldInput) {
+         padding-bottom: 0px;
+@@ -10613,8 +10699,8 @@
+     }
+     .rt-TextFieldRoot:where(.lg\:rt-r-size-1) :where(.rt-TextFieldSlot) {
+         gap: var(--space-2);
+-        padding-left: var(--space-1);
+-        padding-right: var(--space-1);
++        padding-left: calc(var(--space-1) * 0.75);
++        padding-right: calc(var(--space-1) * 0.75);
+     }
+     .rt-TextFieldRoot:where(.lg\:rt-r-size-1) :where(.rt-TextFieldInput) {
+         padding-bottom: 0px;
+@@ -10675,8 +10761,8 @@
+     }
+     .rt-TextFieldRoot:where(.xl\:rt-r-size-1) :where(.rt-TextFieldSlot) {
+         gap: var(--space-2);
+-        padding-left: var(--space-1);
+-        padding-right: var(--space-1);
++        padding-left: calc(var(--space-1) * 0.75);
++        padding-right: calc(var(--space-1) * 0.75);
+     }
+     .rt-TextFieldRoot:where(.xl\:rt-r-size-1) :where(.rt-TextFieldInput) {
+         padding-bottom: 0px;
+diff --git a/node_modules/@radix-ui/themes/dist/cjs/components/_internal/base-button.props.d.ts b/node_modules/@radix-ui/themes/dist/cjs/components/_internal/base-button.props.d.ts
+index 465e6f6..e6698a1 100644
+--- a/node_modules/@radix-ui/themes/dist/cjs/components/_internal/base-button.props.d.ts
++++ b/node_modules/@radix-ui/themes/dist/cjs/components/_internal/base-button.props.d.ts
+@@ -22,7 +22,7 @@ declare const baseButtonPropDefs: {
+     size: {
+         type: "enum";
+         className: string;
+-        values: readonly ["1", "2", "3", "4"];
++        values: readonly ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
+         default: "2";
+         responsive: true;
+     };
+diff --git a/node_modules/@radix-ui/themes/dist/cjs/components/_internal/base-button.props.js b/node_modules/@radix-ui/themes/dist/cjs/components/_internal/base-button.props.js
+index 5a1a01b..d668ec3 100644
+--- a/node_modules/@radix-ui/themes/dist/cjs/components/_internal/base-button.props.js
++++ b/node_modules/@radix-ui/themes/dist/cjs/components/_internal/base-button.props.js
+@@ -1,2 +1,2 @@
+-"use strict";var t=Object.defineProperty;var m=Object.getOwnPropertyDescriptor;var u=Object.getOwnPropertyNames;var c=Object.prototype.hasOwnProperty;var d=(e,o)=>{for(var r in o)t(e,r,{get:o[r],enumerable:!0})},D=(e,o,r,a)=>{if(o&&typeof o=="object"||typeof o=="function")for(let s of u(o))!c.call(e,s)&&s!==r&&t(e,s,{get:()=>o[s],enumerable:!(a=m(o,s))||a.enumerable});return e};var P=e=>D(t({},"__esModule",{value:!0}),e);var b={};d(b,{baseButtonPropDefs:()=>l});module.exports=P(b);var i=require("../../props/as-child.prop.js"),p=require("../../props/color.prop.js"),f=require("../../props/high-contrast.prop.js"),n=require("../../props/radius.prop.js");const v=["1","2","3","4"],y=["classic","solid","soft","surface","outline","ghost"],l={...i.asChildPropDef,size:{type:"enum",className:"rt-r-size",values:v,default:"2",responsive:!0},variant:{type:"enum",className:"rt-variant",values:y,default:"solid"},...p.accentColorPropDef,...f.highContrastPropDef,...n.radiusPropDef,loading:{type:"boolean",className:"rt-loading",default:!1}};
++"use strict";var t=Object.defineProperty;var m=Object.getOwnPropertyDescriptor;var u=Object.getOwnPropertyNames;var c=Object.prototype.hasOwnProperty;var d=(e,o)=>{for(var r in o)t(e,r,{get:o[r],enumerable:!0})},D=(e,o,r,a)=>{if(o&&typeof o=="object"||typeof o=="function")for(let s of u(o))!c.call(e,s)&&s!==r&&t(e,s,{get:()=>o[s],enumerable:!(a=m(o,s))||a.enumerable});return e};var P=e=>D(t({},"__esModule",{value:!0}),e);var b={};d(b,{baseButtonPropDefs:()=>l});module.exports=P(b);var i=require("../../props/as-child.prop.js"),p=require("../../props/color.prop.js"),f=require("../../props/high-contrast.prop.js"),n=require("../../props/radius.prop.js");const v=["0","1","2","3","4","5","6","7","8","9"],y=["classic","solid","soft","surface","outline","ghost"],l={...i.asChildPropDef,size:{type:"enum",className:"rt-r-size",values:v,default:"2",responsive:!0},variant:{type:"enum",className:"rt-variant",values:y,default:"solid"},...p.accentColorPropDef,...f.highContrastPropDef,...n.radiusPropDef,loading:{type:"boolean",className:"rt-loading",default:!1}};
+ //# sourceMappingURL=base-button.props.js.map
 diff --git a/node_modules/@radix-ui/themes/dist/cjs/components/avatar.d.ts b/node_modules/@radix-ui/themes/dist/cjs/components/avatar.d.ts
 index 9ab30f6..7e7c1f8 100644
 --- a/node_modules/@radix-ui/themes/dist/cjs/components/avatar.d.ts
@@ -60,6 +358,43 @@ index 08dc304..57211eb 100644
  export { avatarPropDefs };
  //# sourceMappingURL=avatar.props.d.ts.map
 \ No newline at end of file
+diff --git a/node_modules/@radix-ui/themes/dist/cjs/helpers/extract-props.js b/node_modules/@radix-ui/themes/dist/cjs/helpers/extract-props.js
+index 0ab3c7c..cd1c139 100644
+--- a/node_modules/@radix-ui/themes/dist/cjs/helpers/extract-props.js
++++ b/node_modules/@radix-ui/themes/dist/cjs/helpers/extract-props.js
+@@ -1,2 +1,2 @@
+-"use strict";var R=Object.create;var f=Object.defineProperty;var D=Object.getOwnPropertyDescriptor;var T=Object.getOwnPropertyNames;var x=Object.getPrototypeOf,C=Object.prototype.hasOwnProperty;var V=(s,r)=>{for(var t in r)f(s,t,{get:r[t],enumerable:!0})},P=(s,r,t,i)=>{if(r&&typeof r=="object"||typeof r=="function")for(let n of T(r))!C.call(s,n)&&n!==t&&f(s,n,{get:()=>r[n],enumerable:!(i=D(r,n))||i.enumerable});return s};var S=(s,r,t)=>(t=s!=null?R(x(s)):{},P(r||!s||!s.__esModule?f(t,"default",{value:s,enumerable:!0}):t,s)),b=s=>P(f({},"__esModule",{value:!0}),s);var j={};V(j,{extractProps:()=>g});module.exports=b(j);var o=S(require("classnames")),c=require("./get-responsive-styles.js"),u=require("./is-responsive-object.js"),m=require("./merge-styles.js");function k(...s){return Object.assign({},...s)}function g(s,...r){let t,i;const n={...s},d=k(...r);for(const l in d){let a=n[l];const e=d[l];if(e.default!==void 0&&a===void 0&&(a=e.default),e.type==="enum"&&![e.default,...e.values].includes(a)&&!(0,u.isResponsiveObject)(a)&&(a=e.default),n[l]=a,"className"in e&&e.className){delete n[l];const y="responsive"in e;if(!a||(0,u.isResponsiveObject)(a)&&!y)continue;if((0,u.isResponsiveObject)(a)&&(e.default!==void 0&&a.initial===void 0&&(a.initial=e.default),e.type==="enum"&&([e.default,...e.values].includes(a.initial)||(a.initial=e.default))),e.type==="enum"){const p=(0,c.getResponsiveClassNames)({allowArbitraryValues:!1,value:a,className:e.className,propValues:e.values,parseValue:e.parseValue});t=(0,o.default)(t,p);continue}if(e.type==="string"||e.type==="enum | string"){const p=e.type==="string"?[]:e.values,[N,v]=(0,c.getResponsiveStyles)({className:e.className,customProperties:e.customProperties,propValues:p,parseValue:e.parseValue,value:a});i=(0,m.mergeStyles)(i,v),t=(0,o.default)(t,N);continue}if(e.type==="boolean"&&a){t=(0,o.default)(t,e.className);continue}}}return n.className=(0,o.default)(t,s.className),n.style=(0,m.mergeStyles)(i,s.style),n}
++"use strict";var R=Object.create;var f=Object.defineProperty;var D=Object.getOwnPropertyDescriptor;var T=Object.getOwnPropertyNames;var x=Object.getPrototypeOf,C=Object.prototype.hasOwnProperty;var V=(s,r)=>{for(var t in r)f(s,t,{get:r[t],enumerable:!0})},P=(s,r,t,i)=>{if(r&&typeof r=="object"||typeof r=="function")for(let n of T(r))!C.call(s,n)&&n!==t&&f(s,n,{get:()=>r[n],enumerable:!(i=D(r,n))||i.enumerable});return s};var S=(s,r,t)=>(t=s!=null?R(x(s)):{},P(r||!s||!s.__esModule?f(t,"default",{value:s,enumerable:!0}):t,s)),b=s=>P(f({},"__esModule",{value:!0}),s);var j={};V(j,{extractProps:()=>g});module.exports=b(j);var o=S(require("classnames")),c=require("./get-responsive-styles.js"),u=require("./is-responsive-object.js"),m=require("./merge-styles.js");function k(...s){return Object.assign({},...s)}function g(s,...r){let t,i;const n={...s},d=k(...r);for(const l in d){let a=n[l];const e=d[l];if(e.default!==void 0&&a===void 0&&(a=e.default),e.type==="enum"&&![e.default,...e.values].includes(a)&&!(0,u.isResponsiveObject)(a)&&(a=e.default),n[l]=a,"className"in e&&e.className){delete n[l];const y="responsive"in e;if(a===void 0||a===null||(0,u.isResponsiveObject)(a)&&!y)continue;if((0,u.isResponsiveObject)(a)&&(e.default!==void 0&&a.initial===void 0&&(a.initial=e.default),e.type==="enum"&&([e.default,...e.values].includes(a.initial)||(a.initial=e.default))),e.type==="enum"){const p=(0,c.getResponsiveClassNames)({allowArbitraryValues:!1,value:a,className:e.className,propValues:e.values,parseValue:e.parseValue});t=(0,o.default)(t,p);continue}if(e.type==="string"||e.type==="enum | string"){const p=e.type==="string"?[]:e.values,[N,v]=(0,c.getResponsiveStyles)({className:e.className,customProperties:e.customProperties,propValues:p,parseValue:e.parseValue,value:a});i=(0,m.mergeStyles)(i,v),t=(0,o.default)(t,N);continue}if(e.type==="boolean"&&a){t=(0,o.default)(t,e.className);continue}}}return n.className=(0,o.default)(t,s.className),n.style=(0,m.mergeStyles)(i,s.style),n}
+ //# sourceMappingURL=extract-props.js.map
+diff --git a/node_modules/@radix-ui/themes/dist/cjs/helpers/map-prop-values.js b/node_modules/@radix-ui/themes/dist/cjs/helpers/map-prop-values.js
+index d3e97e2..9738a61 100644
+--- a/node_modules/@radix-ui/themes/dist/cjs/helpers/map-prop-values.js
++++ b/node_modules/@radix-ui/themes/dist/cjs/helpers/map-prop-values.js
+@@ -1,2 +1,2 @@
+-"use strict";var p=Object.defineProperty;var f=Object.getOwnPropertyDescriptor;var m=Object.getOwnPropertyNames;var c=Object.prototype.hasOwnProperty;var a=(e,t)=>{for(var n in t)p(e,n,{get:t[n],enumerable:!0})},b=(e,t,n,s)=>{if(t&&typeof t=="object"||typeof t=="function")for(let o of m(t))!c.call(e,o)&&o!==n&&p(e,o,{get:()=>t[o],enumerable:!(s=f(t,o))||s.enumerable});return e};var d=e=>b(p({},"__esModule",{value:!0}),e);var l={};a(l,{mapButtonSizeToSpinnerSize:()=>u,mapCalloutSizeToTextSize:()=>i,mapResponsiveProp:()=>r});module.exports=d(l);function r(e,t){if(e!==void 0)return typeof e=="string"?t(e):Object.fromEntries(Object.entries(e).map(([n,s])=>[n,t(s)]))}function i(e){return e==="3"?"3":"2"}function u(e){switch(e){case"1":return"1";case"2":case"3":return"2";case"4":return"3"}}
++"use strict";var p=Object.defineProperty;var f=Object.getOwnPropertyDescriptor;var m=Object.getOwnPropertyNames;var c=Object.prototype.hasOwnProperty;var a=(e,t)=>{for(var n in t)p(e,n,{get:t[n],enumerable:!0})},b=(e,t,n,s)=>{if(t&&typeof t=="object"||typeof t=="function")for(let o of m(t))!c.call(e,o)&&o!==n&&p(e,o,{get:()=>t[o],enumerable:!(s=f(t,o))||s.enumerable});return e};var d=e=>b(p({},"__esModule",{value:!0}),e);var l={};a(l,{mapButtonSizeToSpinnerSize:()=>u,mapCalloutSizeToTextSize:()=>i,mapResponsiveProp:()=>r});module.exports=d(l);function r(e,t){if(e!==void 0)return typeof e=="string"?t(e):Object.fromEntries(Object.entries(e).map(([n,s])=>[n,t(s)]))}function i(e){return e==="3"?"3":"2"}function u(e){switch(e){case"0":case"1":return"1";case"2":case"3":return"2";case"4":return"3"}}
+ //# sourceMappingURL=map-prop-values.js.map
+diff --git a/node_modules/@radix-ui/themes/dist/esm/components/_internal/base-button.props.d.ts b/node_modules/@radix-ui/themes/dist/esm/components/_internal/base-button.props.d.ts
+index 465e6f6..e6698a1 100644
+--- a/node_modules/@radix-ui/themes/dist/esm/components/_internal/base-button.props.d.ts
++++ b/node_modules/@radix-ui/themes/dist/esm/components/_internal/base-button.props.d.ts
+@@ -22,7 +22,7 @@ declare const baseButtonPropDefs: {
+     size: {
+         type: "enum";
+         className: string;
+-        values: readonly ["1", "2", "3", "4"];
++        values: readonly ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
+         default: "2";
+         responsive: true;
+     };
+diff --git a/node_modules/@radix-ui/themes/dist/esm/components/_internal/base-button.props.js b/node_modules/@radix-ui/themes/dist/esm/components/_internal/base-button.props.js
+index 26cf0c4..faa918b 100644
+--- a/node_modules/@radix-ui/themes/dist/esm/components/_internal/base-button.props.js
++++ b/node_modules/@radix-ui/themes/dist/esm/components/_internal/base-button.props.js
+@@ -1,2 +1,2 @@
+-import{asChildPropDef as o}from"../../props/as-child.prop.js";import{accentColorPropDef as e}from"../../props/color.prop.js";import{highContrastPropDef as s}from"../../props/high-contrast.prop.js";import{radiusPropDef as r}from"../../props/radius.prop.js";const t=["1","2","3","4"],a=["classic","solid","soft","surface","outline","ghost"],i={...o,size:{type:"enum",className:"rt-r-size",values:t,default:"2",responsive:!0},variant:{type:"enum",className:"rt-variant",values:a,default:"solid"},...e,...s,...r,loading:{type:"boolean",className:"rt-loading",default:!1}};export{i as baseButtonPropDefs};
++import{asChildPropDef as o}from"../../props/as-child.prop.js";import{accentColorPropDef as e}from"../../props/color.prop.js";import{highContrastPropDef as s}from"../../props/high-contrast.prop.js";import{radiusPropDef as r}from"../../props/radius.prop.js";const t=["0","1","2","3","4","5","6","7","8","9"],a=["classic","solid","soft","surface","outline","ghost"],i={...o,size:{type:"enum",className:"rt-r-size",values:t,default:"2",responsive:!0},variant:{type:"enum",className:"rt-variant",values:a,default:"solid"},...e,...s,...r,loading:{type:"boolean",className:"rt-loading",default:!1}};export{i as baseButtonPropDefs};
+ //# sourceMappingURL=base-button.props.js.map
 diff --git a/node_modules/@radix-ui/themes/dist/esm/components/avatar.d.ts b/node_modules/@radix-ui/themes/dist/esm/components/avatar.d.ts
 index 46a0812..f37e354 100644
 --- a/node_modules/@radix-ui/themes/dist/esm/components/avatar.d.ts
@@ -93,6 +428,51 @@ index 08dc304..57211eb 100644
  export { avatarPropDefs };
  //# sourceMappingURL=avatar.props.d.ts.map
 \ No newline at end of file
+diff --git a/node_modules/@radix-ui/themes/dist/esm/helpers/extract-props.js b/node_modules/@radix-ui/themes/dist/esm/helpers/extract-props.js
+index 7559e89..4dbcd06 100644
+--- a/node_modules/@radix-ui/themes/dist/esm/helpers/extract-props.js
++++ b/node_modules/@radix-ui/themes/dist/esm/helpers/extract-props.js
+@@ -1,2 +1,2 @@
+-import o from"classnames";import{getResponsiveClassNames as P,getResponsiveStyles as g}from"./get-responsive-styles.js";import{isResponsiveObject as p}from"./is-responsive-object.js";import{mergeStyles as c}from"./merge-styles.js";function N(...r){return Object.assign({},...r)}function v(r,...m){let t,l;const a={...r},f=N(...m);for(const n in f){let s=a[n];const e=f[n];if(e.default!==void 0&&s===void 0&&(s=e.default),e.type==="enum"&&![e.default,...e.values].includes(s)&&!p(s)&&(s=e.default),a[n]=s,"className"in e&&e.className){delete a[n];const u="responsive"in e;if(!s||p(s)&&!u)continue;if(p(s)&&(e.default!==void 0&&s.initial===void 0&&(s.initial=e.default),e.type==="enum"&&([e.default,...e.values].includes(s.initial)||(s.initial=e.default))),e.type==="enum"){const i=P({allowArbitraryValues:!1,value:s,className:e.className,propValues:e.values,parseValue:e.parseValue});t=o(t,i);continue}if(e.type==="string"||e.type==="enum | string"){const i=e.type==="string"?[]:e.values,[d,y]=g({className:e.className,customProperties:e.customProperties,propValues:i,parseValue:e.parseValue,value:s});l=c(l,y),t=o(t,d);continue}if(e.type==="boolean"&&s){t=o(t,e.className);continue}}}return a.className=o(t,r.className),a.style=c(l,r.style),a}export{v as extractProps};
++import o from"classnames";import{getResponsiveClassNames as P,getResponsiveStyles as g}from"./get-responsive-styles.js";import{isResponsiveObject as p}from"./is-responsive-object.js";import{mergeStyles as c}from"./merge-styles.js";function N(...r){return Object.assign({},...r)}function v(r,...m){let t,l;const a={...r},f=N(...m);for(const n in f){let s=a[n];const e=f[n];if(e.default!==void 0&&s===void 0&&(s=e.default),e.type==="enum"&&![e.default,...e.values].includes(s)&&!p(s)&&(s=e.default),a[n]=s,"className"in e&&e.className){delete a[n];const u="responsive"in e;if((s===void 0||s===null)||p(s)&&!u)continue;if(p(s)&&(e.default!==void 0&&s.initial===void 0&&(s.initial=e.default),e.type==="enum"&&([e.default,...e.values].includes(s.initial)||(s.initial=e.default))),e.type==="enum"){const i=P({allowArbitraryValues:!1,value:s,className:e.className,propValues:e.values,parseValue:e.parseValue});t=o(t,i);continue}if(e.type==="string"||e.type==="enum | string"){const i=e.type==="string"?[]:e.values,[d,y]=g({className:e.className,customProperties:e.customProperties,propValues:i,parseValue:e.parseValue,value:s});l=c(l,y),t=o(t,d);continue}if(e.type==="boolean"&&s){t=o(t,e.className);continue}}}return a.className=o(t,r.className),a.style=c(l,r.style),a}export{v as extractProps};
+ //# sourceMappingURL=extract-props.js.map
+diff --git a/node_modules/@radix-ui/themes/dist/esm/helpers/map-prop-values.js b/node_modules/@radix-ui/themes/dist/esm/helpers/map-prop-values.js
+index 7d56de4..2338924 100644
+--- a/node_modules/@radix-ui/themes/dist/esm/helpers/map-prop-values.js
++++ b/node_modules/@radix-ui/themes/dist/esm/helpers/map-prop-values.js
+@@ -1,2 +1,2 @@
+-function s(e,t){if(e!==void 0)return typeof e=="string"?t(e):Object.fromEntries(Object.entries(e).map(([n,o])=>[n,t(o)]))}function p(e){return e==="3"?"3":"2"}function r(e){switch(e){case"1":return"1";case"2":case"3":return"2";case"4":return"3"}}export{r as mapButtonSizeToSpinnerSize,p as mapCalloutSizeToTextSize,s as mapResponsiveProp};
++function s(e,t){if(e!==void 0)return typeof e=="string"?t(e):Object.fromEntries(Object.entries(e).map(([n,o])=>[n,t(o)]))}function p(e){return e==="3"?"3":"2"}function r(e){switch(e){case"0":case"1":return"1";case"2":case"3":return"2";case"4":return"3"}}export{r as mapButtonSizeToSpinnerSize,p as mapCalloutSizeToTextSize,s as mapResponsiveProp};
+ //# sourceMappingURL=map-prop-values.js.map
+diff --git a/node_modules/@radix-ui/themes/src/components/_internal/base-button.css b/node_modules/@radix-ui/themes/src/components/_internal/base-button.css
+index dfd2f85..3a199ff 100644
+--- a/node_modules/@radix-ui/themes/src/components/_internal/base-button.css
++++ b/node_modules/@radix-ui/themes/src/components/_internal/base-button.css
+@@ -39,6 +39,11 @@
+ 
+ @breakpoints {
+   .rt-BaseButton {
++    &:where(.rt-r-size-0) {
++      --base-button-classic-active-padding-top: 0px;
++      --base-button-height: var(--space-3);
++      border-radius: max(var(--radius-1), var(--radius-full));
++    }
+     &:where(.rt-r-size-1) {
+       --base-button-classic-active-padding-top: 1px;
+       --base-button-height: var(--space-5);
+diff --git a/node_modules/@radix-ui/themes/src/components/_internal/base-button.props.ts b/node_modules/@radix-ui/themes/src/components/_internal/base-button.props.ts
+index 01016f3..0d42bca 100644
+--- a/node_modules/@radix-ui/themes/src/components/_internal/base-button.props.ts
++++ b/node_modules/@radix-ui/themes/src/components/_internal/base-button.props.ts
+@@ -5,7 +5,7 @@ import { radiusPropDef } from '../../props/radius.prop.js';
+ 
+ import type { PropDef } from '../../props/prop-def.js';
+ 
+-const sizes = ['1', '2', '3', '4'] as const;
++const sizes = ['0', '1', '2', '3', '4'] as const;
+ const variants = ['classic', 'solid', 'soft', 'surface', 'outline', 'ghost'] as const;
+ 
+ const baseButtonPropDefs = {
 diff --git a/node_modules/@radix-ui/themes/src/components/avatar.props.tsx b/node_modules/@radix-ui/themes/src/components/avatar.props.tsx
 index 3845423..88af8ab 100644
 --- a/node_modules/@radix-ui/themes/src/components/avatar.props.tsx
@@ -166,427 +546,375 @@ index 5545eeb..cad735f 100644
            {...imageProps}
            onLoadingStatusChange={(status) => {
              imageProps.onLoadingStatusChange?.(status);
+diff --git a/node_modules/@radix-ui/themes/src/components/button.css b/node_modules/@radix-ui/themes/src/components/button.css
+index 9cf9d6f..7d2cc48 100644
+--- a/node_modules/@radix-ui/themes/src/components/button.css
++++ b/node_modules/@radix-ui/themes/src/components/button.css
+@@ -47,6 +47,25 @@
+ 
+ @breakpoints {
+   .rt-Button {
++    &:where(.rt-r-size-0) {
++      gap: var(--space-1);
++      font-size: var(--font-size-1);
++      line-height: var(--line-height-1);
++      letter-spacing: var(--letter-spacing-1);
++
++      &:where(:not(.rt-variant-ghost)) {
++        padding-left: calc(var(--space-1) * 0.75);
++        padding-right: calc(var(--space-1) * 0.75);
++      }
++      &:where(.rt-variant-ghost) {
++        gap: var(--space-1);
++        --button-ghost-padding-x: calc(var(--space-1) * 0.75);
++        --button-ghost-padding-y: calc(var(--space-1) * 0.75);
++      }
++      & .rt-ButtonInner {
++        gap: calc(var(--space-1) * 0.5);
++      }
++    }
+     &:where(.rt-r-size-1) {
+       gap: var(--space-1);
+       font-size: var(--font-size-1);
+diff --git a/node_modules/@radix-ui/themes/src/components/icon-button.css b/node_modules/@radix-ui/themes/src/components/icon-button.css
+index bae90ed..739540d 100644
+--- a/node_modules/@radix-ui/themes/src/components/icon-button.css
++++ b/node_modules/@radix-ui/themes/src/components/icon-button.css
+@@ -11,6 +11,15 @@
+     height: var(--base-button-height);
+     width: var(--base-button-height);
+   }
++  &:where(.rt-r-size-0) {
++    --base-button-height: var(--space-4);
++    height: var(--base-button-height);
++    width: var(--base-button-height);
++    font-size: var(--font-size-1);
++    display: inline-flex;
++    align-items: center;
++    justify-content: center;
++  }
+   &:where(.rt-variant-ghost) {
+     padding: var(--icon-button-ghost-padding);
+ 
+@@ -42,6 +51,9 @@
+ 
+ @breakpoints {
+   .rt-IconButton:where(.rt-variant-ghost) {
++    &:where(.rt-r-size-0) {
++      --icon-button-ghost-padding: calc(var(--space-1) * 0.4);
++    }
+     &:where(.rt-r-size-1) {
+       --icon-button-ghost-padding: var(--space-1);
+     }
+diff --git a/node_modules/@radix-ui/themes/src/helpers/extract-props.ts b/node_modules/@radix-ui/themes/src/helpers/extract-props.ts
+index 16ace8e..5f68cc0 100644
+--- a/node_modules/@radix-ui/themes/src/helpers/extract-props.ts
++++ b/node_modules/@radix-ui/themes/src/helpers/extract-props.ts
+@@ -59,7 +59,7 @@ function extractProps<
+ 
+       const isResponsivePropDef = 'responsive' in propDef;
+       // Make sure we are not threading through responsive values for non-responsive prop defs
+-      if (!value || (isResponsiveObject(value) && !isResponsivePropDef)) {
++      if ((value === undefined || value === null) || (isResponsiveObject(value) && !isResponsivePropDef)) {
+         continue;
+       }
+ 
+diff --git a/node_modules/@radix-ui/themes/src/helpers/map-prop-values.ts b/node_modules/@radix-ui/themes/src/helpers/map-prop-values.ts
+index dd0a014..385ac9d 100644
+--- a/node_modules/@radix-ui/themes/src/helpers/map-prop-values.ts
++++ b/node_modules/@radix-ui/themes/src/helpers/map-prop-values.ts
+@@ -27,6 +27,7 @@ function mapButtonSizeToSpinnerSize(
+   size: (typeof baseButtonPropDefs.size.values)[number]
+ ): (typeof spinnerPropDefs.size.values)[number] {
+   switch (size) {
++    case '0':
+     case '1':
+       return '1';
+     case '2':
 diff --git a/node_modules/@radix-ui/themes/styles.css b/node_modules/@radix-ui/themes/styles.css
-index d1d826c..9c08cee 100644
+index d1d826c..ac9fe8e 100644
 --- a/node_modules/@radix-ui/themes/styles.css
 +++ b/node_modules/@radix-ui/themes/styles.css
-@@ -5919,57 +5919,56 @@
-   font-size: var(--avatar-fallback-two-letters-font-size, var(--avatar-fallback-one-letter-font-size));
+@@ -6527,6 +6527,11 @@
+   height: -moz-fit-content;
+   height: fit-content;
  }
- .rt-AvatarRoot:where(.rt-r-size-1) {
--  --avatar-size: var(--space-5);
--  --avatar-fallback-one-letter-font-size: var(--font-size-2);
--  --avatar-fallback-two-letters-font-size: var(--font-size-1);
--  border-radius: max(var(--radius-2), var(--radius-full));
--  letter-spacing: var(--letter-spacing-1);
--}
--.rt-AvatarRoot:where(.rt-r-size-2) {
-   --avatar-size: var(--space-6);
-   --avatar-fallback-one-letter-font-size: var(--font-size-3);
-   --avatar-fallback-two-letters-font-size: var(--font-size-2);
-   border-radius: max(var(--radius-2), var(--radius-full));
-   letter-spacing: var(--letter-spacing-2);
- }
--.rt-AvatarRoot:where(.rt-r-size-3) {
-+.rt-AvatarRoot:where(.rt-r-size-2) {
-   --avatar-size: var(--space-7);
-   --avatar-fallback-one-letter-font-size: var(--font-size-4);
-   --avatar-fallback-two-letters-font-size: var(--font-size-3);
-   border-radius: max(var(--radius-3), var(--radius-full));
-   letter-spacing: var(--letter-spacing-3);
- }
--.rt-AvatarRoot:where(.rt-r-size-4) {
-+.rt-AvatarRoot:where(.rt-r-size-3) {
-   --avatar-size: var(--space-8);
-   --avatar-fallback-one-letter-font-size: var(--font-size-5);
-   --avatar-fallback-two-letters-font-size: var(--font-size-4);
-   border-radius: max(var(--radius-3), var(--radius-full));
-   letter-spacing: var(--letter-spacing-4);
- }
--.rt-AvatarRoot:where(.rt-r-size-5) {
-+.rt-AvatarRoot:where(.rt-r-size-4) {
-   --avatar-size: var(--space-9);
-   --avatar-fallback-one-letter-font-size: var(--font-size-6);
-   border-radius: max(var(--radius-4), var(--radius-full));
-   letter-spacing: var(--letter-spacing-6);
- }
--.rt-AvatarRoot:where(.rt-r-size-6) {
-+.rt-AvatarRoot:where(.rt-r-size-5) {
-   --avatar-size: 80px;
-   --avatar-fallback-one-letter-font-size: var(--font-size-7);
-   border-radius: max(var(--radius-5), var(--radius-full));
-   letter-spacing: var(--letter-spacing-7);
- }
--.rt-AvatarRoot:where(.rt-r-size-7) {
-+.rt-AvatarRoot:where(.rt-r-size-6) {
-   --avatar-size: 96px;
-   --avatar-fallback-one-letter-font-size: var(--font-size-7);
-   border-radius: max(var(--radius-5), var(--radius-full));
-   letter-spacing: var(--letter-spacing-7);
- }
--.rt-AvatarRoot:where(.rt-r-size-8) {
-+.rt-AvatarRoot:where(.rt-r-size-7) {
-   --avatar-size: 128px;
-   --avatar-fallback-one-letter-font-size: var(--font-size-8);
-   border-radius: max(var(--radius-6), var(--radius-full));
-   letter-spacing: var(--letter-spacing-8);
- }
-+.rt-AvatarRoot:where(.rt-r-size-8) {
-+  --avatar-size: 160px;
-+  --avatar-fallback-one-letter-font-size: var(--font-size-9);
-+  border-radius: max(var(--radius-6), var(--radius-full));
-+  letter-spacing: var(--letter-spacing-9);
++.rt-BaseButton:where(.rt-r-size-0) {
++  --base-button-classic-active-padding-top: 0px;
++  --base-button-height: calc(var(--space-2) + var(--space-3));
++  border-radius: max(var(--radius-1), var(--radius-full));
 +}
- .rt-AvatarRoot:where(.rt-r-size-9) {
-   --avatar-size: 160px;
-   --avatar-fallback-one-letter-font-size: var(--font-size-9);
-@@ -5978,57 +5977,56 @@
+ .rt-BaseButton:where(.rt-r-size-1) {
+   --base-button-classic-active-padding-top: 1px;
+   --base-button-height: var(--space-5);
+@@ -6543,11 +6548,41 @@
+   border-radius: max(var(--radius-3), var(--radius-full));
+ }
+ .rt-BaseButton:where(.rt-r-size-4) {
+-  --base-button-classic-active-padding-top: 2px;
+-  --base-button-height: var(--space-8);
+-  border-radius: max(var(--radius-4), var(--radius-full));
++    --base-button-classic-active-padding-top: 2px;
++    --base-button-height: var(--space-8);
++    border-radius: max(var(--radius-4), var(--radius-full));
++}
++.rt-BaseButton:where(.rt-r-size-5) {
++    --base-button-classic-active-padding-top: 2px;
++    --base-button-height: var(--space-9);
++    border-radius: max(var(--radius-4), var(--radius-full));
++}
++.rt-BaseButton:where(.rt-r-size-6) {
++    --base-button-classic-active-padding-top: 2px;
++    --base-button-height: 80px;
++    border-radius: max(var(--radius-5), var(--radius-full));
++}
++.rt-BaseButton:where(.rt-r-size-7) {
++    --base-button-classic-active-padding-top: 2px;
++    --base-button-height: 96px;
++    border-radius: max(var(--radius-5), var(--radius-full));
++}
++.rt-BaseButton:where(.rt-r-size-8) {
++    --base-button-classic-active-padding-top: 2px;
++    --base-button-height: 128px;
++    border-radius: max(var(--radius-6), var(--radius-full));
++}
++.rt-BaseButton:where(.rt-r-size-9) {
++    --base-button-classic-active-padding-top: 2px;
++    --base-button-height: 160px;
++    border-radius: max(var(--radius-6), var(--radius-full));
  }
  @media (min-width: 520px) {
-   .rt-AvatarRoot:where(.xs\:rt-r-size-1) {
--    --avatar-size: var(--space-5);
--    --avatar-fallback-one-letter-font-size: var(--font-size-2);
--    --avatar-fallback-two-letters-font-size: var(--font-size-1);
--    border-radius: max(var(--radius-2), var(--radius-full));
--    letter-spacing: var(--letter-spacing-1);
--  }
--  .rt-AvatarRoot:where(.xs\:rt-r-size-2) {
-     --avatar-size: var(--space-6);
-     --avatar-fallback-one-letter-font-size: var(--font-size-3);
-     --avatar-fallback-two-letters-font-size: var(--font-size-2);
-     border-radius: max(var(--radius-2), var(--radius-full));
-     letter-spacing: var(--letter-spacing-2);
-   }
--  .rt-AvatarRoot:where(.xs\:rt-r-size-3) {
-+  .rt-AvatarRoot:where(.xs\:rt-r-size-2) {
-     --avatar-size: var(--space-7);
-     --avatar-fallback-one-letter-font-size: var(--font-size-4);
-     --avatar-fallback-two-letters-font-size: var(--font-size-3);
-     border-radius: max(var(--radius-3), var(--radius-full));
-     letter-spacing: var(--letter-spacing-3);
-   }
--  .rt-AvatarRoot:where(.xs\:rt-r-size-4) {
-+  .rt-AvatarRoot:where(.xs\:rt-r-size-3) {
-     --avatar-size: var(--space-8);
-     --avatar-fallback-one-letter-font-size: var(--font-size-5);
-     --avatar-fallback-two-letters-font-size: var(--font-size-4);
-     border-radius: max(var(--radius-3), var(--radius-full));
-     letter-spacing: var(--letter-spacing-4);
-   }
--  .rt-AvatarRoot:where(.xs\:rt-r-size-5) {
-+  .rt-AvatarRoot:where(.xs\:rt-r-size-4) {
-     --avatar-size: var(--space-9);
-     --avatar-fallback-one-letter-font-size: var(--font-size-6);
-     border-radius: max(var(--radius-4), var(--radius-full));
-     letter-spacing: var(--letter-spacing-6);
-   }
--  .rt-AvatarRoot:where(.xs\:rt-r-size-6) {
-+  .rt-AvatarRoot:where(.xs\:rt-r-size-5) {
-     --avatar-size: 80px;
-     --avatar-fallback-one-letter-font-size: var(--font-size-7);
-     border-radius: max(var(--radius-5), var(--radius-full));
-     letter-spacing: var(--letter-spacing-7);
-   }
--  .rt-AvatarRoot:where(.xs\:rt-r-size-7) {
-+  .rt-AvatarRoot:where(.xs\:rt-r-size-6) {
-     --avatar-size: 96px;
-     --avatar-fallback-one-letter-font-size: var(--font-size-7);
-     border-radius: max(var(--radius-5), var(--radius-full));
-     letter-spacing: var(--letter-spacing-7);
-   }
--  .rt-AvatarRoot:where(.xs\:rt-r-size-8) {
-+  .rt-AvatarRoot:where(.xs\:rt-r-size-7) {
-     --avatar-size: 128px;
-     --avatar-fallback-one-letter-font-size: var(--font-size-8);
-     border-radius: max(var(--radius-6), var(--radius-full));
-     letter-spacing: var(--letter-spacing-8);
-   }
-+  .rt-AvatarRoot:where(.xs\:rt-r-size-8) {
-+    --avatar-size: 160px;
-+    --avatar-fallback-one-letter-font-size: var(--font-size-9);
-+    border-radius: max(var(--radius-6), var(--radius-full));
-+    letter-spacing: var(--letter-spacing-9);
++  .rt-BaseButton:where(.xs\:rt-r-size-0) {
++    --base-button-classic-active-padding-top: 0px;
++    --base-button-height: calc(var(--space-2) + var(--space-3));
++    border-radius: max(var(--radius-1), var(--radius-full));
 +  }
-   .rt-AvatarRoot:where(.xs\:rt-r-size-9) {
-     --avatar-size: 160px;
-     --avatar-fallback-one-letter-font-size: var(--font-size-9);
-@@ -6038,57 +6036,56 @@
+   .rt-BaseButton:where(.xs\:rt-r-size-1) {
+     --base-button-classic-active-padding-top: 1px;
+     --base-button-height: var(--space-5);
+@@ -6570,6 +6605,11 @@
+   }
  }
  @media (min-width: 768px) {
-   .rt-AvatarRoot:where(.sm\:rt-r-size-1) {
--    --avatar-size: var(--space-5);
--    --avatar-fallback-one-letter-font-size: var(--font-size-2);
--    --avatar-fallback-two-letters-font-size: var(--font-size-1);
--    border-radius: max(var(--radius-2), var(--radius-full));
--    letter-spacing: var(--letter-spacing-1);
--  }
--  .rt-AvatarRoot:where(.sm\:rt-r-size-2) {
-     --avatar-size: var(--space-6);
-     --avatar-fallback-one-letter-font-size: var(--font-size-3);
-     --avatar-fallback-two-letters-font-size: var(--font-size-2);
-     border-radius: max(var(--radius-2), var(--radius-full));
-     letter-spacing: var(--letter-spacing-2);
-   }
--  .rt-AvatarRoot:where(.sm\:rt-r-size-3) {
-+  .rt-AvatarRoot:where(.sm\:rt-r-size-2) {
-     --avatar-size: var(--space-7);
-     --avatar-fallback-one-letter-font-size: var(--font-size-4);
-     --avatar-fallback-two-letters-font-size: var(--font-size-3);
-     border-radius: max(var(--radius-3), var(--radius-full));
-     letter-spacing: var(--letter-spacing-3);
-   }
--  .rt-AvatarRoot:where(.sm\:rt-r-size-4) {
-+  .rt-AvatarRoot:where(.sm\:rt-r-size-3) {
-     --avatar-size: var(--space-8);
-     --avatar-fallback-one-letter-font-size: var(--font-size-5);
-     --avatar-fallback-two-letters-font-size: var(--font-size-4);
-     border-radius: max(var(--radius-3), var(--radius-full));
-     letter-spacing: var(--letter-spacing-4);
-   }
--  .rt-AvatarRoot:where(.sm\:rt-r-size-5) {
-+  .rt-AvatarRoot:where(.sm\:rt-r-size-4) {
-     --avatar-size: var(--space-9);
-     --avatar-fallback-one-letter-font-size: var(--font-size-6);
-     border-radius: max(var(--radius-4), var(--radius-full));
-     letter-spacing: var(--letter-spacing-6);
-   }
--  .rt-AvatarRoot:where(.sm\:rt-r-size-6) {
-+  .rt-AvatarRoot:where(.sm\:rt-r-size-5) {
-     --avatar-size: 80px;
-     --avatar-fallback-one-letter-font-size: var(--font-size-7);
-     border-radius: max(var(--radius-5), var(--radius-full));
-     letter-spacing: var(--letter-spacing-7);
-   }
--  .rt-AvatarRoot:where(.sm\:rt-r-size-7) {
-+  .rt-AvatarRoot:where(.sm\:rt-r-size-6) {
-     --avatar-size: 96px;
-     --avatar-fallback-one-letter-font-size: var(--font-size-7);
-     border-radius: max(var(--radius-5), var(--radius-full));
-     letter-spacing: var(--letter-spacing-7);
-   }
--  .rt-AvatarRoot:where(.sm\:rt-r-size-8) {
-+  .rt-AvatarRoot:where(.sm\:rt-r-size-7) {
-     --avatar-size: 128px;
-     --avatar-fallback-one-letter-font-size: var(--font-size-8);
-     border-radius: max(var(--radius-6), var(--radius-full));
-     letter-spacing: var(--letter-spacing-8);
-   }
-+  .rt-AvatarRoot:where(.sm\:rt-r-size-8) {
-+    --avatar-size: 160px;
-+    --avatar-fallback-one-letter-font-size: var(--font-size-9);
-+    border-radius: max(var(--radius-6), var(--radius-full));
-+    letter-spacing: var(--letter-spacing-9);
++  .rt-BaseButton:where(.sm\:rt-r-size-0) {
++    --base-button-classic-active-padding-top: 0px;
++    --base-button-height: calc(var(--space-2) + var(--space-3));
++    border-radius: max(var(--radius-1), var(--radius-full));
 +  }
-   .rt-AvatarRoot:where(.sm\:rt-r-size-9) {
-     --avatar-size: 160px;
-     --avatar-fallback-one-letter-font-size: var(--font-size-9);
-@@ -6098,57 +6095,56 @@
+   .rt-BaseButton:where(.sm\:rt-r-size-1) {
+     --base-button-classic-active-padding-top: 1px;
+     --base-button-height: var(--space-5);
+@@ -6592,6 +6632,11 @@
+   }
  }
  @media (min-width: 1024px) {
-   .rt-AvatarRoot:where(.md\:rt-r-size-1) {
--    --avatar-size: var(--space-5);
--    --avatar-fallback-one-letter-font-size: var(--font-size-2);
--    --avatar-fallback-two-letters-font-size: var(--font-size-1);
--    border-radius: max(var(--radius-2), var(--radius-full));
--    letter-spacing: var(--letter-spacing-1);
--  }
--  .rt-AvatarRoot:where(.md\:rt-r-size-2) {
-     --avatar-size: var(--space-6);
-     --avatar-fallback-one-letter-font-size: var(--font-size-3);
-     --avatar-fallback-two-letters-font-size: var(--font-size-2);
-     border-radius: max(var(--radius-2), var(--radius-full));
-     letter-spacing: var(--letter-spacing-2);
-   }
--  .rt-AvatarRoot:where(.md\:rt-r-size-3) {
-+  .rt-AvatarRoot:where(.md\:rt-r-size-2) {
-     --avatar-size: var(--space-7);
-     --avatar-fallback-one-letter-font-size: var(--font-size-4);
-     --avatar-fallback-two-letters-font-size: var(--font-size-3);
-     border-radius: max(var(--radius-3), var(--radius-full));
-     letter-spacing: var(--letter-spacing-3);
-   }
--  .rt-AvatarRoot:where(.md\:rt-r-size-4) {
-+  .rt-AvatarRoot:where(.md\:rt-r-size-3) {
-     --avatar-size: var(--space-8);
-     --avatar-fallback-one-letter-font-size: var(--font-size-5);
-     --avatar-fallback-two-letters-font-size: var(--font-size-4);
-     border-radius: max(var(--radius-3), var(--radius-full));
-     letter-spacing: var(--letter-spacing-4);
-   }
--  .rt-AvatarRoot:where(.md\:rt-r-size-5) {
-+  .rt-AvatarRoot:where(.md\:rt-r-size-4) {
-     --avatar-size: var(--space-9);
-     --avatar-fallback-one-letter-font-size: var(--font-size-6);
-     border-radius: max(var(--radius-4), var(--radius-full));
-     letter-spacing: var(--letter-spacing-6);
-   }
--  .rt-AvatarRoot:where(.md\:rt-r-size-6) {
-+  .rt-AvatarRoot:where(.md\:rt-r-size-5) {
-     --avatar-size: 80px;
-     --avatar-fallback-one-letter-font-size: var(--font-size-7);
-     border-radius: max(var(--radius-5), var(--radius-full));
-     letter-spacing: var(--letter-spacing-7);
-   }
--  .rt-AvatarRoot:where(.md\:rt-r-size-7) {
-+  .rt-AvatarRoot:where(.md\:rt-r-size-6) {
-     --avatar-size: 96px;
-     --avatar-fallback-one-letter-font-size: var(--font-size-7);
-     border-radius: max(var(--radius-5), var(--radius-full));
-     letter-spacing: var(--letter-spacing-7);
-   }
--  .rt-AvatarRoot:where(.md\:rt-r-size-8) {
-+  .rt-AvatarRoot:where(.md\:rt-r-size-7) {
-     --avatar-size: 128px;
-     --avatar-fallback-one-letter-font-size: var(--font-size-8);
-     border-radius: max(var(--radius-6), var(--radius-full));
-     letter-spacing: var(--letter-spacing-8);
-   }
-+  .rt-AvatarRoot:where(.md\:rt-r-size-8) {
-+    --avatar-size: 160px;
-+    --avatar-fallback-one-letter-font-size: var(--font-size-9);
-+    border-radius: max(var(--radius-6), var(--radius-full));
-+    letter-spacing: var(--letter-spacing-9);
++  .rt-BaseButton:where(.md\:rt-r-size-0) {
++    --base-button-classic-active-padding-top: 0px;
++    --base-button-height: calc(var(--space-2) + var(--space-3));
++    border-radius: max(var(--radius-1), var(--radius-full));
 +  }
-   .rt-AvatarRoot:where(.md\:rt-r-size-9) {
-     --avatar-size: 160px;
-     --avatar-fallback-one-letter-font-size: var(--font-size-9);
-@@ -6158,57 +6154,56 @@
+   .rt-BaseButton:where(.md\:rt-r-size-1) {
+     --base-button-classic-active-padding-top: 1px;
+     --base-button-height: var(--space-5);
+@@ -6614,6 +6659,11 @@
+   }
  }
  @media (min-width: 1280px) {
-   .rt-AvatarRoot:where(.lg\:rt-r-size-1) {
--    --avatar-size: var(--space-5);
--    --avatar-fallback-one-letter-font-size: var(--font-size-2);
--    --avatar-fallback-two-letters-font-size: var(--font-size-1);
--    border-radius: max(var(--radius-2), var(--radius-full));
--    letter-spacing: var(--letter-spacing-1);
--  }
--  .rt-AvatarRoot:where(.lg\:rt-r-size-2) {
-     --avatar-size: var(--space-6);
-     --avatar-fallback-one-letter-font-size: var(--font-size-3);
-     --avatar-fallback-two-letters-font-size: var(--font-size-2);
-     border-radius: max(var(--radius-2), var(--radius-full));
-     letter-spacing: var(--letter-spacing-2);
-   }
--  .rt-AvatarRoot:where(.lg\:rt-r-size-3) {
-+  .rt-AvatarRoot:where(.lg\:rt-r-size-2) {
-     --avatar-size: var(--space-7);
-     --avatar-fallback-one-letter-font-size: var(--font-size-4);
-     --avatar-fallback-two-letters-font-size: var(--font-size-3);
-     border-radius: max(var(--radius-3), var(--radius-full));
-     letter-spacing: var(--letter-spacing-3);
-   }
--  .rt-AvatarRoot:where(.lg\:rt-r-size-4) {
-+  .rt-AvatarRoot:where(.lg\:rt-r-size-3) {
-     --avatar-size: var(--space-8);
-     --avatar-fallback-one-letter-font-size: var(--font-size-5);
-     --avatar-fallback-two-letters-font-size: var(--font-size-4);
-     border-radius: max(var(--radius-3), var(--radius-full));
-     letter-spacing: var(--letter-spacing-4);
-   }
--  .rt-AvatarRoot:where(.lg\:rt-r-size-5) {
-+  .rt-AvatarRoot:where(.lg\:rt-r-size-4) {
-     --avatar-size: var(--space-9);
-     --avatar-fallback-one-letter-font-size: var(--font-size-6);
-     border-radius: max(var(--radius-4), var(--radius-full));
-     letter-spacing: var(--letter-spacing-6);
-   }
--  .rt-AvatarRoot:where(.lg\:rt-r-size-6) {
-+  .rt-AvatarRoot:where(.lg\:rt-r-size-5) {
-     --avatar-size: 80px;
-     --avatar-fallback-one-letter-font-size: var(--font-size-7);
-     border-radius: max(var(--radius-5), var(--radius-full));
-     letter-spacing: var(--letter-spacing-7);
-   }
--  .rt-AvatarRoot:where(.lg\:rt-r-size-7) {
-+  .rt-AvatarRoot:where(.lg\:rt-r-size-6) {
-     --avatar-size: 96px;
-     --avatar-fallback-one-letter-font-size: var(--font-size-7);
-     border-radius: max(var(--radius-5), var(--radius-full));
-     letter-spacing: var(--letter-spacing-7);
-   }
--  .rt-AvatarRoot:where(.lg\:rt-r-size-8) {
-+  .rt-AvatarRoot:where(.lg\:rt-r-size-7) {
-     --avatar-size: 128px;
-     --avatar-fallback-one-letter-font-size: var(--font-size-8);
-     border-radius: max(var(--radius-6), var(--radius-full));
-     letter-spacing: var(--letter-spacing-8);
-   }
-+  .rt-AvatarRoot:where(.lg\:rt-r-size-8) {
-+    --avatar-size: 160px;
-+    --avatar-fallback-one-letter-font-size: var(--font-size-9);
-+    border-radius: max(var(--radius-6), var(--radius-full));
-+    letter-spacing: var(--letter-spacing-9);
++  .rt-BaseButton:where(.lg\:rt-r-size-0) {
++    --base-button-classic-active-padding-top: 0px;
++    --base-button-height: calc(var(--space-2) + var(--space-3));
++    border-radius: max(var(--radius-1), var(--radius-full));
 +  }
-   .rt-AvatarRoot:where(.lg\:rt-r-size-9) {
-     --avatar-size: 160px;
-     --avatar-fallback-one-letter-font-size: var(--font-size-9);
-@@ -6218,57 +6213,56 @@
+   .rt-BaseButton:where(.lg\:rt-r-size-1) {
+     --base-button-classic-active-padding-top: 1px;
+     --base-button-height: var(--space-5);
+@@ -6636,6 +6686,11 @@
+   }
  }
  @media (min-width: 1640px) {
-   .rt-AvatarRoot:where(.xl\:rt-r-size-1) {
--    --avatar-size: var(--space-5);
--    --avatar-fallback-one-letter-font-size: var(--font-size-2);
--    --avatar-fallback-two-letters-font-size: var(--font-size-1);
--    border-radius: max(var(--radius-2), var(--radius-full));
--    letter-spacing: var(--letter-spacing-1);
--  }
--  .rt-AvatarRoot:where(.xl\:rt-r-size-2) {
-     --avatar-size: var(--space-6);
-     --avatar-fallback-one-letter-font-size: var(--font-size-3);
-     --avatar-fallback-two-letters-font-size: var(--font-size-2);
-     border-radius: max(var(--radius-2), var(--radius-full));
-     letter-spacing: var(--letter-spacing-2);
-   }
--  .rt-AvatarRoot:where(.xl\:rt-r-size-3) {
-+  .rt-AvatarRoot:where(.xl\:rt-r-size-2) {
-     --avatar-size: var(--space-7);
-     --avatar-fallback-one-letter-font-size: var(--font-size-4);
-     --avatar-fallback-two-letters-font-size: var(--font-size-3);
-     border-radius: max(var(--radius-3), var(--radius-full));
-     letter-spacing: var(--letter-spacing-3);
-   }
--  .rt-AvatarRoot:where(.xl\:rt-r-size-4) {
-+  .rt-AvatarRoot:where(.xl\:rt-r-size-3) {
-     --avatar-size: var(--space-8);
-     --avatar-fallback-one-letter-font-size: var(--font-size-5);
-     --avatar-fallback-two-letters-font-size: var(--font-size-4);
-     border-radius: max(var(--radius-3), var(--radius-full));
-     letter-spacing: var(--letter-spacing-4);
-   }
--  .rt-AvatarRoot:where(.xl\:rt-r-size-5) {
-+  .rt-AvatarRoot:where(.xl\:rt-r-size-4) {
-     --avatar-size: var(--space-9);
-     --avatar-fallback-one-letter-font-size: var(--font-size-6);
-     border-radius: max(var(--radius-4), var(--radius-full));
-     letter-spacing: var(--letter-spacing-6);
-   }
--  .rt-AvatarRoot:where(.xl\:rt-r-size-6) {
-+  .rt-AvatarRoot:where(.xl\:rt-r-size-5) {
-     --avatar-size: 80px;
-     --avatar-fallback-one-letter-font-size: var(--font-size-7);
-     border-radius: max(var(--radius-5), var(--radius-full));
-     letter-spacing: var(--letter-spacing-7);
-   }
--  .rt-AvatarRoot:where(.xl\:rt-r-size-7) {
-+  .rt-AvatarRoot:where(.xl\:rt-r-size-6) {
-     --avatar-size: 96px;
-     --avatar-fallback-one-letter-font-size: var(--font-size-7);
-     border-radius: max(var(--radius-5), var(--radius-full));
-     letter-spacing: var(--letter-spacing-7);
-   }
--  .rt-AvatarRoot:where(.xl\:rt-r-size-8) {
-+  .rt-AvatarRoot:where(.xl\:rt-r-size-7) {
-     --avatar-size: 128px;
-     --avatar-fallback-one-letter-font-size: var(--font-size-8);
-     border-radius: max(var(--radius-6), var(--radius-full));
-     letter-spacing: var(--letter-spacing-8);
-   }
-+  .rt-AvatarRoot:where(.xl\:rt-r-size-8) {
-+    --avatar-size: 160px;
-+    --avatar-fallback-one-letter-font-size: var(--font-size-9);
-+    border-radius: max(var(--radius-6), var(--radius-full));
-+    letter-spacing: var(--letter-spacing-9);
++  .rt-BaseButton:where(.xl\:rt-r-size-0) {
++    --base-button-classic-active-padding-top: 0px;
++    --base-button-height: calc(var(--space-2) + var(--space-3));
++    border-radius: max(var(--radius-1), var(--radius-full));
 +  }
-   .rt-AvatarRoot:where(.xl\:rt-r-size-9) {
-     --avatar-size: 160px;
-     --avatar-fallback-one-letter-font-size: var(--font-size-9);
+   .rt-BaseButton:where(.xl\:rt-r-size-1) {
+     --base-button-classic-active-padding-top: 1px;
+     --base-button-height: var(--space-5);
+@@ -6932,6 +6987,24 @@
+   --margin-bottom-override: initial;
+   --margin-left-override: initial;
+ }
++.rt-Button:where(.rt-r-size-0) {
++  gap: var(--space-1);
++  font-size: var(--font-size-1);
++  line-height: var(--line-height-1);
++  letter-spacing: var(--letter-spacing-1);
++}
++.rt-Button:where(.rt-r-size-0):where(:not(.rt-variant-ghost)) {
++  padding-left: calc(var(--space-1) * 0.75);
++  padding-right: calc(var(--space-1) * 0.75);
++}
++.rt-Button:where(.rt-r-size-0):where(.rt-variant-ghost) {
++  gap: var(--space-1);
++  --button-ghost-padding-x: calc(var(--space-1) * 0.75);
++  --button-ghost-padding-y: calc(var(--space-1) * 0.5);
++}
++.rt-Button:where(.rt-r-size-0) .rt-ButtonInner {
++  gap: calc(var(--space-1) * 0.5);
++}
+ .rt-Button:where(.rt-r-size-1) {
+   gap: var(--space-1);
+   font-size: var(--font-size-1);
+@@ -6993,6 +7066,21 @@
+   --button-ghost-padding-y: var(--space-2);
+ }
+ @media (min-width: 520px) {
++  .rt-Button:where(.xs\:rt-r-size-0) {
++    gap: var(--space-1);
++    font-size: var(--font-size-1);
++    line-height: var(--line-height-1);
++    letter-spacing: var(--letter-spacing-1);
++  }
++  .rt-Button:where(.xs\:rt-r-size-0):where(:not(.rt-variant-ghost)) {
++  padding-left: calc(var(--space-1) * 0.75);
++  padding-right: calc(var(--space-1) * 0.75);
++  }
++  .rt-Button:where(.xs\:rt-r-size-0):where(.rt-variant-ghost) {
++    gap: var(--space-1);
++    --button-ghost-padding-x: calc(var(--space-1) * 0.75);
++    --button-ghost-padding-y: calc(var(--space-1) * 0.5);
++  }
+   .rt-Button:where(.xs\:rt-r-size-1) {
+     gap: var(--space-1);
+     font-size: var(--font-size-1);
+@@ -7055,6 +7143,21 @@
+   }
+ }
+ @media (min-width: 768px) {
++  .rt-Button:where(.sm\:rt-r-size-0) {
++    gap: var(--space-1);
++    font-size: var(--font-size-1);
++    line-height: var(--line-height-1);
++    letter-spacing: var(--letter-spacing-1);
++  }
++  .rt-Button:where(.sm\:rt-r-size-0):where(:not(.rt-variant-ghost)) {
++  padding-left: calc(var(--space-1) * 0.75);
++  padding-right: calc(var(--space-1) * 0.75);
++  }
++  .rt-Button:where(.sm\:rt-r-size-0):where(.rt-variant-ghost) {
++    gap: var(--space-1);
++    --button-ghost-padding-x: calc(var(--space-1) * 0.75);
++    --button-ghost-padding-y: calc(var(--space-1) * 0.5);
++  }
+   .rt-Button:where(.sm\:rt-r-size-1) {
+     gap: var(--space-1);
+     font-size: var(--font-size-1);
+@@ -7117,6 +7220,21 @@
+   }
+ }
+ @media (min-width: 1024px) {
++  .rt-Button:where(.md\:rt-r-size-0) {
++    gap: var(--space-1);
++    font-size: var(--font-size-1);
++    line-height: var(--line-height-1);
++    letter-spacing: var(--letter-spacing-1);
++  }
++  .rt-Button:where(.md\:rt-r-size-0):where(:not(.rt-variant-ghost)) {
++  padding-left: calc(var(--space-1) * 0.75);
++  padding-right: calc(var(--space-1) * 0.75);
++  }
++  .rt-Button:where(.md\:rt-r-size-0):where(.rt-variant-ghost) {
++    gap: var(--space-1);
++    --button-ghost-padding-x: calc(var(--space-1) * 0.75);
++    --button-ghost-padding-y: calc(var(--space-1) * 0.5);
++  }
+   .rt-Button:where(.md\:rt-r-size-1) {
+     gap: var(--space-1);
+     font-size: var(--font-size-1);
+@@ -7179,6 +7297,21 @@
+   }
+ }
+ @media (min-width: 1280px) {
++  .rt-Button:where(.lg\:rt-r-size-0) {
++    gap: var(--space-1);
++    font-size: var(--font-size-1);
++    line-height: var(--line-height-1);
++    letter-spacing: var(--letter-spacing-1);
++  }
++  .rt-Button:where(.lg\:rt-r-size-0):where(:not(.rt-variant-ghost)) {
++  padding-left: calc(var(--space-1) * 0.75);
++  padding-right: calc(var(--space-1) * 0.75);
++  }
++  .rt-Button:where(.lg\:rt-r-size-0):where(.rt-variant-ghost) {
++    gap: var(--space-1);
++    --button-ghost-padding-x: calc(var(--space-1) * 0.75);
++    --button-ghost-padding-y: calc(var(--space-1) * 0.5);
++  }
+   .rt-Button:where(.lg\:rt-r-size-1) {
+     gap: var(--space-1);
+     font-size: var(--font-size-1);
+@@ -7241,6 +7374,21 @@
+   }
+ }
+ @media (min-width: 1640px) {
++  .rt-Button:where(.xl\:rt-r-size-0) {
++    gap: var(--space-1);
++    font-size: var(--font-size-1);
++    line-height: var(--line-height-1);
++    letter-spacing: var(--letter-spacing-1);
++  }
++  .rt-Button:where(.xl\:rt-r-size-0):where(:not(.rt-variant-ghost)) {
++  padding-left: calc(var(--space-1) * 0.75);
++  padding-right: calc(var(--space-1) * 0.75);
++  }
++  .rt-Button:where(.xl\:rt-r-size-0):where(.rt-variant-ghost) {
++    gap: var(--space-1);
++    --button-ghost-padding-x: calc(var(--space-1) * 0.75);
++    --button-ghost-padding-y: calc(var(--space-1) * 0.5);
++  }
+   .rt-Button:where(.xl\:rt-r-size-1) {
+     gap: var(--space-1);
+     font-size: var(--font-size-1);
+@@ -10172,6 +10320,18 @@
+   --margin-bottom-override: initial;
+   --margin-left-override: initial;
+ }
++.rt-IconButton:where(.rt-r-size-0) {
++  --base-button-height: calc(var(--space-2) + var(--space-3));
++  height: var(--base-button-height);
++  width: var(--base-button-height);
++  font-size: var(--font-size-1);
++  display: inline-flex;
++  align-items: center;
++  justify-content: center;
++}
++.rt-IconButton:where(.rt-variant-ghost):where(.rt-r-size-0) {
++  --icon-button-ghost-padding: calc(var(--space-1) * 0.5);
++}
+ .rt-IconButton:where(.rt-variant-ghost):where(.rt-r-size-1) {
+   --icon-button-ghost-padding: var(--space-1);
+ }
+@@ -10182,7 +10342,22 @@
+   --icon-button-ghost-padding: var(--space-2);
+ }
+ .rt-IconButton:where(.rt-variant-ghost):where(.rt-r-size-4) {
+-  --icon-button-ghost-padding: var(--space-3);
++    --icon-button-ghost-padding: var(--space-3);
++}
++.rt-IconButton:where(.rt-variant-ghost):where(.rt-r-size-5) {
++    --icon-button-ghost-padding: var(--space-3);
++}
++.rt-IconButton:where(.rt-variant-ghost):where(.rt-r-size-6) {
++    --icon-button-ghost-padding: var(--space-4);
++}
++.rt-IconButton:where(.rt-variant-ghost):where(.rt-r-size-7) {
++    --icon-button-ghost-padding: var(--space-5);
++}
++.rt-IconButton:where(.rt-variant-ghost):where(.rt-r-size-8) {
++    --icon-button-ghost-padding: var(--space-6);
++}
++.rt-IconButton:where(.rt-variant-ghost):where(.rt-r-size-9) {
++    --icon-button-ghost-padding: var(--space-7);
+ }
+ @media (min-width: 520px) {
+   .rt-IconButton:where(.rt-variant-ghost):where(.xs\:rt-r-size-1) {

@@ -55,31 +55,31 @@ export function MediaListItem({
                 />
             </Skeleton>
             <Flex direction="column" gap="0" className="flex-1">
-                <Skeleton
-                    loading={loading}
-                    className={clsx(loading && 'w-[85%]')}
-                >
-                    <Fade>
+                <Fade enabled={!loading}>
+                    <Skeleton
+                        loading={loading}
+                        className={clsx(loading && 'w-[85%]')}
+                    >
                         <Marquee mode="bounce">
                             <Text size="2" weight="medium">
                                 {title}
                             </Text>
                         </Marquee>
-                    </Fade>
-                </Skeleton>
+                    </Skeleton>
+                </Fade>
                 {subtitle && (
-                    <Skeleton
-                        loading={loading}
-                        className={clsx(loading && 'w-[55%]')}
-                    >
-                        <Fade>
+                    <Fade enabled={!loading}>
+                        <Skeleton
+                            loading={loading}
+                            className={clsx(loading && 'w-[55%]')}
+                        >
                             <Marquee mode="left">
                                 <Text size="1" color="gray">
                                     {subtitle}
                                 </Text>
                             </Marquee>
-                        </Fade>
-                    </Skeleton>
+                        </Skeleton>
+                    </Fade>
                 )}
             </Flex>
             {contextMenu && (
