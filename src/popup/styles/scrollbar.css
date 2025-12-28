@@ -1,61 +1,21 @@
-:root {
-    --scrollbar-track: color-mix(in srgb, var(--gray-a3) 30%, transparent);
-    --scrollbar-thumb: color-mix(in srgb, var(--accent-a7) 65%, var(--gray-a7));
-    --scrollbar-thumb-hover: color-mix(
-        in srgb,
-        var(--accent-a8) 70%,
-        var(--gray-a8)
-    );
-    --scrollbar-thumb-active: color-mix(
-        in srgb,
-        var(--accent-a9) 75%,
-        var(--gray-a9)
-    );
-    --scrollbar-border: color-mix(in srgb, var(--gray-a6) 45%, transparent);
-}
-
-* {
-    scrollbar-width: thin;
-    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
-}
-
+/* How to give padding to the scrollbar? */
 *::-webkit-scrollbar {
-    width: 7px;
-    height: 7px;
+    width: 10px;
+    height: 10px;
 }
 
 *::-webkit-scrollbar-track {
-    background: var(--scrollbar-track);
+    background: color-mix(in srgb, var(--gray-a3) 40%, transparent);
     border-radius: 9999px;
-    box-shadow: inset 0 0 0 1px var(--scrollbar-border);
 }
 
 *::-webkit-scrollbar-thumb {
-    background: linear-gradient(
-        180deg,
-        color-mix(in srgb, var(--scrollbar-thumb) 85%, transparent),
-        color-mix(in srgb, var(--scrollbar-thumb) 60%, transparent)
-    );
+    background: color-mix(in srgb, var(--gray-a10) 75%, var(--gray-a8));
     border-radius: 9999px;
-    border: 2px solid
-        color-mix(in srgb, var(--color-panel-solid) 85%, transparent);
-    box-shadow:
-        0 1px 2px color-mix(in srgb, var(--gray-a9) 22%, transparent),
-        inset 0 0 0 1px color-mix(in srgb, var(--gray-a5) 55%, transparent);
+    border: 2px solid transparent;
+    background-clip: padding-box;
 }
 
 *::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(
-        180deg,
-        color-mix(in srgb, var(--scrollbar-thumb-hover) 90%, transparent),
-        color-mix(in srgb, var(--scrollbar-thumb-hover) 70%, transparent)
-    );
-}
-
-*::-webkit-scrollbar-thumb:active {
-    background: linear-gradient(
-        180deg,
-        color-mix(in srgb, var(--scrollbar-thumb-active) 95%, transparent),
-        color-mix(in srgb, var(--scrollbar-thumb-active) 75%, transparent)
-    );
+    background: color-mix(in srgb, var(--gray-a11) 80%, var(--gray-a9));
 }

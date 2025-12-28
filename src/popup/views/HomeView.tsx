@@ -1,9 +1,5 @@
-import {
-    DiscIcon,
-    PersonIcon,
-    DotsHorizontalIcon,
-} from '@radix-ui/react-icons';
-import { Flex, IconButton, Text } from '@radix-ui/themes';
+import { DiscIcon, PersonIcon } from '@radix-ui/react-icons';
+import { Flex, Text } from '@radix-ui/themes';
 import { MediaCard } from '../components/MediaCard';
 import { MediaList } from '../components/MediaList';
 import { MediaListItem } from '../components/MediaListItem';
@@ -18,24 +14,12 @@ export function HomeView({ searchQuery }: Props) {
 
     return (
         <Flex
-            m="3"
             flexGrow="1"
             direction="column"
             gap="4"
             className="min-h-0 overflow-y-auto"
         >
-            {hasQuery ? (
-                <Text size="4" weight="bold">
-                    Showing results for “{trimmed}”
-                </Text>
-            ) : (
-                <Text size="3" color="gray">
-                    Start typing to search for lyrics tweaks, controls, or
-                    artists.
-                </Text>
-            )}
-
-            <Flex direction="column" gap="2">
+            <Flex p="3" direction="column" gap="2">
                 <Text size="2" weight="bold">
                     Media cards
                 </Text>
@@ -76,32 +60,12 @@ export function HomeView({ searchQuery }: Props) {
                         title="Discovery"
                         subtitle="Daft Punk"
                         icon={<DiscIcon />}
-                        contextMenu={
-                            <IconButton
-                                size="1"
-                                radius="full"
-                                variant="ghost"
-                                aria-label="Discovery options"
-                            >
-                                <DotsHorizontalIcon />
-                            </IconButton>
-                        }
                     />
                     <MediaListItem
                         title="Phoenix"
                         subtitle="French indie"
                         icon={<PersonIcon />}
                         imageShape="round"
-                        contextMenu={
-                            <IconButton
-                                size="1"
-                                radius="full"
-                                variant="ghost"
-                                aria-label="Phoenix options"
-                            >
-                                <DotsHorizontalIcon />
-                            </IconButton>
-                        }
                     />
                     <MediaListItem
                         title="Washing Machine Heart"

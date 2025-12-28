@@ -12,7 +12,7 @@ import { AvatarButton } from './AvatarButton';
 import { Marquee } from './Marquee';
 
 interface Props {
-    title: string;
+    title?: string;
     subtitle?: string;
     imageUrl?: string;
     icon?: ReactNode;
@@ -53,9 +53,9 @@ export function MediaCard({
                         }}
                         aria-label={title}
                     >
-                        {/* TODO: Make this styled to top right of overlay */}
                         <DropdownMenu.Root>
                             <DropdownMenu.Trigger>
+                                {/* TODO: Make this styled to top right of overlay */}
                                 <IconButton
                                     variant="soft"
                                     radius="full"

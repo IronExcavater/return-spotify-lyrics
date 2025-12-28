@@ -9,7 +9,6 @@ interface Props {
     variant?: 'card' | 'list';
     loading?: boolean;
     loadingCount?: number;
-    renderLoadingItem?: (index: number) => ReactNode;
     className?: string;
 }
 
@@ -18,7 +17,6 @@ export function MediaList({
     variant = 'card',
     loading = false,
     loadingCount = 6,
-    renderLoadingItem,
     className,
 }: Props) {
     const isCard = variant === 'card';
@@ -28,21 +26,13 @@ export function MediaList({
         <Flex
             direction={direction}
             gap="1"
-            className={clsx(
-                isCard ? 'overflow-x-auto pr-2 pb-1' : 'min-w-0',
-                className
-            )}
+            className={clsx(isCard ? 'overflow-x-auto' : 'min-w-0', className)}
         >
             {loading
                 ? Array.from({ length: loadingCount }).map((_, index) => (
                       <div key={`media-list-loading-${index}`}>
-                          {renderLoadingItem ? (
-                              renderLoadingItem(index)
-                          ) : isCard ? (
-                              <MediaCard title="Loading" loading />
-                          ) : (
-                              <MediaListItem title="Loading" loading />
-                          )}
+                          isCard ?<MediaCard loading /> :{' '}
+                          <MediaListItem loading />
                       </div>
                   ))
                 : children}

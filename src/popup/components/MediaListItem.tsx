@@ -12,7 +12,7 @@ import { AvatarButton } from './AvatarButton';
 import { Marquee } from './Marquee';
 
 interface Props {
-    title: string;
+    title?: string;
     subtitle?: string;
     imageUrl?: string;
     icon?: ReactNode;
@@ -80,7 +80,7 @@ export function MediaListItem({
             {!loading && (
                 <DropdownMenu.Root>
                     <DropdownMenu.Trigger>
-                        <IconButton variant="soft" radius="full" size="1">
+                        <IconButton variant="ghost" radius="full" size="1">
                             <DotsHorizontalIcon />
                         </IconButton>
                     </DropdownMenu.Trigger>

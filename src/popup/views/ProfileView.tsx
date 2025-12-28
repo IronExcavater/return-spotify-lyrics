@@ -113,8 +113,8 @@ export function ProfileView({ profile, onLogout, connection }: Props) {
     ]);
 
     return (
-        <Flex m="3" flexGrow="1" justify="center">
-            <Flex direction="column" gap="2" className="flex-shrink-0">
+        <Flex flexGrow="1" direction="column" justify="center">
+            <Flex p="3" direction="column" gap="2">
                 {/* Avatar + display name */}
                 <Flex
                     gap="3"
