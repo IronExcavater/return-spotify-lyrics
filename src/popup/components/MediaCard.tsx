@@ -9,6 +9,7 @@ import {
 } from '@radix-ui/themes';
 import clsx from 'clsx';
 import { AvatarButton } from './AvatarButton';
+import { Fade } from './Fade';
 import { Marquee } from './Marquee';
 
 interface Props {
@@ -19,7 +20,7 @@ interface Props {
     imageShape?: 'round' | 'square';
     onClick?: () => void;
     loading?: boolean;
-    contextMenu?: ReactNode; // TODO: How to enforce this has to be a DropdownMenu.Content Node from radix UI?
+    contextMenu?: ReactNode;
 }
 
 export function MediaCard({
@@ -43,53 +44,64 @@ export function MediaCard({
             className={clsx('w-[80px]', clickable && 'cursor-pointer')}
         >
             <Skeleton loading={loading}>
-                <div className="relative inline-flex">
-                    <AvatarButton
-                        avatar={{
-                            src: imageUrl,
-                            fallback: icon,
-                            radius,
-                            size: '6',
-                        }}
-                        aria-label={title}
-                    >
+                <AvatarButton
+                    avatar={{
+                        src: imageUrl,
+                        fallback: icon,
+                        radius,
+                        size: '6',
+                    }}
+                    aria-label={title}
+                    className="relative"
+                >
+                    {contextMenu && (
                         <DropdownMenu.Root>
                             <DropdownMenu.Trigger>
-                                {/* TODO: Make this styled to top right of overlay */}
                                 <IconButton
-                                    variant="soft"
+                                    variant="ghost"
                                     radius="full"
                                     size="1"
+                                    onClick={(event) => event.stopPropagation()}
+                                    className={clsx(
+                                        imageShape === 'round'
+                                            ? '!m-2'
+                                            : '!m-1',
+                                        '!ml-auto !self-start'
+                                    )}
                                 >
                                     <DotsHorizontalIcon />
                                 </IconButton>
                             </DropdownMenu.Trigger>
                             {contextMenu}
                         </DropdownMenu.Root>
-                    </AvatarButton>
-                </div>
+                    )}
+                </AvatarButton>
             </Skeleton>
             <Flex direction="column">
                 <Skeleton
                     loading={loading}
                     className={clsx(loading && 'w-[85%]')}
                 >
-                    <Marquee mode="bounce">
-                        <Text size="1" weight="medium">
-                            {title}
-                        </Text>
-                    </Marquee>
+                    <Fade>
+                        <Marquee mode="bounce">
+                            <Text size="1" weight="medium">
+                                {title}
+                            </Text>
+                        </Marquee>
+                    </Fade>
                 </Skeleton>
                 {subtitle && (
                     <Skeleton
                         loading={loading}
                         className={clsx(loading && 'w-[60%]')}
                     >
-                        <Marquee mode="left">
-                            <Text size="1" color="gray">
-                                {subtitle}
-                            </Text>
-                        </Marquee>
+                        <Fade>
+                            <Marquee mode="left">
+                                <Text size="1" color="gray">
+                                    {subtitle}
+                                </Text>
+                            </Marquee>
+                        </Fade>
                     </Skeleton>
                 )}
             </Flex>

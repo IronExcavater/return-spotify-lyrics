@@ -187,7 +187,6 @@ export function Pill({
                     size="1"
                     variant="ghost"
                     radius="full"
-                    className="h-3 w-3 p-0 [&>svg]:h-2.5 [&>svg]:w-2.5"
                     onMouseDown={(event) => {
                         event.preventDefault();
                         event.stopPropagation();

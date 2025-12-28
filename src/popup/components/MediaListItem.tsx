@@ -9,6 +9,7 @@ import {
 } from '@radix-ui/themes';
 import clsx from 'clsx';
 import { AvatarButton } from './AvatarButton';
+import { Fade } from './Fade';
 import { Marquee } from './Marquee';
 
 interface Props {
@@ -19,7 +20,7 @@ interface Props {
     imageShape?: 'round' | 'square';
     onClick?: () => void;
     loading?: boolean;
-    contextMenu?: ReactNode; // TODO: How to enforce this has to be a DropdownMenu.Content Node from radix UI?
+    contextMenu?: ReactNode;
 }
 
 export function MediaListItem({
@@ -58,29 +59,38 @@ export function MediaListItem({
                     loading={loading}
                     className={clsx(loading && 'w-[85%]')}
                 >
-                    <Marquee mode="bounce">
-                        <Text size="2" weight="medium">
-                            {title}
-                        </Text>
-                    </Marquee>
+                    <Fade>
+                        <Marquee mode="bounce">
+                            <Text size="2" weight="medium">
+                                {title}
+                            </Text>
+                        </Marquee>
+                    </Fade>
                 </Skeleton>
                 {subtitle && (
                     <Skeleton
                         loading={loading}
                         className={clsx(loading && 'w-[55%]')}
                     >
-                        <Marquee mode="left">
-                            <Text size="1" color="gray">
-                                {subtitle}
-                            </Text>
-                        </Marquee>
+                        <Fade>
+                            <Marquee mode="left">
+                                <Text size="1" color="gray">
+                                    {subtitle}
+                                </Text>
+                            </Marquee>
+                        </Fade>
                     </Skeleton>
                 )}
             </Flex>
-            {!loading && (
+            {contextMenu && (
                 <DropdownMenu.Root>
-                    <DropdownMenu.Trigger>
-                        <IconButton variant="ghost" radius="full" size="1">
+                    <DropdownMenu.Trigger disabled={loading}>
+                        <IconButton
+                            variant="ghost"
+                            radius="full"
+                            size="1"
+                            onClick={(event) => event.stopPropagation()}
+                        >
                             <DotsHorizontalIcon />
                         </IconButton>
                     </DropdownMenu.Trigger>

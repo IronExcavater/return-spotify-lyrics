@@ -31,7 +31,6 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    pointer-events: none;
     border-radius: inherit;
     z-index: 1;
 }

@@ -69,7 +69,10 @@ export function AvatarButton({
         >
             <Avatar
                 {...avatarProps}
-                className={clsx(avatarClassName)}
+                className={clsx(
+                    'relative inline-flex items-center justify-center overflow-visible',
+                    avatarClassName
+                )}
                 imageClassName={clsx(
                     'block ring-2 ring-transparent ring-offset-[var(--color-panel-solid)] transition-shadow',
                     'focus-visible:outline-none',

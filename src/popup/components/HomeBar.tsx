@@ -44,16 +44,25 @@ export function HomeBar({
     return (
         <Flex direction="column" gap="2" p="2" flexGrow="1">
             <Flex align="start" gap="2">
-                <Flex align="start" gap="2" direction="column">
-                    <Flex align="center" gap="2">
+                <Flex
+                    align="start"
+                    gap="2"
+                    direction="column"
+                    className="min-w-0 flex-1"
+                >
+                    <Flex
+                        align="center"
+                        gap="1"
+                        className="w-full min-w-0 flex-1"
+                    >
                         <IconButton
                             size="1"
                             variant="ghost"
-                            radius="small"
+                            radius="full"
                             disabled={!canGoBack}
                             aria-label="Go back"
                             onClick={onGoBack}
-                            className="mt-[2px] h-6 !w-4 !p-0"
+                            className="mt-0.5 h-6 !w-4 !p-0"
                         >
                             <ChevronLeftIcon />
                         </IconButton>
@@ -71,14 +80,13 @@ export function HomeBar({
                             size="2"
                             radius="full"
                             placeholder="Find your groove"
-                            className="flex w-full items-center px-3"
+                            className="w-full min-w-0 flex-1"
                         >
                             <TextField.Slot side="left" pr="1">
                                 <IconButton
                                     size="1"
                                     variant="ghost"
                                     aria-label="Search"
-                                    className="relative flex items-center justify-center"
                                     onClick={() => onSearchSubmit?.()}
                                 >
                                     <MagnifyingGlassIcon
@@ -118,20 +126,24 @@ export function HomeBar({
                         </TextField.Root>
                     </Flex>
                     <Flex align="center" gap="2" className="min-w-0 flex-wrap">
-                        <Pill
-                            label="Artist"
-                            value={mockArtist}
-                            placeholder="Add an artist"
-                            onChange={setMockArtist}
-                            onRemove={() => setMockArtist(null)}
-                        />
-                        <Pill
-                            label="Mood"
-                            value={mockMood}
-                            placeholder="Set mood"
-                            onChange={setMockMood}
-                            onRemove={() => setMockMood(null)}
-                        />
+                        {!!mockArtist && (
+                            <Pill
+                                label="Artist"
+                                value={mockArtist}
+                                placeholder="Add an artist"
+                                onChange={setMockArtist}
+                                onRemove={() => setMockArtist(null)}
+                            />
+                        )}
+                        {!!mockMood && (
+                            <Pill
+                                label="Mood"
+                                value={mockMood}
+                                placeholder="Set mood"
+                                onChange={setMockMood}
+                                onRemove={() => setMockMood(null)}
+                            />
+                        )}
                     </Flex>
                 </Flex>
 
