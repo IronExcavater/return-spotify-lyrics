@@ -78,7 +78,6 @@ export function HomeView({ searchQuery }: Props) {
                         subtitle="Mitski"
                         icon={<PersonIcon />}
                         imageShape="round"
-                        loading
                     />
                     <MediaListItem
                         title="Midnight City"
@@ -90,7 +89,6 @@ export function HomeView({ searchQuery }: Props) {
                         title="Skeleton row while we wait"
                         subtitle="Shows loading shimmer"
                         icon={<DiscIcon />}
-                        loading
                     />
                 </MediaList>
             </Flex>

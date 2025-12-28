@@ -149,6 +149,7 @@ export function HomeBar({
             </Flex>
             <Flex align="center" gap="2" className="min-w-0 flex-wrap">
                 {/* TODO: Create actual search filters and add a plus button with a dropdown of available options */}
+                {/* TODO: Why does the pills sometimes result in the app being expanded, I dont know why this is happening (related to todo in media list) */}
                 {!!mockArtist && (
                     <Pill
                         label="Artist"

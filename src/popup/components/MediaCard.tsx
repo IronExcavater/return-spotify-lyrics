@@ -40,7 +40,7 @@ export function MediaCard({
             direction="column"
             gap="1"
             onClick={loading ? undefined : onClick}
-            className="w-24"
+            className="w-20"
         >
             <Skeleton loading={loading}>
                 <AvatarButton
