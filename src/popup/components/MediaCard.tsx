@@ -33,7 +33,6 @@ export function MediaCard({
     loading = false,
     contextMenu,
 }: Props) {
-    const clickable = Boolean(onClick) && !loading;
     const radius = imageShape === 'round' ? 'full' : 'small';
 
     return (
@@ -41,7 +40,7 @@ export function MediaCard({
             direction="column"
             gap="1"
             onClick={loading ? undefined : onClick}
-            className={clsx('w-[80px]', clickable && 'cursor-pointer')}
+            className="w-24"
         >
             <Skeleton loading={loading}>
                 <AvatarButton

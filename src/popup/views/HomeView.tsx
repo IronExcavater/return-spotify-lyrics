@@ -20,7 +20,7 @@ export function HomeView({ searchQuery }: Props) {
             className="min-h-0 overflow-y-auto"
         >
             <Flex p="3" direction="column" gap="2">
-                <Text size="2" weight="bold">
+                <Text size="3" weight="bold">
                     Media cards
                 </Text>
                 <MediaList variant="card">
@@ -51,8 +51,14 @@ export function HomeView({ searchQuery }: Props) {
                         subtitle="A long artist name to force marquee bounce and truncation checks"
                         icon={<DiscIcon />}
                     />
+                    <MediaCard
+                        imageShape="round"
+                        title="Robot Rock"
+                        subtitle="Daft Punk"
+                        icon={<DiscIcon />}
+                    />
                 </MediaList>
-                <Text size="2" weight="bold">
+                <Text size="3" weight="bold">
                     Media list items
                 </Text>
                 <MediaList variant="list">

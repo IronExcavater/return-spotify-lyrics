@@ -70,7 +70,7 @@ export function Marquee({
         <div
             ref={containerRef}
             className={clsx(
-                'flex flex-shrink overflow-hidden whitespace-nowrap',
+                'flex min-w-0 flex-shrink overflow-hidden whitespace-nowrap',
                 className
             )}
             style={{ paddingInline: sidePadding }}

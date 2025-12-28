@@ -33,16 +33,10 @@ export function MediaListItem({
     loading = false,
     contextMenu,
 }: Props) {
-    const clickable = Boolean(onClick) && !loading;
     const radius = imageShape === 'round' ? 'full' : 'small';
 
     return (
-        <Flex
-            align="center"
-            gap="1"
-            onClick={loading ? undefined : onClick}
-            className={clsx(clickable && 'cursor-pointer')}
-        >
+        <Flex align="center" gap="1" onClick={loading ? undefined : onClick}>
             <Skeleton loading={loading}>
                 <AvatarButton
                     avatar={{
@@ -54,7 +48,7 @@ export function MediaListItem({
                     aria-label={title}
                 />
             </Skeleton>
-            <Flex direction="column" gap="0" className="flex-1">
+            <Flex direction="column" gap="0" flexGrow="1">
                 <Fade enabled={!loading}>
                     <Skeleton
                         loading={loading}

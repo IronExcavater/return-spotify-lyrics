@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { Children, ReactNode } from 'react';
 import { Flex } from '@radix-ui/themes';
 import clsx from 'clsx';
 import { MediaCard } from './MediaCard';
@@ -20,22 +20,37 @@ export function MediaList({
     className,
 }: Props) {
     const isCard = variant === 'card';
-    const direction = isCard ? 'row' : 'column';
 
     return (
         <Flex
-            direction={direction}
-            gap="1"
-            className={clsx(isCard ? 'overflow-x-auto' : 'min-w-0', className)}
+            direction={isCard ? 'row' : 'column'}
+            pb="1"
+            gap={isCard ? '2' : '0'} // TODO: For some reason list items cant have gaps between each other because the media list + media list items break? Check ai-temp-3 to see if there is a restructure possible and try to diagnose the issue
+            className={clsx('overflow-auto', className)}
         >
             {loading
-                ? Array.from({ length: loadingCount }).map((_, index) => (
-                      <div key={`media-list-loading-${index}`}>
-                          isCard ?<MediaCard loading /> :{' '}
-                          <MediaListItem loading />
-                      </div>
-                  ))
-                : children}
+                ? Array.from({ length: loadingCount }).map((_, index) =>
+                      isCard ? (
+                          <MediaCard
+                              key={`media-list-loading-${index}`}
+                              loading
+                          />
+                      ) : (
+                          <div
+                              key={`media-list-loading-${index}`}
+                              className="w-full min-w-0"
+                          >
+                              <MediaListItem loading />
+                          </div>
+                      )
+                  )
+                : isCard
+                  ? children
+                  : Children.map(children, (child, index) => (
+                        <div key={index} className="w-full min-w-0">
+                            {child}
+                        </div>
+                    ))}
         </Flex>
     );
 }

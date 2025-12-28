@@ -410,6 +410,8 @@ export function Pill({
     const handleContainerPointerDown = (
         event: ReactMouseEvent<HTMLDivElement>
     ) => {
+        const target = event.target as HTMLElement;
+        if (target.closest('[data-pill-ignore-edit]')) return;
         startEditing(event);
     };
 
@@ -513,7 +515,7 @@ export function Pill({
             onKeyDown={handleContainerKeyDown}
             onBlur={handleBlur}
             className={clsx(
-                'group text-gray-12 max-w-72 min-w-0 items-center rounded-full bg-[var(--gray-a2)] p-0.5 ring-1 ring-[var(--gray-a6)] transition-colors',
+                'group text-gray-12 max-w-full min-w-0 shrink items-center rounded-full bg-[var(--gray-a2)] p-0.5 ring-1 ring-[var(--gray-a6)] transition-colors',
                 'focus-within:ring-2 focus-within:ring-[var(--accent-8)] hover:ring-2 hover:ring-[var(--accent-8)] focus-visible:outline-none',
                 editable &&
                     'cursor-text focus-within:border-[var(--accent-8)] hover:border-[var(--accent-8)]',
@@ -521,7 +523,12 @@ export function Pill({
             )}
         >
             {label && (
-                <Text size="1" weight="medium" color="gray" className="pl-1">
+                <Text
+                    size="1"
+                    weight="medium"
+                    color="gray"
+                    className="truncate pl-1"
+                >
                     {label}
                 </Text>
             )}
@@ -673,6 +680,11 @@ export function Pill({
                     size="1"
                     variant="ghost"
                     radius="full"
+                    data-pill-ignore-edit
+                    onPointerDownCapture={(event) => {
+                        event.stopPropagation();
+                        event.preventDefault();
+                    }}
                     onMouseDown={(event) => {
                         event.preventDefault();
                         event.stopPropagation();
@@ -697,7 +709,7 @@ export function Pill({
                     if (open) setIsEditing(true);
                 }}
             >
-                <DropdownMenu.Trigger asChild onPointerDown={startEditing}>
+                <DropdownMenu.Trigger onPointerDown={startEditing}>
                     {pillBody}
                 </DropdownMenu.Trigger>
                 <DropdownMenu.Content
