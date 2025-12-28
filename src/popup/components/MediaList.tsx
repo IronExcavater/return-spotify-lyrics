@@ -27,7 +27,7 @@ export function MediaList({
     return (
         <Flex
             direction={direction}
-            gap="0"
+            gap="2"
             className={clsx(
                 isCard ? 'overflow-x-auto pr-2 pb-1' : 'min-w-0',
                 className

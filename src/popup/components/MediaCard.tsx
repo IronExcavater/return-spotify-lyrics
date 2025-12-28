@@ -12,6 +12,7 @@ interface MediaCardProps {
     imageShape?: 'round' | 'square';
     onClick?: () => void;
     loading?: boolean;
+    contextMenu?: ReactNode;
 }
 
 export function MediaCard({
@@ -22,6 +23,7 @@ export function MediaCard({
     imageShape = 'square',
     onClick,
     loading = false,
+    contextMenu,
 }: MediaCardProps) {
     const clickable = Boolean(onClick) && !loading;
     const radius = imageShape === 'round' ? 'full' : 'small';
@@ -29,10 +31,9 @@ export function MediaCard({
     return (
         <Flex
             direction="column"
-            p="2"
             gap="1"
             onClick={loading ? undefined : onClick}
-            className={clsx('shrink-0', clickable && 'cursor-pointer')}
+            className={clsx('w-[80px]', clickable && 'cursor-pointer')}
         >
             <Skeleton loading={loading}>
                 <AvatarButton
@@ -40,27 +41,31 @@ export function MediaCard({
                         src: imageUrl,
                         fallback: icon,
                         radius,
-                        size: imageShape === 'square' ? '6' : '7',
+                        size: '6',
                     }}
                     aria-label={title}
-                />
+                >
+                    overlay here!
+                </AvatarButton>
             </Skeleton>
-            <Flex direction="column" gap="0" className="min-w-0">
-                <Skeleton loading={loading}>
-                    <Marquee mode="bounce" className="w-full min-w-0">
-                        <Text size="1" weight="medium" className="leading-none">
+            <Flex direction="column">
+                <Skeleton
+                    loading={loading}
+                    className={clsx(loading && 'w-[85%]')}
+                >
+                    <Marquee mode="bounce">
+                        <Text size="1" weight="medium">
                             {title}
                         </Text>
                     </Marquee>
                 </Skeleton>
                 {subtitle && (
-                    <Skeleton loading={loading}>
-                        <Marquee mode="right" className="w-full min-w-0">
-                            <Text
-                                size="1"
-                                color="gray"
-                                className="leading-none"
-                            >
+                    <Skeleton
+                        loading={loading}
+                        className={clsx(loading && 'w-[60%]')}
+                    >
+                        <Marquee mode="left">
+                            <Text size="1" color="gray">
                                 {subtitle}
                             </Text>
                         </Marquee>

@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 import {
     Cross2Icon,
     ChevronLeftIcon,
@@ -7,6 +7,8 @@ import {
 } from '@radix-ui/react-icons';
 import { Flex, IconButton, TextField } from '@radix-ui/themes';
 import clsx from 'clsx';
+
+import { Pill, type PillValue } from './Pill';
 
 interface Props {
     profileSlot?: ReactNode;
@@ -30,23 +32,28 @@ export function HomeBar({
     onGoBack,
 }: Props) {
     const hasQuery = searchQuery.trim().length > 0;
+    const [mockArtist, setMockArtist] = useState<PillValue | null>({
+        type: 'text',
+        value: 'Chromatics',
+    });
 
     return (
-        <Flex direction="column" gap="1" p="2" flexGrow="1">
-            <Flex align="center" gap="2">
-                <Flex direction="column" gap="1" className="min-w-0 flex-1">
-                    <Flex align="center" gap="1" className="min-w-0">
-                        <IconButton
-                            size="1"
-                            variant="ghost"
-                            radius="small"
-                            disabled={!canGoBack}
-                            aria-label="Go back"
-                            onClick={onGoBack}
-                            className="h-6 !w-4 !p-0"
-                        >
-                            <ChevronLeftIcon />
-                        </IconButton>
+        <Flex direction="column" gap="2" p="2" flexGrow="1">
+            <Flex align="start" gap="2">
+                <Flex align="start" gap="2" className="min-w-0 flex-1">
+                    <IconButton
+                        size="1"
+                        variant="ghost"
+                        radius="small"
+                        disabled={!canGoBack}
+                        aria-label="Go back"
+                        onClick={onGoBack}
+                        className="mt-[2px] h-6 !w-4 !p-0"
+                    >
+                        <ChevronLeftIcon />
+                    </IconButton>
+
+                    <Flex direction="column" gap="2" className="min-w-0 flex-1">
                         <TextField.Root
                             value={searchQuery}
                             onChange={(event) =>
@@ -106,6 +113,22 @@ export function HomeBar({
                                 </IconButton>
                             </TextField.Slot>
                         </TextField.Root>
+
+                        {mockArtist && (
+                            <Flex
+                                align="center"
+                                gap="2"
+                                className="min-w-0 flex-wrap"
+                            >
+                                <Pill
+                                    label="Artist"
+                                    value={mockArtist}
+                                    placeholder="Add an artist"
+                                    onChange={setMockArtist}
+                                    onRemove={() => setMockArtist(null)}
+                                />
+                            </Flex>
+                        )}
                     </Flex>
                 </Flex>
 

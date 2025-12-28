@@ -12,7 +12,7 @@ interface MediaListItemProps {
     imageShape?: 'round' | 'square';
     onClick?: () => void;
     loading?: boolean;
-    endAdornment?: ReactNode;
+    contextMenu?: ReactNode;
 }
 
 export function MediaListItem({
@@ -23,7 +23,7 @@ export function MediaListItem({
     imageShape = 'square',
     onClick,
     loading = false,
-    endAdornment,
+    contextMenu,
 }: MediaListItemProps) {
     const clickable = Boolean(onClick) && !loading;
     const radius = imageShape === 'round' ? 'full' : 'small';
@@ -31,10 +31,9 @@ export function MediaListItem({
     return (
         <Flex
             align="center"
-            gap="2"
-            p="2"
+            gap="1"
             onClick={loading ? undefined : onClick}
-            className={clsx('min-w-0', clickable && 'cursor-pointer')}
+            className={clsx(clickable && 'cursor-pointer')}
         >
             <Skeleton loading={loading}>
                 <AvatarButton
@@ -47,29 +46,38 @@ export function MediaListItem({
                     aria-label={title}
                 />
             </Skeleton>
-            <Flex direction="column" gap="0" className="min-w-0 flex-1">
-                <Skeleton loading={loading}>
-                    <Marquee mode="bounce" className="w-full min-w-0">
-                        <Text size="2" weight="medium" className="leading-none">
+            <Flex direction="column" gap="0" className="flex-1">
+                <Skeleton
+                    loading={loading}
+                    className={clsx(loading && 'w-[85%]')}
+                >
+                    <Marquee mode="bounce">
+                        <Text size="2" weight="medium">
                             {title}
                         </Text>
                     </Marquee>
                 </Skeleton>
                 {subtitle && (
-                    <Skeleton loading={loading}>
-                        <Marquee mode="right" className="w-full min-w-0">
-                            <Text
-                                size="1"
-                                color="gray"
-                                className="leading-none"
-                            >
+                    <Skeleton
+                        loading={loading}
+                        className={clsx(loading && 'w-[55%]')}
+                    >
+                        <Marquee mode="left">
+                            <Text size="1" color="gray">
                                 {subtitle}
                             </Text>
                         </Marquee>
                     </Skeleton>
                 )}
             </Flex>
-            {!loading && endAdornment && <div>{endAdornment}</div>}
+            {!loading && contextMenu && (
+                <div
+                    className="ml-auto"
+                    onClick={(event) => event.stopPropagation()}
+                >
+                    {contextMenu}
+                </div>
+            )}
         </Flex>
     );
 }
