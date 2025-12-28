@@ -5,7 +5,7 @@ import {
     HomeIcon,
     MagnifyingGlassIcon,
 } from '@radix-ui/react-icons';
-import { Flex, IconButton, TextField } from '@radix-ui/themes';
+import { Flex, IconButton, TextField, Text, Button } from '@radix-ui/themes';
 import clsx from 'clsx';
 
 import { Pill, type PillValue } from './Pill';
@@ -40,21 +40,20 @@ export function HomeBar({
         type: 'text',
         value: 'Chillwave',
     });
+    const [mockDate, setMockDate] = useState<PillValue | null>({
+        type: 'date',
+        value: '2024-02-14',
+    });
+    const [mockRange, setMockRange] = useState<PillValue | null>({
+        type: 'date-range',
+        value: { from: '2024-01-01', to: '2024-12-31' },
+    });
 
     return (
         <Flex direction="column" gap="2" p="2" flexGrow="1">
             <Flex align="start" gap="2">
-                <Flex
-                    align="start"
-                    gap="2"
-                    direction="column"
-                    className="min-w-0 flex-1"
-                >
-                    <Flex
-                        align="center"
-                        gap="1"
-                        className="w-full min-w-0 flex-1"
-                    >
+                <Flex direction="column" gap="1" className="w-full">
+                    <Flex align="center" gap="1" className="w-full">
                         <IconButton
                             size="1"
                             variant="ghost"
@@ -125,25 +124,14 @@ export function HomeBar({
                             </TextField.Slot>
                         </TextField.Root>
                     </Flex>
-                    <Flex align="center" gap="2" className="min-w-0 flex-wrap">
-                        {!!mockArtist && (
-                            <Pill
-                                label="Artist"
-                                value={mockArtist}
-                                placeholder="Add an artist"
-                                onChange={setMockArtist}
-                                onRemove={() => setMockArtist(null)}
-                            />
-                        )}
-                        {!!mockMood && (
-                            <Pill
-                                label="Mood"
-                                value={mockMood}
-                                placeholder="Set mood"
-                                onChange={setMockMood}
-                                onRemove={() => setMockMood(null)}
-                            />
-                        )}
+                    <Flex justify="between">
+                        {/* TODO: Integrate into search filters */}
+                        <Text size="2" weight="medium">
+                            Search Filters
+                        </Text>
+                        <Button size="0" variant="soft">
+                            Clear All
+                        </Button>
                     </Flex>
                 </Flex>
 
@@ -152,6 +140,45 @@ export function HomeBar({
                         {profileSlot}
                         {navSlot}
                     </Flex>
+                )}
+            </Flex>
+            <Flex align="center" gap="2" className="min-w-0 flex-wrap">
+                {/* TODO: Create actual search filters and add a plus button with a dropdown of available options */}
+                {!!mockArtist && (
+                    <Pill
+                        label="Artist"
+                        value={mockArtist}
+                        placeholder="Add an artist"
+                        onChange={setMockArtist}
+                        onRemove={() => setMockArtist(null)}
+                    />
+                )}
+                {!!mockMood && (
+                    <Pill
+                        label="Mood"
+                        value={mockMood}
+                        placeholder="Set mood"
+                        onChange={setMockMood}
+                        onRemove={() => setMockMood(null)}
+                    />
+                )}
+                {mockDate && (
+                    <Pill
+                        label="Date"
+                        value={mockDate}
+                        placeholder="Select date"
+                        onChange={setMockDate}
+                        onRemove={() => setMockDate(null)}
+                    />
+                )}
+                {mockRange && (
+                    <Pill
+                        label="Range"
+                        value={mockRange}
+                        placeholder="Select range"
+                        onChange={setMockRange}
+                        onRemove={() => setMockRange(null)}
+                    />
                 )}
             </Flex>
         </Flex>

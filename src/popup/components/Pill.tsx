@@ -1,4 +1,5 @@
 import {
+    useCallback,
     useEffect,
     useMemo,
     useRef,
@@ -6,8 +7,10 @@ import {
     useLayoutEffect,
     type MouseEvent as ReactMouseEvent,
     type KeyboardEvent as ReactKeyboardEvent,
+    type FocusEvent as ReactFocusEvent,
+    RefObject,
 } from 'react';
-import { Cross2Icon } from '@radix-ui/react-icons';
+import { Cross2Icon, MinusIcon, PlusIcon } from '@radix-ui/react-icons';
 import { Flex, IconButton, Text } from '@radix-ui/themes';
 import clsx from 'clsx';
 
@@ -18,6 +21,97 @@ export type PillValue =
     | { type: 'number'; value: number | null }
     | { type: 'date'; value: string }
     | { type: 'date-range'; value: { from?: string; to?: string } };
+
+type DateRangeValue = Extract<PillValue, { type: 'date-range' }>['value'];
+type DateLikeValue = Extract<PillValue, { type: 'date' | 'date-range' }>;
+type DateDraft = { mode: 'date' | 'date-range'; range: DateRangeValue };
+const EARLIEST_MUSIC_YEAR = 1900;
+
+const todayIso = new Date().toISOString().slice(0, 10);
+const minDateIso = `${EARLIEST_MUSIC_YEAR}-01-01`;
+
+const formatDateWithFormatter = (
+    iso: string | undefined,
+    formatter: Intl.DateTimeFormat
+) => {
+    if (!iso) return '';
+    const date = new Date(iso);
+    if (Number.isNaN(date.getTime())) return iso;
+    return formatter.format(date);
+};
+
+const formatDateRangeValue = (
+    range: DateRangeValue,
+    formatter: Intl.DateTimeFormat
+) => {
+    const from = formatDateWithFormatter(range.from, formatter);
+    const to = formatDateWithFormatter(range.to, formatter);
+    if (from && to) return `${from} – ${to}`;
+    return from || to;
+};
+
+const isDateLikeValue = (value: PillValue): value is DateLikeValue =>
+    value.type === 'date' || value.type === 'date-range';
+
+type DateOrder = Array<'day' | 'month' | 'year'>;
+
+const resolveEditPattern = (formatter: Intl.DateTimeFormat) => {
+    const parts = formatter.formatToParts(new Date('2020-01-02'));
+    const order = parts
+        .filter(
+            (part): part is Intl.DateTimeFormatPart =>
+                part.type === 'day' ||
+                part.type === 'month' ||
+                part.type === 'year'
+        )
+        .map((part) => part.type as DateOrder[number]);
+    const separator =
+        parts.find((part) => part.type === 'literal')?.value ?? '/';
+    const placeholder = order
+        .map((token) => {
+            if (token === 'day') return 'dd';
+            if (token === 'month') return 'mm';
+            return 'yyyy';
+        })
+        .join(separator);
+    return { order, separator, placeholder };
+};
+
+const normalizeRangeValue = (range: DateRangeValue): DateRangeValue => ({
+    from: range.from || undefined,
+    to: range.to || undefined,
+});
+
+const clampDateToBounds = (iso?: string): string | undefined => {
+    if (!iso) return undefined;
+    const parsed = Date.parse(iso);
+    if (Number.isNaN(parsed)) return undefined;
+    const clamped = Math.max(
+        Date.parse(minDateIso),
+        Math.min(Date.parse(todayIso), parsed)
+    );
+    return new Date(clamped).toISOString().slice(0, 10);
+};
+
+const clampRangeBounds = (range: DateRangeValue): DateRangeValue => ({
+    from: clampDateToBounds(range.from),
+    to: clampDateToBounds(range.to),
+});
+
+const alignRangeForMode = (
+    range: DateRangeValue,
+    mode: DateDraft['mode']
+): DateRangeValue => {
+    const normalized = normalizeRangeValue(range);
+    if (mode === 'date') {
+        const value = normalized.from ?? normalized.to;
+        return value ? { from: value, to: value } : {};
+    }
+    return normalized;
+};
+
+const rangeToDateString = (range: DateRangeValue) =>
+    range.from ?? range.to ?? '';
 
 interface Props {
     label?: string;
@@ -37,7 +131,80 @@ export function Pill({
     className,
 }: Props) {
     const [isEditing, setIsEditing] = useState(false);
+    const locale =
+        typeof navigator !== 'undefined' && navigator.language
+            ? navigator.language
+            : 'en';
+    const dateFormatter = useMemo(
+        () =>
+            new Intl.DateTimeFormat(locale, {
+                day: 'numeric',
+                month: 'short',
+                year: 'numeric',
+            }),
+        [locale]
+    );
+    const editFormatter = useMemo(
+        () =>
+            new Intl.DateTimeFormat(locale, {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+            }),
+        [locale]
+    );
+    const editPattern = useMemo(
+        () => resolveEditPattern(editFormatter),
+        [editFormatter]
+    );
+    const formatDate = useCallback(
+        (iso?: string) => formatDateWithFormatter(iso, dateFormatter),
+        [dateFormatter]
+    );
+    const formatDateForEdit = useCallback(
+        (iso?: string) => formatDateWithFormatter(iso, editFormatter),
+        [editFormatter]
+    );
+    const formatRange = useCallback(
+        (range: DateRangeValue) => formatDateRangeValue(range, dateFormatter),
+        [dateFormatter]
+    );
+    const parseDateInput = useCallback(
+        (input?: string) => {
+            if (!input) return undefined;
+            const trimmed = input.trim();
+            if (!trimmed) return undefined;
+            const segments = trimmed.split(/\D+/).filter(Boolean);
+            if (segments.length < editPattern.order.length) return undefined;
+
+            const get = (token: DateOrder[number]) => {
+                const index = editPattern.order.indexOf(token);
+                return index === -1 ? undefined : segments[index];
+            };
+
+            const day = Number(get('day'));
+            const month = Number(get('month'));
+            const year = Number(get('year'));
+            if (!day || !month || !year) return undefined;
+
+            const date = new Date(Date.UTC(year, month - 1, day));
+            if (
+                date.getUTCFullYear() !== year ||
+                date.getUTCMonth() !== month - 1 ||
+                date.getUTCDate() !== day
+            )
+                return undefined;
+
+            return clampDateToBounds(date.toISOString().slice(0, 10));
+        },
+        [editPattern.order]
+    );
     const displayValue = useMemo(() => {
+        if (isDateLikeValue(value)) {
+            if (value.type === 'date') return formatDate(value.value);
+            const formatted = formatRange(value.value);
+            return formatted || formatDate(value.value.from);
+        }
         switch (value.type) {
             case 'text':
                 return value.value;
@@ -47,55 +214,129 @@ export function Pill({
                 return value.value.join(', ');
             case 'number':
                 return value.value != null ? String(value.value) : '';
-            case 'date':
-                return value.value;
-            case 'date-range': {
-                const from = value.value.from ?? '';
-                const to = value.value.to ?? '';
-                if (from && to) return `${from} – ${to}`;
-                return from || to;
-            }
             default:
                 return '';
         }
-    }, [value]);
+    }, [value, formatDate, formatRange]);
 
-    const [draft, setDraft] = useState(
+    const [textDraft, setTextDraft] = useState(
         value.type === 'text' ? value.value : ''
     );
+    const [dateDraft, setDateDraft] = useState<DateDraft>({
+        mode: 'date',
+        range: {},
+    });
     const inputRef = useRef<HTMLInputElement>(null);
+    const dateInputRef = useRef<HTMLInputElement>(null);
     const measureRef = useRef<HTMLSpanElement>(null);
+    const dateFromMeasureRef = useRef<HTMLSpanElement>(null);
+    const dateToMeasureRef = useRef<HTMLSpanElement>(null);
+    const [dateWidths, setDateWidths] = useState({ from: 0, to: 0 });
     const [inputPx, setInputPx] = useState<number | null>(null);
     const isTextValue = value.type === 'text';
-    const editable = isTextValue && typeof onChange === 'function';
+    const isDateValue = isDateLikeValue(value);
+    const isRangeMode = dateDraft.mode === 'date-range';
+    const editable =
+        (isTextValue || isDateValue) && typeof onChange === 'function';
 
     useEffect(() => {
-        if (value.type === 'text' && !isEditing) setDraft(value.value);
+        if (value.type === 'text' && !isEditing) setTextDraft(value.value);
     }, [value, isEditing]);
 
     useEffect(() => {
+        if (!isDateValue || isEditing) return;
+        if (value.type === 'date') {
+            const formatted = formatDateForEdit(value.value);
+            setDateDraft({
+                mode: 'date',
+                range: { from: formatted, to: formatted },
+            });
+            return;
+        }
+        setDateDraft({
+            mode: 'date-range',
+            range: {
+                from: formatDateForEdit(value.value.from),
+                to: formatDateForEdit(value.value.to),
+            },
+        });
+    }, [value, isEditing, isDateValue, formatDateForEdit]);
+
+    useEffect(() => {
         if (!isEditing) return;
-        inputRef.current?.focus();
-        inputRef.current?.select();
-    }, [isEditing]);
+        if (isTextValue) {
+            inputRef.current?.focus();
+            inputRef.current?.select();
+        } else if (isDateValue) {
+            dateInputRef.current?.focus();
+        }
+    }, [isEditing, isTextValue, isDateValue]);
 
     useLayoutEffect(() => {
+        if (!isTextValue) return;
         const node = measureRef.current;
         if (!node) return;
         const rect = node.getBoundingClientRect();
         // Subtract a tiny amount to avoid extra pixel padding from measurement quirks.
         const width = Math.max(8, Math.ceil(rect.width) - 1);
         setInputPx(width);
-    }, [draft, placeholder, displayValue]);
+    }, [textDraft, placeholder, displayValue, isTextValue]);
+    useLayoutEffect(() => {
+        if (!isDateValue) return;
+        const measure = (ref: RefObject<HTMLSpanElement>) => {
+            const node = ref.current;
+            if (!node) return 0;
+            const rect = node.getBoundingClientRect();
+            return Math.max(8, Math.ceil(rect.width) - 1);
+        };
+        setDateWidths({
+            from: measure(dateFromMeasureRef),
+            to: measure(dateToMeasureRef),
+        });
+    }, [isDateValue, dateDraft, placeholder, displayValue]);
 
     const commitDraft = () => {
-        if (!editable) return;
-        onChange?.({ ...value, value: draft });
+        if (!editable || !onChange) return;
+
+        if (isTextValue) {
+            onChange({ ...value, value: textDraft });
+        } else if (isDateValue) {
+            const parsed = {
+                from: parseDateInput(dateDraft.range.from),
+                to: parseDateInput(dateDraft.range.to),
+            };
+            const clamped = clampRangeBounds(parsed);
+            const fixed = fixImpossibleRange(clamped);
+            const range = alignRangeForMode(fixed, dateDraft.mode);
+            const nextValue: PillValue =
+                dateDraft.mode === 'date'
+                    ? { type: 'date', value: rangeToDateString(range) }
+                    : { type: 'date-range', value: range };
+            onChange(nextValue);
+        }
+
         setIsEditing(false);
     };
 
     const cancelDraft = () => {
-        if (value.type === 'text') setDraft(value.value);
+        if (isTextValue) setTextDraft(value.value);
+        if (isDateValue) {
+            if (value.type === 'date') {
+                const formatted = formatDateForEdit(value.value);
+                setDateDraft({
+                    mode: 'date',
+                    range: { from: formatted, to: formatted },
+                });
+            } else {
+                setDateDraft({
+                    mode: 'date-range',
+                    range: {
+                        from: formatDateForEdit(value.value.from),
+                        to: formatDateForEdit(value.value.to),
+                    },
+                });
+            }
+        }
         setIsEditing(false);
     };
 
@@ -118,9 +359,73 @@ export function Pill({
         if (!isEditing) setIsEditing(true);
     };
 
-    const handleBlur = () => {
+    const handleBlur = (event: ReactFocusEvent<HTMLDivElement>) => {
+        if (!editable || !isEditing) return;
+        const nextFocus = event.relatedTarget as Node | null;
+        if (nextFocus && event.currentTarget.contains(nextFocus)) return;
         commitDraft();
     };
+
+    const handleInputKeyDown = (
+        event: ReactKeyboardEvent<HTMLInputElement>
+    ) => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            event.stopPropagation();
+            commitDraft();
+        } else if (event.key === 'Escape') {
+            event.preventDefault();
+            event.stopPropagation();
+            cancelDraft();
+        }
+    };
+
+    const setDateMode = (mode: DateDraft['mode']) => {
+        setDateDraft((prev) => {
+            const parsed = {
+                from: parseDateInput(prev.range.from),
+                to: parseDateInput(prev.range.to),
+            };
+            const clamped = clampRangeBounds(parsed);
+            const fixed = fixImpossibleRange(clamped);
+            const aligned = alignRangeForMode(fixed, mode);
+            return {
+                mode,
+                range: {
+                    from: formatDateForEdit(aligned.from),
+                    to: formatDateForEdit(aligned.to),
+                },
+            };
+        });
+    };
+
+    const fixImpossibleRange = (range: DateRangeValue): DateRangeValue => {
+        const normalized = normalizeRangeValue(range);
+        const { from, to } = normalized;
+        if (from && to && from > to) {
+            return { from, to: from };
+        }
+        return normalized;
+    };
+
+    const updateDateRange = (key: keyof DateRangeValue, rawValue: string) => {
+        const value = rawValue || undefined;
+        setDateDraft((prev) => ({
+            mode: 'date-range',
+            range: { ...prev.range, [key]: value },
+        }));
+    };
+
+    const updateSingleDate = (rawValue: string) => {
+        const value = rawValue || undefined;
+        setDateDraft(() => ({
+            mode: 'date',
+            range: { from: value, to: value },
+        }));
+    };
+
+    const handleAddRange = () => setDateMode('date-range');
+    const handleRemoveRange = () => setDateMode('date');
 
     return (
         <Flex
@@ -130,6 +435,7 @@ export function Pill({
             tabIndex={editable ? 0 : -1}
             onClick={handleContainerClick}
             onKeyDown={handleContainerKeyDown}
+            onBlur={handleBlur}
             className={clsx(
                 'group text-gray-12 max-w-60 min-w-0 items-center rounded-full bg-[var(--gray-a2)] p-0.5 ring-1 ring-[var(--gray-a6)] transition-colors',
                 'focus-within:ring-2 focus-within:ring-[var(--accent-8)] hover:ring-2 hover:ring-[var(--accent-8)] focus-visible:outline-none',
@@ -145,25 +451,104 @@ export function Pill({
             )}
 
             {isEditing && editable ? (
-                <input
-                    ref={inputRef}
-                    value={draft}
-                    onChange={(event) => setDraft(event.target.value)}
-                    onBlur={handleBlur}
-                    onKeyDown={(event) => {
-                        if (event.key === 'Enter') {
-                            event.preventDefault();
-                            commitDraft();
-                        } else if (event.key === 'Escape') {
-                            event.preventDefault();
-                            cancelDraft();
+                isTextValue ? (
+                    <input
+                        ref={inputRef}
+                        value={textDraft}
+                        onChange={(event) => setTextDraft(event.target.value)}
+                        onKeyDown={handleInputKeyDown}
+                        placeholder={placeholder}
+                        style={inputPx ? { width: `${inputPx}px` } : undefined}
+                        onClick={(event) => event.stopPropagation()}
+                        className="min-w-0 border-none bg-transparent text-xs font-normal outline-none"
+                    />
+                ) : isDateValue ? (
+                    <Flex
+                        align="center"
+                        gap="0.75"
+                        className="min-w-0 flex-wrap"
+                        onClick={(event: ReactMouseEvent<HTMLDivElement>) =>
+                            event.stopPropagation()
                         }
-                    }}
-                    placeholder={placeholder}
-                    style={inputPx ? { width: `${inputPx}px` } : undefined}
-                    onClick={(event) => event.stopPropagation()}
-                    className="min-w-0 border-none bg-transparent text-xs font-normal outline-none"
-                />
+                    >
+                        <input
+                            ref={dateInputRef}
+                            type="text"
+                            value={dateDraft.range.from ?? ''}
+                            onChange={(event) =>
+                                isRangeMode
+                                    ? updateDateRange(
+                                          'from',
+                                          event.target.value
+                                      )
+                                    : updateSingleDate(event.target.value)
+                            }
+                            onKeyDown={handleInputKeyDown}
+                            placeholder={placeholder || editPattern.placeholder}
+                            className="min-w-0 border-none bg-transparent text-xs font-normal [color:inherit] outline-none"
+                            style={
+                                dateWidths.from
+                                    ? { width: `${dateWidths.from}px` }
+                                    : undefined
+                            }
+                        />
+
+                        {isRangeMode ? (
+                            <>
+                                <Text size="1" color="gray" className="px-1">
+                                    –
+                                </Text>
+                                <input
+                                    type="text"
+                                    value={dateDraft.range.to ?? ''}
+                                    onChange={(event) =>
+                                        updateDateRange(
+                                            'to',
+                                            event.target.value
+                                        )
+                                    }
+                                    onKeyDown={handleInputKeyDown}
+                                    className="min-w-0 border-none bg-transparent text-xs font-normal [color:inherit] outline-none"
+                                    placeholder={
+                                        placeholder || editPattern.placeholder
+                                    }
+                                    style={
+                                        dateWidths.to
+                                            ? { width: `${dateWidths.to}px` }
+                                            : undefined
+                                    }
+                                />
+                                <IconButton
+                                    size="0"
+                                    variant="ghost"
+                                    radius="full"
+                                    className="text-gray-12 ml-2 !h-4 min-h-0 !w-4 min-w-0 bg-[var(--gray-a3)] hover:bg-[var(--gray-a4)]"
+                                    onClick={(event) => {
+                                        event.stopPropagation();
+                                        handleRemoveRange();
+                                    }}
+                                    aria-label="Remove end date"
+                                >
+                                    <MinusIcon />
+                                </IconButton>
+                            </>
+                        ) : (
+                            <IconButton
+                                size="0"
+                                variant="ghost"
+                                radius="full"
+                                className="text-gray-12 ml-2 !h-4 min-h-0 !w-4 min-w-0 bg-[var(--gray-a3)] hover:bg-[var(--gray-a4)]"
+                                onClick={(event) => {
+                                    event.stopPropagation();
+                                    handleAddRange();
+                                }}
+                                aria-label="Add end date"
+                            >
+                                <PlusIcon />
+                            </IconButton>
+                        )}
+                    </Flex>
+                ) : null
             ) : (
                 <Text
                     size="1"
@@ -179,8 +564,30 @@ export function Pill({
                 aria-hidden="true"
                 className="pointer-events-none absolute top-0 left-0 -z-10 text-xs leading-[16px] font-normal whitespace-pre opacity-0"
             >
-                {draft || placeholder}
+                {isTextValue ? textDraft || placeholder : placeholder}
             </span>
+            {isDateValue && (
+                <>
+                    <span
+                        ref={dateFromMeasureRef}
+                        aria-hidden="true"
+                        className="pointer-events-none absolute top-0 left-0 -z-10 text-xs leading-[16px] font-normal whitespace-pre opacity-0"
+                    >
+                        {dateDraft.range.from ||
+                            placeholder ||
+                            editPattern.placeholder}
+                    </span>
+                    <span
+                        ref={dateToMeasureRef}
+                        aria-hidden="true"
+                        className="pointer-events-none absolute top-0 left-0 -z-10 text-xs leading-[16px] font-normal whitespace-pre opacity-0"
+                    >
+                        {dateDraft.range.to ||
+                            placeholder ||
+                            editPattern.placeholder}
+                    </span>
+                </>
+            )}
 
             {onRemove && (
                 <IconButton
