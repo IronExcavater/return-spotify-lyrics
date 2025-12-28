@@ -1,0 +1,44 @@
+:root {
+    --scrollbar-track: color-mix(in srgb, var(--gray-a3) 60%, transparent);
+    --scrollbar-thumb: color-mix(in srgb, var(--gray-a10) 85%, var(--gray-a8));
+    --scrollbar-thumb-hover: color-mix(
+        in srgb,
+        var(--gray-a11) 90%,
+        var(--gray-a9)
+    );
+    --scrollbar-thumb-active: color-mix(
+        in srgb,
+        var(--gray-a12) 90%,
+        var(--gray-a10)
+    );
+}
+
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+*::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+    background: var(--scrollbar-track);
+    border-radius: 9999px;
+}
+
+*::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
+}
+
+*::-webkit-scrollbar-thumb:active {
+    background: var(--scrollbar-thumb-active);
+}

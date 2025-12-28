@@ -16,6 +16,7 @@ import { PlaybackBar } from './components/PlaybackBar';
 import { ProtectedLayout } from './components/ProtectedLayout';
 import { useAppState, BarKey } from './hooks/useAppState';
 import { useAuth } from './hooks/useAuth';
+import { useHistory } from './hooks/useHistory';
 
 import { usePlayer } from './hooks/usePlayer.ts';
 import { usePortalSlot } from './hooks/usePortalSlot';
@@ -39,6 +40,7 @@ export default function App() {
         fallbackWidth: widthBounds.min,
         fallbackHeight: heightBounds.min,
     });
+    const routeHistory = useHistory();
     const { playback } = usePlayer();
 
     const [searchQuery, setSearchQuery] = useState('');
@@ -76,6 +78,10 @@ export default function App() {
                     else navigate('/profile');
                 }}
                 aria-pressed={location.pathname === '/profile'}
+                aria-selected={location.pathname === '/profile'}
+                aria-current={
+                    location.pathname === '/profile' ? 'page' : undefined
+                }
             />
         ),
         [profileImage, location.pathname, navigate]
@@ -146,6 +152,11 @@ export default function App() {
                                 searchQuery={searchQuery}
                                 onSearchChange={setSearchQuery}
                                 onClearSearch={() => setSearchQuery('')}
+                                onSearchSubmit={() =>
+                                    routeHistory.goTo('/home', { searchQuery })
+                                }
+                                canGoBack={routeHistory.canGoBack}
+                                onGoBack={routeHistory.goBack}
                             />
                         )}
                     </Flex>

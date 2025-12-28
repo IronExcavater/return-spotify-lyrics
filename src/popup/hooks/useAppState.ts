@@ -9,6 +9,7 @@ export type BarKey = 'home' | 'playback';
 export const ROUTES = {
     root: '/',
     home: '/home',
+    media: '/media',
     login: '/login',
     lyrics: '/lyrics',
     profile: '/profile',
@@ -38,6 +39,7 @@ const BAR_RULES: Record<BarKey, BarRule> = {
 
 const ROUTE_RULES: Partial<Record<RouteValue, RouteRule>> = {
     [ROUTES.root]: {
+        allowedBars: ['playback'],
         heightOverride: 'auto',
     },
     [ROUTES.home]: {
@@ -49,6 +51,12 @@ const ROUTE_RULES: Partial<Record<RouteValue, RouteRule>> = {
     [ROUTES.login]: {
         widthOverride: 300,
         heightOverride: 'auto',
+    },
+    [ROUTES.profile]: {
+        heightOverride: 'auto',
+    },
+    [ROUTES.media]: {
+        allowedBars: ['home'],
     },
 };
 

@@ -10,6 +10,16 @@
     width: var(--base-button-height);
 }
 
+.rt-AvatarRoot.rt-IconButton {
+    height: var(--avatar-size);
+    width: var(--avatar-size);
+}
+
+.rt-Button:not(:disabled),
+.rt-IconButton:not(:disabled) {
+    cursor: pointer;
+}
+
 .rt-AvatarRoot {
     position: relative;
     user-select: none;
