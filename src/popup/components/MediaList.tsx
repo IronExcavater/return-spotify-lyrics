@@ -24,9 +24,10 @@ export function MediaList({
     return (
         <Flex
             direction={isCard ? 'row' : 'column'}
+            align="stretch"
             pb="1"
-            gap={isCard ? '2' : '0'} // TODO: For some reason list items cant have gaps between each other because the media list + media list items break the width of the entire dom and expanding it somehow (same as todo in home bar)? Check ai-temp-3 to see if there is a restructure possible and try to diagnose the issue
-            className={clsx('overflow-auto', className)}
+            gap={isCard ? '2' : '1'}
+            className={clsx('w-full min-w-0 overflow-auto', className)}
         >
             {loading
                 ? Array.from({ length: loadingCount }).map((_, index) =>

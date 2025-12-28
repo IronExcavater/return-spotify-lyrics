@@ -76,13 +76,13 @@ export function MediaCard({
                     )}
                 </AvatarButton>
             </Skeleton>
-            <Flex direction="column">
+            <Flex direction="column" className="min-w-0">
                 <Fade enabled={!loading}>
                     <Skeleton
                         loading={loading}
                         className={clsx(loading && 'w-[85%]')}
                     >
-                        <Marquee mode="bounce">
+                        <Marquee mode="bounce" className="w-full min-w-0">
                             <Text size="1" weight="medium">
                                 {title}
                             </Text>
@@ -95,7 +95,7 @@ export function MediaCard({
                             loading={loading}
                             className={clsx(loading && 'w-[60%]')}
                         >
-                            <Marquee mode="left">
+                            <Marquee mode="left" className="w-full min-w-0">
                                 <Text size="1" color="gray">
                                     {subtitle}
                                 </Text>

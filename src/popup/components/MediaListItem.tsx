@@ -36,7 +36,12 @@ export function MediaListItem({
     const radius = imageShape === 'round' ? 'full' : 'small';
 
     return (
-        <Flex align="center" gap="1" onClick={loading ? undefined : onClick}>
+        <Flex
+            align="center"
+            gap="1"
+            onClick={loading ? undefined : onClick}
+            className="w-full min-w-0"
+        >
             <Skeleton loading={loading}>
                 <AvatarButton
                     avatar={{
@@ -48,13 +53,13 @@ export function MediaListItem({
                     aria-label={title}
                 />
             </Skeleton>
-            <Flex direction="column" gap="0" flexGrow="1">
+            <Flex direction="column" gap="0" flexGrow="1" className="min-w-0">
                 <Fade enabled={!loading}>
                     <Skeleton
                         loading={loading}
                         className={clsx(loading && 'w-[85%]')}
                     >
-                        <Marquee mode="bounce">
+                        <Marquee mode="bounce" className="w-full min-w-0">
                             <Text size="2" weight="medium">
                                 {title}
                             </Text>
@@ -67,7 +72,7 @@ export function MediaListItem({
                             loading={loading}
                             className={clsx(loading && 'w-[55%]')}
                         >
-                            <Marquee mode="left">
+                            <Marquee mode="left" className="w-full min-w-0">
                                 <Text size="1" color="gray">
                                     {subtitle}
                                 </Text>
