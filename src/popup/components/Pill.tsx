@@ -17,7 +17,7 @@ export type PillValue =
     | { type: 'date'; value: string }
     | { type: 'date-range'; value: { from?: string; to?: string } };
 
-interface PillProps {
+interface Props {
     label?: string;
     value: PillValue;
     placeholder?: string;
@@ -33,7 +33,7 @@ export function Pill({
     onChange,
     onRemove,
     className,
-}: PillProps) {
+}: Props) {
     const [isEditing, setIsEditing] = useState(false);
     const [draft, setDraft] = useState(
         value.type === 'text' ? value.value : ''
@@ -94,21 +94,19 @@ export function Pill({
             event.target.closest('input')
         )
             return;
-        if (isEditing) commitDraft();
-        else setIsEditing(true);
+        if (!isEditing) setIsEditing(true);
     };
 
     const handleContainerKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
         if (!editable) return;
         if (event.key !== 'Enter' && event.key !== ' ') return;
         event.preventDefault();
-        if (isEditing) commitDraft();
-        else setIsEditing(true);
+        if (!isEditing) setIsEditing(true);
     };
 
     const baseLength =
         draft.length || (isTextValue ? value.value.length : 0) || 0;
-    const inputWidthCh = Math.max(baseLength, 1);
+    const inputSize = Math.max(baseLength, 1);
 
     return (
         <Flex
@@ -150,10 +148,11 @@ export function Pill({
                             cancelDraft();
                         }
                     }}
-                    className="placeholder:text-gray-10 border-none bg-transparent px-0 text-[12px] leading-[16px] font-medium text-[var(--gray-12)] outline-none"
+                    className="placeholder:text-gray-10 w-auto min-w-0 border-none bg-transparent px-0 text-[12px] leading-[16px] font-normal text-[var(--gray-12)] outline-none"
                     placeholder={placeholder}
                     aria-label={label ?? 'Edit filter'}
-                    style={{ width: `${inputWidthCh}ch` }}
+                    size={inputSize}
+                    style={{ width: 'auto' }}
                     onClick={(event) => event.stopPropagation()}
                 />
             ) : (
@@ -173,7 +172,7 @@ export function Pill({
                     variant="ghost"
                     radius="full"
                     aria-label="Remove filter"
-                    className="text-gray-11 hover:text-gray-12 h-4 w-4 shrink-0 p-0"
+                    className="text-gray-11 hover:text-gray-12 h-3 w-3 shrink-0 p-0 [&>svg]:h-2.5 [&>svg]:w-2.5"
                     onMouseDown={(event) => {
                         event.preventDefault();
                         event.stopPropagation();

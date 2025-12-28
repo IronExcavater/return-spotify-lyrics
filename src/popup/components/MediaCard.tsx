@@ -1,10 +1,17 @@
 import { ReactNode } from 'react';
-import { Flex, Skeleton, Text } from '@radix-ui/themes';
+import { DotsHorizontalIcon } from '@radix-ui/react-icons';
+import {
+    DropdownMenu,
+    Flex,
+    IconButton,
+    Skeleton,
+    Text,
+} from '@radix-ui/themes';
 import clsx from 'clsx';
 import { AvatarButton } from './AvatarButton';
 import { Marquee } from './Marquee';
 
-interface MediaCardProps {
+interface Props {
     title: string;
     subtitle?: string;
     imageUrl?: string;
@@ -12,7 +19,7 @@ interface MediaCardProps {
     imageShape?: 'round' | 'square';
     onClick?: () => void;
     loading?: boolean;
-    contextMenu?: ReactNode;
+    contextMenu?: ReactNode; // TODO: How to enforce this has to be a DropdownMenu.Content Node from radix UI?
 }
 
 export function MediaCard({
@@ -24,7 +31,7 @@ export function MediaCard({
     onClick,
     loading = false,
     contextMenu,
-}: MediaCardProps) {
+}: Props) {
     const clickable = Boolean(onClick) && !loading;
     const radius = imageShape === 'round' ? 'full' : 'small';
 
@@ -36,17 +43,31 @@ export function MediaCard({
             className={clsx('w-[80px]', clickable && 'cursor-pointer')}
         >
             <Skeleton loading={loading}>
-                <AvatarButton
-                    avatar={{
-                        src: imageUrl,
-                        fallback: icon,
-                        radius,
-                        size: '6',
-                    }}
-                    aria-label={title}
-                >
-                    overlay here!
-                </AvatarButton>
+                <div className="relative inline-flex">
+                    <AvatarButton
+                        avatar={{
+                            src: imageUrl,
+                            fallback: icon,
+                            radius,
+                            size: '6',
+                        }}
+                        aria-label={title}
+                    >
+                        {/* TODO: Make this styled to top right of overlay */}
+                        <DropdownMenu.Root>
+                            <DropdownMenu.Trigger>
+                                <IconButton
+                                    variant="soft"
+                                    radius="full"
+                                    size="1"
+                                >
+                                    <DotsHorizontalIcon />
+                                </IconButton>
+                            </DropdownMenu.Trigger>
+                            {contextMenu}
+                        </DropdownMenu.Root>
+                    </AvatarButton>
+                </div>
             </Skeleton>
             <Flex direction="column">
                 <Skeleton

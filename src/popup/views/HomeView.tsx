@@ -44,16 +44,6 @@ export function HomeView({ searchQuery }: Props) {
                         title="Nightcall"
                         subtitle="Kavinsky"
                         icon={<DiscIcon />}
-                        contextMenu={
-                            <IconButton
-                                size="1"
-                                radius="full"
-                                variant="soft"
-                                aria-label="Nightcall options"
-                            >
-                                <DotsHorizontalIcon />
-                            </IconButton>
-                        }
                     />
                     <MediaCard
                         title="On Hold"
@@ -76,16 +66,6 @@ export function HomeView({ searchQuery }: Props) {
                         title="Very long title to test marquee scrolling and wrapping resilience"
                         subtitle="A long artist name to force marquee bounce and truncation checks"
                         icon={<DiscIcon />}
-                        contextMenu={
-                            <IconButton
-                                size="1"
-                                radius="full"
-                                variant="soft"
-                                aria-label="Long title options"
-                            >
-                                <DotsHorizontalIcon />
-                            </IconButton>
-                        }
                     />
                 </MediaList>
                 <Text size="2" weight="bold">

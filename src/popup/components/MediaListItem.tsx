@@ -1,10 +1,17 @@
 import { ReactNode } from 'react';
-import { Flex, Skeleton, Text } from '@radix-ui/themes';
+import { DotsHorizontalIcon } from '@radix-ui/react-icons';
+import {
+    DropdownMenu,
+    Flex,
+    IconButton,
+    Skeleton,
+    Text,
+} from '@radix-ui/themes';
 import clsx from 'clsx';
 import { AvatarButton } from './AvatarButton';
 import { Marquee } from './Marquee';
 
-interface MediaListItemProps {
+interface Props {
     title: string;
     subtitle?: string;
     imageUrl?: string;
@@ -12,7 +19,7 @@ interface MediaListItemProps {
     imageShape?: 'round' | 'square';
     onClick?: () => void;
     loading?: boolean;
-    contextMenu?: ReactNode;
+    contextMenu?: ReactNode; // TODO: How to enforce this has to be a DropdownMenu.Content Node from radix UI?
 }
 
 export function MediaListItem({
@@ -24,7 +31,7 @@ export function MediaListItem({
     onClick,
     loading = false,
     contextMenu,
-}: MediaListItemProps) {
+}: Props) {
     const clickable = Boolean(onClick) && !loading;
     const radius = imageShape === 'round' ? 'full' : 'small';
 
@@ -70,13 +77,15 @@ export function MediaListItem({
                     </Skeleton>
                 )}
             </Flex>
-            {!loading && contextMenu && (
-                <div
-                    className="ml-auto"
-                    onClick={(event) => event.stopPropagation()}
-                >
+            {!loading && (
+                <DropdownMenu.Root>
+                    <DropdownMenu.Trigger>
+                        <IconButton variant="soft" radius="full" size="1">
+                            <DotsHorizontalIcon />
+                        </IconButton>
+                    </DropdownMenu.Trigger>
                     {contextMenu}
-                </div>
+                </DropdownMenu.Root>
             )}
         </Flex>
     );

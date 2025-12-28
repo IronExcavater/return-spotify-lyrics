@@ -4,7 +4,7 @@ import clsx from 'clsx';
 import { MediaCard } from './MediaCard';
 import { MediaListItem } from './MediaListItem';
 
-interface MediaListProps {
+interface Props {
     children?: ReactNode;
     variant?: 'card' | 'list';
     loading?: boolean;
@@ -20,14 +20,14 @@ export function MediaList({
     loadingCount = 6,
     renderLoadingItem,
     className,
-}: MediaListProps) {
+}: Props) {
     const isCard = variant === 'card';
     const direction = isCard ? 'row' : 'column';
 
     return (
         <Flex
             direction={direction}
-            gap="2"
+            gap="1"
             className={clsx(
                 isCard ? 'overflow-x-auto pr-2 pb-1' : 'min-w-0',
                 className
