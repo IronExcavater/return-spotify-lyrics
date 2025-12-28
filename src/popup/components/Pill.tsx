@@ -3,7 +3,9 @@ import {
     useMemo,
     useRef,
     useState,
-    type KeyboardEvent,
+    useLayoutEffect,
+    type MouseEvent as ReactMouseEvent,
+    type KeyboardEvent as ReactKeyboardEvent,
 } from 'react';
 import { Cross2Icon } from '@radix-ui/react-icons';
 import { Flex, IconButton, Text } from '@radix-ui/themes';
@@ -35,24 +37,6 @@ export function Pill({
     className,
 }: Props) {
     const [isEditing, setIsEditing] = useState(false);
-    const [draft, setDraft] = useState(
-        value.type === 'text' ? value.value : ''
-    );
-    const inputRef = useRef<HTMLInputElement>(null);
-
-    const isTextValue = value.type === 'text';
-    const editable = isTextValue && typeof onChange === 'function';
-
-    useEffect(() => {
-        if (value.type === 'text' && !isEditing) setDraft(value.value);
-    }, [value, isEditing]);
-
-    useEffect(() => {
-        if (!isEditing) return;
-        inputRef.current?.focus();
-        inputRef.current?.select();
-    }, [isEditing]);
-
     const displayValue = useMemo(() => {
         switch (value.type) {
             case 'text':
@@ -76,6 +60,34 @@ export function Pill({
         }
     }, [value]);
 
+    const [draft, setDraft] = useState(
+        value.type === 'text' ? value.value : ''
+    );
+    const inputRef = useRef<HTMLInputElement>(null);
+    const measureRef = useRef<HTMLSpanElement>(null);
+    const [inputPx, setInputPx] = useState<number | null>(null);
+    const isTextValue = value.type === 'text';
+    const editable = isTextValue && typeof onChange === 'function';
+
+    useEffect(() => {
+        if (value.type === 'text' && !isEditing) setDraft(value.value);
+    }, [value, isEditing]);
+
+    useEffect(() => {
+        if (!isEditing) return;
+        inputRef.current?.focus();
+        inputRef.current?.select();
+    }, [isEditing]);
+
+    useLayoutEffect(() => {
+        const node = measureRef.current;
+        if (!node) return;
+        const rect = node.getBoundingClientRect();
+        // Subtract a tiny amount to avoid extra pixel padding from measurement quirks.
+        const width = Math.max(8, Math.ceil(rect.width) - 1);
+        setInputPx(width);
+    }, [draft, placeholder, displayValue]);
+
     const commitDraft = () => {
         if (!editable) return;
         onChange?.({ ...value, value: draft });
@@ -87,7 +99,7 @@ export function Pill({
         setIsEditing(false);
     };
 
-    const handleContainerClick = (event: React.MouseEvent<HTMLDivElement>) => {
+    const handleContainerClick = (event: ReactMouseEvent<HTMLDivElement>) => {
         if (!editable) return;
         if (
             event.target instanceof HTMLElement &&
@@ -97,16 +109,18 @@ export function Pill({
         if (!isEditing) setIsEditing(true);
     };
 
-    const handleContainerKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    const handleContainerKeyDown = (
+        event: ReactKeyboardEvent<HTMLDivElement>
+    ) => {
         if (!editable) return;
         if (event.key !== 'Enter' && event.key !== ' ') return;
         event.preventDefault();
         if (!isEditing) setIsEditing(true);
     };
 
-    const baseLength =
-        draft.length || (isTextValue ? value.value.length : 0) || 0;
-    const inputSize = Math.max(baseLength, 1);
+    const handleBlur = () => {
+        commitDraft();
+    };
 
     return (
         <Flex
@@ -117,18 +131,15 @@ export function Pill({
             onClick={handleContainerClick}
             onKeyDown={handleContainerKeyDown}
             className={clsx(
-                'group text-gray-12 min-w-0 items-center rounded-full border border-[var(--gray-a6)] bg-[var(--gray-a2)] px-[6px] py-[2px] shadow-[0_1px_0_var(--gray-a3)] transition-colors focus-within:ring-2 focus-within:ring-[var(--accent-a5)] focus-within:ring-offset-0',
-                editable && 'cursor-text hover:border-[var(--gray-a7)]',
+                'group text-gray-12 max-w-60 min-w-0 items-center rounded-full bg-[var(--gray-a2)] p-0.5 ring-1 ring-[var(--gray-a6)] transition-colors',
+                'focus-within:ring-2 focus-within:ring-[var(--accent-8)] hover:ring-2 hover:ring-[var(--accent-8)] focus-visible:outline-none',
+                editable &&
+                    'cursor-text focus-within:border-[var(--accent-8)] hover:border-[var(--accent-8)]',
                 className
             )}
         >
             {label && (
-                <Text
-                    size="1"
-                    weight="medium"
-                    color="gray"
-                    className="shrink-0"
-                >
+                <Text size="1" weight="medium" color="gray" className="pl-1">
                     {label}
                 </Text>
             )}
@@ -138,7 +149,7 @@ export function Pill({
                     ref={inputRef}
                     value={draft}
                     onChange={(event) => setDraft(event.target.value)}
-                    onBlur={commitDraft}
+                    onBlur={handleBlur}
                     onKeyDown={(event) => {
                         if (event.key === 'Enter') {
                             event.preventDefault();
@@ -148,17 +159,14 @@ export function Pill({
                             cancelDraft();
                         }
                     }}
-                    className="placeholder:text-gray-10 w-auto min-w-0 border-none bg-transparent px-0 text-[12px] leading-[16px] font-normal text-[var(--gray-12)] outline-none"
                     placeholder={placeholder}
-                    aria-label={label ?? 'Edit filter'}
-                    size={inputSize}
-                    style={{ width: 'auto' }}
+                    style={inputPx ? { width: `${inputPx}px` } : undefined}
                     onClick={(event) => event.stopPropagation()}
+                    className="min-w-0 border-none bg-transparent text-xs font-normal outline-none"
                 />
             ) : (
                 <Text
                     size="1"
-                    weight="medium"
                     color={displayValue ? undefined : 'gray'}
                     className="min-w-0 truncate"
                 >
@@ -166,13 +174,20 @@ export function Pill({
                 </Text>
             )}
 
+            <span
+                ref={measureRef}
+                aria-hidden="true"
+                className="pointer-events-none absolute top-0 left-0 -z-10 text-xs leading-[16px] font-normal whitespace-pre opacity-0"
+            >
+                {draft || placeholder}
+            </span>
+
             {onRemove && (
                 <IconButton
                     size="1"
                     variant="ghost"
                     radius="full"
-                    aria-label="Remove filter"
-                    className="text-gray-11 hover:text-gray-12 h-3 w-3 shrink-0 p-0 [&>svg]:h-2.5 [&>svg]:w-2.5"
+                    className="h-3 w-3 p-0 [&>svg]:h-2.5 [&>svg]:w-2.5"
                     onMouseDown={(event) => {
                         event.preventDefault();
                         event.stopPropagation();

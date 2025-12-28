@@ -36,24 +36,27 @@ export function HomeBar({
         type: 'text',
         value: 'Chromatics',
     });
+    const [mockMood, setMockMood] = useState<PillValue | null>({
+        type: 'text',
+        value: 'Chillwave',
+    });
 
     return (
         <Flex direction="column" gap="2" p="2" flexGrow="1">
             <Flex align="start" gap="2">
-                <Flex align="start" gap="2" className="min-w-0 flex-1">
-                    <IconButton
-                        size="1"
-                        variant="ghost"
-                        radius="small"
-                        disabled={!canGoBack}
-                        aria-label="Go back"
-                        onClick={onGoBack}
-                        className="mt-[2px] h-6 !w-4 !p-0"
-                    >
-                        <ChevronLeftIcon />
-                    </IconButton>
-
-                    <Flex direction="column" gap="2" className="min-w-0 flex-1">
+                <Flex align="start" gap="2" direction="column">
+                    <Flex align="center" gap="2">
+                        <IconButton
+                            size="1"
+                            variant="ghost"
+                            radius="small"
+                            disabled={!canGoBack}
+                            aria-label="Go back"
+                            onClick={onGoBack}
+                            className="mt-[2px] h-6 !w-4 !p-0"
+                        >
+                            <ChevronLeftIcon />
+                        </IconButton>
                         <TextField.Root
                             value={searchQuery}
                             onChange={(event) =>
@@ -113,27 +116,27 @@ export function HomeBar({
                                 </IconButton>
                             </TextField.Slot>
                         </TextField.Root>
-
-                        {mockArtist && (
-                            <Flex
-                                align="center"
-                                gap="2"
-                                className="min-w-0 flex-wrap"
-                            >
-                                <Pill
-                                    label="Artist"
-                                    value={mockArtist}
-                                    placeholder="Add an artist"
-                                    onChange={setMockArtist}
-                                    onRemove={() => setMockArtist(null)}
-                                />
-                            </Flex>
-                        )}
+                    </Flex>
+                    <Flex align="center" gap="2" className="min-w-0 flex-wrap">
+                        <Pill
+                            label="Artist"
+                            value={mockArtist}
+                            placeholder="Add an artist"
+                            onChange={setMockArtist}
+                            onRemove={() => setMockArtist(null)}
+                        />
+                        <Pill
+                            label="Mood"
+                            value={mockMood}
+                            placeholder="Set mood"
+                            onChange={setMockMood}
+                            onRemove={() => setMockMood(null)}
+                        />
                     </Flex>
                 </Flex>
 
                 {(profileSlot || navSlot) && (
-                    <Flex align="center" gap="2" className="self-center">
+                    <Flex align="center" gap="2">
                         {profileSlot}
                         {navSlot}
                     </Flex>

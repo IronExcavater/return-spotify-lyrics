@@ -1,4 +1,4 @@
-/* How to give padding to the scrollbar? */
+/* TODO: How to give padding to the scrollbar? */
 *::-webkit-scrollbar {
     width: 10px;
     height: 10px;
