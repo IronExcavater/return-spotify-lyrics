@@ -55,7 +55,13 @@ export function HomeBar({
     });
 
     return (
-        <Flex direction="column" gap="2" p="2" flexGrow="1">
+        <Flex
+            direction="column"
+            gap="2"
+            p="2"
+            flexGrow="1"
+            className="w-full min-w-0"
+        >
             <Flex align="start" gap="2">
                 <Flex direction="column" gap="1" className="w-full">
                     <Flex align="center" gap="1" className="w-full">
@@ -177,7 +183,7 @@ export function HomeBar({
                         onRemove={() => setMockMediaType(null)}
                     />
                 )}
-                {mockDate && (
+                {!!mockDate && (
                     <Pill
                         label="Date"
                         value={mockDate}
@@ -186,7 +192,7 @@ export function HomeBar({
                         onRemove={() => setMockDate(null)}
                     />
                 )}
-                {mockRange && (
+                {!!mockRange && (
                     <Pill
                         label="Range"
                         value={mockRange}

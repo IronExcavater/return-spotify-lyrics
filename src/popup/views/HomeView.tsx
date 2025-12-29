@@ -17,9 +17,9 @@ export function HomeView({ searchQuery }: Props) {
             flexGrow="1"
             direction="column"
             gap="4"
-            className="min-h-0 overflow-y-auto"
+            className="min-h-0 min-w-0 overflow-y-auto"
         >
-            <Flex p="3" direction="column" gap="2">
+            <Flex p="3" direction="column" gap="2" className="min-w-0">
                 <Text size="3" weight="bold">
                     Media cards
                 </Text>
@@ -78,6 +78,7 @@ export function HomeView({ searchQuery }: Props) {
                         subtitle="Mitski"
                         icon={<PersonIcon />}
                         imageShape="round"
+                        loading
                     />
                     <MediaListItem
                         title="Midnight City"
@@ -89,6 +90,7 @@ export function HomeView({ searchQuery }: Props) {
                         title="Skeleton row while we wait"
                         subtitle="Shows loading shimmer"
                         icon={<DiscIcon />}
+                        loading
                     />
                 </MediaList>
             </Flex>

@@ -115,6 +115,31 @@ export default function App() {
         enabled: appState.showBars,
     });
 
+    // Force a lightweight layout change on app state updates so ResizeObservers rerun.
+    useEffect(() => {
+        const body = document.body;
+        const prevPadding = body.style.paddingRight;
+        body.style.paddingRight = '0.5px';
+
+        const raf = requestAnimationFrame(() => {
+            body.style.paddingRight = prevPadding;
+            window.dispatchEvent(new Event('resize'));
+        });
+
+        return () => {
+            cancelAnimationFrame(raf);
+            body.style.paddingRight = prevPadding;
+        };
+    }, [
+        appState.layout.width,
+        appState.layout.height,
+        appState.layout.widthOverride,
+        appState.layout.heightOverride,
+        appState.activeBar,
+        location.pathname,
+        appState.showBars,
+    ]);
+
     return (
         <Resizer
             width={{

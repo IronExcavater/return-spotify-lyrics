@@ -47,7 +47,7 @@ const formatDateRangeValue = (
 ) => {
     const from = formatDateWithFormatter(range.from, formatter);
     const to = formatDateWithFormatter(range.to, formatter);
-    if (from && to) return `${from} – ${to}`;
+    if (from && to) return `${from} to ${to}`;
     return from || to;
 };
 
@@ -578,8 +578,8 @@ export function Pill({
 
                         {isRangeMode ? (
                             <>
-                                <Text size="1" color="gray" className="px-1">
-                                    –
+                                <Text size="1" color="gray">
+                                    to
                                 </Text>
                                 <input
                                     type="text"
