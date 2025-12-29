@@ -10,6 +10,11 @@
     width: var(--base-button-height);
 }
 
+.rt-Button.rt-variant-ghost {
+    margin: 0;
+    padding: var(--button-ghost-padding-y) var(--button-ghost-padding-x);
+}
+
 .rt-AvatarRoot.rt-IconButton {
     height: var(--avatar-size);
     width: var(--avatar-size);

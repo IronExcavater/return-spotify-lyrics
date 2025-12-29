@@ -1,14 +1,31 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode } from 'react';
 import {
     Cross2Icon,
     ChevronLeftIcon,
     HomeIcon,
     MagnifyingGlassIcon,
+    PlusIcon,
 } from '@radix-ui/react-icons';
-import { Flex, IconButton, TextField, Text, Button } from '@radix-ui/themes';
+import {
+    Button,
+    DropdownMenu,
+    Flex,
+    IconButton,
+    Text,
+    TextField,
+} from '@radix-ui/themes';
 import clsx from 'clsx';
 
+import type { FilterKind, SearchFilter } from '../hooks/useSearch';
 import { Pill, type PillValue } from './Pill';
+
+const FILTER_LABELS: Record<FilterKind, string> = {
+    artist: 'Artist',
+    mood: 'Mood',
+    type: 'Type',
+    date: 'Date',
+    range: 'Date Range',
+};
 
 interface Props {
     profileSlot?: ReactNode;
@@ -19,6 +36,12 @@ interface Props {
     onSearchSubmit?: () => void;
     canGoBack?: boolean;
     onGoBack?: () => void;
+    filters: SearchFilter[];
+    availableFilters: FilterKind[];
+    onAddFilter: (kind: FilterKind) => void;
+    onUpdateFilter: (id: string, value: PillValue) => void;
+    onRemoveFilter: (id: string) => void;
+    onClearFilters: () => void;
 }
 
 export function HomeBar({
@@ -30,38 +53,17 @@ export function HomeBar({
     onSearchSubmit,
     canGoBack,
     onGoBack,
+    filters,
+    availableFilters,
+    onAddFilter,
+    onUpdateFilter,
+    onRemoveFilter,
+    onClearFilters,
 }: Props) {
     const hasQuery = searchQuery.trim().length > 0;
-    const [mockArtist, setMockArtist] = useState<PillValue | null>({
-        type: 'text',
-        value: 'Chromatics',
-    });
-    const [mockMood, setMockMood] = useState<PillValue | null>({
-        type: 'text',
-        value: 'Chillwave',
-    });
-    const [mockMediaType, setMockMediaType] = useState<PillValue | null>({
-        type: 'options',
-        options: ['Track', 'Album', 'Artist', 'Playlist'],
-        value: ['Track', 'Artist'],
-    });
-    const [mockDate, setMockDate] = useState<PillValue | null>({
-        type: 'date',
-        value: '2024-02-14',
-    });
-    const [mockRange, setMockRange] = useState<PillValue | null>({
-        type: 'date-range',
-        value: { from: '2024-01-01', to: '2024-12-31' },
-    });
 
     return (
-        <Flex
-            direction="column"
-            gap="2"
-            p="2"
-            flexGrow="1"
-            className="w-full min-w-0"
-        >
+        <Flex direction="column" p="2" flexGrow="1" className="w-full min-w-0">
             <Flex align="start" gap="2">
                 <Flex direction="column" gap="1" className="w-full">
                     <Flex align="center" gap="1" className="w-full">
@@ -135,14 +137,52 @@ export function HomeBar({
                             </TextField.Slot>
                         </TextField.Root>
                     </Flex>
-                    <Flex justify="between">
-                        {/* TODO: Integrate into search filters */}
+                    <Flex align="center" justify="between">
                         <Text size="2" weight="medium">
                             Search Filters
                         </Text>
-                        <Button size="0" variant="soft">
-                            Clear All
-                        </Button>
+                        <Flex gap="1">
+                            <DropdownMenu.Root>
+                                <DropdownMenu.Trigger>
+                                    <IconButton
+                                        size="1"
+                                        variant="soft"
+                                        radius="full"
+                                        disabled={availableFilters.length === 0}
+                                    >
+                                        <PlusIcon />
+                                    </IconButton>
+                                </DropdownMenu.Trigger>
+                                <DropdownMenu.Content size="1">
+                                    {availableFilters.length === 0 && (
+                                        <DropdownMenu.Item disabled>
+                                            All filters added
+                                        </DropdownMenu.Item>
+                                    )}
+                                    {availableFilters.map((kind) => (
+                                        <DropdownMenu.Item
+                                            key={kind}
+                                            onSelect={(event) => {
+                                                event.preventDefault();
+                                                onAddFilter(kind);
+                                            }}
+                                        >
+                                            {kind === 'range'
+                                                ? 'Date Range'
+                                                : FILTER_LABELS[kind]}
+                                        </DropdownMenu.Item>
+                                    ))}
+                                </DropdownMenu.Content>
+                            </DropdownMenu.Root>
+                            <Button
+                                size="1"
+                                variant="soft"
+                                onClick={onClearFilters}
+                                disabled={filters.length === 0}
+                            >
+                                Clear All
+                            </Button>
+                        </Flex>
                     </Flex>
                 </Flex>
 
@@ -153,54 +193,32 @@ export function HomeBar({
                     </Flex>
                 )}
             </Flex>
-            <Flex align="center" gap="2" className="min-w-0 flex-wrap">
-                {/* TODO: Create actual search filters and add a plus button with a dropdown of available options */}
-                {/* TODO: Why does the pills sometimes result in the app being expanded, I dont know why this is happening (related to todo in media list) */}
-                {!!mockArtist && (
+            <Flex
+                align="center"
+                gap="2"
+                pt={filters.length > 0 && '2'}
+                className="flex-wrap"
+            >
+                {filters.map((filter) => (
                     <Pill
-                        label="Artist"
-                        value={mockArtist}
-                        placeholder="Add an artist"
-                        onChange={setMockArtist}
-                        onRemove={() => setMockArtist(null)}
+                        key={filter.id}
+                        label={filter.label}
+                        value={filter.value}
+                        placeholder={
+                            filter.kind === 'artist'
+                                ? 'Add an artist'
+                                : filter.kind === 'mood'
+                                  ? 'Set mood'
+                                  : filter.kind === 'type'
+                                    ? 'Select categories'
+                                    : 'Select date'
+                        }
+                        onChange={(value) =>
+                            onUpdateFilter(filter.id, value as PillValue)
+                        }
+                        onRemove={() => onRemoveFilter(filter.id)}
                     />
-                )}
-                {!!mockMood && (
-                    <Pill
-                        label="Mood"
-                        value={mockMood}
-                        placeholder="Set mood"
-                        onChange={setMockMood}
-                        onRemove={() => setMockMood(null)}
-                    />
-                )}
-                {!!mockMediaType && (
-                    <Pill
-                        label="Type"
-                        value={mockMediaType}
-                        placeholder="Select categories"
-                        onChange={setMockMediaType}
-                        onRemove={() => setMockMediaType(null)}
-                    />
-                )}
-                {!!mockDate && (
-                    <Pill
-                        label="Date"
-                        value={mockDate}
-                        placeholder="Select date"
-                        onChange={setMockDate}
-                        onRemove={() => setMockDate(null)}
-                    />
-                )}
-                {!!mockRange && (
-                    <Pill
-                        label="Range"
-                        value={mockRange}
-                        placeholder="Select range"
-                        onChange={setMockRange}
-                        onRemove={() => setMockRange(null)}
-                    />
-                )}
+                ))}
             </Flex>
         </Flex>
     );

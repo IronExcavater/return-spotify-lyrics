@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { PersonIcon } from '@radix-ui/react-icons';
 import { Flex } from '@radix-ui/themes';
 import {
@@ -21,6 +21,7 @@ import { useHistory } from './hooks/useHistory';
 import { usePlayer } from './hooks/usePlayer.ts';
 import { usePortalSlot } from './hooks/usePortalSlot';
 import { Resizer } from './hooks/useResize.tsx';
+import { useSearch } from './hooks/useSearch';
 import { HomeView } from './views/HomeView';
 import { LoginView } from './views/LoginView';
 import { LyricsView } from './views/LyricsView';
@@ -43,7 +44,7 @@ export default function App() {
     const routeHistory = useHistory();
     const { playback } = usePlayer();
 
-    const [searchQuery, setSearchQuery] = useState('');
+    const search = useSearch();
 
     const profileImage = profile?.images?.[0]?.url;
 
@@ -174,14 +175,22 @@ export default function App() {
                             <HomeBar
                                 profileSlot={profileFloating.anchors.home}
                                 navSlot={navFloating.anchors.home}
-                                searchQuery={searchQuery}
-                                onSearchChange={setSearchQuery}
-                                onClearSearch={() => setSearchQuery('')}
+                                searchQuery={search.query}
+                                onSearchChange={search.setQuery}
+                                onClearSearch={() => search.setQuery('')}
                                 onSearchSubmit={() =>
-                                    routeHistory.goTo('/home', { searchQuery })
+                                    routeHistory.goTo('/home', {
+                                        searchQuery: search.query,
+                                    })
                                 }
                                 canGoBack={routeHistory.canGoBack}
                                 onGoBack={routeHistory.goBack}
+                                filters={search.filters}
+                                availableFilters={search.available}
+                                onAddFilter={search.addFilter}
+                                onUpdateFilter={search.updateFilter}
+                                onRemoveFilter={search.removeFilter}
+                                onClearFilters={search.clearFilters}
                             />
                         )}
                     </Flex>
@@ -208,7 +217,10 @@ export default function App() {
                                 when={mustLogin}
                                 redirectTo="/login"
                             >
-                                <HomeView searchQuery={searchQuery} />
+                                <HomeView
+                                    searchQuery={search.query}
+                                    filters={search.filters}
+                                />
                             </ProtectedLayout>
                         }
                     />
