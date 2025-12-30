@@ -39,6 +39,15 @@ interface Props {
     onReorder?: (items: MediaShelfItem[]) => void;
 }
 
+const hashId = (value: string) => {
+    let h = 0;
+    for (let i = 0; i < value.length; i += 1) {
+        h = (h << 5) - h + value.charCodeAt(i);
+        h |= 0;
+    }
+    return h >>> 0;
+};
+
 function getScrollParent(node: HTMLElement | null): HTMLElement | Window {
     let current: HTMLElement | null = node;
 
@@ -166,7 +175,7 @@ export function MediaShelf({
     );
 
     const renderItem = useCallback(
-        (item: MediaShelfItem) => {
+        (item: MediaShelfItem, seed: number) => {
             const contextMenu = (
                 <DropdownMenu.Content align="end" size="1">
                     <DropdownMenu.Item>Play next</DropdownMenu.Item>
@@ -185,6 +194,7 @@ export function MediaShelf({
                         icon={item.icon ?? <MdMusicNote />}
                         width="100%"
                         contextMenu={contextMenu}
+                        seed={seed}
                         loading={item.loading}
                     />
                 );
@@ -196,6 +206,7 @@ export function MediaShelf({
                     icon={item.icon ?? <MdMusicNote />}
                     imageUrl={item.imageUrl}
                     contextMenu={contextMenu}
+                    seed={seed}
                     loading={item.loading}
                 />
             );
@@ -247,6 +258,10 @@ export function MediaShelf({
                                   style={{ flex: '0 0 auto' }}
                               >
                                   {col.map((item, idx) => {
+                                      const seed =
+                                          hashId(item.id ?? '') ^
+                                          ((colIndex * itemsPerColumn + idx) <<
+                                              1);
                                       const flatIndex =
                                           colIndex * itemsPerColumn + idx;
                                       return (
@@ -264,7 +279,7 @@ export function MediaShelf({
                                                       {...dragProvided.draggableProps}
                                                       {...dragProvided.dragHandleProps}
                                                   >
-                                                      {renderItem(item)}
+                                                      {renderItem(item, seed)}
                                                   </div>
                                               )}
                                           </Draggable>
@@ -272,24 +287,27 @@ export function MediaShelf({
                                   })}
                               </Flex>
                           ))
-                        : visibleItems.map((item, index) => (
-                              <Draggable
-                                  key={item.id}
-                                  draggableId={item.id}
-                                  index={index}
-                                  isDragDisabled={!draggable}
-                              >
-                                  {(dragProvided) => (
-                                      <div
-                                          ref={dragProvided.innerRef}
-                                          {...dragProvided.draggableProps}
-                                          {...dragProvided.dragHandleProps}
-                                      >
-                                          {renderItem(item)}
-                                      </div>
-                                  )}
-                              </Draggable>
-                          ))}
+                        : visibleItems.map((item, index) => {
+                              const seed = hashId(item.id ?? '') ^ (index << 1);
+                              return (
+                                  <Draggable
+                                      key={item.id}
+                                      draggableId={item.id}
+                                      index={index}
+                                      isDragDisabled={!draggable}
+                                  >
+                                      {(dragProvided) => (
+                                          <div
+                                              ref={dragProvided.innerRef}
+                                              {...dragProvided.draggableProps}
+                                              {...dragProvided.dragHandleProps}
+                                          >
+                                              {renderItem(item, seed)}
+                                          </div>
+                                      )}
+                                  </Draggable>
+                              );
+                          })}
                     {dropProvided.placeholder}
                     {loadingMore && (
                         <div

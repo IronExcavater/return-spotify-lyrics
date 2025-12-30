@@ -23,6 +23,7 @@ interface Props {
     contextMenu?: ReactNode;
     className?: string;
     width?: number | string;
+    seed?: number;
 }
 
 export function MediaCard({
@@ -35,21 +36,30 @@ export function MediaCard({
     loading = false,
     contextMenu,
     className,
+    seed = 0,
 }: Props) {
     const radius = imageShape === 'round' ? 'full' : 'small';
     const hash = (value: string | undefined, salt: number) => {
         if (!value) return salt * 7;
-        let h = salt;
+        let h = salt | 0;
         for (let i = 0; i < value.length; i += 1) {
-            h = (h << 5) - h + value.charCodeAt(i);
-            h |= 0;
+            h ^= value.charCodeAt(i) + 0x9e3779b9 + (h << 6) + (h >> 2);
         }
-        return Math.abs(h);
+        h ^= h << 13;
+        h ^= h >> 17;
+        h ^= h << 5;
+        return h >>> 0;
     };
-    const titleSeed = hash(title, 13) + hash(subtitle, 17);
-    const subtitleSeed = hash(subtitle, 23) + hash(title, 29);
-    const titleWidth = 65 + (titleSeed % 30); // 65–94%
-    const subtitleWidth = 40 + (subtitleSeed % 35); // 40–74%
+    const noise = (seed: number) => {
+        let t = seed + 0x6d2b79f5;
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+    const baseSeed =
+        hash(title, 13) ^ hash(subtitle, 17) ^ hash(imageUrl, 23) ^ seed;
+    const titleWidth = Math.round(68 + noise(baseSeed + 11) * 28); // 68–96%
+    const subtitleWidth = Math.round(28 + noise(baseSeed + 29) * 32); // 28–60%
     const titleSkeletonStyle = loading ? { width: `${titleWidth}%` } : {};
     const subtitleSkeletonStyle = loading ? { width: `${subtitleWidth}%` } : {};
 
