@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
     DragDropContext,
     Droppable,
@@ -9,20 +9,19 @@ import { PlusIcon } from '@radix-ui/react-icons';
 import {
     Flex,
     Text,
-    IconButton,
     Switch,
-    DropdownMenu,
     Button,
+    IconButton,
     AlertDialog,
 } from '@radix-ui/themes';
+import clsx from 'clsx';
 
 import {
     MediaSection,
     type MediaSectionState,
-    type MediaSectionVariant,
-    type MediaSectionOrientation,
 } from '../components/MediaSection';
 import type { MediaShelfItem } from '../components/MediaShelf';
+import { usePersonalisation } from '../hooks/usePersonalisation';
 import type { SearchFilter } from '../hooks/useSearch';
 
 interface Props {
@@ -92,13 +91,16 @@ const INITIAL_SECTIONS: MediaSectionState[] = [
     },
 ];
 
-export function HomeView({
-    searchQuery: _searchQuery,
-    filters: _filters,
-}: Props) {
+export function HomeView({ searchQuery, filters }: Props) {
     const [sections, setSections] =
         useState<MediaSectionState[]>(INITIAL_SECTIONS);
     const [editing, setEditing] = useState(false);
+    const [lastAddedId, setLastAddedId] = useState<string | null>(null);
+
+    const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+    const sectionRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+
+    const { heading } = usePersonalisation({ searchQuery, filters });
 
     const resetSections = useCallback(() => {
         setSections(INITIAL_SECTIONS);
@@ -127,24 +129,26 @@ export function HomeView({
         setSections((prev) => prev.filter((section) => section.id !== id));
     }, []);
 
-    const addSection = useCallback((variant: MediaSectionVariant) => {
-        const id = `sec-${Date.now()}`;
-        const orientation: MediaSectionOrientation =
-            variant === 'tile' ? 'horizontal' : 'vertical';
+    const addSection = useCallback(() => {
+        const id =
+            typeof crypto !== 'undefined' && crypto.randomUUID
+                ? `sec-${crypto.randomUUID()}`
+                : `sec-${Date.now()}`;
         const nextSection: MediaSectionState = {
             id,
-            title: variant === 'tile' ? 'New albums' : 'New list',
+            title: 'New list',
             subtitle: 'Custom section',
-            variant,
-            orientation,
-            itemsPerColumn: orientation === 'horizontal' ? 2 : 6,
-            maxVisible: orientation === 'horizontal' ? 3 : 8,
-            fixedHeight: orientation === 'vertical' ? 320 : 240,
-            items: makeItems(id, 1, 10, 'Item', 'Artist'),
+            variant: 'list',
+            orientation: 'vertical',
+            rows: 10,
+            maxVisible: 10,
+            clampUnit: 'items',
+            items: makeItems(id, 1, 12, 'Item', 'Artist'),
             hasMore: true,
             loadingMore: false,
         };
         setSections((prev) => [...prev, nextSection]);
+        setLastAddedId(id);
     }, []);
 
     const loadMore = useCallback((id: string) => {
@@ -197,54 +201,69 @@ export function HomeView({
         [sections]
     );
 
+    useEffect(() => {
+        if (!lastAddedId) return;
+
+        const raf = requestAnimationFrame(() => {
+            const node = sectionRefs.current.get(lastAddedId);
+            if (node) {
+                node.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                setLastAddedId(null);
+            }
+        });
+
+        return () => cancelAnimationFrame(raf);
+    }, [lastAddedId]);
+
     return (
         <Flex
             flexGrow="1"
             direction="column"
-            gap="3"
             className="no-overflow-anchor min-h-0 min-w-0 overflow-y-auto"
+            ref={scrollContainerRef}
         >
-            <Flex p="3" direction="column" gap="3" className="min-w-0">
-                <Flex align="center" justify="between" gap="3">
+            <Flex px="3" py="2" direction="column" gap="1" className="min-w-0">
+                <Flex
+                    align="center"
+                    justify="between"
+                    gap="3"
+                    className={clsx(
+                        'relative min-w-0 py-1',
+                        editing &&
+                            'sticky top-0 z-20 mt-[10px] mb-[10px] bg-[var(--color-background)]'
+                    )}
+                >
                     {!editing && (
-                        <Flex align="center" gap="2">
-                            <Text size="3" weight="bold">
-                                Welcome back{' '}
-                                {/* TODO: Make the title and subtitle something personalised that changes based on various situations, e.g. how long you've used this, num of sessions, time of day, etc. */}
+                        <Flex direction="column" align="start" gap="1">
+                            <Text
+                                size="3"
+                                weight="bold"
+                                className="leading-none"
+                            >
+                                {heading.title}
                             </Text>
-                            <Text size="1" color="gray">
-                                Short message{' '}
-                                {/* TODO: Write a short message */}
+                            <Text
+                                size="1"
+                                color="gray"
+                                className="leading-tight"
+                            >
+                                {heading.subtitle}
                             </Text>
                         </Flex>
                     )}
+
                     {editing && (
-                        <Flex align="center" gap="2">
-                            <DropdownMenu.Root>
-                                <DropdownMenu.Trigger>
-                                    <IconButton
-                                        size="1"
-                                        variant="soft"
-                                        color="green"
-                                        radius="full"
-                                        aria-label="Add section"
-                                    >
-                                        <PlusIcon />
-                                    </IconButton>
-                                </DropdownMenu.Trigger>
-                                <DropdownMenu.Content align="end" size="1">
-                                    <DropdownMenu.Item
-                                        onSelect={() => addSection('list')}
-                                    >
-                                        Add list section
-                                    </DropdownMenu.Item>
-                                    <DropdownMenu.Item
-                                        onSelect={() => addSection('tile')}
-                                    >
-                                        Add tiles section
-                                    </DropdownMenu.Item>
-                                </DropdownMenu.Content>
-                            </DropdownMenu.Root>
+                        <Flex align="center" gap="2" className="relative">
+                            <IconButton
+                                size="1"
+                                variant="soft"
+                                color="green"
+                                radius="full"
+                                onClick={addSection}
+                                aria-label="Add section"
+                            >
+                                <PlusIcon />
+                            </IconButton>
 
                             <AlertDialog.Root>
                                 <AlertDialog.Trigger>
@@ -295,6 +314,10 @@ export function HomeView({
                             aria-label="Toggle customise mode"
                         />
                     </Flex>
+
+                    {editing && (
+                        <div className="pointer-events-none absolute top-full right-0 left-0 z-0 h-4 bg-gradient-to-b from-[var(--color-background)] to-transparent" />
+                    )}
                 </Flex>
 
                 <DragDropContext onDragEnd={onSectionDragEnd}>
@@ -306,7 +329,6 @@ export function HomeView({
                         {(dropProvided) => (
                             <Flex
                                 direction="column"
-                                gap="0"
                                 className="min-w-0"
                                 ref={dropProvided.innerRef}
                                 {...dropProvided.droppableProps}
@@ -320,14 +342,23 @@ export function HomeView({
                                     >
                                         {(dragProvided, dragSnapshot) => (
                                             <div
-                                                ref={dragProvided.innerRef}
+                                                ref={(node) => {
+                                                    dragProvided.innerRef(node);
+                                                    if (node)
+                                                        sectionRefs.current.set(
+                                                            section.id,
+                                                            node
+                                                        );
+                                                    else
+                                                        sectionRefs.current.delete(
+                                                            section.id
+                                                        );
+                                                }}
                                                 {...dragProvided.draggableProps}
                                                 {...dragProvided.dragHandleProps}
                                                 style={{
                                                     ...dragProvided
                                                         .draggableProps.style,
-                                                    marginBottom:
-                                                        'var(--space-5)',
                                                 }}
                                             >
                                                 <MediaSection
@@ -340,7 +371,6 @@ export function HomeView({
                                                     onDelete={removeSection}
                                                     onReorderItems={updateItems}
                                                     onLoadMore={loadMore}
-                                                    className="pb-2"
                                                 />
                                             </div>
                                         )}

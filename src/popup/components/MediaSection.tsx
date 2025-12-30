@@ -210,7 +210,7 @@ export function MediaSection({
     return (
         <div
             className={clsx(
-                'rounded-2 relative m-1 min-w-0 bg-[var(--color-background)] p-1 ring-2 ring-transparent ring-offset-2 ring-offset-[var(--color-background)] transition-all',
+                'rounded-2 relative m-1 min-w-0 bg-[var(--color-background)] ring-2 ring-transparent ring-offset-3 ring-offset-[var(--color-background)] transition-all',
                 editing && 'hover:!ring-[var(--accent-8)]',
                 editing && dragging && '!ring-[var(--accent-10)]',
                 className
