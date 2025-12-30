@@ -193,7 +193,7 @@ export function useAppState({ fallbackWidth, fallbackHeight }: Props) {
         }
 
         lastEnforcedNav.current = { bar: activeBar, route: path };
-    }, [hydrated, activeBar, location.pathname, navigate]);
+    }, [hydrated, activeBar, location.pathname, navigate, playback]);
 
     // App size getters
     const widthOverride = routeRule?.widthOverride;

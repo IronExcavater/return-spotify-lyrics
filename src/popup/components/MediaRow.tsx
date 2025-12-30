@@ -37,6 +37,21 @@ export function MediaRow({
     className,
 }: MediaRowProps) {
     const radius = imageShape === 'round' ? 'full' : 'small';
+    const hash = (value: string | undefined, salt: number) => {
+        if (!value) return salt * 5;
+        let h = salt;
+        for (let i = 0; i < value.length; i += 1) {
+            h = (h << 5) - h + value.charCodeAt(i);
+            h |= 0;
+        }
+        return Math.abs(h);
+    };
+    const titleSeed = hash(title, 11) + hash(subtitle, 7);
+    const subtitleSeed = hash(subtitle, 19) + hash(title, 3);
+    const titleWidth = 65 + (titleSeed % 28); // 65–92%
+    const subtitleWidth = 40 + (subtitleSeed % 32); // 40–71%
+    const titleSkeletonStyle = loading ? { width: `${titleWidth}%` } : {};
+    const subtitleSkeletonStyle = loading ? { width: `${subtitleWidth}%` } : {};
 
     return (
         <Flex
@@ -58,29 +73,45 @@ export function MediaRow({
             </Skeleton>
             <Flex direction="column" gap="0" flexGrow="1" className="min-w-0">
                 <Fade enabled={!loading}>
-                    <Skeleton
-                        loading={loading}
-                        className={clsx(loading && 'w-[85%]')}
+                    <div
+                        className="transition-all duration-300 ease-out"
+                        style={titleSkeletonStyle}
                     >
-                        <Marquee mode="bounce" className="w-full min-w-0">
-                            <Text size="2" weight="medium">
-                                {title}
-                            </Text>
-                        </Marquee>
-                    </Skeleton>
-                </Fade>
-                {subtitle && (
-                    <Fade enabled={!loading}>
-                        <Skeleton
-                            loading={loading}
-                            className={clsx(loading && 'w-[55%]')}
-                        >
-                            <Marquee mode="left" className="w-full min-w-0">
-                                <Text size="1" color="gray">
-                                    {subtitle}
+                        <Skeleton loading={loading} className="w-full">
+                            <Marquee
+                                mode="bounce"
+                                className={clsx(
+                                    'min-w-0',
+                                    !loading && 'w-full'
+                                )}
+                            >
+                                <Text size="2" weight="medium">
+                                    {title}
                                 </Text>
                             </Marquee>
                         </Skeleton>
+                    </div>
+                </Fade>
+                {subtitle && (
+                    <Fade enabled={!loading}>
+                        <div
+                            className="transition-all duration-300 ease-out"
+                            style={subtitleSkeletonStyle}
+                        >
+                            <Skeleton loading={loading} className="w-full">
+                                <Marquee
+                                    mode="left"
+                                    className={clsx(
+                                        'min-w-0',
+                                        !loading && 'w-full'
+                                    )}
+                                >
+                                    <Text size="1" color="gray">
+                                        {subtitle}
+                                    </Text>
+                                </Marquee>
+                            </Skeleton>
+                        </div>
                     </Fade>
                 )}
             </Flex>

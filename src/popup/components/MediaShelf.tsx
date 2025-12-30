@@ -18,6 +18,7 @@ export interface MediaShelfItem {
     subtitle?: string;
     icon?: ReactNode;
     imageUrl?: string;
+    loading?: boolean;
 }
 
 interface Props {
@@ -33,6 +34,7 @@ interface Props {
     hasMore?: boolean;
     loadingMore?: boolean;
     onLoadMore?: () => void;
+    itemLoading?: boolean;
     className?: string;
     onReorder?: (items: MediaShelfItem[]) => void;
 }
@@ -73,10 +75,17 @@ export function MediaShelf({
     hasMore = false,
     loadingMore = false,
     onLoadMore,
+    itemLoading = false,
     className,
     onReorder,
 }: Props) {
-    const flattened = useMemo(() => items, [items]);
+    const flattened = useMemo(
+        () =>
+            items.map((item) =>
+                itemLoading ? { ...item, loading: true } : item
+            ),
+        [items, itemLoading]
+    );
 
     const visibleItems = useMemo(() => {
         if (maxVisible == null) return flattened;
@@ -176,6 +185,7 @@ export function MediaShelf({
                         icon={item.icon ?? <MdMusicNote />}
                         width="100%"
                         contextMenu={contextMenu}
+                        loading={item.loading}
                     />
                 );
 
@@ -186,6 +196,7 @@ export function MediaShelf({
                     icon={item.icon ?? <MdMusicNote />}
                     imageUrl={item.imageUrl}
                     contextMenu={contextMenu}
+                    loading={item.loading}
                 />
             );
         },
@@ -285,13 +296,13 @@ export function MediaShelf({
                             className={clsx(
                                 'pointer-events-none absolute drop-shadow-sm',
                                 orientation === 'horizontal'
-                                    ? 'right-3 bottom-2'
-                                    : 'right-3 bottom-2'
+                                    ? 'right-2 bottom-2'
+                                    : 'right-2 bottom-2'
                             )}
                         >
-                            <div className="flex items-center gap-2 rounded-full bg-[color-mix(in_lab,var(--gray-12)_14%,transparent)] px-3 py-1 text-[11px] text-[var(--gray-1)] backdrop-blur">
+                            <div className="flex items-center gap-2 rounded-full bg-[var(--color-panel-solid)] px-2 py-[6px] text-[11px] text-[var(--gray-12)] shadow">
                                 <span className="h-2 w-2 animate-pulse rounded-full bg-[var(--accent-9)]" />
-                                Loading…
+                                Loading more
                             </div>
                         </div>
                     )}

@@ -151,6 +151,27 @@ export function HomeView({ searchQuery, filters }: Props) {
         setLastAddedId(id);
     }, []);
 
+    const buildPreviewItems = useCallback((section: MediaSectionState) => {
+        const rows =
+            Number(section.rows) ||
+            Number(section.itemsPerColumn) ||
+            (section.orientation === 'horizontal' ? 3 : 6);
+        const cols =
+            Number(section.columns) ||
+            Number(section.maxVisible) ||
+            (section.orientation === 'horizontal' ? 4 : 1);
+        const effectiveRows = rows === 0 ? 8 : Math.max(1, Math.min(rows, 12));
+        const effectiveCols = cols === 0 ? 6 : Math.max(1, Math.min(cols, 12));
+        const count = Math.min(72, Math.max(12, effectiveRows * effectiveCols));
+        return makeItems(
+            `${section.id}-preview`,
+            1,
+            count,
+            'Preview item',
+            'Loading…'
+        );
+    }, []);
+
     const loadMore = useCallback((id: string) => {
         setSections((prev) => {
             const target = prev.find((section) => section.id === id);
@@ -224,99 +245,100 @@ export function HomeView({ searchQuery, filters }: Props) {
         >
             <Flex px="3" py="2" direction="column" gap="1" className="min-w-0">
                 <Flex
-                    align="center"
                     justify="between"
-                    gap="3"
+                    direction="column"
                     className={clsx(
                         'relative min-w-0 py-1',
                         editing &&
-                            'sticky top-0 z-20 mt-[10px] mb-[10px] bg-[var(--color-background)]'
+                            'sticky top-0 z-20 mb-4 bg-[var(--color-background)]'
                     )}
                 >
-                    {!editing && (
-                        <Flex direction="column" align="start" gap="1">
-                            <Text
-                                size="3"
-                                weight="bold"
-                                className="leading-none"
-                            >
+                    <Flex>
+                        {!editing && (
+                            <Text size="3" weight="bold">
                                 {heading.title}
                             </Text>
-                            <Text
-                                size="1"
-                                color="gray"
-                                className="leading-tight"
-                            >
-                                {heading.subtitle}
+                        )}
+
+                        {editing && (
+                            <Flex align="center" gap="2" className="relative">
+                                <IconButton
+                                    size="1"
+                                    variant="soft"
+                                    color="green"
+                                    radius="full"
+                                    onClick={addSection}
+                                    aria-label="Add section"
+                                >
+                                    <PlusIcon />
+                                </IconButton>
+
+                                <AlertDialog.Root>
+                                    <AlertDialog.Trigger>
+                                        <Button
+                                            size="1"
+                                            variant="soft"
+                                            color="red"
+                                        >
+                                            Restore
+                                        </Button>
+                                    </AlertDialog.Trigger>
+                                    <AlertDialog.Content
+                                        maxWidth="300px"
+                                        size="1"
+                                    >
+                                        <AlertDialog.Title size="3">
+                                            Revert home layout?
+                                        </AlertDialog.Title>
+                                        <AlertDialog.Description size="2">
+                                            This restores the default shelves
+                                            and order. Your current arrangement
+                                            will be lost.
+                                        </AlertDialog.Description>
+                                        <Flex mt="3" justify="end" gap="2">
+                                            <AlertDialog.Cancel>
+                                                <Button variant="soft" size="1">
+                                                    Cancel
+                                                </Button>
+                                            </AlertDialog.Cancel>
+                                            <AlertDialog.Action>
+                                                <Button
+                                                    variant="soft"
+                                                    color="red"
+                                                    size="1"
+                                                    onClick={resetSections}
+                                                    autoFocus
+                                                >
+                                                    Revert
+                                                </Button>
+                                            </AlertDialog.Action>
+                                        </Flex>
+                                    </AlertDialog.Content>
+                                </AlertDialog.Root>
+                            </Flex>
+                        )}
+
+                        <Flex align="center" gap="1" ml="auto">
+                            <Text size="1" color="gray">
+                                Edit
                             </Text>
-                        </Flex>
-                    )}
-
-                    {editing && (
-                        <Flex align="center" gap="2" className="relative">
-                            <IconButton
+                            <Switch
                                 size="1"
-                                variant="soft"
-                                color="green"
-                                radius="full"
-                                onClick={addSection}
-                                aria-label="Add section"
-                            >
-                                <PlusIcon />
-                            </IconButton>
-
-                            <AlertDialog.Root>
-                                <AlertDialog.Trigger>
-                                    <Button size="1" variant="soft" color="red">
-                                        Restore
-                                    </Button>
-                                </AlertDialog.Trigger>
-                                <AlertDialog.Content maxWidth="300px" size="1">
-                                    <AlertDialog.Title size="3">
-                                        Revert home layout?
-                                    </AlertDialog.Title>
-                                    <AlertDialog.Description size="2">
-                                        This restores the default shelves and
-                                        order. Your current arrangement will be
-                                        lost.
-                                    </AlertDialog.Description>
-                                    <Flex mt="3" justify="end" gap="2">
-                                        <AlertDialog.Cancel>
-                                            <Button variant="soft" size="1">
-                                                Cancel
-                                            </Button>
-                                        </AlertDialog.Cancel>
-                                        <AlertDialog.Action>
-                                            <Button
-                                                variant="soft"
-                                                color="red"
-                                                size="1"
-                                                onClick={resetSections}
-                                                autoFocus
-                                            >
-                                                Revert
-                                            </Button>
-                                        </AlertDialog.Action>
-                                    </Flex>
-                                </AlertDialog.Content>
-                            </AlertDialog.Root>
+                                checked={editing}
+                                onCheckedChange={setEditing}
+                                aria-label="Toggle customise mode"
+                            />
                         </Flex>
-                    )}
 
-                    <Flex align="center" gap="1">
-                        <Text size="1" color="gray">
-                            Customise
-                        </Text>
-                        <Switch
-                            size="1"
-                            checked={editing}
-                            onCheckedChange={setEditing}
-                            aria-label="Toggle customise mode"
-                        />
+                        {editing && (
+                            <div className="pointer-events-none absolute top-full right-0 left-0 z-0 h-4 bg-gradient-to-b from-[var(--color-background)] to-transparent" />
+                        )}
                     </Flex>
 
-                    {editing && (
-                        <div className="pointer-events-none absolute top-full right-0 left-0 z-0 h-4 bg-gradient-to-b from-[var(--color-background)] to-transparent" />
+                    {!editing && (
+                        <Text size="1" color="gray">
+                            {heading.subtitle}
+                        </Text>
                     )}
                 </Flex>
 
@@ -333,49 +355,70 @@ export function HomeView({ searchQuery, filters }: Props) {
                                 ref={dropProvided.innerRef}
                                 {...dropProvided.droppableProps}
                             >
-                                {sections.map((section, index) => (
-                                    <Draggable
-                                        key={section.id}
-                                        draggableId={section.id}
-                                        index={index}
-                                        isDragDisabled={!editing}
-                                    >
-                                        {(dragProvided, dragSnapshot) => (
-                                            <div
-                                                ref={(node) => {
-                                                    dragProvided.innerRef(node);
-                                                    if (node)
-                                                        sectionRefs.current.set(
-                                                            section.id,
+                                {sections.map((section, index) => {
+                                    const renderSection = editing
+                                        ? {
+                                              ...section,
+                                              items: buildPreviewItems(section),
+                                              hasMore: false,
+                                              loadingMore: false,
+                                          }
+                                        : section;
+
+                                    return (
+                                        <Draggable
+                                            key={section.id}
+                                            draggableId={section.id}
+                                            index={index}
+                                            isDragDisabled={!editing}
+                                        >
+                                            {(dragProvided, dragSnapshot) => (
+                                                <div
+                                                    ref={(node) => {
+                                                        dragProvided.innerRef(
                                                             node
                                                         );
-                                                    else
-                                                        sectionRefs.current.delete(
-                                                            section.id
-                                                        );
-                                                }}
-                                                {...dragProvided.draggableProps}
-                                                {...dragProvided.dragHandleProps}
-                                                style={{
-                                                    ...dragProvided
-                                                        .draggableProps.style,
-                                                }}
-                                            >
-                                                <MediaSection
-                                                    section={section}
-                                                    editing={editing}
-                                                    dragging={
-                                                        dragSnapshot.isDragging
-                                                    }
-                                                    onChange={updateSection}
-                                                    onDelete={removeSection}
-                                                    onReorderItems={updateItems}
-                                                    onLoadMore={loadMore}
-                                                />
-                                            </div>
-                                        )}
-                                    </Draggable>
-                                ))}
+                                                        if (node)
+                                                            sectionRefs.current.set(
+                                                                section.id,
+                                                                node
+                                                            );
+                                                        else
+                                                            sectionRefs.current.delete(
+                                                                section.id
+                                                            );
+                                                    }}
+                                                    {...dragProvided.draggableProps}
+                                                    {...dragProvided.dragHandleProps}
+                                                    style={{
+                                                        ...dragProvided
+                                                            .draggableProps
+                                                            .style,
+                                                    }}
+                                                >
+                                                    <MediaSection
+                                                        section={renderSection}
+                                                        editing={editing}
+                                                        preview={editing}
+                                                        dragging={
+                                                            dragSnapshot.isDragging
+                                                        }
+                                                        onChange={updateSection}
+                                                        onDelete={removeSection}
+                                                        onReorderItems={
+                                                            updateItems
+                                                        }
+                                                        onLoadMore={
+                                                            editing
+                                                                ? undefined
+                                                                : loadMore
+                                                        }
+                                                    />
+                                                </div>
+                                            )}
+                                        </Draggable>
+                                    );
+                                })}
                                 {dropProvided.placeholder}
                             </Flex>
                         )}

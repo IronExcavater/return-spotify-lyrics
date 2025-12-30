@@ -30,9 +30,25 @@ export type MediaSectionState = {
     loadingMore?: boolean;
 };
 
+const MAX_ROWS = 12;
+const MAX_COLS = 12;
+
+const clampRows = (val: number) => {
+    if (Number.isNaN(val)) return Number.NaN;
+    if (val <= 0) return 0;
+    return Math.min(MAX_ROWS, val);
+};
+
+const clampCols = (val: number) => {
+    if (Number.isNaN(val)) return Number.NaN;
+    if (val <= 0) return 0;
+    return Math.min(MAX_COLS, val);
+};
+
 interface Props {
     section: MediaSectionState;
     editing: boolean;
+    preview?: boolean;
     onChange: (id: string, patch: Partial<MediaSectionState>) => void;
     onRemove?: (id: string) => void;
     onDelete?: (id: string) => void;
@@ -45,6 +61,7 @@ interface Props {
 export function MediaSection({
     section,
     editing,
+    preview = false,
     onChange,
     onRemove,
     onDelete,
@@ -98,12 +115,16 @@ export function MediaSection({
         ? Number(section.itemsPerColumn)
         : undefined;
 
-    const layoutCols = Number.isFinite(Number(rawCols))
-        ? Number(rawCols)
-        : (colsFromLegacy ?? defaultColsByMode);
-    const layoutRows = Number.isFinite(Number(rawRows))
-        ? Number(rawRows)
-        : (rowsFromLegacy ?? defaultRowsByMode);
+    const layoutCols = clampCols(
+        Number.isFinite(Number(rawCols))
+            ? Number(rawCols)
+            : (colsFromLegacy ?? defaultColsByMode)
+    );
+    const layoutRows = clampRows(
+        Number.isFinite(Number(rawRows))
+            ? Number(rawRows)
+            : (rowsFromLegacy ?? defaultRowsByMode)
+    );
 
     const isColsBlank = typeof rawCols === 'number' && Number.isNaN(rawCols);
     const isRowsBlank = typeof rawRows === 'number' && Number.isNaN(rawRows);
@@ -146,9 +167,13 @@ export function MediaSection({
             maxVisible={maxVisible}
             fixedHeight={fixedHeight}
             className={variant === 'list' ? 'pr-1' : undefined}
-            hasMore={section.hasMore}
-            loadingMore={section.loadingMore}
-            onLoadMore={onLoadMore ? () => onLoadMore(section.id) : undefined}
+            hasMore={preview ? false : section.hasMore}
+            loadingMore={preview ? false : section.loadingMore}
+            onLoadMore={
+                preview || !onLoadMore
+                    ? undefined
+                    : () => onLoadMore(section.id)
+            }
             onReorder={
                 onReorderItems
                     ? (next) => onReorderItems(section.id, next)
@@ -156,6 +181,7 @@ export function MediaSection({
             }
             interactive={!editing}
             draggable={false}
+            itemLoading={preview}
         />
     );
 
@@ -236,10 +262,8 @@ export function MediaSection({
 
                 <div
                     className={clsx(
-                        'pointer-events-none absolute top-1 right-2 z-10 overflow-hidden transition-[max-height,opacity,transform] will-change-[max-height,opacity,transform]',
-                        editing
-                            ? 'max-h-24 translate-y-0 opacity-100'
-                            : 'max-h-0 -translate-y-1 opacity-0'
+                        'pointer-events-none absolute top-0 right-1 z-10 overflow-hidden transition-[opacity,transform] duration-300 will-change-[opacity,transform]',
+                        editing ? 'opacity-100' : 'opacity-0'
                     )}
                 >
                     <Flex
@@ -294,18 +318,16 @@ export function MediaSection({
                                 placeholder={defaultRowsPlaceholder}
                                 onDecrement={() =>
                                     onChange(section.id, {
-                                        rows: Math.max(
-                                            0,
-                                            (layoutRows || 0) - 1
-                                        ),
+                                        rows: clampRows((layoutRows || 0) - 1),
                                     })
                                 }
                                 onIncrement={() =>
                                     onChange(section.id, {
-                                        rows:
+                                        rows: clampRows(
                                             layoutRows === 0
                                                 ? 1
-                                                : Math.max(1, layoutRows + 1),
+                                                : layoutRows + 1
+                                        ),
                                     })
                                 }
                                 onValueChange={(val) => {
@@ -322,7 +344,7 @@ export function MediaSection({
                                     onChange(section.id, {
                                         rows: Number.isNaN(normalized)
                                             ? Number.NaN
-                                            : Math.max(0, normalized),
+                                            : clampRows(normalized),
                                     });
                                 }}
                                 onValueBlur={() => {
@@ -332,7 +354,7 @@ export function MediaSection({
                                         current < 0
                                     ) {
                                         onChange(section.id, {
-                                            rows: defaultRowsByMode,
+                                            rows: clampRows(defaultRowsByMode),
                                         });
                                     }
                                 }}
@@ -345,21 +367,18 @@ export function MediaSection({
                                     placeholder={defaultColsPlaceholder}
                                     onDecrement={() =>
                                         onChange(section.id, {
-                                            columns: Math.max(
-                                                0,
+                                            columns: clampCols(
                                                 (layoutCols || 0) - 1
                                             ),
                                         })
                                     }
                                     onIncrement={() =>
                                         onChange(section.id, {
-                                            columns:
+                                            columns: clampCols(
                                                 layoutCols === 0
                                                     ? 1
-                                                    : Math.max(
-                                                          1,
-                                                          layoutCols + 1
-                                                      ),
+                                                    : layoutCols + 1
+                                            ),
                                         })
                                     }
                                     onValueChange={(val) => {
@@ -377,7 +396,7 @@ export function MediaSection({
                                         onChange(section.id, {
                                             columns: Number.isNaN(normalized)
                                                 ? Number.NaN
-                                                : Math.max(0, normalized),
+                                                : clampCols(normalized),
                                         });
                                     }}
                                     onValueBlur={() => {
@@ -387,7 +406,10 @@ export function MediaSection({
                                             current < 0
                                         ) {
                                             onChange(section.id, {
-                                                columns: defaultColsByMode,
+                                                columns:
+                                                    clampCols(
+                                                        defaultColsByMode
+                                                    ),
                                             });
                                         }
                                     }}
