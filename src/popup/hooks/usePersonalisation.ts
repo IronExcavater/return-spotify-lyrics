@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { SearchFilter } from './useSearch';
 
+/* TODO: This needs to be overhauled for more meaningful functionality, this should also utilise existing helpers e.g. setInStorage getFromStorage */
+
 type SessionMeta = {
     sessions: number;
     firstVisit: number;
