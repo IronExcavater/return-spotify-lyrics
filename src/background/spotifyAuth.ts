@@ -25,6 +25,7 @@ const SPOTIFY_SCOPE_STRING = SPOTIFY_SCOPES.join(' ');
 
 let refreshTimer: ReturnType<typeof setTimeout> | undefined;
 let sdk: SpotifyApi | null = null;
+let refreshInFlight: Promise<SpotifyToken> | null = null;
 
 export interface SpotifyToken extends AccessToken {
     expires_by: number;
@@ -121,37 +122,75 @@ export async function requestAccessToken(code: string): Promise<SpotifyToken> {
 export async function refreshAccessToken(
     refreshToken: string
 ): Promise<SpotifyToken> {
-    const response = await fetch(SPOTIFY_TOKEN_URL, {
-        method: 'POST',
-        headers: new Headers({
-            'Content-Type': 'application/x-www-form-urlencoded',
-        }),
-        body: new URLSearchParams({
-            client_id: SPOTIFY_CLIENT_ID,
-            grant_type: 'refresh_token',
-            refresh_token: refreshToken,
-        }),
-    });
+    if (refreshInFlight) return refreshInFlight;
 
-    const raw = (await response.json()) as AccessToken;
-    if (!response.ok || !raw) throw new Error('Token exchange failed');
+    refreshInFlight = (async () => {
+        const prevToken = await getFromStorage<SpotifyToken>(SPOTIFY_TOKEN_KEY);
 
-    const token: SpotifyToken = withExpiry({
-        ...raw,
-        refresh_token: raw.refresh_token ?? refreshToken,
-    });
+        const response = await fetch(SPOTIFY_TOKEN_URL, {
+            method: 'POST',
+            headers: new Headers({
+                'Content-Type': 'application/x-www-form-urlencoded',
+            }),
+            body: new URLSearchParams({
+                client_id: SPOTIFY_CLIENT_ID,
+                grant_type: 'refresh_token',
+                refresh_token: refreshToken,
+            }),
+        });
 
-    await setInStorage(SPOTIFY_TOKEN_KEY, token);
-    refreshSoon(token);
-    sdk = SpotifyApi.withAccessToken(SPOTIFY_CLIENT_ID, token);
-    return token;
+        let raw: AccessToken | { error?: string } | undefined;
+        try {
+            raw = (await response.json()) as typeof raw;
+        } catch {
+            raw = undefined;
+        }
+
+        if (!response.ok || !raw || !('access_token' in raw)) {
+            const errorCode =
+                raw && 'error' in raw ? raw.error : 'token exchange failed';
+
+            if (errorCode === 'invalid_grant') {
+                await clearSpotifySession();
+            }
+
+            throw new Error(
+                typeof errorCode === 'string'
+                    ? errorCode
+                    : 'Token exchange failed'
+            );
+        }
+
+        const token: SpotifyToken = withExpiry({
+            ...raw,
+            refresh_token: raw.refresh_token ?? refreshToken,
+            scope: raw.scope ?? prevToken?.scope ?? SPOTIFY_SCOPE_STRING,
+        });
+
+        await setInStorage(SPOTIFY_TOKEN_KEY, token);
+        refreshSoon(token);
+        sdk = SpotifyApi.withAccessToken(SPOTIFY_CLIENT_ID, token);
+        return token;
+    })();
+
+    try {
+        return await refreshInFlight;
+    } finally {
+        refreshInFlight = null;
+    }
 }
 
 export async function getAccessToken(): Promise<SpotifyToken | undefined> {
     let token = await getFromStorage<SpotifyToken>(SPOTIFY_TOKEN_KEY);
 
     if (token && Date.now() >= token.expires_by) {
-        token = await refreshAccessToken(token.refresh_token);
+        try {
+            token = await refreshAccessToken(token.refresh_token);
+        } catch (err) {
+            console.warn('[spotifyAuth] Token refresh failed', err);
+            await clearSpotifySession();
+            return undefined;
+        }
     } else if (token) {
         refreshSoon(token);
     }
@@ -183,7 +222,9 @@ function refreshSoon(token: SpotifyToken) {
 
 async function refreshNow(token: SpotifyToken) {
     try {
-        await refreshAccessToken(token.refresh_token);
+        const latest =
+            (await getFromStorage<SpotifyToken>(SPOTIFY_TOKEN_KEY)) ?? token;
+        await refreshAccessToken(latest.refresh_token);
     } catch (err) {
         console.warn('[spotifyAuth] Failed to refresh token', err);
     }

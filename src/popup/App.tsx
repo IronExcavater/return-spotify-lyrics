@@ -131,15 +131,7 @@ export default function App() {
             cancelAnimationFrame(raf);
             body.style.paddingRight = prevPadding;
         };
-    }, [
-        appState.layout.width,
-        appState.layout.height,
-        appState.layout.widthOverride,
-        appState.layout.heightOverride,
-        appState.activeBar,
-        location.pathname,
-        appState.showBars,
-    ]);
+    }, [appState.activeBar, location.pathname]);
 
     return (
         <Resizer

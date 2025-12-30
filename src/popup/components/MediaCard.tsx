@@ -21,6 +21,8 @@ interface Props {
     onClick?: () => void;
     loading?: boolean;
     contextMenu?: ReactNode;
+    className?: string;
+    width?: number | string;
 }
 
 export function MediaCard({
@@ -32,6 +34,7 @@ export function MediaCard({
     onClick,
     loading = false,
     contextMenu,
+    className,
 }: Props) {
     const radius = imageShape === 'round' ? 'full' : 'small';
 
@@ -40,7 +43,7 @@ export function MediaCard({
             direction="column"
             gap="1"
             onClick={loading ? undefined : onClick}
-            className="w-20"
+            className={clsx('w-20', className)}
         >
             <Skeleton loading={loading}>
                 <AvatarButton

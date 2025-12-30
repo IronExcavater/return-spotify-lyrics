@@ -8,11 +8,12 @@ import {
     Text,
 } from '@radix-ui/themes';
 import clsx from 'clsx';
+
 import { AvatarButton } from './AvatarButton';
 import { Fade } from './Fade';
 import { Marquee } from './Marquee';
 
-interface Props {
+export interface MediaRowProps {
     title?: string;
     subtitle?: string;
     imageUrl?: string;
@@ -21,9 +22,10 @@ interface Props {
     onClick?: () => void;
     loading?: boolean;
     contextMenu?: ReactNode;
+    className?: string;
 }
 
-export function MediaListItem({
+export function MediaRow({
     title,
     subtitle,
     imageUrl,
@@ -32,7 +34,8 @@ export function MediaListItem({
     onClick,
     loading = false,
     contextMenu,
-}: Props) {
+    className,
+}: MediaRowProps) {
     const radius = imageShape === 'round' ? 'full' : 'small';
 
     return (
@@ -40,7 +43,7 @@ export function MediaListItem({
             align="center"
             gap="1"
             onClick={loading ? undefined : onClick}
-            className="w-full min-w-0"
+            className={clsx('w-full min-w-[220px]', className)}
         >
             <Skeleton loading={loading}>
                 <AvatarButton

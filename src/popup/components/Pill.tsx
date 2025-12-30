@@ -14,6 +14,8 @@ import { Cross2Icon, MinusIcon, PlusIcon } from '@radix-ui/react-icons';
 import { DropdownMenu, Flex, IconButton, Text } from '@radix-ui/themes';
 import clsx from 'clsx';
 
+import { InlineInput } from './InlineInput';
+
 export type PillValue =
     | { type: 'text'; value: string }
     | { type: 'single-select'; value: string }
@@ -535,15 +537,15 @@ export function Pill({
 
             {isEditing && editable && !isOptionsValue ? (
                 isTextValue ? (
-                    <input
+                    <InlineInput
                         ref={inputRef}
                         value={textDraft}
-                        onChange={(event) => setTextDraft(event.target.value)}
+                        onChange={(val) => setTextDraft(val)}
                         onKeyDown={handleInputKeyDown}
                         placeholder={placeholder}
                         style={inputPx ? { width: `${inputPx}px` } : undefined}
                         onClick={(event) => event.stopPropagation()}
-                        className="min-w-0 border-none bg-transparent text-xs font-normal outline-none"
+                        className="min-w-0 font-normal"
                     />
                 ) : isDateValue ? (
                     <Flex
@@ -554,21 +556,17 @@ export function Pill({
                             event.stopPropagation()
                         }
                     >
-                        <input
+                        <InlineInput
                             ref={dateInputRef}
-                            type="text"
                             value={dateDraft.range.from ?? ''}
-                            onChange={(event) =>
+                            onChange={(val) =>
                                 isRangeMode
-                                    ? updateDateRange(
-                                          'from',
-                                          event.target.value
-                                      )
-                                    : updateSingleDate(event.target.value)
+                                    ? updateDateRange('from', val)
+                                    : updateSingleDate(val)
                             }
                             onKeyDown={handleInputKeyDown}
                             placeholder={placeholder || editPattern.placeholder}
-                            className="min-w-0 border-none bg-transparent text-xs font-normal outline-none"
+                            className="min-w-0 font-normal"
                             style={
                                 dateWidths.from
                                     ? { width: `${dateWidths.from}px` }
@@ -581,17 +579,13 @@ export function Pill({
                                 <Text size="1" color="gray">
                                     to
                                 </Text>
-                                <input
-                                    type="text"
+                                <InlineInput
                                     value={dateDraft.range.to ?? ''}
-                                    onChange={(event) =>
-                                        updateDateRange(
-                                            'to',
-                                            event.target.value
-                                        )
+                                    onChange={(val) =>
+                                        updateDateRange('to', val)
                                     }
                                     onKeyDown={handleInputKeyDown}
-                                    className="min-w-0 border-none bg-transparent text-xs font-normal [color:inherit] outline-none"
+                                    className="min-w-0 font-normal"
                                     placeholder={
                                         placeholder || editPattern.placeholder
                                     }
