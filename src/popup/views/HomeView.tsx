@@ -1,12 +1,20 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
     DragDropContext,
     Droppable,
     Draggable,
     type DropResult,
 } from '@hello-pangea/dnd';
-import { PlusIcon, ReloadIcon } from '@radix-ui/react-icons';
-import { Flex, Text, IconButton, Switch, DropdownMenu } from '@radix-ui/themes';
+import { PlusIcon } from '@radix-ui/react-icons';
+import {
+    Flex,
+    Text,
+    IconButton,
+    Switch,
+    DropdownMenu,
+    Button,
+    AlertDialog,
+} from '@radix-ui/themes';
 
 import {
     MediaSection,
@@ -189,11 +197,6 @@ export function HomeView({
         [sections]
     );
 
-    const totalItems = useMemo(
-        () => sections.reduce((acc, section) => acc + section.items.length, 0),
-        [sections]
-    );
-
     return (
         <Flex
             flexGrow="1"
@@ -201,61 +204,96 @@ export function HomeView({
             gap="3"
             className="no-overflow-anchor min-h-0 min-w-0 overflow-y-auto"
         >
-            <Flex p="1" direction="column" gap="3" className="min-w-0">
+            <Flex p="3" direction="column" gap="3" className="min-w-0">
                 <Flex align="center" justify="between" gap="3">
-                    <Flex direction="column">
-                        <Text size="4" weight="bold">
-                            Home
-                        </Text>
-                        <Text size="1" color="gray">
-                            {totalItems} items across {sections.length} sections
-                        </Text>
-                    </Flex>
-                    <Flex align="center" gap="2">
-                        <Flex align="center" gap="1">
-                            <Text size="1" color="gray">
-                                Edit
+                    {!editing && (
+                        <Flex align="center" gap="2">
+                            <Text size="3" weight="bold">
+                                Welcome back{' '}
+                                {/* TODO: Make the title and subtitle something personalised that changes based on various situations, e.g. how long you've used this, num of sessions, time of day, etc. */}
                             </Text>
-                            <Switch
-                                size="1"
-                                checked={editing}
-                                onCheckedChange={setEditing}
-                                aria-label="Toggle edit mode"
-                            />
+                            <Text size="1" color="gray">
+                                Short message{' '}
+                                {/* TODO: Write a short message */}
+                            </Text>
                         </Flex>
-                        <DropdownMenu.Root>
-                            <DropdownMenu.Trigger>
-                                <IconButton
-                                    size="1"
-                                    variant="soft"
-                                    highContrast
-                                    radius="full"
-                                    aria-label="Add section"
-                                >
-                                    <PlusIcon />
-                                </IconButton>
-                            </DropdownMenu.Trigger>
-                            <DropdownMenu.Content align="end" size="1">
-                                <DropdownMenu.Item
-                                    onSelect={() => addSection('list')}
-                                >
-                                    Add list section
-                                </DropdownMenu.Item>
-                                <DropdownMenu.Item
-                                    onSelect={() => addSection('tile')}
-                                >
-                                    Add tiles section
-                                </DropdownMenu.Item>
-                            </DropdownMenu.Content>
-                        </DropdownMenu.Root>
-                        <IconButton
+                    )}
+                    {editing && (
+                        <Flex align="center" gap="2">
+                            <DropdownMenu.Root>
+                                <DropdownMenu.Trigger>
+                                    <IconButton
+                                        size="1"
+                                        variant="soft"
+                                        color="green"
+                                        radius="full"
+                                        aria-label="Add section"
+                                    >
+                                        <PlusIcon />
+                                    </IconButton>
+                                </DropdownMenu.Trigger>
+                                <DropdownMenu.Content align="end" size="1">
+                                    <DropdownMenu.Item
+                                        onSelect={() => addSection('list')}
+                                    >
+                                        Add list section
+                                    </DropdownMenu.Item>
+                                    <DropdownMenu.Item
+                                        onSelect={() => addSection('tile')}
+                                    >
+                                        Add tiles section
+                                    </DropdownMenu.Item>
+                                </DropdownMenu.Content>
+                            </DropdownMenu.Root>
+
+                            <AlertDialog.Root>
+                                <AlertDialog.Trigger>
+                                    <Button size="1" variant="soft" color="red">
+                                        Restore
+                                    </Button>
+                                </AlertDialog.Trigger>
+                                <AlertDialog.Content maxWidth="300px" size="1">
+                                    <AlertDialog.Title size="3">
+                                        Revert home layout?
+                                    </AlertDialog.Title>
+                                    <AlertDialog.Description size="2">
+                                        This restores the default shelves and
+                                        order. Your current arrangement will be
+                                        lost.
+                                    </AlertDialog.Description>
+                                    <Flex mt="3" justify="end" gap="2">
+                                        <AlertDialog.Cancel>
+                                            <Button variant="soft" size="1">
+                                                Cancel
+                                            </Button>
+                                        </AlertDialog.Cancel>
+                                        <AlertDialog.Action>
+                                            <Button
+                                                variant="soft"
+                                                color="red"
+                                                size="1"
+                                                onClick={resetSections}
+                                                autoFocus
+                                            >
+                                                Revert
+                                            </Button>
+                                        </AlertDialog.Action>
+                                    </Flex>
+                                </AlertDialog.Content>
+                            </AlertDialog.Root>
+                        </Flex>
+                    )}
+
+                    <Flex align="center" gap="1">
+                        <Text size="1" color="gray">
+                            Customise
+                        </Text>
+                        <Switch
                             size="1"
-                            variant="ghost"
-                            aria-label="Reset layout"
-                            onClick={resetSections}
-                        >
-                            <ReloadIcon />
-                        </IconButton>
+                            checked={editing}
+                            onCheckedChange={setEditing}
+                            aria-label="Toggle customise mode"
+                        />
                     </Flex>
                 </Flex>
 
@@ -268,7 +306,7 @@ export function HomeView({
                         {(dropProvided) => (
                             <Flex
                                 direction="column"
-                                gap="5"
+                                gap="0"
                                 className="min-w-0"
                                 ref={dropProvided.innerRef}
                                 {...dropProvided.droppableProps}
@@ -285,6 +323,12 @@ export function HomeView({
                                                 ref={dragProvided.innerRef}
                                                 {...dragProvided.draggableProps}
                                                 {...dragProvided.dragHandleProps}
+                                                style={{
+                                                    ...dragProvided
+                                                        .draggableProps.style,
+                                                    marginBottom:
+                                                        'var(--space-5)',
+                                                }}
                                             >
                                                 <MediaSection
                                                     section={section}

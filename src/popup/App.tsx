@@ -92,12 +92,12 @@ export default function App() {
         () => (
             <NavBar
                 active={appState.activeBar}
-                canShowPlayback={playback != null}
+                canShowPlayback
                 onShowHome={() => appState.setActiveBar('home')}
                 onShowPlayback={() => appState.setActiveBar('playback')}
             />
         ),
-        [appState.activeBar, playback, appState.setActiveBar]
+        [appState.activeBar, appState.setActiveBar]
     );
 
     const profileFloating = usePortalSlot<BarKey>({

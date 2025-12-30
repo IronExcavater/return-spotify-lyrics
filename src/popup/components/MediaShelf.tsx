@@ -205,7 +205,7 @@ export function MediaShelf({
                     wrap="nowrap"
                     {...dropProvided.droppableProps}
                     className={clsx(
-                        'no-overflow-anchor relative w-full min-w-0',
+                        'no-overflow-anchor relative w-full min-w-0 transition-[opacity,filter] duration-200',
                         !interactive && 'pointer-events-none opacity-70',
                         orientation === 'horizontal'
                             ? fixedHeight
@@ -313,7 +313,3 @@ export function MediaShelf({
 
     return <DragDropContext onDragEnd={handleDragEnd}>{body}</DragDropContext>;
 }
-
-// Backwards compatibility for existing imports
-export type MediaFeedItem = MediaShelfItem;
-export const MediaFeed = MediaShelf;

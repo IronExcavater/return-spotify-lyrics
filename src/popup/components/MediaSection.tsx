@@ -210,7 +210,7 @@ export function MediaSection({
     return (
         <div
             className={clsx(
-                'relative m-1 min-w-0 rounded-xl bg-[var(--color-background)] p-1 ring-2 ring-transparent transition-[ring-color,transform] duration-150',
+                'rounded-2 relative m-1 min-w-0 bg-[var(--color-background)] p-1 ring-2 ring-transparent ring-offset-2 ring-offset-[var(--color-background)] transition-all',
                 editing && 'hover:!ring-[var(--accent-8)]',
                 editing && dragging && '!ring-[var(--accent-10)]',
                 className
@@ -236,7 +236,7 @@ export function MediaSection({
 
                 <div
                     className={clsx(
-                        'pointer-events-none absolute top-1 right-2 z-10 overflow-hidden transition-[max-height,opacity,transform] duration-200 ease-out will-change-[max-height,opacity,transform]',
+                        'pointer-events-none absolute top-1 right-2 z-10 overflow-hidden transition-[max-height,opacity,transform] will-change-[max-height,opacity,transform]',
                         editing
                             ? 'max-h-24 translate-y-0 opacity-100'
                             : 'max-h-0 -translate-y-1 opacity-0'
@@ -246,7 +246,7 @@ export function MediaSection({
                         align="center"
                         gap="1"
                         className={clsx(
-                            'pointer-events-auto rounded-full bg-[var(--color-panel-solid)]/90 px-3 py-[4px] text-[12px] shadow-sm backdrop-blur transition-opacity duration-200',
+                            'pointer-events-auto rounded-full bg-[var(--color-panel-solid)]/90 p-1 text-[12px] shadow-sm backdrop-blur transition-opacity',
                             editing ? 'opacity-100' : 'opacity-0'
                         )}
                     >
