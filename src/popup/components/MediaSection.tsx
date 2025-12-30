@@ -263,7 +263,7 @@ export function MediaSection({
                 <div
                     className={clsx(
                         'pointer-events-none absolute top-0 right-1 z-10 overflow-hidden transition-[opacity,transform] duration-300 will-change-[opacity,transform]',
-                        editing ? 'opacity-100' : 'opacity-0'
+                        editing ? 'opacity-100' : 'max-h-0 opacity-0'
                     )}
                 >
                     <Flex
@@ -312,6 +312,7 @@ export function MediaSection({
                         />
 
                         <Flex align="center" gap="2">
+                            {/* TODO: Why is this blurring the input when the value changes instead of keeping it focused */}
                             <StepperControl
                                 label="Rows"
                                 value={displayRows}
@@ -361,6 +362,7 @@ export function MediaSection({
                             />
 
                             {mode !== 'v-list' && (
+                                /* TODO: Why is this blurring the input when the value changes instead of keeping it focused */
                                 <StepperControl
                                     label="Cols"
                                     value={displayCols}

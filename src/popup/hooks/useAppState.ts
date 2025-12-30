@@ -219,8 +219,8 @@ export function useAppState({ fallbackWidth, fallbackHeight }: Props) {
         [updateAppState]
     );
 
-    // Show bars getter
-    const showBars = !!authed;
+    // Show bars getter (show while auth is loading)
+    const showBars = authed !== false;
 
     return {
         loading: !hydrated,
