@@ -3,7 +3,7 @@ import pkg from './package.json';
 
 export default defineManifest({
     manifest_version: 3,
-    name: pkg.name,
+    name: pkg.name, // TODO: Improve the manifest name to actually capitalise and convert '-' to space
     version: pkg.version,
     description: pkg.description,
     icons: {

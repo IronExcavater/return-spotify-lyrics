@@ -12,8 +12,7 @@ const FALLBACK_LYRICS = [
 export function LyricsView() {
     const { playback } = usePlayer();
     const track = asTrack(playback?.item);
-    const cover = track?.album?.images?.[0]?.url;
-    const averageColor = false; //useAverageColor(cover);
+    const averageColor = false;
 
     return (
         <Flex
