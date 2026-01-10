@@ -217,6 +217,40 @@ export function MediaSection({
         return next;
     };
 
+    const focusDraft = (
+        display: string,
+        setDraft: (value: string | null) => void
+    ) => {
+        setDraft(display === '∞' ? '' : display);
+    };
+
+    const changeCount = (
+        value: string,
+        clamp: (val: number) => number,
+        setDraft: (value: string | null) => void,
+        key: 'rows' | 'columns'
+    ) => {
+        setDraft(value);
+        const parsed = parseCount(value, clamp);
+        if (parsed === null) return;
+        onChange(section.id, { [key]: parsed });
+    };
+
+    const blurCount = (
+        draft: string | null,
+        clamp: (val: number) => number,
+        fallback: number,
+        setDraft: (value: string | null) => void,
+        key: 'rows' | 'columns'
+    ) => {
+        if (draft === null) return;
+        const parsed = parseCount(draft, clamp);
+        onChange(section.id, {
+            [key]: parsed === null ? clamp(fallback) : parsed,
+        });
+        setDraft(null);
+    };
+
     const itemsPerColumn =
         orientation === 'horizontal' ? Math.max(1, layoutRows || 1) : 1;
     const maxVisible =
@@ -373,33 +407,26 @@ export function MediaSection({
                                         ),
                                     });
                                 }}
-                                onValueChange={(val) => {
-                                    setRowsDraft(val);
-                                    const parsed = parseCount(val, clampRows);
-                                    if (parsed === null) return;
-                                    onChange(section.id, { rows: parsed });
-                                }}
-                                onValueBlur={() => {
-                                    if (rowsDraft === null) return;
-                                    const parsed = parseCount(
+                                onValueChange={(val) =>
+                                    changeCount(
+                                        val,
+                                        clampRows,
+                                        setRowsDraft,
+                                        'rows'
+                                    )
+                                }
+                                onValueBlur={() =>
+                                    blurCount(
                                         rowsDraft,
-                                        clampRows
-                                    );
-                                    onChange(section.id, {
-                                        rows:
-                                            parsed === null
-                                                ? clampRows(defaultRowsByMode)
-                                                : parsed,
-                                    });
-                                    setRowsDraft(null);
-                                }}
-                                onValueFocus={() => {
-                                    setRowsDraft(
-                                        displayRowsStr === '∞'
-                                            ? ''
-                                            : displayRowsStr
-                                    );
-                                }}
+                                        clampRows,
+                                        defaultRowsByMode,
+                                        setRowsDraft,
+                                        'rows'
+                                    )
+                                }
+                                onValueFocus={() =>
+                                    focusDraft(displayRowsStr, setRowsDraft)
+                                }
                             />
 
                             {mode !== 'v-list' && (
@@ -426,40 +453,26 @@ export function MediaSection({
                                             ),
                                         });
                                     }}
-                                    onValueChange={(val) => {
-                                        setColsDraft(val);
-                                        const parsed = parseCount(
+                                    onValueChange={(val) =>
+                                        changeCount(
                                             val,
-                                            clampCols
-                                        );
-                                        if (parsed === null) return;
-                                        onChange(section.id, {
-                                            columns: parsed,
-                                        });
-                                    }}
-                                    onValueBlur={() => {
-                                        if (colsDraft === null) return;
-                                        const parsed = parseCount(
+                                            clampCols,
+                                            setColsDraft,
+                                            'columns'
+                                        )
+                                    }
+                                    onValueBlur={() =>
+                                        blurCount(
                                             colsDraft,
-                                            clampCols
-                                        );
-                                        onChange(section.id, {
-                                            columns:
-                                                parsed === null
-                                                    ? clampCols(
-                                                          defaultColsByMode
-                                                      )
-                                                    : parsed,
-                                        });
-                                        setColsDraft(null);
-                                    }}
-                                    onValueFocus={() => {
-                                        setColsDraft(
-                                            displayColsStr === '∞'
-                                                ? ''
-                                                : displayColsStr
-                                        );
-                                    }}
+                                            clampCols,
+                                            defaultColsByMode,
+                                            setColsDraft,
+                                            'columns'
+                                        )
+                                    }
+                                    onValueFocus={() =>
+                                        focusDraft(displayColsStr, setColsDraft)
+                                    }
                                 />
                             )}
                         </Flex>
