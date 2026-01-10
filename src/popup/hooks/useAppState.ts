@@ -1,5 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import {
+    ANALYTICS_EVENTS,
+    createAnalyticsTracker,
+} from '../../shared/analytics';
 import { getFromStorage, setInStorage } from '../../shared/storage';
 import { useAuth } from './useAuth.ts';
 import { usePlayer } from './usePlayer.ts';
@@ -88,6 +92,7 @@ export function useAppState({ fallbackWidth, fallbackHeight }: Props) {
 
     const { authed } = useAuth();
     const { playback } = usePlayer();
+    const trackApp = useMemo(() => createAnalyticsTracker('app'), []);
 
     const [hydrated, setHydrated] = useState(false);
     const [appState, setAppState] = useState<AppState>({});
@@ -124,12 +129,37 @@ export function useAppState({ fallbackWidth, fallbackHeight }: Props) {
         void updateAppState({ lastBar: activeBar });
     }, [hydrated, activeBar, updateAppState]);
 
+    const lastBarRef = useRef<BarKey | null>(null);
+
+    useEffect(() => {
+        if (!hydrated) return;
+        if (lastBarRef.current === activeBar) return;
+        lastBarRef.current = activeBar;
+        void trackApp(ANALYTICS_EVENTS.appBarChange, {
+            reason: 'bar switched',
+            data: { bar: activeBar },
+        });
+    }, [activeBar, hydrated, trackApp]);
+
     // Update last route to location.pathname
     useEffect(() => {
         if (!hydrated) return;
 
         void updateAppState({ lastRoute: location.pathname as RouteValue });
     }, [hydrated, location.pathname, updateAppState]);
+
+    const lastRouteRef = useRef<RouteValue | null>(null);
+
+    useEffect(() => {
+        if (!hydrated) return;
+        const nextRoute = location.pathname as RouteValue;
+        if (lastRouteRef.current === nextRoute) return;
+        lastRouteRef.current = nextRoute;
+        void trackApp(ANALYTICS_EVENTS.appRoute, {
+            reason: 'navigation',
+            data: { to: nextRoute },
+        });
+    }, [hydrated, location.pathname, trackApp]);
 
     // Initialise after load
     const initialised = useRef(false);
@@ -144,6 +174,16 @@ export function useAppState({ fallbackWidth, fallbackHeight }: Props) {
             void updateAppState({ lastBar: 'playback' });
         }
     }, [hydrated, playback, initialised]);
+
+    const openedRef = useRef(false);
+
+    useEffect(() => {
+        if (!hydrated || openedRef.current) return;
+        openedRef.current = true;
+        void trackApp(ANALYTICS_EVENTS.appOpen, {
+            reason: 'popup initialised',
+        });
+    }, [hydrated, trackApp]);
 
     // track last playback change
     const lastPlaybackChange = useRef<number | null>(null);
@@ -215,8 +255,16 @@ export function useAppState({ fallbackWidth, fallbackHeight }: Props) {
 
     // Playback expanded setter
     const setPlaybackExpanded = useCallback(
-        (expanded: boolean) => updateAppState({ playbackExpanded: expanded }),
-        [updateAppState]
+        (expanded: boolean) => {
+            void trackApp(ANALYTICS_EVENTS.playbackExpand, {
+                reason: expanded
+                    ? 'playback bar expanded'
+                    : 'playback bar collapsed',
+                data: { expanded },
+            });
+            return updateAppState({ playbackExpanded: expanded });
+        },
+        [trackApp, updateAppState]
     );
 
     // Show bars getter (show while auth is loading)

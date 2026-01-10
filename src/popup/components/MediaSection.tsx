@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { GridIcon, RowsIcon, ColumnsIcon } from '@radix-ui/react-icons';
 import { Button, Flex, IconButton, Text } from '@radix-ui/themes';
 import clsx from 'clsx';
@@ -45,6 +46,61 @@ const clampCols = (val: number) => {
     return Math.min(MAX_COLS, val);
 };
 
+type StepperControlProps = {
+    label: string;
+    value: string | number;
+    placeholder: string;
+    onDecrement: () => void;
+    onIncrement: () => void;
+    onValueChange: (val: string) => void;
+    onValueBlur: () => void;
+    onValueFocus: () => void;
+};
+
+function StepperControl({
+    label,
+    value,
+    placeholder,
+    onDecrement,
+    onIncrement,
+    onValueChange,
+    onValueBlur,
+    onValueFocus,
+}: StepperControlProps) {
+    return (
+        <Flex align="center" gap="1">
+            <Text size="1" color="gray">
+                {label}
+            </Text>
+            <Button
+                size="0"
+                variant="ghost"
+                radius="small"
+                onClick={onDecrement}
+            >
+                –
+            </Button>
+            <InlineInput
+                value={value}
+                placeholder={placeholder}
+                usePlaceholderWidth
+                onChange={onValueChange}
+                onBlur={onValueBlur}
+                onFocus={onValueFocus}
+                className="text-center"
+            />
+            <Button
+                size="0"
+                variant="ghost"
+                radius="small"
+                onClick={onIncrement}
+            >
+                +
+            </Button>
+        </Flex>
+    );
+}
+
 interface Props {
     section: MediaSectionState;
     editing: boolean;
@@ -71,6 +127,9 @@ export function MediaSection({
     dragging = false,
 }: Props) {
     const { title, subtitle } = section;
+    const [rowsDraft, setRowsDraft] = useState<string | null>(null);
+    const [colsDraft, setColsDraft] = useState<string | null>(null);
+    const [clampDraft, setClampDraft] = useState<string | null>(null);
 
     const derivedView =
         section.view ??
@@ -130,6 +189,33 @@ export function MediaSection({
     const isRowsBlank = typeof rawRows === 'number' && Number.isNaN(rawRows);
     const displayCols = isColsBlank ? '' : layoutCols === 0 ? '∞' : layoutCols;
     const displayRows = isRowsBlank ? '' : layoutRows === 0 ? '∞' : layoutRows;
+    const displayClamp =
+        typeof section.rowHeight === 'number' && Number.isNaN(section.rowHeight)
+            ? ''
+            : section.rowHeight === undefined
+              ? '∞'
+              : section.rowHeight;
+    const displayColsStr = String(displayCols);
+    const displayRowsStr = String(displayRows);
+    const displayClampStr = String(displayClamp);
+
+    const parseCount = (raw: string, clamp: (val: number) => number) => {
+        const trimmed = raw.trim();
+        if (!trimmed) return null;
+        if (trimmed === '∞' || trimmed === '0') return 0;
+        const next = Number(trimmed);
+        if (!Number.isFinite(next)) return null;
+        return clamp(next);
+    };
+
+    const parseClamp = (raw: string) => {
+        const trimmed = raw.trim();
+        if (!trimmed) return null;
+        if (trimmed === '∞' || trimmed === '0') return undefined;
+        const next = Number(trimmed);
+        if (!Number.isFinite(next) || next <= 0) return null;
+        return next;
+    };
 
     const itemsPerColumn =
         orientation === 'horizontal' ? Math.max(1, layoutRows || 1) : 1;
@@ -141,7 +227,6 @@ export function MediaSection({
             : layoutRows === 0
               ? undefined
               : layoutRows;
-    const clampUnit = section.clampUnit ?? 'px';
     const clampValue =
         section.rowHeight === undefined || Number.isNaN(section.rowHeight)
             ? undefined
@@ -149,11 +234,7 @@ export function MediaSection({
               ? Number(section.rowHeight)
               : undefined;
     const clampPx =
-        orientation === 'vertical' && clampValue
-            ? clampUnit === 'items'
-                ? clampValue * Math.max(1, layoutRows || 1)
-                : clampValue
-            : undefined;
+        orientation === 'vertical' && clampValue ? clampValue : undefined;
 
     const fixedHeight = orientation === 'vertical' ? clampPx : undefined;
 
@@ -183,54 +264,6 @@ export function MediaSection({
             draggable={false}
             itemLoading={preview}
         />
-    );
-
-    const StepperControl = ({
-        label,
-        value,
-        placeholder,
-        onDecrement,
-        onIncrement,
-        onValueChange,
-        onValueBlur,
-    }: {
-        label: string;
-        value: string | number;
-        placeholder: string;
-        onDecrement: () => void;
-        onIncrement: () => void;
-        onValueChange: (val: string) => void;
-        onValueBlur: () => void;
-    }) => (
-        <Flex align="center" gap="1">
-            <Text size="1" color="gray">
-                {label}
-            </Text>
-            <Button
-                size="0"
-                variant="ghost"
-                radius="small"
-                onClick={onDecrement}
-            >
-                –
-            </Button>
-            <InlineInput
-                value={value}
-                placeholder={placeholder}
-                usePlaceholderWidth
-                onChange={onValueChange}
-                onBlur={onValueBlur}
-                className="text-center"
-            />
-            <Button
-                size="0"
-                variant="ghost"
-                radius="small"
-                onClick={onIncrement}
-            >
-                +
-            </Button>
-        </Flex>
     );
 
     return (
@@ -273,6 +306,13 @@ export function MediaSection({
                             'pointer-events-auto rounded-full bg-[var(--color-panel-solid)]/90 p-1 text-[12px] shadow-sm backdrop-blur transition-opacity',
                             editing ? 'opacity-100' : 'opacity-0'
                         )}
+                        onMouseDownCapture={(event) => {
+                            const target = event.target;
+                            if (target instanceof HTMLInputElement) return;
+                            const active = document.activeElement;
+                            if (active instanceof HTMLInputElement)
+                                active.blur();
+                        }}
                     >
                         <SegmentedControl
                             items={[
@@ -315,49 +355,50 @@ export function MediaSection({
                             {/* TODO: Why is this blurring the input when the value changes instead of keeping it focused */}
                             <StepperControl
                                 label="Rows"
-                                value={displayRows}
+                                value={rowsDraft ?? displayRowsStr}
                                 placeholder={defaultRowsPlaceholder}
-                                onDecrement={() =>
+                                onDecrement={() => {
+                                    setRowsDraft(null);
                                     onChange(section.id, {
                                         rows: clampRows((layoutRows || 0) - 1),
-                                    })
-                                }
-                                onIncrement={() =>
+                                    });
+                                }}
+                                onIncrement={() => {
+                                    setRowsDraft(null);
                                     onChange(section.id, {
                                         rows: clampRows(
                                             layoutRows === 0
                                                 ? 1
                                                 : layoutRows + 1
                                         ),
-                                    })
-                                }
-                                onValueChange={(val) => {
-                                    if (val.trim() === '') {
-                                        onChange(section.id, {
-                                            rows: Number.NaN,
-                                        });
-                                        return;
-                                    }
-                                    const normalized =
-                                        val.trim() === '∞' || val.trim() === '0'
-                                            ? 0
-                                            : Number(val);
-                                    onChange(section.id, {
-                                        rows: Number.isNaN(normalized)
-                                            ? Number.NaN
-                                            : clampRows(normalized),
                                     });
                                 }}
+                                onValueChange={(val) => {
+                                    setRowsDraft(val);
+                                    const parsed = parseCount(val, clampRows);
+                                    if (parsed === null) return;
+                                    onChange(section.id, { rows: parsed });
+                                }}
                                 onValueBlur={() => {
-                                    const current = Number(section.rows);
-                                    if (
-                                        !Number.isFinite(current) ||
-                                        current < 0
-                                    ) {
-                                        onChange(section.id, {
-                                            rows: clampRows(defaultRowsByMode),
-                                        });
-                                    }
+                                    if (rowsDraft === null) return;
+                                    const parsed = parseCount(
+                                        rowsDraft,
+                                        clampRows
+                                    );
+                                    onChange(section.id, {
+                                        rows:
+                                            parsed === null
+                                                ? clampRows(defaultRowsByMode)
+                                                : parsed,
+                                    });
+                                    setRowsDraft(null);
+                                }}
+                                onValueFocus={() => {
+                                    setRowsDraft(
+                                        displayRowsStr === '∞'
+                                            ? ''
+                                            : displayRowsStr
+                                    );
                                 }}
                             />
 
@@ -365,55 +406,59 @@ export function MediaSection({
                                 /* TODO: Why is this blurring the input when the value changes instead of keeping it focused */
                                 <StepperControl
                                     label="Cols"
-                                    value={displayCols}
+                                    value={colsDraft ?? displayColsStr}
                                     placeholder={defaultColsPlaceholder}
-                                    onDecrement={() =>
+                                    onDecrement={() => {
+                                        setColsDraft(null);
                                         onChange(section.id, {
                                             columns: clampCols(
                                                 (layoutCols || 0) - 1
                                             ),
-                                        })
-                                    }
-                                    onIncrement={() =>
+                                        });
+                                    }}
+                                    onIncrement={() => {
+                                        setColsDraft(null);
                                         onChange(section.id, {
                                             columns: clampCols(
                                                 layoutCols === 0
                                                     ? 1
                                                     : layoutCols + 1
                                             ),
-                                        })
-                                    }
+                                        });
+                                    }}
                                     onValueChange={(val) => {
-                                        if (val.trim() === '') {
-                                            onChange(section.id, {
-                                                columns: Number.NaN,
-                                            });
-                                            return;
-                                        }
-                                        const normalized =
-                                            val.trim() === '∞' ||
-                                            val.trim() === '0'
-                                                ? 0
-                                                : Number(val);
+                                        setColsDraft(val);
+                                        const parsed = parseCount(
+                                            val,
+                                            clampCols
+                                        );
+                                        if (parsed === null) return;
                                         onChange(section.id, {
-                                            columns: Number.isNaN(normalized)
-                                                ? Number.NaN
-                                                : clampCols(normalized),
+                                            columns: parsed,
                                         });
                                     }}
                                     onValueBlur={() => {
-                                        const current = Number(section.columns);
-                                        if (
-                                            !Number.isFinite(current) ||
-                                            current < 0
-                                        ) {
-                                            onChange(section.id, {
-                                                columns:
-                                                    clampCols(
-                                                        defaultColsByMode
-                                                    ),
-                                            });
-                                        }
+                                        if (colsDraft === null) return;
+                                        const parsed = parseCount(
+                                            colsDraft,
+                                            clampCols
+                                        );
+                                        onChange(section.id, {
+                                            columns:
+                                                parsed === null
+                                                    ? clampCols(
+                                                          defaultColsByMode
+                                                      )
+                                                    : parsed,
+                                        });
+                                        setColsDraft(null);
+                                    }}
+                                    onValueFocus={() => {
+                                        setColsDraft(
+                                            displayColsStr === '∞'
+                                                ? ''
+                                                : displayColsStr
+                                        );
                                     }}
                                 />
                             )}
@@ -425,55 +470,33 @@ export function MediaSection({
                                     Clamp
                                 </Text>
                                 <InlineInput
-                                    value={
-                                        typeof section.rowHeight === 'number' &&
-                                        Number.isNaN(section.rowHeight)
-                                            ? ''
-                                            : section.rowHeight === undefined
-                                              ? '∞'
-                                              : section.rowHeight
-                                    }
+                                    value={clampDraft ?? displayClampStr}
                                     placeholder="∞"
                                     usePlaceholderWidth
                                     onChange={(val) => {
-                                        const trimmed = val.trim();
-                                        if (trimmed === '') {
-                                            onChange(section.id, {
-                                                rowHeight: Number.NaN,
-                                            });
-                                            return;
-                                        }
-                                        if (
-                                            trimmed === '∞' ||
-                                            trimmed === '0'
-                                        ) {
-                                            onChange(section.id, {
-                                                rowHeight: undefined,
-                                            });
-                                            return;
-                                        }
-                                        const next = Number(trimmed);
+                                        setClampDraft(val);
+                                        const parsed = parseClamp(val);
+                                        if (parsed === null) return;
                                         onChange(section.id, {
-                                            rowHeight:
-                                                Number.isFinite(next) &&
-                                                next > 0
-                                                    ? next
-                                                    : Number.NaN,
+                                            rowHeight: parsed ?? undefined,
+                                            clampUnit: 'px',
                                         });
                                     }}
                                     onBlur={() => {
-                                        if (
-                                            typeof section.rowHeight ===
-                                                'number' &&
-                                            (!Number.isFinite(
-                                                section.rowHeight
-                                            ) ||
-                                                section.rowHeight <= 0)
-                                        ) {
-                                            onChange(section.id, {
-                                                rowHeight: undefined,
-                                            });
-                                        }
+                                        if (clampDraft === null) return;
+                                        const parsed = parseClamp(clampDraft);
+                                        onChange(section.id, {
+                                            rowHeight: parsed ?? undefined,
+                                            clampUnit: 'px',
+                                        });
+                                        setClampDraft(null);
+                                    }}
+                                    onFocus={() => {
+                                        setClampDraft(
+                                            displayClampStr === '∞'
+                                                ? ''
+                                                : displayClampStr
+                                        );
                                     }}
                                     className="text-center"
                                 />

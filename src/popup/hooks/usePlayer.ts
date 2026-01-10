@@ -1,5 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { PlaybackState } from '@spotify/web-api-ts-sdk';
+import {
+    ANALYTICS_EVENTS,
+    createAnalyticsTracker,
+} from '../../shared/analytics';
 import { sendSpotifyMessage } from '../../shared/messaging';
 
 export function usePlayer(pollMs = 4000) {
@@ -11,6 +15,7 @@ export function usePlayer(pollMs = 4000) {
     const baseProgress = useRef(0);
     const lastSyncRef = useRef<number | null>(null);
     const pendingEndSync = useRef(false);
+    const trackPlayback = useMemo(() => createAnalyticsTracker('playback'), []);
 
     // Sync playback state
     const sync = useCallback(async () => {
@@ -33,6 +38,17 @@ export function usePlayer(pollMs = 4000) {
     }, [sync, pollMs]);
 
     const isPlaying = playback?.is_playing ?? false;
+    const lastPlayState = useRef<boolean | null>(null);
+
+    useEffect(() => {
+        if (playback == null) return;
+        if (lastPlayState.current === isPlaying) return;
+        lastPlayState.current = isPlaying;
+        void trackPlayback(ANALYTICS_EVENTS.playbackState, {
+            reason: 'playback state synced',
+            data: { playing: isPlaying },
+        });
+    }, [isPlaying, playback, trackPlayback]);
 
     useEffect(() => {
         const latestProgress = playback?.progress_ms ?? 0;
@@ -88,10 +104,19 @@ export function usePlayer(pollMs = 4000) {
     if (!muted) lastNonZero.current = volumePercent;
 
     const setVolume = (v: number) => {
+        void trackPlayback(ANALYTICS_EVENTS.playbackVolume, {
+            reason: 'volume adjusted',
+            data: { volume: v },
+        });
         void sendSpotifyMessage('setPlaybackVolume', v);
     };
 
     const toggleMute = () => {
+        const nextMuted = !muted;
+        void trackPlayback(ANALYTICS_EVENTS.playbackMute, {
+            reason: nextMuted ? 'muted playback' : 'unmuted playback',
+            data: { muted: nextMuted },
+        });
         if (muted)
             void sendSpotifyMessage(
                 'setPlaybackVolume',
@@ -103,16 +128,22 @@ export function usePlayer(pollMs = 4000) {
     const isShuffle = playback?.shuffle_state ?? false;
 
     const toggleShuffle = () => {
+        void trackPlayback(ANALYTICS_EVENTS.playbackShuffle, {
+            reason: 'shuffle toggled',
+            data: { enabled: !isShuffle },
+        });
         void sendSpotifyMessage('toggleShuffle', !isShuffle);
     };
 
     const repeatMode = playback?.repeat_state ?? 'off';
 
     const toggleRepeat = () => {
-        void sendSpotifyMessage(
-            'setRepeatMode',
-            repeatMode === 'off' ? 'context' : 'off'
-        );
+        const next = repeatMode === 'off' ? 'context' : 'off';
+        void trackPlayback(ANALYTICS_EVENTS.playbackRepeat, {
+            reason: 'repeat toggled',
+            data: { mode: next },
+        });
+        void sendSpotifyMessage('setRepeatMode', next);
     };
 
     const refreshAfter = useCallback(
@@ -124,16 +155,68 @@ export function usePlayer(pollMs = 4000) {
     );
 
     const controls = {
-        play: () => refreshAfter('startResumePlayback'),
-        pause: () => refreshAfter('pausePlayback'),
-        next: () => refreshAfter('skipToNext'),
-        previous: () => refreshAfter('skipToPrevious'),
-        seek: (ms: number) => refreshAfter('seekToPosition', ms),
+        play: () => {
+            void trackPlayback(ANALYTICS_EVENTS.playbackPlay, {
+                reason: 'playback resumed',
+            });
+            return refreshAfter('startResumePlayback');
+        },
+        pause: () => {
+            void trackPlayback(ANALYTICS_EVENTS.playbackPause, {
+                reason: 'playback paused',
+            });
+            return refreshAfter('pausePlayback');
+        },
+        next: () => {
+            void trackPlayback(ANALYTICS_EVENTS.playbackNext, {
+                reason: 'skipped to next',
+            });
+            return refreshAfter('skipToNext');
+        },
+        previous: () => {
+            void trackPlayback(ANALYTICS_EVENTS.playbackPrevious, {
+                reason: 'skipped to previous',
+            });
+            return refreshAfter('skipToPrevious');
+        },
+        seek: (ms: number) => {
+            void trackPlayback(ANALYTICS_EVENTS.playbackSeek, {
+                reason: 'scrubbed playback',
+                data: { positionMs: ms },
+            });
+            return refreshAfter('seekToPosition', ms);
+        },
         setVolume,
         toggleMute,
         toggleShuffle,
         toggleRepeat,
     };
+
+    const lastItemRef = useRef<string | null>(null);
+
+    useEffect(() => {
+        const item = playback?.item;
+        if (!item) return;
+        const itemId = item.id ?? item.uri ?? null;
+        if (!itemId || lastItemRef.current === itemId) return;
+        lastItemRef.current = itemId;
+
+        const artists = 'artists' in item ? item.artists : undefined;
+        const show = 'show' in item ? item.show : undefined;
+        const names = artists?.map((artist) => artist.name) ?? [];
+
+        if (!names.length && show?.name) names.push(show.name);
+
+        void trackPlayback(ANALYTICS_EVENTS.playbackItem, {
+            reason: 'playback item changed',
+            data: {
+                id: itemId,
+                name: item.name,
+                type: item.type,
+                artists: names,
+            },
+        });
+    }, [playback?.item, trackPlayback]);
 
     return {
         playback,

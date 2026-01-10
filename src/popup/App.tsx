@@ -9,6 +9,7 @@ import {
     useNavigate,
 } from 'react-router-dom';
 
+import { ANALYTICS_EVENTS, createAnalyticsTracker } from '../shared/analytics';
 import { AvatarButton } from './components/AvatarButton';
 import { HomeBar } from './components/HomeBar';
 import { NavBar } from './components/NavBar';
@@ -45,6 +46,7 @@ export default function App() {
     const { playback } = usePlayer();
 
     const search = useSearch();
+    const trackSearch = useMemo(() => createAnalyticsTracker('search'), []);
 
     const profileImage = profile?.images?.[0]?.url;
 
@@ -169,12 +171,34 @@ export default function App() {
                                 navSlot={navFloating.anchors.home}
                                 searchQuery={search.query}
                                 onSearchChange={search.setQuery}
-                                onClearSearch={() => search.setQuery('')}
-                                onSearchSubmit={() =>
+                                onClearSearch={() => {
+                                    if (search.query.trim()) {
+                                        void trackSearch(
+                                            ANALYTICS_EVENTS.searchClear,
+                                            {
+                                                reason: 'search query cleared',
+                                            }
+                                        );
+                                    }
+                                    search.setQuery('');
+                                }}
+                                onSearchSubmit={() => {
+                                    void trackSearch(
+                                        ANALYTICS_EVENTS.searchSubmit,
+                                        {
+                                            reason: 'search submitted',
+                                            data: {
+                                                query: search.query.trim(),
+                                                filters: search.filters.map(
+                                                    (filter) => filter.kind
+                                                ),
+                                            },
+                                        }
+                                    );
                                     routeHistory.goTo('/home', {
                                         searchQuery: search.query,
-                                    })
-                                }
+                                    });
+                                }}
                                 canGoBack={routeHistory.canGoBack}
                                 onGoBack={routeHistory.goBack}
                                 filters={search.filters}

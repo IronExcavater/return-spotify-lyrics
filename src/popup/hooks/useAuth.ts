@@ -1,5 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { UserProfile } from '@spotify/web-api-ts-sdk';
+import {
+    ANALYTICS_EVENTS,
+    createAnalyticsTracker,
+} from '../../shared/analytics';
 import { Msg, sendMessage, sendSpotifyMessage } from '../../shared/messaging';
 import { getFromStorage, setInStorage } from '../../shared/storage';
 
@@ -21,6 +25,7 @@ export function useAuth() {
     >(undefined);
     const connectionRef = useRef<SpotifyConnectionMeta | undefined>(undefined);
     const sessionActiveRef = useRef(false);
+    const trackAuth = useMemo(() => createAnalyticsTracker('auth'), []);
 
     const sync = async () => {
         try {
@@ -66,10 +71,16 @@ export function useAuth() {
     };
 
     const login = () => {
+        void trackAuth(ANALYTICS_EVENTS.authLogin, {
+            reason: 'user requested Spotify login',
+        });
         void sendMessage({ type: Msg.LOGIN_SPOTIFY });
     };
 
     const logout = () => {
+        void trackAuth(ANALYTICS_EVENTS.authLogout, {
+            reason: 'user requested Spotify logout',
+        });
         void sendMessage({ type: Msg.LOGOUT_SPOTIFY });
     };
 
@@ -100,6 +111,18 @@ export function useAuth() {
         );
         void sync();
     }, []);
+
+    const lastAuthState = useRef<boolean | undefined>(undefined);
+
+    useEffect(() => {
+        if (authed === undefined) return;
+        if (lastAuthState.current === authed) return;
+        lastAuthState.current = authed;
+        void trackAuth(ANALYTICS_EVENTS.authState, {
+            reason: 'authentication state updated',
+            data: { authed },
+        });
+    }, [authed, trackAuth]);
 
     return { authed, profile: user, login, logout, connection };
 }

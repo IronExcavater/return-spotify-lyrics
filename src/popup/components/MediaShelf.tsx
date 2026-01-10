@@ -301,10 +301,15 @@ export function MediaShelf({
                     contextMenu={contextMenu}
                     seed={seed}
                     loading={item.loading}
+                    className={
+                        orientation === 'horizontal'
+                            ? 'min-w-[220px]'
+                            : undefined
+                    }
                 />
             );
         },
-        [variant]
+        [orientation, variant]
     );
 
     const body = (
@@ -332,7 +337,13 @@ export function MediaShelf({
                                 : fixedHeight
                                   ? 'overflow-y-auto'
                                   : 'overflow-visible',
-                            variant === 'list' ? 'pr-1 pb-1' : 'pb-1',
+                            variant === 'list'
+                                ? orientation === 'horizontal'
+                                    ? 'pr-1 pb-1'
+                                    : 'pr-1'
+                                : orientation === 'horizontal'
+                                  ? 'pb-1'
+                                  : undefined,
                             className
                         )}
                         style={
@@ -354,7 +365,11 @@ export function MediaShelf({
                                       key={`col-${colIndex}`}
                                       direction="column"
                                       gap="1"
-                                      className="min-w-0"
+                                      className={clsx(
+                                          'min-w-0',
+                                          variant === 'list' &&
+                                              'w-[220px] flex-none'
+                                      )}
                                       style={{ flex: '0 0 auto' }}
                                   >
                                       {col.map((item, idx) => {

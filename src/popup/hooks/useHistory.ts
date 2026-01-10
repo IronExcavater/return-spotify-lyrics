@@ -61,7 +61,9 @@ export function useHistory() {
     useEffect(() => {
         const update = () => setCanGoBack(getCanGoBack());
         listeners.add(update);
-        return () => listeners.delete(update);
+        return () => {
+            listeners.delete(update);
+        };
     }, []);
 
     useEffect(() => {

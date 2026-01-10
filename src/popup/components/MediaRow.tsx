@@ -68,7 +68,7 @@ export function MediaRow({
             align="center"
             gap="1"
             onClick={loading ? undefined : onClick}
-            className={clsx('w-full min-w-[220px]', className)}
+            className={clsx('w-full', className)}
         >
             <Skeleton loading={loading}>
                 <AvatarButton

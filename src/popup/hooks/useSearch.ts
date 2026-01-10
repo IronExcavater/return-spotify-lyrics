@@ -1,4 +1,8 @@
 import { useCallback, useMemo, useState } from 'react';
+import {
+    ANALYTICS_EVENTS,
+    createAnalyticsTracker,
+} from '../../shared/analytics';
 import { type PillValue } from '../components/Pill';
 
 export type FilterKind = 'artist' | 'mood' | 'type' | 'date' | 'range';
@@ -45,6 +49,7 @@ const randomId = () => crypto.randomUUID?.() ?? Math.random().toString(36);
 export function useSearch() {
     const [query, setQuery] = useState('');
     const [filters, setFilters] = useState<SearchFilter[]>([]);
+    const trackSearch = useMemo(() => createAnalyticsTracker('search'), []);
 
     const available = useMemo(() => {
         const active = new Set(filters.map((filter) => filter.kind));
@@ -66,8 +71,12 @@ export function useSearch() {
                     value: meta.buildValue(),
                 },
             ]);
+            void trackSearch(ANALYTICS_EVENTS.searchFilterAdd, {
+                reason: 'filter added',
+                data: { filter: kind },
+            });
         },
-        [available]
+        [available, trackSearch]
     );
 
     const updateFilter = useCallback((id: string, value: PillValue) => {
@@ -78,11 +87,29 @@ export function useSearch() {
         );
     }, []);
 
-    const removeFilter = useCallback((id: string) => {
-        setFilters((prev) => prev.filter((filter) => filter.id !== id));
-    }, []);
+    const removeFilter = useCallback(
+        (id: string) => {
+            const removed = filters.find((filter) => filter.id === id);
+            setFilters((prev) => prev.filter((filter) => filter.id !== id));
+            if (removed) {
+                void trackSearch(ANALYTICS_EVENTS.searchFilterRemove, {
+                    reason: 'filter removed',
+                    data: { filter: removed.kind },
+                });
+            }
+        },
+        [filters, trackSearch]
+    );
 
-    const clearFilters = useCallback(() => setFilters([]), []);
+    const clearFilters = useCallback(() => {
+        if (filters.length) {
+            void trackSearch(ANALYTICS_EVENTS.searchFilterClear, {
+                reason: 'filters cleared',
+                data: { count: filters.length },
+            });
+        }
+        setFilters([]);
+    }, [filters, trackSearch]);
 
     return {
         query,
