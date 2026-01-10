@@ -337,13 +337,7 @@ export function MediaShelf({
                                 : fixedHeight
                                   ? 'overflow-y-auto'
                                   : 'overflow-visible',
-                            variant === 'list'
-                                ? orientation === 'horizontal'
-                                    ? 'pr-1 pb-1'
-                                    : 'pr-1'
-                                : orientation === 'horizontal'
-                                  ? 'pb-1'
-                                  : undefined,
+                            variant === 'list' ? 'pr-1' : undefined,
                             className
                         )}
                         style={
@@ -449,8 +443,8 @@ export function MediaShelf({
                             aria-hidden
                             className={clsx(
                                 orientation === 'horizontal'
-                                    ? 'h-full w-px'
-                                    : 'h-px w-full'
+                                    ? 'absolute top-0 right-0 h-full w-px'
+                                    : 'absolute bottom-0 left-0 h-px w-full'
                             )}
                         />
                     </Flex>

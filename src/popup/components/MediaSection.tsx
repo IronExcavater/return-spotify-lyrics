@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { GridIcon, RowsIcon, ColumnsIcon } from '@radix-ui/react-icons';
-import { Button, Flex, IconButton, Text } from '@radix-ui/themes';
+import { Button, DropdownMenu, Flex, IconButton, Text } from '@radix-ui/themes';
 import clsx from 'clsx';
 
 import { InlineInput } from './InlineInput';
+import { MediaRow } from './MediaRow';
 import { MediaShelf, type MediaShelfItem } from './MediaShelf';
 import { SegmentedControl } from './SegmentedControl';
 
@@ -31,19 +32,33 @@ export type MediaSectionState = {
     loadingMore?: boolean;
 };
 
-const MAX_ROWS = 12;
-const MAX_COLS = 12;
+const CLAMP_PX_MAX = 720;
+const LIMITS_BY_MODE = {
+    'v-list': {
+        rows: { min: 5, max: 20, allowInfinite: true },
+        cols: { min: 1, max: 1, allowInfinite: false },
+    },
+    'h-list': {
+        rows: { min: 5, max: 20, allowInfinite: true },
+        cols: { min: 2, max: 20, allowInfinite: true },
+    },
+    card: {
+        rows: { min: 1, max: 5, allowInfinite: false },
+        cols: { min: 5, max: 20, allowInfinite: true },
+    },
+} as const;
 
-const clampRows = (val: number) => {
+const clampCount = (
+    val: number,
+    {
+        min,
+        max,
+        allowInfinite,
+    }: { min: number; max: number; allowInfinite: boolean }
+) => {
     if (Number.isNaN(val)) return Number.NaN;
-    if (val <= 0) return 0;
-    return Math.min(MAX_ROWS, val);
-};
-
-const clampCols = (val: number) => {
-    if (Number.isNaN(val)) return Number.NaN;
-    if (val <= 0) return 0;
-    return Math.min(MAX_COLS, val);
+    if (val <= 0) return allowInfinite ? 0 : min;
+    return Math.min(max, Math.max(min, val));
 };
 
 type StepperControlProps = {
@@ -130,6 +145,13 @@ export function MediaSection({
     const [rowsDraft, setRowsDraft] = useState<string | null>(null);
     const [colsDraft, setColsDraft] = useState<string | null>(null);
     const [clampDraft, setClampDraft] = useState<string | null>(null);
+    const sectionRef = useRef<HTMLDivElement | null>(null);
+    const measureRowRef = useRef<HTMLDivElement | null>(null);
+    const measureStackRef = useRef<HTMLDivElement | null>(null);
+    const [rowMetrics, setRowMetrics] = useState<{
+        height: number;
+        gap: number;
+    } | null>(null);
 
     const derivedView =
         section.view ??
@@ -156,7 +178,8 @@ export function MediaSection({
               : 'v-list';
 
     const defaultColsByMode = mode === 'v-list' ? 1 : 0; // ∞ for h-list/card
-    const defaultRowsByMode = mode === 'v-list' ? 0 : mode === 'h-list' ? 3 : 1;
+    const defaultRowsByMode =
+        mode === 'v-list' ? 0 : LIMITS_BY_MODE[mode].rows.min;
     const defaultColsPlaceholder =
         defaultColsByMode === 0 ? '∞' : String(defaultColsByMode);
     const defaultRowsPlaceholder =
@@ -174,15 +197,20 @@ export function MediaSection({
         ? Number(section.itemsPerColumn)
         : undefined;
 
-    const layoutCols = clampCols(
+    const rowLimits = LIMITS_BY_MODE[mode].rows;
+    const colLimits = LIMITS_BY_MODE[mode].cols;
+
+    const layoutCols = clampCount(
         Number.isFinite(Number(rawCols))
             ? Number(rawCols)
-            : (colsFromLegacy ?? defaultColsByMode)
+            : (colsFromLegacy ?? defaultColsByMode),
+        colLimits
     );
-    const layoutRows = clampRows(
+    const layoutRows = clampCount(
         Number.isFinite(Number(rawRows))
             ? Number(rawRows)
-            : (rowsFromLegacy ?? defaultRowsByMode)
+            : (rowsFromLegacy ?? defaultRowsByMode),
+        rowLimits
     );
 
     const isColsBlank = typeof rawCols === 'number' && Number.isNaN(rawCols);
@@ -199,7 +227,10 @@ export function MediaSection({
     const displayRowsStr = String(displayRows);
     const displayClampStr = String(displayClamp);
 
-    const parseCount = (raw: string, clamp: (val: number) => number) => {
+    const parseCount = (
+        raw: string,
+        clamp: (val: number) => number
+    ): number | null => {
         const trimmed = raw.trim();
         if (!trimmed) return null;
         if (trimmed === '∞' || trimmed === '0') return 0;
@@ -261,16 +292,124 @@ export function MediaSection({
             : layoutRows === 0
               ? undefined
               : layoutRows;
+    const clampUnit = section.clampUnit ?? 'px';
     const clampValue =
         section.rowHeight === undefined || Number.isNaN(section.rowHeight)
             ? undefined
             : Number.isFinite(Number(section.rowHeight))
               ? Number(section.rowHeight)
               : undefined;
+    const rowHeightPx = rowMetrics?.height;
+    const rowGapPx = rowMetrics?.gap;
+    const minClampRows = 3;
+    const clampRowsMin = minClampRows;
+    const clampRowsMax =
+        rowHeightPx !== undefined && rowGapPx !== undefined
+            ? Math.max(
+                  clampRowsMin,
+                  Math.floor(
+                      (CLAMP_PX_MAX + rowGapPx) / (rowHeightPx + rowGapPx)
+                  )
+              )
+            : clampRowsMin;
+    const clampClampRows = (val: number) =>
+        Math.min(clampRowsMax, Math.max(clampRowsMin, val));
+    const rowsToPx =
+        rowHeightPx !== undefined && rowGapPx !== undefined
+            ? (rows: number) =>
+                  rows * rowHeightPx + Math.max(0, rows - 1) * rowGapPx
+            : null;
+    const pxToRows =
+        rowHeightPx !== undefined && rowGapPx !== undefined
+            ? (px: number) => (px + rowGapPx) / (rowHeightPx + rowGapPx)
+            : null;
+    const minClampPx = rowsToPx ? rowsToPx(minClampRows) : undefined;
+    const clampClampPx = (val: number) =>
+        minClampPx === undefined
+            ? val
+            : Math.min(CLAMP_PX_MAX, Math.max(minClampPx, val));
     const clampPx =
-        orientation === 'vertical' && clampValue ? clampValue : undefined;
+        orientation === 'vertical' && clampValue && rowsToPx
+            ? clampUnit === 'items'
+                ? Math.ceil(rowsToPx(clampClampRows(clampValue))) + 1
+                : clampClampPx(clampValue)
+            : undefined;
 
     const fixedHeight = orientation === 'vertical' ? clampPx : undefined;
+
+    const clampUnitLabel = clampUnit === 'items' ? 'rows' : 'px';
+
+    const toRows = pxToRows ? (px: number) => Math.round(pxToRows(px)) : null;
+    const toPx = rowsToPx ? (rows: number) => Math.round(rowsToPx(rows)) : null;
+
+    const updateClampUnit = (nextUnit: 'px' | 'items') => {
+        if (nextUnit === clampUnit) return;
+        if (!toRows || !toPx) return;
+        const raw =
+            clampDraft ??
+            (clampValue === undefined ? undefined : String(clampValue));
+
+        if (raw === undefined) {
+            onChange(section.id, { clampUnit: nextUnit });
+            return;
+        }
+
+        const parsed = parseClamp(raw);
+        if (parsed === null) {
+            onChange(section.id, { clampUnit: nextUnit });
+            setClampDraft(null);
+            return;
+        }
+
+        if (parsed === undefined) {
+            onChange(section.id, { clampUnit: nextUnit, rowHeight: undefined });
+            setClampDraft(null);
+            return;
+        }
+
+        const converted =
+            clampUnit === 'px' && nextUnit === 'items'
+                ? clampClampRows(toRows(parsed))
+                : clampUnit === 'items' && nextUnit === 'px'
+                  ? clampClampPx(toPx(parsed))
+                  : parsed;
+
+        onChange(section.id, {
+            clampUnit: nextUnit,
+            rowHeight: converted,
+        });
+        setClampDraft(String(converted));
+    };
+
+    useLayoutEffect(() => {
+        if (mode !== 'v-list') return;
+        const rowEl = measureRowRef.current;
+        const stackEl = measureStackRef.current;
+        if (!rowEl) return;
+        if (!stackEl) return;
+
+        const compute = () => {
+            const rect = rowEl.getBoundingClientRect();
+            const style = getComputedStyle(stackEl);
+            const rawGap = style.rowGap || style.gap || '0';
+            const parsedGap = Number.parseFloat(rawGap);
+            const gap = Number.isFinite(parsedGap) ? parsedGap : 0;
+            const height = rect.height;
+            if (!height) return;
+            setRowMetrics((prev) => {
+                if (!prev || prev.height !== height || prev.gap !== gap) {
+                    return { height, gap };
+                }
+                return prev;
+            });
+        };
+
+        compute();
+        const observer = new ResizeObserver(() => compute());
+        observer.observe(rowEl);
+        observer.observe(stackEl);
+        return () => observer.disconnect();
+    }, [mode, section.items.length, preview]);
 
     const content = (
         <MediaShelf
@@ -309,7 +448,23 @@ export function MediaSection({
                 className
             )}
             data-dragging={dragging ? 'true' : 'false'}
+            ref={sectionRef}
         >
+            <div className="pointer-events-none absolute -z-10 opacity-0">
+                <Flex
+                    ref={measureStackRef}
+                    direction="column"
+                    gap="1"
+                    style={{ width: 320 }}
+                >
+                    <div ref={measureRowRef}>
+                        <MediaRow
+                            title="Measure row"
+                            subtitle="Measure subtitle"
+                        />
+                    </div>
+                </Flex>
+            </div>
             <Flex direction="column" gap="1" className="relative min-w-0">
                 <Flex
                     direction="row"
@@ -394,23 +549,27 @@ export function MediaSection({
                                 onDecrement={() => {
                                     setRowsDraft(null);
                                     onChange(section.id, {
-                                        rows: clampRows((layoutRows || 0) - 1),
+                                        rows: clampCount(
+                                            (layoutRows || 0) - 1,
+                                            rowLimits
+                                        ),
                                     });
                                 }}
                                 onIncrement={() => {
                                     setRowsDraft(null);
                                     onChange(section.id, {
-                                        rows: clampRows(
+                                        rows: clampCount(
                                             layoutRows === 0
                                                 ? 1
-                                                : layoutRows + 1
+                                                : layoutRows + 1,
+                                            rowLimits
                                         ),
                                     });
                                 }}
                                 onValueChange={(val) =>
                                     changeCount(
                                         val,
-                                        clampRows,
+                                        (value) => clampCount(value, rowLimits),
                                         setRowsDraft,
                                         'rows'
                                     )
@@ -418,7 +577,7 @@ export function MediaSection({
                                 onValueBlur={() =>
                                     blurCount(
                                         rowsDraft,
-                                        clampRows,
+                                        (value) => clampCount(value, rowLimits),
                                         defaultRowsByMode,
                                         setRowsDraft,
                                         'rows'
@@ -438,25 +597,28 @@ export function MediaSection({
                                     onDecrement={() => {
                                         setColsDraft(null);
                                         onChange(section.id, {
-                                            columns: clampCols(
-                                                (layoutCols || 0) - 1
+                                            columns: clampCount(
+                                                (layoutCols || 0) - 1,
+                                                colLimits
                                             ),
                                         });
                                     }}
                                     onIncrement={() => {
                                         setColsDraft(null);
                                         onChange(section.id, {
-                                            columns: clampCols(
+                                            columns: clampCount(
                                                 layoutCols === 0
                                                     ? 1
-                                                    : layoutCols + 1
+                                                    : layoutCols + 1,
+                                                colLimits
                                             ),
                                         });
                                     }}
                                     onValueChange={(val) =>
                                         changeCount(
                                             val,
-                                            clampCols,
+                                            (value) =>
+                                                clampCount(value, colLimits),
                                             setColsDraft,
                                             'columns'
                                         )
@@ -464,7 +626,8 @@ export function MediaSection({
                                     onValueBlur={() =>
                                         blurCount(
                                             colsDraft,
-                                            clampCols,
+                                            (value) =>
+                                                clampCount(value, colLimits),
                                             defaultColsByMode,
                                             setColsDraft,
                                             'columns'
@@ -490,17 +653,31 @@ export function MediaSection({
                                         setClampDraft(val);
                                         const parsed = parseClamp(val);
                                         if (parsed === null) return;
+                                        const value =
+                                            parsed === undefined
+                                                ? undefined
+                                                : clampUnit === 'items'
+                                                  ? clampClampRows(parsed)
+                                                  : clampClampPx(parsed);
                                         onChange(section.id, {
-                                            rowHeight: parsed ?? undefined,
-                                            clampUnit: 'px',
+                                            rowHeight: value,
+                                            clampUnit,
                                         });
                                     }}
                                     onBlur={() => {
                                         if (clampDraft === null) return;
                                         const parsed = parseClamp(clampDraft);
+                                        const value =
+                                            parsed === undefined
+                                                ? undefined
+                                                : parsed === null
+                                                  ? undefined
+                                                  : clampUnit === 'items'
+                                                    ? clampClampRows(parsed)
+                                                    : clampClampPx(parsed);
                                         onChange(section.id, {
-                                            rowHeight: parsed ?? undefined,
-                                            clampUnit: 'px',
+                                            rowHeight: value,
+                                            clampUnit,
                                         });
                                         setClampDraft(null);
                                     }}
@@ -513,9 +690,33 @@ export function MediaSection({
                                     }}
                                     className="text-center"
                                 />
-                                <Text size="1" color="gray">
-                                    px
-                                </Text>
+                                <DropdownMenu.Root>
+                                    <DropdownMenu.Trigger>
+                                        <Button
+                                            size="0"
+                                            variant="ghost"
+                                            radius="small"
+                                        >
+                                            {clampUnitLabel}
+                                        </Button>
+                                    </DropdownMenu.Trigger>
+                                    <DropdownMenu.Content align="end" size="1">
+                                        <DropdownMenu.Item
+                                            onSelect={() =>
+                                                updateClampUnit('px')
+                                            }
+                                        >
+                                            px
+                                        </DropdownMenu.Item>
+                                        <DropdownMenu.Item
+                                            onSelect={() =>
+                                                updateClampUnit('items')
+                                            }
+                                        >
+                                            rows
+                                        </DropdownMenu.Item>
+                                    </DropdownMenu.Content>
+                                </DropdownMenu.Root>
                             </Flex>
                         )}
 
