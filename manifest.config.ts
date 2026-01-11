@@ -1,9 +1,15 @@
 import { defineManifest } from '@crxjs/vite-plugin';
 import pkg from './package.json';
 
+const manifestName = pkg.name
+    .split('/')
+    .pop()
+    ?.replace(/[-_]+/g, ' ')
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+
 export default defineManifest({
     manifest_version: 3,
-    name: pkg.name, // TODO: Improve the manifest name to actually capitalise and convert '-' to space
+    name: manifestName ?? pkg.name,
     version: pkg.version,
     description: pkg.description,
     icons: {
