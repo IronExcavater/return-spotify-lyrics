@@ -9,6 +9,7 @@ import {
 } from '@radix-ui/themes';
 import clsx from 'clsx';
 
+import { hashSequence, seededWidths } from '../../shared/math';
 import { AvatarButton } from './AvatarButton';
 import { Fade } from './Fade';
 import { Marquee } from './Marquee';
@@ -39,27 +40,16 @@ export function MediaRow({
     seed = 0,
 }: MediaRowProps) {
     const radius = imageShape === 'round' ? 'full' : 'small';
-    const hash = (value: string | undefined, salt: number) => {
-        if (!value) return salt * 5;
-        let h = salt | 0;
-        for (let i = 0; i < value.length; i += 1) {
-            h ^= value.charCodeAt(i) + 0x9e3779b9 + (h << 6) + (h >> 2);
-        }
-        h ^= h << 13;
-        h ^= h >> 17;
-        h ^= h << 5;
-        return h >>> 0;
-    };
-    const noise = (seed: number) => {
-        let t = seed + 0x6d2b79f5;
-        t = Math.imul(t ^ (t >>> 15), t | 1);
-        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-    };
     const baseSeed =
-        hash(title, 11) ^ hash(subtitle, 7) ^ hash(imageUrl, 31) ^ seed;
-    const titleWidth = Math.round(68 + noise(baseSeed + 5) * 26); // 68–94%
-    const subtitleWidth = Math.round(26 + noise(baseSeed + 41) * 30); // 26–56%
+        hashSequence([title, subtitle, imageUrl], [11, 7, 31], [5]) ^ seed;
+    const { titleWidth, subtitleWidth } = seededWidths(baseSeed, {
+        titleMin: 68,
+        titleRange: 26,
+        subtitleMin: 26,
+        subtitleRange: 30,
+        titleOffset: 5,
+        subtitleOffset: 41,
+    });
     const titleSkeletonStyle = loading ? { width: `${titleWidth}%` } : {};
     const subtitleSkeletonStyle = loading ? { width: `${subtitleWidth}%` } : {};
 
@@ -79,6 +69,7 @@ export function MediaRow({
                         size: '3',
                     }}
                     aria-label={title}
+                    hideRing
                 />
             </Skeleton>
             <Flex direction="column" gap="0" flexGrow="1" className="min-w-0">
@@ -132,6 +123,7 @@ export function MediaRow({
                             variant="ghost"
                             radius="full"
                             size="1"
+                            color="gray"
                             onClick={(event) => event.stopPropagation()}
                         >
                             <DotsHorizontalIcon />

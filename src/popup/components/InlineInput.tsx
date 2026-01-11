@@ -1,19 +1,16 @@
 import React, { forwardRef } from 'react';
 import clsx from 'clsx';
 
-interface Props extends Omit<
-    React.InputHTMLAttributes<HTMLInputElement>,
-    'onChange' | 'value'
-> {
+interface Props
+    extends Omit<
+        React.InputHTMLAttributes<HTMLInputElement>,
+        'onChange' | 'value'
+    > {
     value: string | number;
     onChange: (value: string) => void;
-    /** When true, placeholder contributes to width when input is empty. */
     usePlaceholderWidth?: boolean;
 }
 
-/**
- * Minimal inline input with no chrome, sized to its contents.
- */
 export const InlineInput = forwardRef<HTMLInputElement, Props>(
     (
         {
@@ -62,5 +59,3 @@ export const InlineInput = forwardRef<HTMLInputElement, Props>(
 );
 
 InlineInput.displayName = 'InlineInput';
-
-export default InlineInput;

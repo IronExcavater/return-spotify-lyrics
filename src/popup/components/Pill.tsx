@@ -28,6 +28,7 @@ export type PillValue =
 type DateRangeValue = Extract<PillValue, { type: 'date-range' }>['value'];
 type DateLikeValue = Extract<PillValue, { type: 'date' | 'date-range' }>;
 type DateDraft = { mode: 'date' | 'date-range'; range: DateRangeValue };
+type DateGranularity = 'day' | 'month' | 'year';
 const EARLIEST_MUSIC_YEAR = 1900;
 
 const todayIso = new Date().toISOString().slice(0, 10);
@@ -120,6 +121,7 @@ interface Props {
     label?: string;
     value: PillValue;
     placeholder?: string;
+    dateGranularity?: DateGranularity;
     onChange?: (value: PillValue) => void;
     onRemove?: () => void;
     className?: string;
@@ -129,6 +131,7 @@ export function Pill({
     label,
     value,
     placeholder = 'Type to edit',
+    dateGranularity = 'day',
     onChange,
     onRemove,
     className,
@@ -138,24 +141,38 @@ export function Pill({
         typeof navigator !== 'undefined' && navigator.language
             ? navigator.language
             : 'en';
-    const dateFormatter = useMemo(
-        () =>
-            new Intl.DateTimeFormat(locale, {
-                day: 'numeric',
-                month: 'short',
-                year: 'numeric',
-            }),
-        [locale]
-    );
-    const editFormatter = useMemo(
-        () =>
-            new Intl.DateTimeFormat(locale, {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric',
-            }),
-        [locale]
-    );
+    const dateFormatter = useMemo(() => {
+        const options =
+            dateGranularity === 'year'
+                ? ({ year: 'numeric' } satisfies Intl.DateTimeFormatOptions)
+                : dateGranularity === 'month'
+                  ? ({
+                        month: 'short',
+                        year: 'numeric',
+                    } satisfies Intl.DateTimeFormatOptions)
+                  : ({
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                    } satisfies Intl.DateTimeFormatOptions);
+        return new Intl.DateTimeFormat(locale, options);
+    }, [dateGranularity, locale]);
+    const editFormatter = useMemo(() => {
+        const options =
+            dateGranularity === 'year'
+                ? ({ year: 'numeric' } satisfies Intl.DateTimeFormatOptions)
+                : dateGranularity === 'month'
+                  ? ({
+                        month: '2-digit',
+                        year: 'numeric',
+                    } satisfies Intl.DateTimeFormatOptions)
+                  : ({
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                    } satisfies Intl.DateTimeFormatOptions);
+        return new Intl.DateTimeFormat(locale, options);
+    }, [dateGranularity, locale]);
     const editPattern = useMemo(
         () => resolveEditPattern(editFormatter),
         [editFormatter]
@@ -185,10 +202,13 @@ export function Pill({
                 return index === -1 ? undefined : segments[index];
             };
 
-            const day = Number(get('day'));
-            const month = Number(get('month'));
-            const year = Number(get('year'));
-            if (!day || !month || !year) return undefined;
+            const rawDay = get('day');
+            const rawMonth = get('month');
+            const rawYear = get('year');
+            const day = rawDay ? Number(rawDay) : 1;
+            const month = rawMonth ? Number(rawMonth) : 1;
+            const year = rawYear ? Number(rawYear) : 0;
+            if (!year) return undefined;
 
             const date = new Date(Date.UTC(year, month - 1, day));
             if (

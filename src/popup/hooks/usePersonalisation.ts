@@ -39,8 +39,9 @@ export function usePersonalisation({
     const snapshot = useMemo<PersonalisationSnapshot>(() => {
         return buildPersonalisationSnapshot(knowledge, {
             searchQuery,
+            filterCount: filters.length,
         });
-    }, [knowledge, searchQuery]);
+    }, [knowledge, searchQuery, filters.length]);
 
     return snapshot;
 }

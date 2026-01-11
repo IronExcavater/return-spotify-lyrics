@@ -85,7 +85,7 @@ export function ProfileView({ profile, onLogout, connection }: Props) {
                 value: followers != null ? followers.toLocaleString() : '—',
             },
             {
-                label: 'Connected',
+                label: 'Signed in',
                 value:
                     connectedRelative ??
                     formatAbsolute(connection?.connectedAt) ??
@@ -95,7 +95,7 @@ export function ProfileView({ profile, onLogout, connection }: Props) {
                     : undefined,
             },
             {
-                label: 'Auth Sync',
+                label: 'Last update',
                 value:
                     lastSyncRelative ??
                     formatAbsolute(connection?.lastActiveAt) ??
@@ -168,7 +168,7 @@ export function ProfileView({ profile, onLogout, connection }: Props) {
                             Disconnect Spotify
                         </Button>
                     </AlertDialog.Trigger>
-                    <AlertDialog.Content maxWidth="280px" size="1">
+                    <AlertDialog.Content maxWidth="260px" size="1">
                         <AlertDialog.Title size="3">
                             Disconnect Spotify
                         </AlertDialog.Title>
@@ -178,13 +178,16 @@ export function ProfileView({ profile, onLogout, connection }: Props) {
                         </AlertDialog.Description>
                         <Flex mt="3" justify="end" gap="2">
                             <AlertDialog.Cancel>
-                                <Button variant="soft">Cancel</Button>
+                                <Button size="1" variant="soft">
+                                    Cancel
+                                </Button>
                             </AlertDialog.Cancel>
                             <AlertDialog.Action>
                                 <Button
                                     variant="soft"
                                     color="red"
                                     onClick={onLogout}
+                                    size="1"
                                     autoFocus
                                 >
                                     Disconnect

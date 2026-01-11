@@ -1,3 +1,4 @@
+import type { ItemTypes, MaxInt } from '@spotify/web-api-ts-sdk';
 import { getSpotifySdk } from './spotifyAuth.ts';
 
 async function requireClient() {
@@ -77,6 +78,88 @@ export const spotifyRpc = {
     hasSavedTracks: async (ids: string[]) => {
         const client = await requireClient();
         return client.currentUser.tracks.hasSavedTracks(ids);
+    },
+    getRecentlyPlayedTracks: async ({
+        limit = 20,
+    }: {
+        limit?: MaxInt<50>;
+    } = {}) => {
+        const client = await requireClient();
+        return client.player.getRecentlyPlayedTracks(limit);
+    },
+    getTopTracks: async ({
+        limit = 20,
+        timeRange = 'short_term',
+        offset = 0,
+    }: {
+        limit?: MaxInt<50>;
+        timeRange?: 'short_term' | 'medium_term' | 'long_term';
+        offset?: number;
+    } = {}) => {
+        const client = await requireClient();
+        return client.currentUser.topItems('tracks', timeRange, limit, offset);
+    },
+    getTopArtists: async ({
+        limit = 20,
+        timeRange = 'short_term',
+        offset = 0,
+    }: {
+        limit?: MaxInt<50>;
+        timeRange?: 'short_term' | 'medium_term' | 'long_term';
+        offset?: number;
+    } = {}) => {
+        const client = await requireClient();
+        return client.currentUser.topItems('artists', timeRange, limit, offset);
+    },
+    getSavedTracks: async ({
+        limit = 20,
+        offset = 0,
+    }: {
+        limit?: MaxInt<50>;
+        offset?: number;
+    } = {}) => {
+        const client = await requireClient();
+        return client.currentUser.tracks.savedTracks(limit, offset);
+    },
+    getNewReleases: async ({
+        limit = 20,
+        offset = 0,
+    }: {
+        limit?: MaxInt<50>;
+        offset?: number;
+    } = {}) => {
+        const client = await requireClient();
+        return client.browse.getNewReleases(undefined, limit, offset);
+    },
+    getFeaturedPlaylists: async ({
+        limit = 20,
+        offset = 0,
+    }: {
+        limit?: MaxInt<50>;
+        offset?: number;
+    } = {}) => {
+        const client = await requireClient();
+        return client.browse.getFeaturedPlaylists(
+            undefined,
+            undefined,
+            undefined,
+            limit,
+            offset
+        );
+    },
+    search: async ({
+        query,
+        types,
+        limit = 20,
+        offset = 0,
+    }: {
+        query: string;
+        types: ItemTypes[];
+        limit?: MaxInt<50>;
+        offset?: number;
+    }) => {
+        const client = await requireClient();
+        return client.search(query, types, undefined, limit, offset);
     },
 } as const;
 

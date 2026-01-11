@@ -21,10 +21,9 @@ import { Pill, type PillValue } from './Pill';
 
 const FILTER_LABELS: Record<FilterKind, string> = {
     artist: 'Artist',
-    mood: 'Mood',
-    type: 'Type',
-    date: 'Date',
-    range: 'Date Range',
+    genre: 'Genre',
+    category: 'Category',
+    year: 'Released',
 };
 
 interface Props {
@@ -167,9 +166,7 @@ export function HomeBar({
                                                 onAddFilter(kind);
                                             }}
                                         >
-                                            {kind === 'range'
-                                                ? 'Date Range'
-                                                : FILTER_LABELS[kind]}
+                                            {FILTER_LABELS[kind]}
                                         </DropdownMenu.Item>
                                     ))}
                                 </DropdownMenu.Content>
@@ -204,14 +201,17 @@ export function HomeBar({
                         key={filter.id}
                         label={filter.label}
                         value={filter.value}
+                        dateGranularity={
+                            filter.kind === 'year' ? 'year' : undefined
+                        }
                         placeholder={
                             filter.kind === 'artist'
-                                ? 'Add an artist'
-                                : filter.kind === 'mood'
-                                  ? 'Set mood'
-                                  : filter.kind === 'type'
-                                    ? 'Select categories'
-                                    : 'Select date'
+                                ? 'Name'
+                                : filter.kind === 'genre'
+                                  ? 'Tag'
+                                  : filter.kind === 'category'
+                                    ? 'Pick'
+                                    : 'YYYY'
                         }
                         onChange={(value) =>
                             onUpdateFilter(filter.id, value as PillValue)

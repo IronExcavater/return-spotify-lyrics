@@ -5,7 +5,7 @@ import {
 } from '../../shared/analytics';
 import { type PillValue } from '../components/Pill';
 
-export type FilterKind = 'artist' | 'mood' | 'type' | 'date' | 'range';
+export type FilterKind = 'artist' | 'genre' | 'category' | 'year';
 
 export type SearchFilter = {
     id: string;
@@ -22,25 +22,29 @@ const FILTER_META: Record<
         label: 'Artist',
         buildValue: () => ({ type: 'text', value: '' }),
     },
-    mood: {
-        label: 'Mood',
+    genre: {
+        label: 'Genre',
         buildValue: () => ({ type: 'text', value: '' }),
     },
-    type: {
-        label: 'Type',
+    category: {
+        label: 'Category',
         buildValue: () => ({
             type: 'options',
-            options: ['Track', 'Album', 'Artist', 'Playlist'],
+            options: [
+                'Track',
+                'Album',
+                'Artist',
+                'Playlist',
+                'Show',
+                'Episode',
+                'Audiobook',
+            ],
             value: [],
         }),
     },
-    date: {
-        label: 'Date',
+    year: {
+        label: 'Released',
         buildValue: () => ({ type: 'date', value: '' }),
-    },
-    range: {
-        label: 'Range',
-        buildValue: () => ({ type: 'date-range', value: {} }),
     },
 };
 

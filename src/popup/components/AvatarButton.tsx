@@ -10,12 +10,14 @@ import clsx from 'clsx';
 interface AvatarButtonProps extends Omit<IconButtonProps, 'asChild'> {
     avatar: AvatarProps;
     children?: ReactNode;
+    hideRing?: boolean;
 }
 
 export function AvatarButton({
     avatar,
     children,
     className,
+    hideRing = false,
     disabled,
     onKeyDown,
     onKeyUp,
@@ -74,13 +76,18 @@ export function AvatarButton({
                     avatarClassName
                 )}
                 imageClassName={clsx(
-                    'block ring-2 ring-transparent ring-offset-2 ring-offset-[var(--color-background)] transition-shadow',
-                    'focus-visible:outline-none',
-                    isEnabled &&
+                    'block transition-shadow',
+                    hideRing
+                        ? 'ring-0 ring-offset-0 focus-visible:outline-none'
+                        : 'ring-2 ring-transparent ring-offset-2 ring-offset-[var(--color-background)] focus-visible:outline-none',
+                    !hideRing &&
+                        isEnabled &&
                         'focus-visible:ring-2 focus-visible:ring-[var(--accent-8)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-background)]',
-                    isEnabled &&
+                    !hideRing &&
+                        isEnabled &&
                         'hover:ring-2 hover:ring-[var(--accent-8)] hover:ring-offset-2 hover:ring-offset-[var(--color-background)]',
-                    isEnabled &&
+                    !hideRing &&
+                        isEnabled &&
                         (ariaPressed || ariaSelected) &&
                         '!ring-[var(--accent-10)] ring-offset-2 ring-offset-[var(--color-background)]',
                     imageClassName

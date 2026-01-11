@@ -15,6 +15,7 @@ export type PersonalisationSnapshot = {
 
 export type PersonalisationContext = {
     searchQuery?: string;
+    filterCount?: number;
 };
 
 const getTimeGreeting = (hours: number) => {
@@ -27,19 +28,31 @@ const getTimeGreeting = (hours: number) => {
 
 export function buildPersonalisationSnapshot(
     knowledge: AnalyticsKnowledge,
-    { searchQuery = '' }: PersonalisationContext = {}
+    { searchQuery = '', filterCount = 0 }: PersonalisationContext = {}
 ): PersonalisationSnapshot {
     const now = new Date();
     const greeting = getTimeGreeting(now.getHours());
     const sessions = Math.max(1, knowledge.sessions.count || 1);
     const daysActive = Math.max(1, knowledge.sessions.daysActive || 1);
     const longTimer = sessions > 20 || daysActive > 21;
-    const title =
-        sessions === 1
-            ? `${greeting}, welcome`
-            : longTimer
-              ? `${greeting}, regular`
-              : `${greeting} again`;
+    const isNew = knowledge.sessions.isNew;
+    const isRegular = knowledge.sessions.isRegular || longTimer;
+
+    const pick = (options: string[]) => {
+        const seed =
+            sessions * 13 +
+            daysActive * 7 +
+            now.getDate() +
+            (knowledge.search.isSearchHeavy ? 3 : 0) +
+            (knowledge.playback.isPlaybackHeavy ? 5 : 0);
+        return options[Math.abs(seed) % options.length];
+    };
+
+    const title = (() => {
+        if (isNew) return `${greeting}, welcome`;
+        if (isRegular) return `${greeting}, good to see you`;
+        return `${greeting}, back again`;
+    })();
 
     const subtitle = (() => {
         if (searchQuery.trim()) {
@@ -47,27 +60,51 @@ export function buildPersonalisationSnapshot(
             return `Dialling up "${trimmed}".`;
         }
 
-        if (longTimer) {
-            return `You have dropped by ${sessions} times across ${daysActive} days.`;
-        }
-
         if (knowledge.playback.isPlaybackHeavy) {
-            return 'Queue-ready picks based on how you play.';
+            return pick([
+                'Queue-ready picks based on how you play.',
+                'Playback-heavy sessions — here is what fits.',
+                'Let us keep the momentum going.',
+            ]);
         }
 
         if (knowledge.search.isSearchHeavy) {
-            return 'Search-first sessions keep your mixes sharp.';
+            return pick([
+                'Search-first sessions keep your mixes sharp.',
+                'Precision picks for how you explore.',
+                'Let us surface the exact vibe.',
+            ]);
         }
 
         if (knowledge.total.prefersLyrics) {
-            return 'Lyrics mode is usually where you land.';
+            return pick([
+                'Lyrics-first sessions still feel right.',
+                'Words-forward listening, ready when you are.',
+                'Keep the lyrics close today.',
+            ]);
+        }
+
+        if (filterCount > 0) {
+            return pick([
+                'Filters ready — let us narrow it down.',
+                'Tuning the mix to your filters.',
+                'Dialled-in discovery ahead.',
+            ]);
         }
 
         if (sessions > 3) {
-            return 'Picking up where you left off.';
+            return pick([
+                'Picking up where you left off.',
+                'Carry on from your last session.',
+                'Ready for the next run.',
+            ]);
         }
 
-        return 'Fresh picks ready whenever you are.';
+        return pick([
+            'Fresh picks ready whenever you are.',
+            'Start a new run, your way.',
+            'Let us find something that lands.',
+        ]);
     })();
 
     return {

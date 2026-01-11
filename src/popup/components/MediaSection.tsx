@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { GridIcon, RowsIcon, ColumnsIcon } from '@radix-ui/react-icons';
 import { Button, DropdownMenu, Flex, IconButton, Text } from '@radix-ui/themes';
 import clsx from 'clsx';
@@ -339,6 +339,24 @@ export function MediaSection({
 
     const clampUnitLabel = clampUnit === 'items' ? 'rows' : 'px';
 
+    const placeholderItems = useMemo(() => {
+        if (!preview) return [];
+        const cols = maxVisible ?? (orientation === 'horizontal' ? 4 : 8);
+        const rows = itemsPerColumn ?? 3;
+        const count = orientation === 'horizontal' ? cols * rows : cols;
+        const safeCount = Math.max(6, Math.min(count, 48));
+        return Array.from({ length: safeCount }).map((_, idx) => ({
+            id: `${section.id}-placeholder-${idx}`,
+            title: 'Loading',
+            subtitle: 'Loading',
+        }));
+    }, [itemsPerColumn, maxVisible, orientation, preview, section.id]);
+
+    const shelfItems =
+        preview && section.items.length === 0
+            ? placeholderItems
+            : section.items;
+
     const toRows = pxToRows ? (px: number) => Math.round(pxToRows(px)) : null;
     const toPx = rowsToPx ? (rows: number) => Math.round(rowsToPx(rows)) : null;
 
@@ -414,7 +432,7 @@ export function MediaSection({
     const content = (
         <MediaShelf
             droppableId={`media-shelf-${section.id}`}
-            items={section.items as MediaShelfItem[]}
+            items={shelfItems as MediaShelfItem[]}
             variant={variant === 'tile' ? 'tile' : 'list'}
             orientation={orientation}
             itemsPerColumn={itemsPerColumn}
@@ -483,7 +501,7 @@ export function MediaSection({
 
                 <div
                     className={clsx(
-                        'pointer-events-none absolute top-0 right-1 z-10 overflow-hidden transition-[opacity,transform] duration-300 will-change-[opacity,transform]',
+                        'pointer-events-none absolute -top-0.5 right-1 z-10 overflow-hidden transition-[opacity,transform] duration-300 will-change-[opacity,transform]',
                         editing ? 'opacity-100' : 'max-h-0 opacity-0'
                     )}
                 >

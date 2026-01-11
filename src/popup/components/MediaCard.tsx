@@ -8,6 +8,7 @@ import {
     Text,
 } from '@radix-ui/themes';
 import clsx from 'clsx';
+import { hashSequence, seededWidths } from '../../shared/math';
 import { AvatarButton } from './AvatarButton';
 import { Fade } from './Fade';
 import { Marquee } from './Marquee';
@@ -39,27 +40,17 @@ export function MediaCard({
     seed = 0,
 }: Props) {
     const radius = imageShape === 'round' ? 'full' : 'small';
-    const hash = (value: string | undefined, salt: number) => {
-        if (!value) return salt * 7;
-        let h = salt | 0;
-        for (let i = 0; i < value.length; i += 1) {
-            h ^= value.charCodeAt(i) + 0x9e3779b9 + (h << 6) + (h >> 2);
-        }
-        h ^= h << 13;
-        h ^= h >> 17;
-        h ^= h << 5;
-        return h >>> 0;
-    };
-    const noise = (seed: number) => {
-        let t = seed + 0x6d2b79f5;
-        t = Math.imul(t ^ (t >>> 15), t | 1);
-        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-    };
+    const subtitleContent = subtitle?.trim() ? subtitle : ' ';
     const baseSeed =
-        hash(title, 13) ^ hash(subtitle, 17) ^ hash(imageUrl, 23) ^ seed;
-    const titleWidth = Math.round(68 + noise(baseSeed + 11) * 28); // 68–96%
-    const subtitleWidth = Math.round(28 + noise(baseSeed + 29) * 32); // 28–60%
+        hashSequence([title, subtitle, imageUrl], [13, 17, 23], [7]) ^ seed;
+    const { titleWidth, subtitleWidth } = seededWidths(baseSeed, {
+        titleMin: 68,
+        titleRange: 28,
+        subtitleMin: 28,
+        subtitleRange: 32,
+        titleOffset: 11,
+        subtitleOffset: 29,
+    });
     const titleSkeletonStyle = loading ? { width: `${titleWidth}%` } : {};
     const subtitleSkeletonStyle = loading ? { width: `${subtitleWidth}%` } : {};
 
@@ -79,6 +70,7 @@ export function MediaCard({
                         size: '6',
                     }}
                     aria-label={title}
+                    hideRing
                     className="relative"
                 >
                     {contextMenu && (
@@ -87,13 +79,14 @@ export function MediaCard({
                                 <IconButton
                                     variant="ghost"
                                     radius="full"
-                                    size="1"
+                                    size="0"
+                                    color="gray"
                                     onClick={(event) => event.stopPropagation()}
                                     className={clsx(
                                         imageShape === 'round'
                                             ? '!m-2'
                                             : '!m-1',
-                                        '!ml-auto !self-start'
+                                        '!ml-auto !self-start !bg-[var(--color-panel-solid)]/10 !backdrop-blur-[2px] hover:!bg-[var(--accent-11)]/10 hover:!backdrop-blur-xs' // !bg-[var(--color-panel-solid)]/40 text-[var(--accent-9)] shadow-sm backdrop-blur-xs transition-[background-color,opacity] opacity-40 hover:!bg-[var(--color-panel-solid)]/80 hover:opacity-100'
                                     )}
                                 >
                                     <DotsHorizontalIcon />
@@ -125,28 +118,26 @@ export function MediaCard({
                         </Skeleton>
                     </div>
                 </Fade>
-                {subtitle && (
-                    <Fade enabled={!loading}>
-                        <div
-                            className="transition-all duration-300 ease-out"
-                            style={subtitleSkeletonStyle}
-                        >
-                            <Skeleton loading={loading} className="w-full">
-                                <Marquee
-                                    mode="left"
-                                    className={clsx(
-                                        'min-w-0',
-                                        !loading && 'w-full'
-                                    )}
-                                >
-                                    <Text size="1" color="gray">
-                                        {subtitle}
-                                    </Text>
-                                </Marquee>
-                            </Skeleton>
-                        </div>
-                    </Fade>
-                )}
+                <Fade enabled={!loading}>
+                    <div
+                        className="min-h-[14px] transition-all duration-300 ease-out"
+                        style={subtitleSkeletonStyle}
+                    >
+                        <Skeleton loading={loading} className="w-full">
+                            <Marquee
+                                mode="left"
+                                className={clsx(
+                                    'min-w-0',
+                                    !loading && 'w-full'
+                                )}
+                            >
+                                <Text size="1" color="gray">
+                                    {subtitleContent}
+                                </Text>
+                            </Marquee>
+                        </Skeleton>
+                    </div>
+                </Fade>
             </Flex>
         </Flex>
     );
