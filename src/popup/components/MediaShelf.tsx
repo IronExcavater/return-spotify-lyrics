@@ -337,7 +337,6 @@ export function MediaShelf({
                                 : fixedHeight
                                   ? 'overflow-y-auto'
                                   : 'overflow-visible',
-                            variant === 'list' ? 'pr-1' : undefined,
                             className
                         )}
                         style={

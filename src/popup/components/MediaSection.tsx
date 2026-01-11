@@ -420,7 +420,6 @@ export function MediaSection({
             itemsPerColumn={itemsPerColumn}
             maxVisible={maxVisible}
             fixedHeight={fixedHeight}
-            className={variant === 'list' ? 'pr-1' : undefined}
             hasMore={preview ? false : section.hasMore}
             loadingMore={preview ? false : section.loadingMore}
             onLoadMore={
@@ -541,7 +540,6 @@ export function MediaSection({
                         />
 
                         <Flex align="center" gap="2">
-                            {/* TODO: Why is this blurring the input when the value changes instead of keeping it focused */}
                             <StepperControl
                                 label="Rows"
                                 value={rowsDraft ?? displayRowsStr}
@@ -589,7 +587,6 @@ export function MediaSection({
                             />
 
                             {mode !== 'v-list' && (
-                                /* TODO: Why is this blurring the input when the value changes instead of keeping it focused */
                                 <StepperControl
                                     label="Cols"
                                     value={colsDraft ?? displayColsStr}
