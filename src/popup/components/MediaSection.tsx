@@ -1,15 +1,18 @@
-import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import {
+    useLayoutEffect,
+    useMemo,
+    useRef,
+    useState,
+    MouseEvent as ReactMouseEvent,
+} from 'react';
 import { GridIcon, RowsIcon, ColumnsIcon } from '@radix-ui/react-icons';
 import { Button, DropdownMenu, Flex, IconButton, Text } from '@radix-ui/themes';
 import clsx from 'clsx';
 
-import { InlineInput } from './InlineInput';
 import { MediaRow } from './MediaRow';
 import { MediaShelf, type MediaShelfItem } from './MediaShelf';
 import { SegmentedControl } from './SegmentedControl';
-
-export type MediaSectionVariant = 'list' | 'tile';
-export type MediaSectionOrientation = 'vertical' | 'horizontal';
+import { StepperControl } from './StepperControl';
 
 export type MediaSectionState = {
     id: string;
@@ -20,19 +23,17 @@ export type MediaSectionState = {
     rows?: number;
     infinite?: 'columns' | 'rows' | null;
     rowHeight?: number;
+    columnWidth?: number;
     clampUnit?: 'px' | 'items';
     items: MediaShelfItem[];
-    // legacy fields
-    variant?: 'list' | 'tile';
-    orientation?: 'vertical' | 'horizontal';
-    maxVisible?: number;
-    itemsPerColumn?: number;
-    fixedHeight?: number;
     hasMore?: boolean;
     loadingMore?: boolean;
+    wideColumns?: boolean;
 };
 
 const CLAMP_PX_MAX = 720;
+const COLUMN_WIDTH_MIN = 180;
+const COLUMN_WIDTH_MAX = 520;
 const LIMITS_BY_MODE = {
     'v-list': {
         rows: { min: 5, max: 20, allowInfinite: true },
@@ -60,61 +61,6 @@ const clampCount = (
     if (val <= 0) return allowInfinite ? 0 : min;
     return Math.min(max, Math.max(min, val));
 };
-
-type StepperControlProps = {
-    label: string;
-    value: string | number;
-    placeholder: string;
-    onDecrement: () => void;
-    onIncrement: () => void;
-    onValueChange: (val: string) => void;
-    onValueBlur: () => void;
-    onValueFocus: () => void;
-};
-
-function StepperControl({
-    label,
-    value,
-    placeholder,
-    onDecrement,
-    onIncrement,
-    onValueChange,
-    onValueBlur,
-    onValueFocus,
-}: StepperControlProps) {
-    return (
-        <Flex align="center" gap="1">
-            <Text size="1" color="gray">
-                {label}
-            </Text>
-            <Button
-                size="0"
-                variant="ghost"
-                radius="small"
-                onClick={onDecrement}
-            >
-                –
-            </Button>
-            <InlineInput
-                value={value}
-                placeholder={placeholder}
-                usePlaceholderWidth
-                onChange={onValueChange}
-                onBlur={onValueBlur}
-                onFocus={onValueFocus}
-                className="text-center"
-            />
-            <Button
-                size="0"
-                variant="ghost"
-                radius="small"
-                onClick={onIncrement}
-            >
-                +
-            </Button>
-        </Flex>
-    );
-}
 
 interface Props {
     section: MediaSectionState;
@@ -145,6 +91,7 @@ export function MediaSection({
     const [rowsDraft, setRowsDraft] = useState<string | null>(null);
     const [colsDraft, setColsDraft] = useState<string | null>(null);
     const [clampDraft, setClampDraft] = useState<string | null>(null);
+    const [widthDraft, setWidthDraft] = useState<string | null>(null);
     const sectionRef = useRef<HTMLDivElement | null>(null);
     const measureRowRef = useRef<HTMLDivElement | null>(null);
     const measureStackRef = useRef<HTMLDivElement | null>(null);
@@ -153,22 +100,14 @@ export function MediaSection({
         gap: number;
     } | null>(null);
 
-    const derivedView =
-        section.view ??
-        (section.variant === 'tile'
-            ? 'card'
-            : section.variant === 'list'
-              ? 'list'
-              : 'list');
+    const derivedView = section.view ?? 'list';
 
     const derivedInfinite =
         section.infinite !== undefined
             ? section.infinite
             : derivedView === 'card'
               ? 'columns'
-              : section.orientation === 'horizontal'
-                ? 'columns'
-                : null;
+              : null;
 
     const mode: 'card' | 'h-list' | 'v-list' =
         derivedView === 'card'
@@ -190,26 +129,16 @@ export function MediaSection({
 
     const rawCols = section.columns;
     const rawRows = section.rows;
-    const colsFromLegacy = Number.isFinite(section.maxVisible)
-        ? Number(section.maxVisible)
-        : undefined;
-    const rowsFromLegacy = Number.isFinite(section.itemsPerColumn)
-        ? Number(section.itemsPerColumn)
-        : undefined;
 
     const rowLimits = LIMITS_BY_MODE[mode].rows;
     const colLimits = LIMITS_BY_MODE[mode].cols;
 
     const layoutCols = clampCount(
-        Number.isFinite(Number(rawCols))
-            ? Number(rawCols)
-            : (colsFromLegacy ?? defaultColsByMode),
+        Number.isFinite(Number(rawCols)) ? Number(rawCols) : defaultColsByMode,
         colLimits
     );
     const layoutRows = clampCount(
-        Number.isFinite(Number(rawRows))
-            ? Number(rawRows)
-            : (rowsFromLegacy ?? defaultRowsByMode),
+        Number.isFinite(Number(rawRows)) ? Number(rawRows) : defaultRowsByMode,
         rowLimits
     );
 
@@ -226,6 +155,22 @@ export function MediaSection({
     const displayColsStr = String(displayCols);
     const displayRowsStr = String(displayRows);
     const displayClampStr = String(displayClamp);
+    const defaultColumnWidth = 300;
+    const columnWidth =
+        mode === 'h-list'
+            ? clampCount(
+                  Number.isFinite(Number(section.columnWidth))
+                      ? Number(section.columnWidth)
+                      : defaultColumnWidth,
+                  {
+                      min: COLUMN_WIDTH_MIN,
+                      max: COLUMN_WIDTH_MAX,
+                      allowInfinite: false,
+                  }
+              )
+            : undefined;
+    const displayWidthStr =
+        columnWidth === undefined ? '' : String(columnWidth);
 
     const parseCount = (
         raw: string,
@@ -338,6 +283,8 @@ export function MediaSection({
     const fixedHeight = orientation === 'vertical' ? clampPx : undefined;
 
     const clampUnitLabel = clampUnit === 'items' ? 'rows' : 'px';
+    const clampColumnWidth = (val: number) =>
+        Math.min(COLUMN_WIDTH_MAX, Math.max(COLUMN_WIDTH_MIN, val));
 
     const placeholderItems = useMemo(() => {
         if (!preview) return [];
@@ -436,6 +383,8 @@ export function MediaSection({
             variant={variant === 'tile' ? 'tile' : 'list'}
             orientation={orientation}
             itemsPerColumn={itemsPerColumn}
+            wideColumns={section.wideColumns}
+            columnWidth={columnWidth}
             maxVisible={maxVisible}
             fixedHeight={fixedHeight}
             hasMore={preview ? false : section.hasMore}
@@ -501,7 +450,7 @@ export function MediaSection({
 
                 <div
                     className={clsx(
-                        'pointer-events-none absolute -top-0.5 right-1 z-10 overflow-hidden transition-[opacity,transform] duration-300 will-change-[opacity,transform]',
+                        'pointer-events-none absolute -top-0.5 right-0 z-10 overflow-hidden transition-[opacity,transform] duration-300 will-change-[opacity,transform]',
                         editing ? 'opacity-100' : 'max-h-0 opacity-0'
                     )}
                 >
@@ -509,10 +458,10 @@ export function MediaSection({
                         align="center"
                         gap="1"
                         className={clsx(
-                            'pointer-events-auto rounded-full bg-[var(--color-panel-solid)]/90 p-1 text-[12px] shadow-sm backdrop-blur transition-opacity',
+                            'pointer-events-auto rounded-full bg-[var(--color-panel-solid)]/90 p-1 shadow-sm backdrop-blur transition-opacity',
                             editing ? 'opacity-100' : 'opacity-0'
                         )}
-                        onMouseDownCapture={(event) => {
+                        onMouseDownCapture={(event: ReactMouseEvent) => {
                             const target = event.target;
                             if (target instanceof HTMLInputElement) return;
                             const active = document.activeElement;
@@ -549,10 +498,6 @@ export function MediaSection({
                                             : viewNext === 'h-list'
                                               ? 'columns'
                                               : null,
-                                    orientation:
-                                        viewNext === 'v-list'
-                                            ? 'vertical'
-                                            : 'horizontal',
                                 })
                             }
                         />
@@ -653,86 +598,140 @@ export function MediaSection({
                                     }
                                 />
                             )}
+
+                            {mode === 'h-list' && (
+                                <StepperControl
+                                    label="Width"
+                                    value={widthDraft ?? displayWidthStr}
+                                    placeholder={String(defaultColumnWidth)}
+                                    hideSteppers
+                                    onDecrement={() => undefined}
+                                    onIncrement={() => undefined}
+                                    onValueChange={(val) => {
+                                        setWidthDraft(val);
+                                        const parsed = parseClamp(val);
+                                        if (parsed === null) return;
+                                        const next =
+                                            parsed === undefined
+                                                ? defaultColumnWidth
+                                                : clampColumnWidth(parsed);
+                                        onChange(section.id, {
+                                            columnWidth: next,
+                                        });
+                                    }}
+                                    onValueBlur={() => {
+                                        if (widthDraft === null) return;
+                                        const parsed = parseClamp(widthDraft);
+                                        const next =
+                                            parsed === null ||
+                                            parsed === undefined
+                                                ? defaultColumnWidth
+                                                : clampColumnWidth(parsed);
+                                        onChange(section.id, {
+                                            columnWidth: next,
+                                        });
+                                        setWidthDraft(null);
+                                    }}
+                                    onValueFocus={() =>
+                                        focusDraft(
+                                            displayWidthStr,
+                                            setWidthDraft
+                                        )
+                                    }
+                                    suffix={
+                                        <Text
+                                            size="1"
+                                            color="gray"
+                                            className="px-0.25"
+                                        >
+                                            px
+                                        </Text>
+                                    }
+                                />
+                            )}
                         </Flex>
 
                         {mode === 'v-list' && (
-                            <Flex align="center" gap="1" ml="2">
-                                <Text size="1" color="gray">
-                                    Clamp
-                                </Text>
-                                <InlineInput
-                                    value={clampDraft ?? displayClampStr}
-                                    placeholder="∞"
-                                    usePlaceholderWidth
-                                    onChange={(val) => {
-                                        setClampDraft(val);
-                                        const parsed = parseClamp(val);
-                                        if (parsed === null) return;
-                                        const value =
-                                            parsed === undefined
-                                                ? undefined
-                                                : clampUnit === 'items'
-                                                  ? clampClampRows(parsed)
-                                                  : clampClampPx(parsed);
-                                        onChange(section.id, {
-                                            rowHeight: value,
-                                            clampUnit,
-                                        });
-                                    }}
-                                    onBlur={() => {
-                                        if (clampDraft === null) return;
-                                        const parsed = parseClamp(clampDraft);
-                                        const value =
-                                            parsed === undefined
-                                                ? undefined
-                                                : parsed === null
-                                                  ? undefined
-                                                  : clampUnit === 'items'
-                                                    ? clampClampRows(parsed)
-                                                    : clampClampPx(parsed);
-                                        onChange(section.id, {
-                                            rowHeight: value,
-                                            clampUnit,
-                                        });
-                                        setClampDraft(null);
-                                    }}
-                                    onFocus={() => {
-                                        setClampDraft(
-                                            displayClampStr === '∞'
-                                                ? ''
-                                                : displayClampStr
-                                        );
-                                    }}
-                                    className="text-center"
-                                />
-                                <DropdownMenu.Root>
-                                    <DropdownMenu.Trigger>
-                                        <Button
-                                            size="0"
-                                            variant="ghost"
-                                            radius="small"
+                            <StepperControl
+                                label="Clamp"
+                                value={clampDraft ?? displayClampStr}
+                                placeholder="∞"
+                                hideSteppers
+                                onDecrement={() => undefined}
+                                onIncrement={() => undefined}
+                                onValueChange={(val) => {
+                                    setClampDraft(val);
+                                    const parsed = parseClamp(val);
+                                    if (parsed === null) return;
+                                    const value =
+                                        parsed === undefined
+                                            ? undefined
+                                            : clampUnit === 'items'
+                                              ? clampClampRows(parsed)
+                                              : clampClampPx(parsed);
+                                    onChange(section.id, {
+                                        rowHeight: value,
+                                        clampUnit,
+                                    });
+                                }}
+                                onValueBlur={() => {
+                                    if (clampDraft === null) return;
+                                    const parsed = parseClamp(clampDraft);
+                                    const value =
+                                        parsed === undefined
+                                            ? undefined
+                                            : parsed === null
+                                              ? undefined
+                                              : clampUnit === 'items'
+                                                ? clampClampRows(parsed)
+                                                : clampClampPx(parsed);
+                                    onChange(section.id, {
+                                        rowHeight: value,
+                                        clampUnit,
+                                    });
+                                    setClampDraft(null);
+                                }}
+                                onValueFocus={() => {
+                                    setClampDraft(
+                                        displayClampStr === '∞'
+                                            ? ''
+                                            : displayClampStr
+                                    );
+                                }}
+                                suffix={
+                                    <DropdownMenu.Root>
+                                        <DropdownMenu.Trigger>
+                                            <Button
+                                                size="0"
+                                                variant="ghost"
+                                                radius="small"
+                                                className="!px-0.25"
+                                            >
+                                                {clampUnitLabel}
+                                            </Button>
+                                        </DropdownMenu.Trigger>
+                                        <DropdownMenu.Content
+                                            align="end"
+                                            size="1"
                                         >
-                                            {clampUnitLabel}
-                                        </Button>
-                                    </DropdownMenu.Trigger>
-                                    <DropdownMenu.Content align="end" size="1">
-                                        <DropdownMenu.Item
-                                            onSelect={() =>
-                                                updateClampUnit('px')
-                                            }
-                                        >
-                                            px
-                                        </DropdownMenu.Item>
-                                        <DropdownMenu.Item
-                                            onSelect={() =>
-                                                updateClampUnit('items')
-                                            }
-                                        >
-                                            rows
-                                        </DropdownMenu.Item>
-                                    </DropdownMenu.Content>
-                                </DropdownMenu.Root>
-                            </Flex>
+                                            <DropdownMenu.Item
+                                                onSelect={() =>
+                                                    updateClampUnit('px')
+                                                }
+                                            >
+                                                pixels
+                                            </DropdownMenu.Item>
+                                            <DropdownMenu.Item
+                                                onSelect={() =>
+                                                    updateClampUnit('items')
+                                                }
+                                            >
+                                                rows
+                                            </DropdownMenu.Item>
+                                        </DropdownMenu.Content>
+                                    </DropdownMenu.Root>
+                                }
+                            />
                         )}
 
                         <IconButton
@@ -758,6 +757,18 @@ export function MediaSection({
                 >
                     {content}
                 </div>
+                {!preview && section.loadingMore && (
+                    <div className="pointer-events-none absolute right-2 bottom-2 z-20">
+                        <Flex
+                            align="center"
+                            gap="1"
+                            className="rounded-full bg-[var(--color-panel-solid)]/90 px-2 py-[6px] text-[11px] text-[var(--gray-12)] shadow-sm backdrop-blur"
+                        >
+                            <span className="h-2 w-2 animate-pulse rounded-full bg-[var(--accent-9)]" />
+                            Loading more
+                        </Flex>
+                    </div>
+                )}
             </Flex>
         </div>
     );

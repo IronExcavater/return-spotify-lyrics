@@ -13,11 +13,6 @@ export type PersonalisationSnapshot = {
     };
 };
 
-export type PersonalisationContext = {
-    searchQuery?: string;
-    filterCount?: number;
-};
-
 const getTimeGreeting = (hours: number) => {
     if (hours < 5) return 'Late night';
     if (hours < 12) return 'Good morning';
@@ -27,8 +22,7 @@ const getTimeGreeting = (hours: number) => {
 };
 
 export function buildPersonalisationSnapshot(
-    knowledge: AnalyticsKnowledge,
-    { searchQuery = '', filterCount = 0 }: PersonalisationContext = {}
+    knowledge: AnalyticsKnowledge
 ): PersonalisationSnapshot {
     const now = new Date();
     const greeting = getTimeGreeting(now.getHours());
@@ -55,11 +49,6 @@ export function buildPersonalisationSnapshot(
     })();
 
     const subtitle = (() => {
-        if (searchQuery.trim()) {
-            const trimmed = searchQuery.trim();
-            return `Dialling up "${trimmed}".`;
-        }
-
         if (knowledge.playback.isPlaybackHeavy) {
             return pick([
                 'Queue-ready picks based on how you play.',
@@ -81,14 +70,6 @@ export function buildPersonalisationSnapshot(
                 'Lyrics-first sessions still feel right.',
                 'Words-forward listening, ready when you are.',
                 'Keep the lyrics close today.',
-            ]);
-        }
-
-        if (filterCount > 0) {
-            return pick([
-                'Filters ready — let us narrow it down.',
-                'Tuning the mix to your filters.',
-                'Dialled-in discovery ahead.',
             ]);
         }
 

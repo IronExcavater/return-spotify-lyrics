@@ -53,6 +53,11 @@
     transition: transform 0.3s ease-out;
 }
 
-.marquee-pause:hover {
+.marquee-hover {
     animation-play-state: paused;
+}
+
+.marquee-hover:hover,
+.marquee-hover-group:hover .marquee-hover {
+    animation-play-state: running;
 }

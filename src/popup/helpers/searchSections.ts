@@ -1,0 +1,80 @@
+import type { SearchType } from '../../shared/search';
+import type { MediaSectionState } from '../components/MediaSection';
+
+export const SEARCH_SECTION_BASE: Record<SearchType, MediaSectionState> = {
+    track: {
+        id: 'search-tracks',
+        title: 'Tracks',
+        view: 'list',
+        infinite: 'columns',
+        rows: 3,
+        wideColumns: true,
+        items: [],
+        hasMore: false,
+        loadingMore: false,
+    },
+    album: {
+        id: 'search-albums',
+        title: 'Albums',
+        view: 'card',
+        infinite: 'columns',
+        rows: 2,
+        items: [],
+        hasMore: false,
+        loadingMore: false,
+    },
+    artist: {
+        id: 'search-artists',
+        title: 'Artists',
+        view: 'card',
+        infinite: 'columns',
+        rows: 2,
+        items: [],
+        hasMore: false,
+        loadingMore: false,
+    },
+    playlist: {
+        id: 'search-playlists',
+        title: 'Playlists',
+        view: 'card',
+        infinite: 'columns',
+        rows: 2,
+        items: [],
+        hasMore: false,
+        loadingMore: false,
+    },
+    show: {
+        id: 'search-shows',
+        title: 'Shows',
+        view: 'card',
+        infinite: 'columns',
+        rows: 2,
+        items: [],
+        hasMore: false,
+        loadingMore: false,
+    },
+    episode: {
+        id: 'search-episodes',
+        title: 'Episodes',
+        view: 'list',
+        infinite: 'columns',
+        rows: 3,
+        wideColumns: true,
+        items: [],
+        hasMore: false,
+        loadingMore: false,
+    },
+    audiobook: {
+        id: 'search-audiobooks',
+        title: 'Audiobooks',
+        view: 'card',
+        infinite: 'columns',
+        rows: 2,
+        items: [],
+        hasMore: false,
+        loadingMore: false,
+    },
+};
+
+export const buildSearchSections = (types: SearchType[]): MediaSectionState[] =>
+    types.map((type) => ({ ...SEARCH_SECTION_BASE[type], items: [] }));

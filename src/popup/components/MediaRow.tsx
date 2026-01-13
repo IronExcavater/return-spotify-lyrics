@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { DotsHorizontalIcon } from '@radix-ui/react-icons';
 import {
     DropdownMenu,
@@ -24,6 +24,7 @@ export interface MediaRowProps {
     loading?: boolean;
     contextMenu?: ReactNode;
     className?: string;
+    style?: CSSProperties;
     seed?: number;
 }
 
@@ -37,6 +38,7 @@ export function MediaRow({
     loading = false,
     contextMenu,
     className,
+    style,
     seed = 0,
 }: MediaRowProps) {
     const radius = imageShape === 'round' ? 'full' : 'small';
@@ -58,7 +60,8 @@ export function MediaRow({
             align="center"
             gap="1"
             onClick={loading ? undefined : onClick}
-            className={clsx('w-full', className)}
+            className={clsx('marquee-hover-group w-full', className)}
+            style={style}
         >
             <Skeleton loading={loading}>
                 <AvatarButton

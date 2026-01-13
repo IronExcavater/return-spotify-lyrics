@@ -1,18 +1,11 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState, useEffect } from 'react';
 import {
     ANALYTICS_EVENTS,
     createAnalyticsTracker,
 } from '../../shared/analytics';
-import { type PillValue } from '../components/Pill';
+import type { FilterKind, PillValue, SearchFilter } from '../../shared/types';
 
-export type FilterKind = 'artist' | 'genre' | 'category' | 'year';
-
-export type SearchFilter = {
-    id: string;
-    kind: FilterKind;
-    label: string;
-    value: PillValue;
-};
+const SEARCH_DEBOUNCE_MS = 150;
 
 const FILTER_META: Record<
     FilterKind,
@@ -26,8 +19,8 @@ const FILTER_META: Record<
         label: 'Genre',
         buildValue: () => ({ type: 'text', value: '' }),
     },
-    category: {
-        label: 'Category',
+    type: {
+        label: 'Type',
         buildValue: () => ({
             type: 'options',
             options: [
@@ -53,6 +46,8 @@ const randomId = () => crypto.randomUUID?.() ?? Math.random().toString(36);
 export function useSearch() {
     const [query, setQuery] = useState('');
     const [filters, setFilters] = useState<SearchFilter[]>([]);
+    const [debouncedQuery, setDebouncedQuery] = useState(query);
+    const [debouncedFilters, setDebouncedFilters] = useState(filters);
     const trackSearch = useMemo(() => createAnalyticsTracker('search'), []);
 
     const available = useMemo(() => {
@@ -115,10 +110,30 @@ export function useSearch() {
         setFilters([]);
     }, [filters, trackSearch]);
 
+    useEffect(() => {
+        const timeout = window.setTimeout(() => {
+            setDebouncedQuery(query);
+            setDebouncedFilters(filters);
+        }, SEARCH_DEBOUNCE_MS);
+
+        return () => window.clearTimeout(timeout);
+    }, [filters, query]);
+
+    const setSearchState = useCallback(
+        (next: { query: string; filters: SearchFilter[] }) => {
+            setQuery(next.query);
+            setFilters(next.filters);
+        },
+        []
+    );
+
     return {
         query,
         setQuery,
         filters,
+        debouncedQuery,
+        debouncedFilters,
+        setSearchState,
         addFilter,
         updateFilter,
         removeFilter,

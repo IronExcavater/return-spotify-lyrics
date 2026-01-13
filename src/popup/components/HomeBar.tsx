@@ -6,23 +6,17 @@ import {
     MagnifyingGlassIcon,
     PlusIcon,
 } from '@radix-ui/react-icons';
-import {
-    Button,
-    DropdownMenu,
-    Flex,
-    IconButton,
-    Text,
-    TextField,
-} from '@radix-ui/themes';
+import { Button, DropdownMenu, Flex, IconButton, Text } from '@radix-ui/themes';
 import clsx from 'clsx';
 
-import type { FilterKind, SearchFilter } from '../hooks/useSearch';
-import { Pill, type PillValue } from './Pill';
+import type { FilterKind, SearchFilter, PillValue } from '../../shared/types';
+import { Pill } from './Pill';
+import { SearchBar } from './SearchBar';
 
 const FILTER_LABELS: Record<FilterKind, string> = {
     artist: 'Artist',
     genre: 'Genre',
-    category: 'Category',
+    type: 'Type',
     year: 'Released',
 };
 
@@ -77,23 +71,14 @@ export function HomeBar({
                         >
                             <ChevronLeftIcon />
                         </IconButton>
-                        <TextField.Root
+                        <SearchBar
                             value={searchQuery}
-                            onChange={(event) =>
-                                onSearchChange(event.target.value)
-                            }
-                            onKeyDown={(event) => {
-                                if (event.key === 'Enter') {
-                                    event.preventDefault();
-                                    onSearchSubmit?.();
-                                }
-                            }}
-                            size="2"
-                            radius="full"
+                            onChange={onSearchChange}
+                            onSubmit={onSearchSubmit}
+                            onClear={onClearSearch}
                             placeholder="Find your groove"
                             className="w-full min-w-0 flex-1"
-                        >
-                            <TextField.Slot side="left" pr="1">
+                            leftSlot={
                                 <IconButton
                                     size="1"
                                     variant="ghost"
@@ -117,8 +102,8 @@ export function HomeBar({
                                         )}
                                     />
                                 </IconButton>
-                            </TextField.Slot>
-                            <TextField.Slot side="right" pl="1">
+                            }
+                            rightSlot={
                                 <IconButton
                                     size="1"
                                     variant="ghost"
@@ -133,8 +118,8 @@ export function HomeBar({
                                 >
                                     <Cross2Icon />
                                 </IconButton>
-                            </TextField.Slot>
-                        </TextField.Root>
+                            }
+                        />
                     </Flex>
                     <Flex align="center" justify="between">
                         <Text size="2" weight="medium">
@@ -209,8 +194,8 @@ export function HomeBar({
                                 ? 'Name'
                                 : filter.kind === 'genre'
                                   ? 'Tag'
-                                  : filter.kind === 'category'
-                                    ? 'Pick'
+                                  : filter.kind === 'type'
+                                    ? 'Select'
                                     : 'YYYY'
                         }
                         onChange={(value) =>

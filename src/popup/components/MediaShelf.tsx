@@ -16,15 +16,12 @@ import { Flex, DropdownMenu } from '@radix-ui/themes';
 import clsx from 'clsx';
 import { MdMusicNote } from 'react-icons/md';
 
+import type { MediaItem } from '../../shared/types';
 import { MediaCard } from './MediaCard';
 import { MediaRow } from './MediaRow';
 
-export interface MediaShelfItem {
-    id: string;
-    title: string;
-    subtitle?: string;
+export interface MediaShelfItem extends MediaItem {
     icon?: ReactNode;
-    imageUrl?: string;
     loading?: boolean;
 }
 
@@ -36,6 +33,8 @@ interface Props {
     orientation?: 'vertical' | 'horizontal';
     variant?: 'list' | 'tile';
     itemsPerColumn?: number;
+    wideColumns?: boolean;
+    columnWidth?: number;
     maxVisible?: number;
     fixedHeight?: number;
     hasMore?: boolean;
@@ -86,6 +85,7 @@ export function MediaShelf({
     orientation = 'vertical',
     variant = 'list',
     itemsPerColumn = 6,
+    columnWidth,
     maxVisible,
     fixedHeight,
     hasMore = false,
@@ -130,8 +130,15 @@ export function MediaShelf({
         return grouped;
     }, [visibleItems, orientation, itemsPerColumn]);
 
+    const effectiveColumnWidth =
+        variant === 'list' ? (columnWidth ?? 300) : undefined;
+
     const scrollRef = useRef<HTMLDivElement | null>(null);
     const sentinelRef = useRef<HTMLDivElement | null>(null);
+    const lastItemsRef = useRef<{
+        firstId: string | null;
+        length: number;
+    } | null>(null);
 
     const capacity = useMemo(() => {
         if (maxVisible == null) return Number.POSITIVE_INFINITY;
@@ -225,6 +232,20 @@ export function MediaShelf({
         };
     }, [orientation, items.length, visibleItems.length]);
 
+    useEffect(() => {
+        const node = scrollRef.current;
+        if (!node) return;
+        const firstId = items[0]?.id ?? null;
+        const prev = lastItemsRef.current;
+        lastItemsRef.current = { firstId, length: items.length };
+        if (!prev) return;
+        const replaced = prev.firstId !== firstId;
+        const shrunk = items.length < prev.length;
+        if (!replaced && !shrunk) return;
+        if (orientation === 'horizontal') node.scrollLeft = 0;
+        else node.scrollTop = 0;
+    }, [items, orientation]);
+
     const renderFades = () => {
         if (orientation === 'horizontal') {
             return (
@@ -301,15 +322,15 @@ export function MediaShelf({
                     contextMenu={contextMenu}
                     seed={seed}
                     loading={item.loading}
-                    className={
-                        orientation === 'horizontal'
-                            ? 'min-w-[220px]'
+                    style={
+                        orientation === 'horizontal' && effectiveColumnWidth
+                            ? { minWidth: effectiveColumnWidth }
                             : undefined
                     }
                 />
             );
         },
-        [orientation, variant]
+        [effectiveColumnWidth, orientation, variant]
     );
 
     const body = (
@@ -360,10 +381,16 @@ export function MediaShelf({
                                       gap="1"
                                       className={clsx(
                                           'min-w-0',
-                                          variant === 'list' &&
-                                              'w-[220px] flex-none'
+                                          variant === 'list' && 'flex-none'
                                       )}
-                                      style={{ flex: '0 0 auto' }}
+                                      style={
+                                          effectiveColumnWidth
+                                              ? {
+                                                    flex: '0 0 auto',
+                                                    width: effectiveColumnWidth,
+                                                }
+                                              : { flex: '0 0 auto' }
+                                      }
                                   >
                                       {col.map((item, idx) => {
                                           const seed =
@@ -422,28 +449,13 @@ export function MediaShelf({
                                   );
                               })}
                         {dropProvided.placeholder}
-                        {loadingMore && (
-                            <div
-                                className={clsx(
-                                    'pointer-events-none absolute drop-shadow-sm',
-                                    orientation === 'horizontal'
-                                        ? 'right-2 bottom-2'
-                                        : 'right-2 bottom-2'
-                                )}
-                            >
-                                <div className="flex items-center gap-2 rounded-full bg-[var(--color-panel-solid)] px-2 py-[6px] text-[11px] text-[var(--gray-12)] shadow">
-                                    <span className="h-2 w-2 animate-pulse rounded-full bg-[var(--accent-9)]" />
-                                    Loading more
-                                </div>
-                            </div>
-                        )}
                         <div
                             ref={sentinelRef}
                             aria-hidden
                             className={clsx(
                                 orientation === 'horizontal'
-                                    ? 'absolute top-0 right-0 h-full w-px'
-                                    : 'absolute bottom-0 left-0 h-px w-full'
+                                    ? 'h-full w-px flex-none'
+                                    : 'h-px w-full flex-none'
                             )}
                         />
                     </Flex>

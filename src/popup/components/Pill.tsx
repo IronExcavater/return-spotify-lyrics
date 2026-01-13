@@ -14,16 +14,12 @@ import { Cross2Icon, MinusIcon, PlusIcon } from '@radix-ui/react-icons';
 import { DropdownMenu, Flex, IconButton, Text } from '@radix-ui/themes';
 import clsx from 'clsx';
 
+import { formatDateWithFormatter, resolveLocale } from '../../shared/date';
+import type { PillValue } from '../../shared/types';
+import { useSettings } from '../hooks/useSettings';
 import { InlineInput } from './InlineInput';
 
-export type PillValue =
-    | { type: 'text'; value: string }
-    | { type: 'single-select'; value: string }
-    | { type: 'multi-select'; value: string[] }
-    | { type: 'number'; value: number | null }
-    | { type: 'date'; value: string }
-    | { type: 'date-range'; value: { from?: string; to?: string } }
-    | { type: 'options'; value: string[]; options: string[] };
+export type { PillValue } from '../../shared/types';
 
 type DateRangeValue = Extract<PillValue, { type: 'date-range' }>['value'];
 type DateLikeValue = Extract<PillValue, { type: 'date' | 'date-range' }>;
@@ -33,16 +29,6 @@ const EARLIEST_MUSIC_YEAR = 1900;
 
 const todayIso = new Date().toISOString().slice(0, 10);
 const minDateIso = `${EARLIEST_MUSIC_YEAR}-01-01`;
-
-const formatDateWithFormatter = (
-    iso: string | undefined,
-    formatter: Intl.DateTimeFormat
-) => {
-    if (!iso) return '';
-    const date = new Date(iso);
-    if (Number.isNaN(date.getTime())) return iso;
-    return formatter.format(date);
-};
 
 const formatDateRangeValue = (
     range: DateRangeValue,
@@ -137,10 +123,8 @@ export function Pill({
     className,
 }: Props) {
     const [isEditing, setIsEditing] = useState(false);
-    const locale =
-        typeof navigator !== 'undefined' && navigator.language
-            ? navigator.language
-            : 'en';
+    const { settings } = useSettings();
+    const locale = resolveLocale(settings.locale);
     const dateFormatter = useMemo(() => {
         const options =
             dateGranularity === 'year'
@@ -441,6 +425,7 @@ export function Pill({
         event: ReactKeyboardEvent<HTMLDivElement>
     ) => {
         if (!editable) return;
+        if (event.target instanceof HTMLInputElement) return;
         if (event.key !== 'Enter' && event.key !== ' ') return;
         event.preventDefault();
         startEditing();

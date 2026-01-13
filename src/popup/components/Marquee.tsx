@@ -1,11 +1,14 @@
 import { CSSProperties, ReactNode, useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
 
+import { useSettings } from '../hooks/useSettings';
+
 interface Props {
     children: ReactNode;
     speed?: number;
     mode?: 'left' | 'right' | 'bounce';
-    pauseOnHover?: boolean;
+    animateOnHover?: boolean;
+    pauseWhenOffscreen?: boolean;
     className?: string;
     sidePadding?: number;
     gap?: number;
@@ -15,17 +18,20 @@ export function Marquee({
     children,
     speed = 10,
     mode = 'left',
-    pauseOnHover = true,
+    animateOnHover = false,
+    pauseWhenOffscreen = true,
     sidePadding = 2,
     gap = 16,
     className,
 }: Props) {
+    const { settings } = useSettings();
     const containerRef = useRef<HTMLDivElement>(null);
     const originalRef = useRef<HTMLDivElement>(null);
 
     const [distance, setDistance] = useState(0);
     const [duration, setDuration] = useState(0);
     const [scroll, setScroll] = useState(false);
+    const [isVisible, setIsVisible] = useState(true);
     const MIN_DURATION = 4;
 
     useEffect(() => {
@@ -64,7 +70,26 @@ export function Marquee({
         return () => observer.disconnect();
     }, [sidePadding, gap, mode, speed]);
 
+    useEffect(() => {
+        if (!pauseWhenOffscreen) return;
+        const node = containerRef.current;
+        if (!node) return;
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                const entry = entries[0];
+                if (entry) setIsVisible(entry.isIntersecting);
+            },
+            { rootMargin: '120px' }
+        );
+
+        observer.observe(node);
+        return () => observer.disconnect();
+    }, [pauseWhenOffscreen]);
+
+    const resolvedAnimateOnHover = animateOnHover || settings.reducedMotion;
     const showClone = scroll && mode !== 'bounce';
+    const shouldAnimate = scroll && (!pauseWhenOffscreen || isVisible);
 
     return (
         <div
@@ -78,8 +103,8 @@ export function Marquee({
             <div
                 className={clsx(
                     'inline-flex items-center',
-                    scroll && `animate-marquee-${mode}`,
-                    pauseOnHover && 'marquee-pause'
+                    shouldAnimate ? `animate-marquee-${mode}` : 'marquee-reset',
+                    resolvedAnimateOnHover && 'marquee-hover'
                 )}
                 style={
                     {

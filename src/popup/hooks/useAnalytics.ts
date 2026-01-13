@@ -26,10 +26,12 @@ export function useAnalyticsKnowledge() {
                 },
             }) satisfies AnalyticsKnowledge
     );
+    const [hydrated, setHydrated] = useState(false);
 
     const refresh = useCallback(async () => {
         const next = await getAnalyticsKnowledge();
         setKnowledge(next);
+        setHydrated(true);
     }, []);
 
     useEffect(() => {
@@ -54,5 +56,6 @@ export function useAnalyticsKnowledge() {
     return {
         knowledge,
         refresh,
+        hydrated,
     };
 }

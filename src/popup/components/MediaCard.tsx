@@ -59,7 +59,7 @@ export function MediaCard({
             direction="column"
             gap="1"
             onClick={loading ? undefined : onClick}
-            className={clsx('w-20', className)}
+            className={clsx('marquee-hover-group w-20', className)}
         >
             <Skeleton loading={loading}>
                 <AvatarButton
