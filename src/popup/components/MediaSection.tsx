@@ -4,6 +4,7 @@ import {
     useRef,
     useState,
     MouseEvent as ReactMouseEvent,
+    ReactNode,
 } from 'react';
 import { GridIcon, RowsIcon, ColumnsIcon } from '@radix-ui/react-icons';
 import { Button, DropdownMenu, Flex, IconButton, Text } from '@radix-ui/themes';
@@ -29,6 +30,7 @@ export type MediaSectionState = {
     hasMore?: boolean;
     loadingMore?: boolean;
     wideColumns?: boolean;
+    showImage?: boolean;
 };
 
 const CLAMP_PX_MAX = 720;
@@ -71,6 +73,10 @@ interface Props {
     onDelete?: (id: string) => void;
     onReorderItems?: (id: string, next: MediaShelfItem[]) => void;
     onLoadMore?: (id: string) => void;
+    renderContent?: (context: {
+        columnWidth?: number;
+        preview: boolean;
+    }) => ReactNode;
     className?: string;
     dragging?: boolean;
 }
@@ -84,6 +90,7 @@ export function MediaSection({
     onDelete,
     onReorderItems,
     onLoadMore,
+    renderContent,
     className,
     dragging = false,
 }: Props) {
@@ -376,7 +383,9 @@ export function MediaSection({
         return () => observer.disconnect();
     }, [mode, section.items.length, preview]);
 
-    const content = (
+    const content = renderContent ? (
+        renderContent({ columnWidth, preview })
+    ) : (
         <MediaShelf
             droppableId={`media-shelf-${section.id}`}
             items={shelfItems as MediaShelfItem[]}
@@ -389,6 +398,7 @@ export function MediaSection({
             fixedHeight={fixedHeight}
             hasMore={preview ? false : section.hasMore}
             loadingMore={preview ? false : section.loadingMore}
+            showImage={section.showImage}
             onLoadMore={
                 preview || !onLoadMore
                     ? undefined

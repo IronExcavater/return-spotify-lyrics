@@ -191,7 +191,10 @@ export function useAppState({ fallbackWidth, fallbackHeight }: Props) {
     useEffect(() => {
         if (!hydrated) return;
 
-        if (playback) lastPlaybackChange.current = null;
+        if (playback) {
+            lastPlaybackChange.current = null;
+            return;
+        }
 
         if (lastPlaybackChange.current === null)
             lastPlaybackChange.current = Date.now();
@@ -201,14 +204,30 @@ export function useAppState({ fallbackWidth, fallbackHeight }: Props) {
     useEffect(() => {
         if (!hydrated) return;
 
+        if (activeBar === 'playback' && playback === null) {
+            setActiveBar('home');
+            void updateAppState({ lastBar: 'home' });
+            return;
+        }
+
         if (
             activeBar === 'playback' &&
+            lastPlaybackChange.current !== null &&
             Date.now() >= lastPlaybackChange.current + PLAYBACK_STALE_MS
         ) {
             setActiveBar('home');
             void updateAppState({ lastBar: 'home' });
         }
-    }, [hydrated, activeBar, updateAppState]);
+    }, [hydrated, activeBar, playback, updateAppState]);
+
+    useEffect(() => {
+        if (!hydrated) return;
+        if (location.pathname !== ROUTES.media) return;
+        if (activeBar !== 'home') {
+            setActiveBar('home');
+            void updateAppState({ lastBar: 'home' });
+        }
+    }, [hydrated, activeBar, location.pathname, updateAppState]);
 
     // Enforce route rules
     const lastEnforcedNav = useRef<{ bar: BarKey; route: RouteValue } | null>(

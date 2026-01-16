@@ -17,9 +17,11 @@ import { Marquee } from './Marquee';
 export interface MediaRowProps {
     title?: string;
     subtitle?: string;
+    subtitleHeight?: number;
     imageUrl?: string;
     icon?: ReactNode;
     imageShape?: 'round' | 'square';
+    showImage?: boolean;
     onClick?: () => void;
     loading?: boolean;
     contextMenu?: ReactNode;
@@ -31,9 +33,11 @@ export interface MediaRowProps {
 export function MediaRow({
     title,
     subtitle,
+    subtitleHeight,
     imageUrl,
     icon,
     imageShape = 'square',
+    showImage = true,
     onClick,
     loading = false,
     contextMenu,
@@ -60,21 +64,23 @@ export function MediaRow({
             align="center"
             gap="1"
             onClick={loading ? undefined : onClick}
-            className={clsx('marquee-hover-group w-full', className)}
+            className={clsx('group w-full', className)}
             style={style}
         >
-            <Skeleton loading={loading}>
-                <AvatarButton
-                    avatar={{
-                        src: imageUrl,
-                        fallback: icon,
-                        radius,
-                        size: '3',
-                    }}
-                    aria-label={title}
-                    hideRing
-                />
-            </Skeleton>
+            {showImage && (
+                <Skeleton loading={loading}>
+                    <AvatarButton
+                        avatar={{
+                            src: imageUrl,
+                            fallback: icon,
+                            radius,
+                            size: '3',
+                        }}
+                        aria-label={title}
+                        hideRing
+                    />
+                </Skeleton>
+            )}
             <Flex direction="column" gap="0" flexGrow="1" className="min-w-0">
                 <Fade enabled={!loading}>
                     <div
@@ -100,7 +106,14 @@ export function MediaRow({
                     <Fade enabled={!loading}>
                         <div
                             className="transition-all duration-300 ease-out"
-                            style={subtitleSkeletonStyle}
+                            style={
+                                subtitleHeight
+                                    ? {
+                                          ...subtitleSkeletonStyle,
+                                          height: subtitleHeight,
+                                      }
+                                    : subtitleSkeletonStyle
+                            }
                         >
                             <Skeleton loading={loading} className="w-full">
                                 <Marquee
@@ -110,7 +123,18 @@ export function MediaRow({
                                         !loading && 'w-full'
                                     )}
                                 >
-                                    <Text size="1" color="gray">
+                                    <Text
+                                        size="1"
+                                        color="gray"
+                                        style={
+                                            subtitleHeight
+                                                ? {
+                                                      lineHeight: `${subtitleHeight}px`,
+                                                      height: subtitleHeight,
+                                                  }
+                                                : undefined
+                                        }
+                                    >
                                         {subtitle}
                                     </Text>
                                 </Marquee>

@@ -23,7 +23,22 @@ export type MediaItem = {
     title: string;
     subtitle?: string;
     imageUrl?: string;
+    uri?: string;
+    externalUrl?: string;
+    artistUrl?: string;
+    kind?: MediaKind;
+    parentKind?: MediaKind;
+    parentId?: string;
 };
+
+export type MediaKind =
+    | 'track'
+    | 'album'
+    | 'artist'
+    | 'playlist'
+    | 'show'
+    | 'episode'
+    | 'audiobook';
 
 export function asTrack(item: Track | Episode | undefined): Track | undefined {
     return item && item.type === 'track' ? (item as Track) : undefined;

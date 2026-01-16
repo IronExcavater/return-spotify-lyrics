@@ -27,6 +27,7 @@ export function Marquee({
     const { settings } = useSettings();
     const containerRef = useRef<HTMLDivElement>(null);
     const originalRef = useRef<HTMLDivElement>(null);
+    const separatorRef = useRef<HTMLSpanElement>(null);
 
     const [distance, setDistance] = useState(0);
     const [duration, setDuration] = useState(0);
@@ -55,7 +56,12 @@ export function Marquee({
                 1,
                 mode === 'bounce' ? speed * 0.85 : speed
             );
-            const travel = mode === 'bounce' ? overflow : originalW + gap;
+            const shouldClone = shouldScroll && mode !== 'bounce';
+            const separatorWidth = shouldClone
+                ? (separatorRef.current?.getBoundingClientRect().width ?? gap)
+                : 0;
+            const travel =
+                mode === 'bounce' ? overflow : originalW + separatorWidth;
             const seconds = Math.max(travel / baseSpeed, MIN_DURATION);
             setDistance(travel);
             setDuration(seconds);
@@ -66,6 +72,7 @@ export function Marquee({
         const observer = new ResizeObserver(compute);
         if (containerRef.current) observer.observe(containerRef.current);
         if (originalRef.current) observer.observe(originalRef.current);
+        if (separatorRef.current) observer.observe(separatorRef.current);
 
         return () => observer.disconnect();
     }, [sidePadding, gap, mode, speed]);
@@ -90,6 +97,7 @@ export function Marquee({
     const resolvedAnimateOnHover = animateOnHover || settings.reducedMotion;
     const showClone = scroll && mode !== 'bounce';
     const shouldAnimate = scroll && (!pauseWhenOffscreen || isVisible);
+    const separatorPadding = gap / 2;
 
     return (
         <div
@@ -104,7 +112,8 @@ export function Marquee({
                 className={clsx(
                     'inline-flex items-center',
                     shouldAnimate ? `animate-marquee-${mode}` : 'marquee-reset',
-                    resolvedAnimateOnHover && 'marquee-hover'
+                    resolvedAnimateOnHover &&
+                        '[animation-play-state:paused] group-hover:[animation-play-state:running]'
                 )}
                 style={
                     {
@@ -113,10 +122,7 @@ export function Marquee({
                     } as CSSProperties
                 }
             >
-                <div
-                    className="inline-flex items-center"
-                    style={{ gap: showClone ? `${gap}px` : undefined }}
-                >
+                <div className="inline-flex items-center">
                     <div
                         ref={originalRef}
                         className="inline-flex shrink-0 items-center"
@@ -124,12 +130,22 @@ export function Marquee({
                         {children}
                     </div>
                     {showClone && (
-                        <div
-                            className="inline-flex shrink-0 items-center"
-                            aria-hidden="true"
-                        >
-                            {children}
-                        </div>
+                        <>
+                            <span
+                                ref={separatorRef}
+                                aria-hidden="true"
+                                className="inline-flex items-center text-[var(--gray-9)]"
+                                style={{ paddingInline: separatorPadding }}
+                            >
+                                {'\u2022'}
+                            </span>
+                            <div
+                                className="inline-flex shrink-0 items-center"
+                                aria-hidden="true"
+                            >
+                                {children}
+                            </div>
+                        </>
                     )}
                 </div>
             </div>

@@ -1,54 +1,48 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import type { SearchFilter, PillValue } from '../../shared/types';
+import type { SearchFilter } from '../../shared/types';
+import type { MediaRouteState } from '../helpers/mediaRoute';
 
 export type HomeRouteState = {
     searchQuery?: string;
     searchFilters?: SearchFilter[];
 };
 
+export type RouteState = HomeRouteState | MediaRouteState;
+
 export type HistoryEntry = {
     path: string;
-    state?: HomeRouteState;
+    state?: RouteState;
 };
 
 const shouldTrack = (path: string) =>
-    path === '/home' || path === '/profile' || path.startsWith('/media/');
+    path === '/home' ||
+    path === '/profile' ||
+    path === '/media' ||
+    path.startsWith('/media/');
 
-const valuesEqual = (a: PillValue, b: PillValue) => {
-    if (a.type !== b.type) return false;
-    if (a.type === 'text' || a.type === 'single-select')
-        return a.value === b.value;
-    if (a.type === 'number') return a.value === b.value;
-    if (a.type === 'multi-select' || a.type === 'options') {
-        return (
-            a.value.length === b.value.length &&
-            a.value.every((value, index) => value === b.value[index])
-        );
+const isMediaState = (state?: RouteState): state is MediaRouteState =>
+    !!state && 'kind' in state && 'id' in state;
+
+const serializeFilters = (filters?: SearchFilter[]) =>
+    JSON.stringify(
+        (filters ?? []).map((filter) => ({
+            id: filter.id,
+            kind: filter.kind,
+            label: filter.label,
+            value: filter.value,
+        }))
+    );
+
+const serializeState = (state?: RouteState) => {
+    if (!state) return '';
+    if (isMediaState(state)) {
+        return `media:${state.kind}:${state.id}:${state.selectedId ?? ''}`;
     }
-    if (a.type === 'date') return a.value === b.value;
-    return a.value.from === b.value.from && a.value.to === b.value.to;
+    return `home:${state.searchQuery ?? ''}:${serializeFilters(
+        state.searchFilters
+    )}`;
 };
-
-const filtersEqual = (a?: SearchFilter[], b?: SearchFilter[]) => {
-    if (a === b) return true;
-    if (!a?.length && !b?.length) return true;
-    if (!a || !b || a.length !== b.length) return false;
-    return a.every((filter, index) => {
-        const other = b[index];
-        if (!other) return false;
-        return (
-            filter.id === other.id &&
-            filter.kind === other.kind &&
-            filter.label === other.label &&
-            valuesEqual(filter.value, other.value)
-        );
-    });
-};
-
-const stateEquals = (a?: HomeRouteState, b?: HomeRouteState) =>
-    (a?.searchQuery ?? '') === (b?.searchQuery ?? '') &&
-    filtersEqual(a?.searchFilters, b?.searchFilters);
 
 const listeners = new Set<() => void>();
 const historyStack: HistoryEntry[] = [];
@@ -59,12 +53,14 @@ const emit = () => {
 
 const getCanGoBack = () => historyStack.length > 1;
 
-const recordRoute = (path: string, state?: HomeRouteState) => {
+const recordRoute = (path: string, state?: RouteState) => {
     if (!shouldTrack(path)) return;
 
     const last = historyStack[historyStack.length - 1];
     if (last && last.path === path) {
-        if (!stateEquals(last.state, state)) {
+        const lastKey = serializeState(last.state);
+        const nextKey = serializeState(state);
+        if (lastKey !== nextKey) {
             historyStack.push({ path, state });
             emit();
         }
@@ -101,12 +97,12 @@ export function useHistory() {
         lastLocation.current = location.pathname;
         recordRoute(
             location.pathname,
-            location.state as HomeRouteState | undefined
+            location.state as RouteState | undefined
         );
     }, [location.pathname, location.state]);
 
     const goTo = useCallback(
-        (path: string, state?: HomeRouteState) => {
+        (path: string, state?: RouteState) => {
             recordRoute(path, state);
             navigate(path, { state, replace: location.pathname === path });
         },
@@ -121,7 +117,7 @@ export function useHistory() {
     }, [navigate]);
 
     const rememberState = useCallback(
-        (state?: HomeRouteState) => {
+        (state?: RouteState) => {
             recordRoute(location.pathname, state);
         },
         [location.pathname]

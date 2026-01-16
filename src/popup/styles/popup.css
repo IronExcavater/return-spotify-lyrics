@@ -6,6 +6,12 @@
 @import './radix-themes.css';
 @tailwind utilities;
 
+@layer utilities {
+    .scrollbar-gutter-stable {
+        scrollbar-gutter: stable;
+    }
+}
+
 :root {
     overflow: hidden;
 }

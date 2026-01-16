@@ -25,6 +25,7 @@ interface Props {
     className?: string;
     width?: number | string;
     seed?: number;
+    cardSize?: 1 | 2 | 3;
 }
 
 export function MediaCard({
@@ -37,9 +38,21 @@ export function MediaCard({
     loading = false,
     contextMenu,
     className,
+    width,
     seed = 0,
+    cardSize = 2,
 }: Props) {
     const radius = imageShape === 'round' ? 'full' : 'small';
+    const sizeConfig: Record<
+        1 | 2 | 3,
+        { avatar: '5' | '6' | '7'; width: number }
+    > = {
+        1: { avatar: '5', width: 72 },
+        2: { avatar: '6', width: 88 },
+        3: { avatar: '7', width: 104 },
+    };
+    const resolvedSize = sizeConfig[cardSize] ?? sizeConfig[2];
+    const resolvedWidth = width ?? resolvedSize.width;
     const subtitleContent = subtitle?.trim() ? subtitle : ' ';
     const baseSeed =
         hashSequence([title, subtitle, imageUrl], [13, 17, 23], [7]) ^ seed;
@@ -59,7 +72,8 @@ export function MediaCard({
             direction="column"
             gap="1"
             onClick={loading ? undefined : onClick}
-            className={clsx('marquee-hover-group w-20', className)}
+            className={clsx('group', className)}
+            style={{ width: resolvedWidth }}
         >
             <Skeleton loading={loading}>
                 <AvatarButton
@@ -67,7 +81,7 @@ export function MediaCard({
                         src: imageUrl,
                         fallback: icon,
                         radius,
-                        size: '6',
+                        size: resolvedSize.avatar,
                     }}
                     aria-label={title}
                     hideRing
@@ -86,7 +100,7 @@ export function MediaCard({
                                         imageShape === 'round'
                                             ? '!m-2'
                                             : '!m-1',
-                                        '!ml-auto !self-start !bg-[var(--color-panel-solid)]/10 !backdrop-blur-[2px] hover:!bg-[var(--accent-11)]/10 hover:!backdrop-blur-xs' // !bg-[var(--color-panel-solid)]/40 text-[var(--accent-9)] shadow-sm backdrop-blur-xs transition-[background-color,opacity] opacity-40 hover:!bg-[var(--color-panel-solid)]/80 hover:opacity-100'
+                                        'pointer-events-none !ml-auto !self-start !bg-[var(--color-panel-solid)]/10 !opacity-0 !backdrop-blur-[2px] transition-opacity group-hover:pointer-events-auto group-hover:!opacity-100 hover:!bg-[var(--accent-11)]/10 hover:!backdrop-blur-xs data-[state=open]:pointer-events-auto data-[state=open]:!opacity-100'
                                     )}
                                 >
                                     <DotsHorizontalIcon />

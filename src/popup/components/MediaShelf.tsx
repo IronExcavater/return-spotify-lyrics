@@ -1,15 +1,9 @@
-import {
-    useEffect,
-    useMemo,
-    useRef,
-    useCallback,
-    useState,
-    ReactNode,
-} from 'react';
+import { useEffect, useMemo, useRef, useCallback, ReactNode } from 'react';
 import {
     DragDropContext,
     Draggable,
     Droppable,
+    type DroppableProvided,
     type DropResult,
 } from '@hello-pangea/dnd';
 import { Flex, DropdownMenu } from '@radix-ui/themes';
@@ -17,6 +11,11 @@ import clsx from 'clsx';
 import { MdMusicNote } from 'react-icons/md';
 
 import type { MediaItem } from '../../shared/types';
+import { buildMediaActions } from '../helpers/mediaActions';
+import { buildMediaRouteFromItem } from '../helpers/mediaRoute';
+import { createMenuShortcutHandler } from '../helpers/menuShortcuts';
+import { useHistory } from '../hooks/useHistory';
+import { useScrollFade } from '../hooks/useScrollFade';
 import { MediaCard } from './MediaCard';
 import { MediaRow } from './MediaRow';
 
@@ -43,6 +42,8 @@ interface Props {
     itemLoading?: boolean;
     className?: string;
     onReorder?: (items: MediaShelfItem[]) => void;
+    showImage?: boolean;
+    cardSize?: 1 | 2 | 3;
 }
 
 const hashId = (value: string) => {
@@ -53,6 +54,9 @@ const hashId = (value: string) => {
     }
     return h >>> 0;
 };
+
+const getItemKey = (item: MediaShelfItem, index: number) =>
+    item.id ?? `${item.title ?? 'item'}-${index}`;
 
 function getScrollParent(node: HTMLElement | null): HTMLElement | Window {
     let current: HTMLElement | null = node;
@@ -94,12 +98,9 @@ export function MediaShelf({
     itemLoading = false,
     className,
     onReorder,
+    showImage = true,
+    cardSize,
 }: Props) {
-    const [fade, setFade] = useState({
-        start: false,
-        end: false,
-    });
-
     const flattened = useMemo(
         () =>
             items.map((item) =>
@@ -117,6 +118,12 @@ export function MediaShelf({
         return flattened.slice(0, capacity);
     }, [flattened, maxVisible, orientation, itemsPerColumn]);
 
+    const { scrollRef, fade } = useScrollFade(orientation, [
+        items.length,
+        visibleItems.length,
+    ]);
+    const routeHistory = useHistory();
+
     const columns = useMemo(() => {
         if (orientation !== 'horizontal' || itemsPerColumn <= 0)
             return [visibleItems];
@@ -133,7 +140,6 @@ export function MediaShelf({
     const effectiveColumnWidth =
         variant === 'list' ? (columnWidth ?? 300) : undefined;
 
-    const scrollRef = useRef<HTMLDivElement | null>(null);
     const sentinelRef = useRef<HTMLDivElement | null>(null);
     const lastItemsRef = useRef<{
         firstId: string | null;
@@ -196,45 +202,6 @@ export function MediaShelf({
     useEffect(() => {
         const node = scrollRef.current;
         if (!node) return;
-
-        const compute = () => {
-            if (!node) return;
-            if (orientation === 'horizontal') {
-                const maxScroll = node.scrollWidth - node.clientWidth;
-                const start = node.scrollLeft > 2;
-                const end = node.scrollLeft < maxScroll - 2;
-                setFade((prev) =>
-                    prev.start === start && prev.end === end
-                        ? prev
-                        : { start, end }
-                );
-            } else {
-                const maxScroll = node.scrollHeight - node.clientHeight;
-                const start = node.scrollTop > 2;
-                const end = node.scrollTop < maxScroll - 2;
-                setFade((prev) =>
-                    prev.start === start && prev.end === end
-                        ? prev
-                        : { start, end }
-                );
-            }
-        };
-
-        compute();
-        const onScroll = () => compute();
-        node.addEventListener('scroll', onScroll, { passive: true });
-        const resizeObserver = new ResizeObserver(() => compute());
-        resizeObserver.observe(node);
-
-        return () => {
-            node.removeEventListener('scroll', onScroll);
-            resizeObserver.disconnect();
-        };
-    }, [orientation, items.length, visibleItems.length]);
-
-    useEffect(() => {
-        const node = scrollRef.current;
-        if (!node) return;
         const firstId = items[0]?.id ?? null;
         const prev = lastItemsRef.current;
         lastItemsRef.current = { firstId, length: items.length };
@@ -290,14 +257,48 @@ export function MediaShelf({
 
     const renderItem = useCallback(
         (item: MediaShelfItem, seed: number) => {
-            const contextMenu = (
-                <DropdownMenu.Content align="end" size="1">
-                    <DropdownMenu.Item>Play next</DropdownMenu.Item>
-                    <DropdownMenu.Item>Add to queue</DropdownMenu.Item>
-                    <DropdownMenu.Separator />
-                    <DropdownMenu.Item>Go to artist</DropdownMenu.Item>
+            const actions = buildMediaActions(item);
+            const hasActions =
+                actions.primary.length > 0 || actions.secondary.length > 0;
+            const contextMenu = hasActions ? (
+                <DropdownMenu.Content
+                    align="end"
+                    size="1"
+                    onKeyDown={createMenuShortcutHandler([
+                        ...actions.primary,
+                        ...actions.secondary,
+                    ])}
+                >
+                    {actions.primary.map((action) => (
+                        <DropdownMenu.Item
+                            key={action.id}
+                            shortcut={action.shortcut}
+                            onSelect={() => action.onSelect()}
+                        >
+                            {action.label}
+                        </DropdownMenu.Item>
+                    ))}
+                    {actions.primary.length > 0 &&
+                        actions.secondary.length > 0 && (
+                            <DropdownMenu.Separator />
+                        )}
+                    {actions.secondary.map((action) => (
+                        <DropdownMenu.Item
+                            key={action.id}
+                            shortcut={action.shortcut}
+                            onSelect={() => action.onSelect()}
+                        >
+                            {action.label}
+                        </DropdownMenu.Item>
+                    ))}
                 </DropdownMenu.Content>
-            );
+            ) : null;
+
+            const route = buildMediaRouteFromItem(item);
+            const handleNavigate = () => {
+                if (!route) return;
+                routeHistory.goTo('/media', route);
+            };
 
             if (variant === 'tile')
                 return (
@@ -306,10 +307,13 @@ export function MediaShelf({
                         subtitle={item.subtitle}
                         imageUrl={item.imageUrl}
                         icon={item.icon ?? <MdMusicNote />}
-                        width="100%"
                         contextMenu={contextMenu}
                         seed={seed}
                         loading={item.loading}
+                        cardSize={cardSize}
+                        onClick={
+                            item.loading || !route ? undefined : handleNavigate
+                        }
                     />
                 );
 
@@ -319,9 +323,13 @@ export function MediaShelf({
                     subtitle={item.subtitle}
                     icon={item.icon ?? <MdMusicNote />}
                     imageUrl={item.imageUrl}
+                    showImage={showImage}
                     contextMenu={contextMenu}
                     seed={seed}
                     loading={item.loading}
+                    onClick={
+                        item.loading || !route ? undefined : handleNavigate
+                    }
                     style={
                         orientation === 'horizontal' && effectiveColumnWidth
                             ? { minWidth: effectiveColumnWidth }
@@ -330,142 +338,149 @@ export function MediaShelf({
                 />
             );
         },
-        [effectiveColumnWidth, orientation, variant]
+        [effectiveColumnWidth, orientation, routeHistory, variant]
     );
 
-    const body = (
-        <Droppable
-            droppableId={droppableId}
-            isDropDisabled={!draggable}
-            direction={orientation === 'horizontal' ? 'horizontal' : 'vertical'}
-        >
-            {(dropProvided) => (
-                <div className="relative">
-                    <Flex
-                        direction={
-                            orientation === 'horizontal' ? 'row' : 'column'
+    const renderItems = () => {
+        if (orientation === 'horizontal') {
+            return columns.map((col, colIndex) => (
+                <Flex
+                    key={`col-${colIndex}`}
+                    direction="column"
+                    gap="1"
+                    className={clsx(
+                        'min-w-0',
+                        variant === 'list' && 'flex-none'
+                    )}
+                    style={
+                        effectiveColumnWidth
+                            ? {
+                                  flex: '0 0 auto',
+                                  width: effectiveColumnWidth,
+                              }
+                            : { flex: '0 0 auto' }
+                    }
+                >
+                    {col.map((item, idx) => {
+                        const flatIndex = colIndex * itemsPerColumn + idx;
+                        const key = getItemKey(item, flatIndex);
+                        const seed = hashId(item.id ?? '') ^ (flatIndex << 1);
+                        if (!draggable) {
+                            return (
+                                <div key={key}>{renderItem(item, seed)}</div>
+                            );
                         }
-                        gap="1"
-                        wrap="nowrap"
-                        {...dropProvided.droppableProps}
-                        className={clsx(
-                            'no-overflow-anchor relative w-full min-w-0 transition-[opacity,filter] duration-200',
-                            !interactive && 'pointer-events-none opacity-70',
-                            orientation === 'horizontal'
-                                ? fixedHeight
-                                    ? 'overflow-x-auto overflow-y-hidden'
-                                    : 'overflow-x-auto overflow-y-visible'
-                                : fixedHeight
-                                  ? 'overflow-y-auto'
-                                  : 'overflow-visible',
-                            className
-                        )}
-                        style={
-                            fixedHeight
-                                ? {
-                                      maxHeight: fixedHeight,
-                                      overflowAnchor: 'none',
-                                  }
-                                : { overflowAnchor: 'none' }
-                        }
-                        ref={(node) => {
-                            dropProvided.innerRef(node);
-                            scrollRef.current = node;
-                        }}
-                    >
-                        {orientation === 'horizontal'
-                            ? columns.map((col, colIndex) => (
-                                  <Flex
-                                      key={`col-${colIndex}`}
-                                      direction="column"
-                                      gap="1"
-                                      className={clsx(
-                                          'min-w-0',
-                                          variant === 'list' && 'flex-none'
-                                      )}
-                                      style={
-                                          effectiveColumnWidth
-                                              ? {
-                                                    flex: '0 0 auto',
-                                                    width: effectiveColumnWidth,
-                                                }
-                                              : { flex: '0 0 auto' }
-                                      }
-                                  >
-                                      {col.map((item, idx) => {
-                                          const seed =
-                                              hashId(item.id ?? '') ^
-                                              ((colIndex * itemsPerColumn +
-                                                  idx) <<
-                                                  1);
-                                          const flatIndex =
-                                              colIndex * itemsPerColumn + idx;
-                                          return (
-                                              <Draggable
-                                                  key={item.id}
-                                                  draggableId={item.id}
-                                                  index={flatIndex}
-                                                  isDragDisabled={!draggable}
-                                              >
-                                                  {(dragProvided) => (
-                                                      <div
-                                                          ref={
-                                                              dragProvided.innerRef
-                                                          }
-                                                          {...dragProvided.draggableProps}
-                                                          {...dragProvided.dragHandleProps}
-                                                      >
-                                                          {renderItem(
-                                                              item,
-                                                              seed
-                                                          )}
-                                                      </div>
-                                                  )}
-                                              </Draggable>
-                                          );
-                                      })}
-                                  </Flex>
-                              ))
-                            : visibleItems.map((item, index) => {
-                                  const seed =
-                                      hashId(item.id ?? '') ^ (index << 1);
-                                  return (
-                                      <Draggable
-                                          key={item.id}
-                                          draggableId={item.id}
-                                          index={index}
-                                          isDragDisabled={!draggable}
-                                      >
-                                          {(dragProvided) => (
-                                              <div
-                                                  ref={dragProvided.innerRef}
-                                                  {...dragProvided.draggableProps}
-                                                  {...dragProvided.dragHandleProps}
-                                              >
-                                                  {renderItem(item, seed)}
-                                              </div>
-                                          )}
-                                      </Draggable>
-                                  );
-                              })}
-                        {dropProvided.placeholder}
+                        return (
+                            <Draggable
+                                key={key}
+                                draggableId={key}
+                                index={flatIndex}
+                                isDragDisabled={!draggable}
+                            >
+                                {(dragProvided) => (
+                                    <div
+                                        ref={dragProvided.innerRef}
+                                        {...dragProvided.draggableProps}
+                                        {...dragProvided.dragHandleProps}
+                                    >
+                                        {renderItem(item, seed)}
+                                    </div>
+                                )}
+                            </Draggable>
+                        );
+                    })}
+                </Flex>
+            ));
+        }
+
+        return visibleItems.map((item, index) => {
+            const seed = hashId(item.id ?? '') ^ (index << 1);
+            if (!draggable) {
+                const key = getItemKey(item, index);
+                return <div key={key}>{renderItem(item, seed)}</div>;
+            }
+            return (
+                <Draggable
+                    key={getItemKey(item, index)}
+                    draggableId={getItemKey(item, index)}
+                    index={index}
+                    isDragDisabled={!draggable}
+                >
+                    {(dragProvided) => (
                         <div
-                            ref={sentinelRef}
-                            aria-hidden
-                            className={clsx(
-                                orientation === 'horizontal'
-                                    ? 'h-full w-px flex-none'
-                                    : 'h-px w-full flex-none'
-                            )}
-                        />
-                    </Flex>
-                    {renderFades()}
-                </div>
-            )}
-        </Droppable>
+                            ref={dragProvided.innerRef}
+                            {...dragProvided.draggableProps}
+                            {...dragProvided.dragHandleProps}
+                        >
+                            {renderItem(item, seed)}
+                        </div>
+                    )}
+                </Draggable>
+            );
+        });
+    };
+
+    const renderBody = (dropProvided?: DroppableProvided) => (
+        <div className="relative">
+            <Flex
+                direction={orientation === 'horizontal' ? 'row' : 'column'}
+                gap="1"
+                wrap="nowrap"
+                {...(dropProvided?.droppableProps ?? {})}
+                className={clsx(
+                    'no-overflow-anchor relative w-full min-w-0 transition-[opacity,filter] duration-200',
+                    !interactive && 'pointer-events-none opacity-70',
+                    orientation === 'horizontal'
+                        ? fixedHeight
+                            ? 'overflow-x-auto overflow-y-hidden'
+                            : 'overflow-x-auto overflow-y-visible'
+                        : fixedHeight
+                          ? 'overflow-y-auto'
+                          : 'overflow-visible',
+                    className
+                )}
+                style={
+                    fixedHeight
+                        ? {
+                              maxHeight: fixedHeight,
+                              overflowAnchor: 'none',
+                          }
+                        : { overflowAnchor: 'none' }
+                }
+                ref={(node) => {
+                    if (dropProvided) dropProvided.innerRef(node);
+                    scrollRef.current = node;
+                }}
+            >
+                {renderItems()}
+                {dropProvided?.placeholder}
+                <div
+                    ref={sentinelRef}
+                    aria-hidden
+                    className={clsx(
+                        orientation === 'horizontal'
+                            ? 'h-full w-px flex-none'
+                            : 'h-px w-full flex-none'
+                    )}
+                />
+            </Flex>
+            {renderFades()}
+        </div>
     );
 
-    if (!draggable) return body;
+    if (!draggable) return renderBody();
 
-    return <DragDropContext onDragEnd={handleDragEnd}>{body}</DragDropContext>;
+    return (
+        <DragDropContext onDragEnd={handleDragEnd}>
+            <Droppable
+                droppableId={droppableId}
+                isDropDisabled={!draggable}
+                direction={
+                    orientation === 'horizontal' ? 'horizontal' : 'vertical'
+                }
+            >
+                {(dropProvided) => renderBody(dropProvided)}
+            </Droppable>
+        </DragDropContext>
+    );
 }

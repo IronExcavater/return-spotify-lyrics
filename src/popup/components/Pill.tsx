@@ -14,7 +14,8 @@ import { Cross2Icon, MinusIcon, PlusIcon } from '@radix-ui/react-icons';
 import { DropdownMenu, Flex, IconButton, Text } from '@radix-ui/themes';
 import clsx from 'clsx';
 
-import { formatDateWithFormatter, resolveLocale } from '../../shared/date';
+import { formatDateWithFormatter } from '../../shared/date';
+import { resolveLocale } from '../../shared/locale';
 import type { PillValue } from '../../shared/types';
 import { useSettings } from '../hooks/useSettings';
 import { InlineInput } from './InlineInput';

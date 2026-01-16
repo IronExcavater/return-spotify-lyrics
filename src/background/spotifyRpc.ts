@@ -1,4 +1,4 @@
-import type { ItemTypes, MaxInt } from '@spotify/web-api-ts-sdk';
+import type { ItemTypes, MaxInt, Market } from '@spotify/web-api-ts-sdk';
 import { getSpotifySdk } from './spotifyAuth.ts';
 
 async function requireClient() {
@@ -65,6 +65,26 @@ export const spotifyRpc = {
     addToQueue: async (uri: string) => {
         const client = await requireClient();
         return client.player.addItemToPlaybackQueue(uri);
+    },
+    startPlayback: async ({
+        uris,
+        contextUri,
+        offset,
+        positionMs,
+    }: {
+        uris?: string[];
+        contextUri?: string;
+        offset?: { position?: number };
+        positionMs?: number;
+    }) => {
+        const client = await requireClient();
+        return client.player.startResumePlayback(
+            '',
+            contextUri,
+            uris,
+            offset,
+            positionMs
+        );
     },
 
     saveTracks: async (ids: string[]) => {
@@ -147,6 +167,16 @@ export const spotifyRpc = {
             offset
         );
     },
+    getUserPlaylists: async ({
+        limit = 20,
+        offset = 0,
+    }: {
+        limit?: MaxInt<50>;
+        offset?: number;
+    } = {}) => {
+        const client = await requireClient();
+        return client.currentUser.playlists.playlists(limit, offset);
+    },
     search: async ({
         query,
         types,
@@ -160,6 +190,106 @@ export const spotifyRpc = {
     }) => {
         const client = await requireClient();
         return client.search(query, types, undefined, limit, offset);
+    },
+    getAlbum: async ({ id, market }: { id: string; market?: Market }) => {
+        const client = await requireClient();
+        return client.albums.get(id, market);
+    },
+    getAlbumTracks: async ({
+        id,
+        market,
+        limit = 50,
+        offset = 0,
+    }: {
+        id: string;
+        market?: Market;
+        limit?: MaxInt<50>;
+        offset?: number;
+    }) => {
+        const client = await requireClient();
+        return client.albums.tracks(id, market, limit, offset);
+    },
+    getArtist: async ({ id }: { id: string }) => {
+        const client = await requireClient();
+        return client.artists.get(id);
+    },
+    getArtistTopTracks: async ({
+        id,
+        market,
+    }: {
+        id: string;
+        market: Market;
+    }) => {
+        const client = await requireClient();
+        return client.artists.topTracks(id, market);
+    },
+    getArtistAlbums: async ({
+        id,
+        market,
+        limit = 20,
+        offset = 0,
+    }: {
+        id: string;
+        market?: Market;
+        limit?: MaxInt<50>;
+        offset?: number;
+    }) => {
+        const client = await requireClient();
+        return client.artists.albums(id, undefined, market, limit, offset);
+    },
+    getArtistRelatedArtists: async ({ id }: { id: string }) => {
+        const client = await requireClient();
+        return client.artists.relatedArtists(id);
+    },
+    getShow: async ({ id, market }: { id: string; market?: Market }) => {
+        const client = await requireClient();
+        return client.shows.get(id, market);
+    },
+    getShowEpisodes: async ({
+        id,
+        market,
+        limit = 50,
+        offset = 0,
+    }: {
+        id: string;
+        market?: Market;
+        limit?: MaxInt<50>;
+        offset?: number;
+    }) => {
+        const client = await requireClient();
+        return client.shows.episodes(id, market, limit, offset);
+    },
+    getPlaylist: async ({ id, market }: { id: string; market?: Market }) => {
+        const client = await requireClient();
+        return client.playlists.getPlaylist(id, market);
+    },
+    getPlaylistItems: async ({
+        id,
+        market,
+        limit = 50,
+        offset = 0,
+    }: {
+        id: string;
+        market?: Market;
+        limit?: MaxInt<50>;
+        offset?: number;
+    }) => {
+        const client = await requireClient();
+        return client.playlists.getPlaylistItems(
+            id,
+            undefined,
+            market,
+            limit,
+            offset
+        );
+    },
+    getTrack: async ({ id }: { id: string }) => {
+        const client = await requireClient();
+        return client.tracks.get(id);
+    },
+    getEpisode: async ({ id, market }: { id: string; market?: Market }) => {
+        const client = await requireClient();
+        return client.episodes.get(id, market);
     },
 } as const;
 

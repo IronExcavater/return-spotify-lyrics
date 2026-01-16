@@ -20,7 +20,7 @@ import { useAppState, BarKey } from './hooks/useAppState';
 import { useAuth } from './hooks/useAuth';
 import { useHistory } from './hooks/useHistory';
 
-import type { HomeRouteState } from './hooks/useHistory';
+import type { HomeRouteState, RouteState } from './hooks/useHistory';
 import { usePlayer } from './hooks/usePlayer.ts';
 import { usePortalSlot } from './hooks/usePortalSlot';
 import { Resizer } from './hooks/useResize.tsx';
@@ -28,6 +28,7 @@ import { useSearch } from './hooks/useSearch';
 import { HomeView } from './views/HomeView';
 import { LoginView } from './views/LoginView';
 import { LyricsView } from './views/LyricsView';
+import { MediaView } from './views/MediaView';
 import { ProfileView } from './views/ProfileView';
 
 const BAR_KEYS: readonly BarKey[] = ['home', 'playback'];
@@ -52,6 +53,11 @@ export default function App() {
 
     const profileImage = profile?.images?.[0]?.url;
 
+    const isHomeRouteState = (
+        state: RouteState | null | undefined
+    ): state is HomeRouteState =>
+        !!state && ('searchQuery' in state || 'searchFilters' in state);
+
     // Auth semantics
     const mustLogin = authed === false && authed !== undefined;
     const mustLogout = authed === true;
@@ -66,9 +72,10 @@ export default function App() {
 
     useEffect(() => {
         if (location.pathname !== '/home') return;
-        const state = location.state as HomeRouteState | null;
-        const nextQuery = state?.searchQuery ?? '';
-        const nextFilters = state?.searchFilters ?? [];
+        const state = location.state as RouteState | null;
+        const homeState = isHomeRouteState(state) ? state : undefined;
+        const nextQuery = homeState?.searchQuery ?? '';
+        const nextFilters = homeState?.searchFilters ?? [];
         search.setSearchState({ query: nextQuery, filters: nextFilters });
     }, [location.pathname, location.state, search.setSearchState]);
 
@@ -238,13 +245,18 @@ export default function App() {
                                     onGoBack={() => {
                                         const previous = routeHistory.goBack();
                                         if (previous?.path === '/home') {
+                                            const homeState = isHomeRouteState(
+                                                previous.state
+                                            )
+                                                ? previous.state
+                                                : undefined;
                                             search.setSearchState({
                                                 query:
-                                                    previous.state
-                                                        ?.searchQuery ?? '',
+                                                    homeState?.searchQuery ??
+                                                    '',
                                                 filters:
-                                                    previous.state
-                                                        ?.searchFilters ?? [],
+                                                    homeState?.searchFilters ??
+                                                    [],
                                             });
                                         }
                                     }}
@@ -312,6 +324,17 @@ export default function App() {
                                         connection={connection}
                                         onLogout={logout}
                                     />
+                                </ProtectedLayout>
+                            }
+                        />
+                        <Route
+                            path="/media"
+                            element={
+                                <ProtectedLayout
+                                    when={mustLogin}
+                                    redirectTo="/login"
+                                >
+                                    <MediaView />
                                 </ProtectedLayout>
                             }
                         />

@@ -23,7 +23,8 @@ import type {
 } from '@spotify/web-api-ts-sdk';
 import clsx from 'clsx';
 
-import { resolveLocale } from '../../shared/date';
+import { formatDurationShort } from '../../shared/date';
+import { resolveLocale } from '../../shared/locale';
 import {
     albumToItem,
     artistToItem,
@@ -79,8 +80,8 @@ const buildHomeSections = (): MediaSectionState[] => [
         title: 'Top tracks',
         subtitle: 'Your short-term replay list',
         view: 'list',
-        infinite: null,
-        rows: 7,
+        infinite: 'columns',
+        rows: 6,
         clampUnit: 'items',
         items: [],
         hasMore: false,
@@ -102,18 +103,18 @@ const buildHomeSections = (): MediaSectionState[] => [
         id: 'new-releases',
         title: 'New releases',
         subtitle: 'Latest drops',
-        view: 'card',
+        view: 'list',
         infinite: 'columns',
-        rows: 2,
+        rows: 5,
         columns: 0,
         items: [],
         hasMore: false,
         loadingMore: false,
     },
     {
-        id: 'featured-playlists',
-        title: 'Featured playlists',
-        subtitle: 'Freshly curated',
+        id: 'user-playlists',
+        title: 'Your playlists',
+        subtitle: 'Saved in your library',
         view: 'card',
         infinite: 'columns',
         rows: 2,
@@ -149,6 +150,7 @@ type StoredHomeSection = Pick<
     | 'infinite'
     | 'rowHeight'
     | 'columnWidth'
+    | 'cardSize'
     | 'clampUnit'
     | 'wideColumns'
 >;
@@ -163,6 +165,7 @@ const stripSection = (section: MediaSectionState): StoredHomeSection => ({
     infinite: section.infinite,
     rowHeight: section.rowHeight,
     columnWidth: section.columnWidth,
+    cardSize: section.cardSize,
     clampUnit: section.clampUnit,
     wideColumns: section.wideColumns,
 });
@@ -177,6 +180,7 @@ const sanitizeStored = (section: StoredHomeSection): StoredHomeSection => ({
     infinite: section.infinite,
     rowHeight: section.rowHeight,
     columnWidth: section.columnWidth,
+    cardSize: section.cardSize,
     clampUnit: section.clampUnit,
     wideColumns: section.wideColumns,
 });
@@ -215,6 +219,19 @@ const dedupeItems = (items: MediaShelfItem[]) => {
         seen.add(item.id);
         return true;
     });
+};
+
+const buildTrackSubtitle = (
+    trackItem: MediaShelfItem,
+    albumName?: string,
+    durationMs?: number
+) => {
+    const parts = [
+        trackItem.subtitle,
+        albumName,
+        durationMs ? formatDurationShort(durationMs) : undefined,
+    ].filter(Boolean);
+    return parts.length > 0 ? parts.join(' \u2022 ') : undefined;
 };
 
 export function HomeView({ searchQuery, filters }: Props) {
@@ -494,7 +511,7 @@ export function HomeView({ searchQuery, filters }: Props) {
                 topTracks,
                 topArtists,
                 newReleases,
-                featured,
+                userPlaylists,
                 saved,
             ] = await Promise.allSettled([
                 sendSpotifyMessage('getRecentlyPlayedTracks', {
@@ -505,15 +522,105 @@ export function HomeView({ searchQuery, filters }: Props) {
                     timeRange: 'short_term',
                 }),
                 sendSpotifyMessage('getTopArtists', {
-                    limit: 20,
+                    limit: 50,
                     timeRange: 'short_term',
                 }),
                 sendSpotifyMessage('getNewReleases', { limit: 20 }),
-                sendSpotifyMessage('getFeaturedPlaylists', { limit: 20 }),
+                sendSpotifyMessage('getUserPlaylists', { limit: 20 }),
                 sendSpotifyMessage('getSavedTracks', { limit: 20 }),
             ]);
 
             if (cancelled) return;
+
+            let topArtistsItems =
+                topArtists.status === 'fulfilled'
+                    ? topArtists.value.items.map((artist) =>
+                          topArtistToItem(artist)
+                      )
+                    : [];
+            if (topArtistsItems.length < 12) {
+                try {
+                    const fallbacks = await Promise.allSettled([
+                        sendSpotifyMessage('getTopArtists', {
+                            limit: 50,
+                            timeRange: 'medium_term',
+                        }),
+                        sendSpotifyMessage('getTopArtists', {
+                            limit: 50,
+                            timeRange: 'long_term',
+                        }),
+                    ]);
+                    const merged = new Map<string, MediaShelfItem>();
+                    topArtistsItems.forEach((item) => {
+                        if (item.id) merged.set(item.id, item);
+                    });
+                    fallbacks.forEach((result) => {
+                        if (result.status !== 'fulfilled') return;
+                        result.value.items.forEach((artist) => {
+                            const item = topArtistToItem(artist);
+                            if (item.id && !merged.has(item.id)) {
+                                merged.set(item.id, item);
+                            }
+                        });
+                    });
+                    topArtistsItems = Array.from(merged.values()).slice(0, 50);
+                } catch (error) {
+                    console.warn('[home] Top artists fallback failed', error);
+                }
+            }
+
+            let topTracksItems =
+                topTracks.status === 'fulfilled'
+                    ? topTracks.value.items.map((track) => {
+                          const base = trackToItem(track);
+                          return {
+                              ...base,
+                              subtitle: buildTrackSubtitle(
+                                  base,
+                                  track.album?.name,
+                                  track.duration_ms
+                              ),
+                          };
+                      })
+                    : [];
+            if (topTracksItems.length < 12) {
+                try {
+                    const fallbacks = await Promise.allSettled([
+                        sendSpotifyMessage('getTopTracks', {
+                            limit: 50,
+                            timeRange: 'medium_term',
+                        }),
+                        sendSpotifyMessage('getTopTracks', {
+                            limit: 50,
+                            timeRange: 'long_term',
+                        }),
+                    ]);
+                    const merged = new Map<string, MediaShelfItem>();
+                    topTracksItems.forEach((item) => {
+                        if (item.id) merged.set(item.id, item);
+                    });
+                    fallbacks.forEach((result) => {
+                        if (result.status !== 'fulfilled') return;
+                        result.value.items.forEach((track) => {
+                            const base = trackToItem(track);
+                            const item = {
+                                ...base,
+                                subtitle: buildTrackSubtitle(
+                                    base,
+                                    track.album?.name,
+                                    track.duration_ms
+                                ),
+                            };
+                            if (item.id && !merged.has(item.id)) {
+                                merged.set(item.id, item);
+                            }
+                        });
+                    });
+                    topTracksItems = Array.from(merged.values()).slice(0, 50);
+                } catch (error) {
+                    console.warn('[home] Top tracks fallback failed', error);
+                }
+            }
 
             const itemsBySection: Record<string, MediaShelfItem[]> = {
                 recent:
@@ -524,27 +631,17 @@ export function HomeView({ searchQuery, filters }: Props) {
                               )
                           )
                         : [],
-                'top-tracks':
-                    topTracks.status === 'fulfilled'
-                        ? topTracks.value.items.map((track) =>
-                              trackToItem(track)
-                          )
-                        : [],
-                'top-artists':
-                    topArtists.status === 'fulfilled'
-                        ? topArtists.value.items.map((artist) =>
-                              topArtistToItem(artist)
-                          )
-                        : [],
+                'top-tracks': topTracksItems,
+                'top-artists': topArtistsItems,
                 'new-releases':
                     newReleases.status === 'fulfilled'
                         ? newReleases.value.albums.items.map((album) =>
                               albumToItem(album)
                           )
                         : [],
-                'featured-playlists':
-                    featured.status === 'fulfilled'
-                        ? featured.value.playlists.items.map((playlist) =>
+                'user-playlists':
+                    userPlaylists.status === 'fulfilled'
+                        ? userPlaylists.value.items.map((playlist) =>
                               playlistToItem(playlist)
                           )
                         : [],
@@ -712,19 +809,27 @@ export function HomeView({ searchQuery, filters }: Props) {
     }, [isSearching, searchContext.query, searchContext.types]);
 
     const isEditable = editing && !isSearching;
+    const alwaysVisibleSections = useMemo(
+        () => new Set(['user-playlists', 'saved-tracks']),
+        []
+    );
     const visibleSections = useMemo(
         () =>
             isEditable || isLoading
                 ? activeSections
-                : activeSections.filter((section) => section.items.length > 0),
-        [activeSections, isEditable, isLoading]
+                : activeSections.filter(
+                      (section) =>
+                          section.items.length > 0 ||
+                          alwaysVisibleSections.has(section.id)
+                  ),
+        [activeSections, alwaysVisibleSections, isEditable, isLoading]
     );
 
     return (
         <Flex
             flexGrow="1"
             direction="column"
-            className="no-overflow-anchor min-h-0 min-w-0 overflow-y-auto [scrollbar-gutter:stable]"
+            className="no-overflow-anchor scrollbar-gutter-stable min-h-0 min-w-0 overflow-y-auto"
         >
             <Flex px="3" py="2" direction="column" gap="1" className="min-w-0">
                 <Flex
