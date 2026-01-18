@@ -69,6 +69,13 @@ export function Marquee({
             const seconds = Math.max(travel / baseSpeed, MIN_DURATION);
             setDistance(travel);
             setDuration(seconds);
+            const firstChild = originalRef.current?.firstElementChild;
+            const styleSource = firstChild ?? originalRef.current;
+            if (styleSource && separatorRef.current) {
+                const styles = getComputedStyle(styleSource);
+                separatorRef.current.style.fontSize = styles.fontSize;
+                separatorRef.current.style.lineHeight = styles.lineHeight;
+            }
         };
 
         compute();
