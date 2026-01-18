@@ -1,4 +1,4 @@
-import { KeyboardEventHandler, ReactNode } from 'react';
+import { CSSProperties, KeyboardEventHandler, ReactNode } from 'react';
 import {
     Avatar,
     AvatarProps,
@@ -6,6 +6,8 @@ import {
     IconButtonProps,
 } from '@radix-ui/themes';
 import clsx from 'clsx';
+
+import { useCachedImage } from '../hooks/useCachedImage';
 
 interface AvatarButtonProps extends Omit<IconButtonProps, 'asChild'> {
     avatar: AvatarProps;
@@ -29,8 +31,15 @@ export function AvatarButton({
     const {
         className: avatarClassName,
         imageClassName,
+        radius: avatarRadius,
+        src,
         ...avatarProps
     } = avatar;
+    const cachedSrc = useCachedImage(src);
+
+    const ringRadius =
+        avatarRadius === 'full' ? '9999px' : 'calc(0.375rem + 4px)';
+    const isActive = !!(ariaPressed || ariaSelected);
 
     const handleKeyDown: KeyboardEventHandler<HTMLButtonElement> = (event) => {
         onKeyDown?.(event);
@@ -71,27 +80,26 @@ export function AvatarButton({
         >
             <Avatar
                 {...avatarProps}
+                src={cachedSrc}
+                radius={avatarRadius}
                 className={clsx(
-                    'relative inline-flex items-center justify-center overflow-visible',
+                    'relative inline-flex items-center justify-center overflow-visible outline-none',
+                    !hideRing &&
+                        'after:pointer-events-none after:absolute after:inset-[-4px] after:rounded-[var(--avatar-ring-radius)] after:border-2 after:border-transparent after:opacity-0 after:transition-opacity',
+                    !hideRing &&
+                        isEnabled &&
+                        'hover:after:border-[var(--accent-8)] hover:after:opacity-100 focus-visible:after:border-[var(--accent-8)] focus-visible:after:opacity-100',
+                    !hideRing &&
+                        isActive &&
+                        'after:!border-[var(--accent-10)] after:opacity-100',
                     avatarClassName
                 )}
-                imageClassName={clsx(
-                    'block transition-shadow',
-                    hideRing
-                        ? 'ring-0 ring-offset-0 focus-visible:outline-none'
-                        : 'ring-2 ring-transparent ring-offset-2 ring-offset-[var(--color-background)] focus-visible:outline-none',
-                    !hideRing &&
-                        isEnabled &&
-                        'focus-visible:ring-2 focus-visible:ring-[var(--accent-8)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-background)]',
-                    !hideRing &&
-                        isEnabled &&
-                        'hover:ring-2 hover:ring-[var(--accent-8)] hover:ring-offset-2 hover:ring-offset-[var(--color-background)]',
-                    !hideRing &&
-                        isEnabled &&
-                        (ariaPressed || ariaSelected) &&
-                        '!ring-[var(--accent-10)] ring-offset-2 ring-offset-[var(--color-background)]',
-                    imageClassName
-                )}
+                style={
+                    {
+                        '--avatar-ring-radius': ringRadius,
+                    } as CSSProperties
+                }
+                imageClassName={clsx('block transition-shadow', imageClassName)}
             >
                 {children}
             </Avatar>

@@ -19,6 +19,7 @@ import {
 import { UserProfile } from '@spotify/web-api-ts-sdk';
 import { SearchBar } from '../components/SearchBar';
 import { SpotifyConnectionMeta } from '../hooks/useAuth';
+import { useCachedImage } from '../hooks/useCachedImage';
 import { useSettings } from '../hooks/useSettings';
 
 const relativeFormatter = new Intl.RelativeTimeFormat(undefined, {
@@ -119,7 +120,7 @@ export function ProfileView({ profile, onLogout, connection }: Props) {
 
     const id = profile?.id ?? '0000000000000000000000000';
     const name = profile?.display_name ?? 'John Does Nuts';
-    const image = profile?.images?.[0]?.url;
+    const image = useCachedImage(profile?.images?.[0]?.url);
     const link = profile?.external_urls?.spotify;
     const followers = profile?.followers?.total;
 
@@ -189,7 +190,7 @@ export function ProfileView({ profile, onLogout, connection }: Props) {
                         gap="3"
                         align="center"
                         onClick={() => window.open(link, '_blank')}
-                        style={{ cursor: 'pointer' }}
+                        className="group cursor-pointer"
                     >
                         <Avatar
                             radius="full"
@@ -199,12 +200,20 @@ export function ProfileView({ profile, onLogout, connection }: Props) {
                         />
                         <Flex direction="column" gap="1" align="start">
                             <Skeleton loading={loading}>
-                                <Text size="4" weight="bold">
+                                <Text
+                                    size="4"
+                                    weight="bold"
+                                    className="app-link group-hover:text-[var(--accent-11)]"
+                                >
                                     {name}
                                 </Text>
                             </Skeleton>
                             <Skeleton loading={loading}>
-                                <Text size="2" color="gray">
+                                <Text
+                                    size="2"
+                                    color="gray"
+                                    className="app-link group-hover:text-[var(--accent-11)]"
+                                >
                                     @{id}
                                 </Text>
                             </Skeleton>

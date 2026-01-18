@@ -543,7 +543,6 @@ export function MediaView() {
     const hero = useMemo<HeroData | null>(() => {
         if (!data) return null;
         if (data.kind === 'album') {
-            const albumType = formatAlbumType(data.album);
             if (data.selectedTrack) {
                 const artistNodes = data.selectedTrack.artists.map(
                     (artist, index) => (
@@ -579,7 +578,7 @@ export function MediaView() {
                     { year: 'numeric' },
                     settings.locale
                 );
-                const info = [albumType, data.album.name, year]
+                const info = [data.album.name, year]
                     .filter(Boolean)
                     .join(' • ');
                 return {
@@ -601,9 +600,7 @@ export function MediaView() {
                 { year: 'numeric' },
                 settings.locale
             );
-            const info = [albumType, year, `${data.album.total_tracks} tracks`]
-                .filter(Boolean)
-                .join(' • ');
+            const info = [year].filter(Boolean).join(' • ');
             return {
                 title: data.album.name,
                 subtitle: (
@@ -830,7 +827,7 @@ export function MediaView() {
         if (rafRef.current) return;
         rafRef.current = requestAnimationFrame(() => {
             rafRef.current = null;
-            const progress = Math.min(1, lastScrollTopRef.current / 24);
+            const progress = Math.min(1, lastScrollTopRef.current / 8);
             heroStickyRef.current?.style.setProperty(
                 '--hero-collapse',
                 progress.toFixed(3)
@@ -854,7 +851,9 @@ export function MediaView() {
                 <Flex
                     align="center"
                     gap="3"
-                    className="relative w-full px-3 pb-3"
+                    px="3"
+                    pb="3"
+                    className="relative w-full"
                     style={{
                         paddingTop: 'calc(12px - 8px * var(--hero-collapse))',
                     }}
@@ -1026,7 +1025,8 @@ export function MediaView() {
                                 section={
                                     {
                                         id: 'album-tracks',
-                                        title: 'Album',
+                                        title: data.album.name,
+                                        subtitle: formatAlbumType(data.album),
                                         view: 'list',
                                         items: data?.tracks ?? skeletonRows,
                                     } satisfies MediaSectionState

@@ -58,6 +58,9 @@ export function MediaRow({
     });
     const titleSkeletonStyle = loading ? { width: `${titleWidth}%` } : {};
     const subtitleSkeletonStyle = loading ? { width: `${subtitleWidth}%` } : {};
+    const loadingLineClassName =
+        'flex min-w-0 flex-shrink overflow-hidden whitespace-nowrap';
+    const loadingLineStyle = { paddingInline: 2 };
 
     return (
         <Flex
@@ -84,28 +87,57 @@ export function MediaRow({
             <Flex direction="column" gap="0" flexGrow="1" className="min-w-0">
                 <Fade enabled={!loading}>
                     <div
-                        className="transition-all duration-300 ease-out"
+                        className="transition-[width] duration-300 ease-out"
                         style={titleSkeletonStyle}
                     >
                         <Skeleton loading={loading} className="w-full">
-                            <Marquee
-                                mode="bounce"
-                                className={clsx(
-                                    'min-w-0',
-                                    !loading && 'w-full'
-                                )}
-                            >
-                                <Text size="2" weight="medium">
-                                    {title}
-                                </Text>
-                            </Marquee>
+                            {loading ? (
+                                <div
+                                    className={loadingLineClassName}
+                                    style={loadingLineStyle}
+                                >
+                                    <Text
+                                        size="2"
+                                        weight="medium"
+                                        className={clsx(
+                                            'leading-tight',
+                                            onClick && 'app-link',
+                                            onClick &&
+                                                'group-hover:text-[var(--accent-11)]'
+                                        )}
+                                    >
+                                        {title}
+                                    </Text>
+                                </div>
+                            ) : (
+                                <Marquee
+                                    mode="bounce"
+                                    className={clsx(
+                                        'min-w-0',
+                                        !loading && 'w-full'
+                                    )}
+                                >
+                                    <Text
+                                        size="2"
+                                        weight="medium"
+                                        className={clsx(
+                                            'leading-tight',
+                                            onClick && 'app-link',
+                                            onClick &&
+                                                'group-hover:text-[var(--accent-11)]'
+                                        )}
+                                    >
+                                        {title}
+                                    </Text>
+                                </Marquee>
+                            )}
                         </Skeleton>
                     </div>
                 </Fade>
                 {subtitle && (
                     <Fade enabled={!loading}>
                         <div
-                            className="transition-all duration-300 ease-out"
+                            className="transition-[width] duration-300 ease-out"
                             style={
                                 subtitleHeight
                                     ? {
@@ -116,28 +148,60 @@ export function MediaRow({
                             }
                         >
                             <Skeleton loading={loading} className="w-full">
-                                <Marquee
-                                    mode="left"
-                                    className={clsx(
-                                        'min-w-0',
-                                        !loading && 'w-full'
-                                    )}
-                                >
-                                    <Text
-                                        size="1"
-                                        color="gray"
-                                        style={
-                                            subtitleHeight
-                                                ? {
-                                                      lineHeight: `${subtitleHeight}px`,
-                                                      height: subtitleHeight,
-                                                  }
-                                                : undefined
-                                        }
+                                {loading ? (
+                                    <div
+                                        className={loadingLineClassName}
+                                        style={loadingLineStyle}
                                     >
-                                        {subtitle}
-                                    </Text>
-                                </Marquee>
+                                        <Text
+                                            size="1"
+                                            color="gray"
+                                            className={clsx(
+                                                onClick && 'app-link',
+                                                onClick &&
+                                                    'group-hover:text-[var(--accent-11)]'
+                                            )}
+                                            style={
+                                                subtitleHeight
+                                                    ? {
+                                                          lineHeight: `${subtitleHeight}px`,
+                                                          height: subtitleHeight,
+                                                      }
+                                                    : undefined
+                                            }
+                                        >
+                                            {subtitle}
+                                        </Text>
+                                    </div>
+                                ) : (
+                                    <Marquee
+                                        mode="left"
+                                        className={clsx(
+                                            'min-w-0',
+                                            !loading && 'w-full'
+                                        )}
+                                    >
+                                        <Text
+                                            size="1"
+                                            color="gray"
+                                            className={clsx(
+                                                onClick && 'app-link',
+                                                onClick &&
+                                                    'group-hover:text-[var(--accent-11)]'
+                                            )}
+                                            style={
+                                                subtitleHeight
+                                                    ? {
+                                                          lineHeight: `${subtitleHeight}px`,
+                                                          height: subtitleHeight,
+                                                      }
+                                                    : undefined
+                                            }
+                                        >
+                                            {subtitle}
+                                        </Text>
+                                    </Marquee>
+                                )}
                             </Skeleton>
                         </div>
                     </Fade>

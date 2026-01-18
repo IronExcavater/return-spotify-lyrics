@@ -23,6 +23,7 @@ export function ExternalLink({
                     if (href) window.open(href, '_blank', 'noopener');
                 }}
                 className={clsx(
+                    'app-link',
                     pointer && href && '!cursor-pointer',
                     noAccent && '!text-gray-12',
                     className

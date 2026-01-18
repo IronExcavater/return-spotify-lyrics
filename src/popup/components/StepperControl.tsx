@@ -29,7 +29,7 @@ export function StepperControl({
     suffix,
 }: StepperControlProps) {
     return (
-        <Flex align="center">
+        <Flex align="center" direction="row" wrap="nowrap">
             <Text size="1" color="gray" mr="1">
                 {label}
             </Text>

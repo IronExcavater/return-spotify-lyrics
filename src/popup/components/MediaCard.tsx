@@ -125,7 +125,15 @@ export function MediaCard({
                                     !loading && 'w-full'
                                 )}
                             >
-                                <Text size="1" weight="medium">
+                                <Text
+                                    size="1"
+                                    weight="medium"
+                                    className={clsx(
+                                        onClick && 'app-link',
+                                        onClick &&
+                                            'group-hover:text-[var(--accent-11)]'
+                                    )}
+                                >
                                     {title}
                                 </Text>
                             </Marquee>
@@ -145,7 +153,15 @@ export function MediaCard({
                                     !loading && 'w-full'
                                 )}
                             >
-                                <Text size="1" color="gray">
+                                <Text
+                                    size="1"
+                                    color="gray"
+                                    className={clsx(
+                                        onClick && 'app-link',
+                                        onClick &&
+                                            'group-hover:text-[var(--accent-11)]'
+                                    )}
+                                >
                                     {subtitleContent}
                                 </Text>
                             </Marquee>

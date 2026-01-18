@@ -31,6 +31,7 @@ export function SegmentedControl<Key extends string>({
 
     const itemRefs = useRef(new Map<Key, HTMLButtonElement | null>());
     const [indicatorPos, setIndicatorPos] = useState({ x: 0, y: 0 });
+    const [hasMeasured, setHasMeasured] = useState(false);
 
     useLayoutEffect(() => {
         const node = current ? itemRefs.current.get(current) : null;
@@ -41,7 +42,8 @@ export function SegmentedControl<Key extends string>({
             x: offsetLeft + offsetWidth / 2,
             y: offsetTop + offsetHeight / 2,
         });
-    }, [current, items]);
+        if (!hasMeasured) setHasMeasured(true);
+    }, [current, items, hasMeasured]);
 
     const setItemRef = (key: Key) => (node: HTMLButtonElement | null) => {
         if (node) itemRefs.current.set(key, node);
@@ -50,7 +52,7 @@ export function SegmentedControl<Key extends string>({
 
     return (
         <>
-            {items.length > 0 && (
+            {items.length > 0 && hasMeasured && (
                 <span
                     aria-hidden="true"
                     data-orientation={orientation}

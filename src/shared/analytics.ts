@@ -1,7 +1,7 @@
 import { getFromStorage, setInStorage } from './storage';
 
-export const ANALYTICS_EVENTS_KEY = 'analytics.events';
-export const ANALYTICS_KNOWLEDGE_KEY = 'analytics.knowledge';
+export const ANALYTICS_EVENTS_KEY = 'analyticsEvents';
+export const ANALYTICS_KNOWLEDGE_KEY = 'analyticsKnowledge';
 
 export const ANALYTICS_EVENTS = {
     appOpen: 'app.open',

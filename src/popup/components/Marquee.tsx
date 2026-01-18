@@ -12,6 +12,8 @@ interface Props {
     className?: string;
     sidePadding?: number;
     gap?: number;
+    separatorColor?: string;
+    separatorClassName?: string;
 }
 
 export function Marquee({
@@ -22,6 +24,8 @@ export function Marquee({
     pauseWhenOffscreen = true,
     sidePadding = 2,
     gap = 16,
+    separatorColor = 'currentColor',
+    separatorClassName,
     className,
 }: Props) {
     const { settings } = useSettings();
@@ -134,8 +138,14 @@ export function Marquee({
                             <span
                                 ref={separatorRef}
                                 aria-hidden="true"
-                                className="inline-flex items-center text-[var(--gray-9)]"
-                                style={{ paddingInline: separatorPadding }}
+                                className={clsx(
+                                    'inline-flex items-center',
+                                    separatorClassName
+                                )}
+                                style={{
+                                    paddingInline: separatorPadding,
+                                    color: separatorColor,
+                                }}
                             >
                                 {'\u2022'}
                             </span>

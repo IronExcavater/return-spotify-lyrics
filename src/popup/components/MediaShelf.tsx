@@ -430,6 +430,7 @@ export function MediaShelf({
                 className={clsx(
                     'no-overflow-anchor relative w-full min-w-0 transition-[opacity,filter] duration-200',
                     !interactive && 'pointer-events-none opacity-70',
+                    'scrollbar-gutter-stable',
                     orientation === 'horizontal'
                         ? fixedHeight
                             ? 'overflow-x-auto overflow-y-hidden'

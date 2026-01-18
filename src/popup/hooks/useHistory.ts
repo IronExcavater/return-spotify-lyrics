@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { getFromStorage, setInStorage } from '../../shared/storage';
 import type { SearchFilter } from '../../shared/types';
 import type { MediaRouteState } from '../helpers/mediaRoute';
 
@@ -34,40 +35,82 @@ const serializeFilters = (filters?: SearchFilter[]) =>
         }))
     );
 
+const normalizeState = (state?: RouteState): RouteState | undefined => {
+    if (!state) return undefined;
+    if (isMediaState(state)) return state;
+    const query = state.searchQuery?.trim() ?? '';
+    const filters =
+        state.searchFilters && state.searchFilters.length > 0
+            ? state.searchFilters
+            : undefined;
+    if (!query && !filters) return undefined;
+    return { searchQuery: query, searchFilters: filters };
+};
+
 const serializeState = (state?: RouteState) => {
-    if (!state) return '';
-    if (isMediaState(state)) {
-        return `media:${state.kind}:${state.id}:${state.selectedId ?? ''}`;
+    const normalized = normalizeState(state);
+    if (!normalized) return '';
+    if (isMediaState(normalized)) {
+        return `media:${normalized.kind}:${normalized.id}:${normalized.selectedId ?? ''}`;
     }
-    return `home:${state.searchQuery ?? ''}:${serializeFilters(
-        state.searchFilters
-    )}`;
+    const query = normalized.searchQuery ?? '';
+    const filters = normalized.searchFilters ?? [];
+    if (!query && filters.length === 0) return '';
+    return `home:${query}:${serializeFilters(filters)}`;
 };
 
 const listeners = new Set<() => void>();
 const historyStack: HistoryEntry[] = [];
+const MAX_HISTORY = 30;
+const HISTORY_KEY = 'popupHistory';
+let hasHydrated = false;
+let persistTimer: number | null = null;
 
 const emit = () => {
     listeners.forEach((listener) => listener());
+    if (persistTimer) return;
+    persistTimer = window.setTimeout(() => {
+        persistTimer = null;
+        void setInStorage(HISTORY_KEY, historyStack.slice(-MAX_HISTORY));
+    }, 150);
 };
 
 const getCanGoBack = () => historyStack.length > 1;
 
-const recordRoute = (path: string, state?: RouteState) => {
+const trimHistory = () => {
+    if (historyStack.length <= MAX_HISTORY) return;
+    historyStack.splice(0, historyStack.length - MAX_HISTORY);
+};
+
+const recordRoute = (
+    path: string,
+    state?: RouteState,
+    samePathBehavior: 'replace' | 'push' = 'replace'
+) => {
     if (!shouldTrack(path)) return;
+    const normalizedState = normalizeState(state);
 
     const last = historyStack[historyStack.length - 1];
     if (last && last.path === path) {
-        const lastKey = serializeState(last.state);
-        const nextKey = serializeState(state);
-        if (lastKey !== nextKey) {
-            historyStack.push({ path, state });
+        const nextState = normalizedState ?? last.state;
+        if (serializeState(last.state) !== serializeState(nextState)) {
+            if (samePathBehavior === 'push') {
+                historyStack.push({ path, state: nextState });
+            } else {
+                historyStack[historyStack.length - 1] = {
+                    path,
+                    state: nextState,
+                };
+            }
+            trimHistory();
             emit();
         }
         return;
     }
 
-    historyStack.push({ path, state });
+    if (!normalizedState && path === '/home') return;
+    historyStack.push({ path, state: normalizedState });
+    trimHistory();
     emit();
 };
 
@@ -83,13 +126,28 @@ export function useHistory() {
     const location = useLocation();
     const [canGoBack, setCanGoBack] = useState(getCanGoBack());
     const lastLocation = useRef<string | null>(null);
-
     useEffect(() => {
         const update = () => setCanGoBack(getCanGoBack());
         listeners.add(update);
         return () => {
             listeners.delete(update);
         };
+    }, []);
+
+    useEffect(() => {
+        if (hasHydrated) return;
+        hasHydrated = true;
+        getFromStorage<HistoryEntry[]>(HISTORY_KEY, (stored) => {
+            const next = (stored ?? [])
+                .filter((entry) => shouldTrack(entry.path))
+                .map((entry) => ({
+                    path: entry.path,
+                    state: normalizeState(entry.state),
+                }));
+            historyStack.length = 0;
+            historyStack.push(...next.slice(-MAX_HISTORY));
+            emit();
+        });
     }, []);
 
     useEffect(() => {
@@ -103,7 +161,7 @@ export function useHistory() {
 
     const goTo = useCallback(
         (path: string, state?: RouteState) => {
-            recordRoute(path, state);
+            recordRoute(path, state, 'push');
             navigate(path, { state, replace: location.pathname === path });
         },
         [location.pathname, navigate]
@@ -118,7 +176,7 @@ export function useHistory() {
 
     const rememberState = useCallback(
         (state?: RouteState) => {
-            recordRoute(location.pathname, state);
+            recordRoute(location.pathname, state, 'push');
         },
         [location.pathname]
     );
@@ -128,5 +186,6 @@ export function useHistory() {
         goBack,
         goTo,
         rememberState,
+        maxHistory: MAX_HISTORY,
     };
 }

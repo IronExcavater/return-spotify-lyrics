@@ -10,6 +10,26 @@
     .scrollbar-gutter-stable {
         scrollbar-gutter: stable;
     }
+
+    .app-link {
+        text-decoration: none;
+        color: inherit;
+        transition:
+            color 150ms ease,
+            background-color 150ms ease;
+    }
+
+    .app-link:hover {
+        text-decoration: none;
+        color: var(--accent-11);
+        background-color: transparent;
+    }
+
+    .app-link-button {
+        background: transparent;
+        border: 0;
+        padding: 0;
+    }
 }
 
 :root {

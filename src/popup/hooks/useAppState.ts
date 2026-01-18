@@ -59,9 +59,6 @@ const ROUTE_RULES: Partial<Record<RouteValue, RouteRule>> = {
     [ROUTES.profile]: {
         heightOverride: 'auto',
     },
-    [ROUTES.media]: {
-        allowedBars: ['home'],
-    },
 };
 
 const APP_STATE_KEY = 'appState';
@@ -219,15 +216,6 @@ export function useAppState({ fallbackWidth, fallbackHeight }: Props) {
             void updateAppState({ lastBar: 'home' });
         }
     }, [hydrated, activeBar, playback, updateAppState]);
-
-    useEffect(() => {
-        if (!hydrated) return;
-        if (location.pathname !== ROUTES.media) return;
-        if (activeBar !== 'home') {
-            setActiveBar('home');
-            void updateAppState({ lastBar: 'home' });
-        }
-    }, [hydrated, activeBar, location.pathname, updateAppState]);
 
     // Enforce route rules
     const lastEnforcedNav = useRef<{ bar: BarKey; route: RouteValue } | null>(

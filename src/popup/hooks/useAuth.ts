@@ -20,6 +20,9 @@ export interface SpotifyConnectionMeta {
 export function useAuth() {
     const [authed, setAuthed] = useState<boolean | undefined>(undefined);
     const [user, setUser] = useState<UserProfile | undefined>(undefined);
+    const [cachedUser, setCachedUser] = useState<UserProfile | undefined>(
+        undefined
+    );
     const [connection, setConnection] = useState<
         SpotifyConnectionMeta | undefined
     >(undefined);
@@ -101,7 +104,10 @@ export function useAuth() {
 
     // Initial auth sync
     useEffect(() => {
-        getFromStorage<UserProfile>(SPOTIFY_USER_KEY, (user) => setUser(user));
+        getFromStorage<UserProfile>(SPOTIFY_USER_KEY, (user) => {
+            if (user) setCachedUser(user);
+            if (!sessionActiveRef.current && user) setUser(user);
+        });
         getFromStorage<SpotifyConnectionMeta>(
             SPOTIFY_CONNECTION_KEY,
             (meta) => {
@@ -124,5 +130,6 @@ export function useAuth() {
         });
     }, [authed, trackAuth]);
 
-    return { authed, profile: user, login, logout, connection };
+    const profile = authed === false ? undefined : (user ?? cachedUser);
+    return { authed, profile, login, logout, connection };
 }
