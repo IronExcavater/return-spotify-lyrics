@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
+import { createLogger, logError } from '../../shared/logging';
 
 const MAX_IMAGE_CACHE = 50;
 const imageCache = new Map<string, string>();
 const imageOrder: string[] = [];
 const activeCounts = new Map<string, number>();
+const logger = createLogger('image');
 
 const setActive = (src: string, delta: number) => {
     const next = (activeCounts.get(src) ?? 0) + delta;
@@ -42,12 +44,14 @@ const cacheImage = async (src: string) => {
 };
 
 export function useCachedImage(src?: string) {
-    const [cachedSrc, setCachedSrc] = useState<string | undefined>(undefined);
+    const [resolvedSrc, setResolvedSrc] = useState<string | undefined>(() => {
+        if (!src) return undefined;
+        return imageCache.get(src) ?? src;
+    });
 
     useEffect(() => {
-        let cancelled = false;
         if (!src) {
-            setCachedSrc(undefined);
+            setResolvedSrc(undefined);
             return;
         }
 
@@ -55,27 +59,23 @@ export function useCachedImage(src?: string) {
 
         const cached = imageCache.get(src);
         if (cached) {
-            setCachedSrc(cached);
+            setResolvedSrc(cached);
             return () => {
-                cancelled = true;
                 setActive(src, -1);
             };
         }
 
+        setResolvedSrc(src);
         void cacheImage(src)
-            .then((url) => {
-                if (!cancelled) setCachedSrc(url);
-            })
+            .then(() => undefined)
             .catch((error) => {
-                console.warn('[image] Failed to cache image', error);
-                if (!cancelled) setCachedSrc(src);
+                logError(logger, 'Failed to cache image', error);
             });
 
         return () => {
-            cancelled = true;
             setActive(src, -1);
         };
     }, [src]);
 
-    return cachedSrc ?? src;
+    return resolvedSrc ?? src;
 }

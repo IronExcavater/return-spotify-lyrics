@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { isSecondaryRoute } from './useAppState';
 
 interface RouteToggleOptions {
     fallbackPath?: string;
@@ -13,6 +14,7 @@ export function useRouteToggle(
     const navigate = useNavigate();
     const location = useLocation();
     const lastNonTargetRoute = useRef<string | null>(null);
+    const lastPrimaryRoute = useRef<string | null>(null);
     const locationPathRef = useRef(location.pathname);
 
     useEffect(() => {
@@ -20,6 +22,9 @@ export function useRouteToggle(
         if (!trackHistory) return;
         if (location.pathname !== targetPath) {
             lastNonTargetRoute.current = location.pathname;
+            if (!isSecondaryRoute(location.pathname)) {
+                lastPrimaryRoute.current = location.pathname;
+            }
         }
     }, [location.pathname, targetPath, trackHistory]);
 
@@ -27,7 +32,9 @@ export function useRouteToggle(
         const currentPath = locationPathRef.current;
         if (currentPath === targetPath) {
             const fallback = trackHistory
-                ? (lastNonTargetRoute.current ?? fallbackPath)
+                ? (lastPrimaryRoute.current ??
+                  lastNonTargetRoute.current ??
+                  fallbackPath)
                 : fallbackPath;
             navigate(fallback, { replace: true });
         } else {

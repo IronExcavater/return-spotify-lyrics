@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode, type Ref } from 'react';
 import {
     Cross2Icon,
     ChevronLeftIcon,
@@ -8,8 +8,8 @@ import {
 } from '@radix-ui/react-icons';
 import { Button, DropdownMenu, Flex, IconButton, Text } from '@radix-ui/themes';
 import clsx from 'clsx';
-
 import type { FilterKind, SearchFilter, PillValue } from '../../shared/types';
+import { handleMenuTriggerKeyDown } from '../hooks/useActions';
 import { Pill } from './Pill';
 import { SearchBar } from './SearchBar';
 
@@ -27,6 +27,7 @@ interface Props {
     onSearchChange: (query: string) => void;
     onClearSearch: () => void;
     onSearchSubmit?: () => void;
+    searchInputRef?: Ref<HTMLInputElement>;
     canGoBack?: boolean;
     onGoBack?: () => void;
     filters: SearchFilter[];
@@ -44,6 +45,7 @@ export function HomeBar({
     onSearchChange,
     onClearSearch,
     onSearchSubmit,
+    searchInputRef,
     canGoBack,
     onGoBack,
     filters,
@@ -67,7 +69,7 @@ export function HomeBar({
                             disabled={!canGoBack}
                             aria-label="Go back"
                             onClick={onGoBack}
-                            className="mt-0.5 h-6 !w-4 !p-0"
+                            className="mt-0.5 h-6 w-4! p-0!"
                         >
                             <ChevronLeftIcon />
                         </IconButton>
@@ -77,7 +79,9 @@ export function HomeBar({
                             onSubmit={onSearchSubmit}
                             onClear={onClearSearch}
                             placeholder="Find your groove"
-                            className="w-full min-w-0 flex-1"
+                            className="w-full min-w-0"
+                            inputRef={searchInputRef}
+                            showShortcut
                             leftSlot={
                                 <IconButton
                                     size="1"
@@ -87,7 +91,7 @@ export function HomeBar({
                                 >
                                     <MagnifyingGlassIcon
                                         className={clsx(
-                                            'absolute transition-transform ease-out',
+                                            'absolute transition-transform',
                                             hasQuery
                                                 ? 'scale-100 opacity-100'
                                                 : 'scale-50 opacity-0'
@@ -95,7 +99,7 @@ export function HomeBar({
                                     />
                                     <HomeIcon
                                         className={clsx(
-                                            'absolute transition-transform ease-out',
+                                            'absolute transition-transform',
                                             hasQuery
                                                 ? 'scale-50 opacity-0'
                                                 : 'scale-100 opacity-100'
@@ -112,8 +116,8 @@ export function HomeBar({
                                     tabIndex={!hasQuery ? -1 : 0}
                                     onClick={onClearSearch}
                                     className={clsx(
-                                        '!transition-transform',
-                                        hasQuery ? '!scale-100' : '!scale-0'
+                                        'transition-transform!',
+                                        hasQuery ? 'scale-100!' : 'scale-0!'
                                     )}
                                 >
                                     <Cross2Icon />
@@ -127,7 +131,9 @@ export function HomeBar({
                         </Text>
                         <Flex gap="1">
                             <DropdownMenu.Root>
-                                <DropdownMenu.Trigger>
+                                <DropdownMenu.Trigger
+                                    onKeyDown={handleMenuTriggerKeyDown}
+                                >
                                     <IconButton
                                         size="1"
                                         variant="soft"
@@ -167,11 +173,9 @@ export function HomeBar({
                         </Flex>
                     </Flex>
                 </Flex>
-
                 {(profileSlot || navSlot) && (
                     <Flex align="center" gap="2">
-                        {profileSlot}
-                        {navSlot}
+                        {profileSlot} {navSlot}
                     </Flex>
                 )}
             </Flex>

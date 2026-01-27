@@ -1,5 +1,4 @@
 import { Flex, Text } from '@radix-ui/themes';
-import { asTrack } from '../../shared/types';
 import { usePlayer } from '../hooks/usePlayer';
 
 const FALLBACK_LYRICS = [
@@ -10,15 +9,14 @@ const FALLBACK_LYRICS = [
 ];
 
 export function LyricsView() {
-    const { playback } = usePlayer();
-    const track = asTrack(playback?.item);
+    usePlayer();
     const averageColor = false;
 
     return (
         <Flex
             direction="column"
             flexGrow="1"
-            className="min-h-[280px] text-white select-none"
+            className="min-h-70 text-white select-none"
             p="4"
             style={{
                 background: averageColor

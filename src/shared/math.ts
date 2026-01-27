@@ -52,3 +52,13 @@ export const seededWidths = (
     );
     return { titleWidth, subtitleWidth };
 };
+
+export const skeletonTextWidths = (
+    parts: Array<string | undefined>,
+    seed: number,
+    salts: number[],
+    options?: Parameters<typeof seededWidths>[1]
+) => {
+    const baseSeed = hashSequence(parts, salts, [5]) ^ seed;
+    return seededWidths(baseSeed, options);
+};

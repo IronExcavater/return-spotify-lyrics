@@ -58,10 +58,7 @@ export function usePersonalisation({
 
     useEffect(() => {
         if (!hydrated || snapshot) return;
-        const next = buildPersonalisationSnapshot(knowledge, {
-            searchQuery,
-            filterCount: filters.length,
-        });
+        const next = buildPersonalisationSnapshot(knowledge);
         cachedSnapshot = next;
         setSnapshot(next);
     }, [filters.length, hydrated, knowledge, searchQuery, snapshot]);

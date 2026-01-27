@@ -15,20 +15,18 @@ import {
     Skeleton,
     Switch,
     Text,
+    Tooltip,
 } from '@radix-ui/themes';
 import { UserProfile } from '@spotify/web-api-ts-sdk';
+import { resolveLocale } from '../../shared/locale';
 import { SearchBar } from '../components/SearchBar';
+import { TextButton } from '../components/TextButton';
 import { SpotifyConnectionMeta } from '../hooks/useAuth';
 import { useCachedImage } from '../hooks/useCachedImage';
 import { useSettings } from '../hooks/useSettings';
 
 const relativeFormatter = new Intl.RelativeTimeFormat(undefined, {
     numeric: 'auto',
-});
-
-const absoluteFormatter = new Intl.DateTimeFormat(undefined, {
-    dateStyle: 'medium',
-    timeStyle: 'short',
 });
 
 const LOCALE_OPTIONS = [
@@ -91,10 +89,11 @@ function formatRelative(timestamp?: number, now?: number) {
     return undefined;
 }
 
-function formatAbsolute(timestamp?: number) {
-    return timestamp
-        ? absoluteFormatter.format(new Date(timestamp))
-        : undefined;
+function formatAbsolute(
+    timestamp: number | undefined,
+    formatter: Intl.DateTimeFormat
+) {
+    return timestamp ? formatter.format(new Date(timestamp)) : undefined;
 }
 
 interface Props {
@@ -109,6 +108,23 @@ export function ProfileView({ profile, onLogout, connection }: Props) {
     const [localeSearch, setLocaleSearch] = useState('');
     const [localeOpen, setLocaleOpen] = useState(false);
     const { settings, updateSettings } = useSettings();
+    const resolvedLocale = resolveLocale(settings.locale);
+    const absoluteFormatter = useMemo(
+        () =>
+            new Intl.DateTimeFormat(resolvedLocale, {
+                dateStyle: 'medium',
+                timeStyle: 'short',
+            }),
+        [resolvedLocale]
+    );
+    const fullDateFormatter = useMemo(
+        () =>
+            new Intl.DateTimeFormat(resolvedLocale, {
+                dateStyle: 'full',
+                timeStyle: 'short',
+            }),
+        [resolvedLocale]
+    );
 
     useEffect(() => {
         const interval = window.setInterval(() => {
@@ -143,27 +159,35 @@ export function ProfileView({ profile, onLogout, connection }: Props) {
                 label: 'Signed in',
                 value:
                     connectedRelative ??
-                    formatAbsolute(connection?.connectedAt) ??
+                    formatAbsolute(
+                        connection?.connectedAt,
+                        absoluteFormatter
+                    ) ??
                     '—',
                 hint: connection?.connectedAt
-                    ? formatAbsolute(connection.connectedAt)
+                    ? formatAbsolute(connection.connectedAt, fullDateFormatter)
                     : undefined,
             },
             {
                 label: 'Last update',
                 value:
                     lastSyncRelative ??
-                    formatAbsolute(connection?.lastActiveAt) ??
+                    formatAbsolute(
+                        connection?.lastActiveAt,
+                        absoluteFormatter
+                    ) ??
                     '—',
                 hint: connection?.lastActiveAt
-                    ? formatAbsolute(connection.lastActiveAt)
+                    ? formatAbsolute(connection.lastActiveAt, fullDateFormatter)
                     : undefined,
             },
         ];
     }, [
+        absoluteFormatter,
         connection?.connectedAt,
         connection?.lastActiveAt,
         followers,
+        fullDateFormatter,
         relativeNow,
     ]);
 
@@ -182,7 +206,7 @@ export function ProfileView({ profile, onLogout, connection }: Props) {
         LOCALE_OPTIONS[0];
 
     return (
-        <Flex flexGrow="1" direction="column" justify="center">
+        <Flex direction="column" justify="center">
             <Flex p="3" direction="column" gap="2">
                 {/* Avatar + display name */}
                 <Flex align="center" justify="between" gap="3">
@@ -200,22 +224,24 @@ export function ProfileView({ profile, onLogout, connection }: Props) {
                         />
                         <Flex direction="column" gap="1" align="start">
                             <Skeleton loading={loading}>
-                                <Text
+                                <TextButton
                                     size="4"
                                     weight="bold"
-                                    className="app-link group-hover:text-[var(--accent-11)]"
+                                    interactive
+                                    className="group-hover:text-accent-11"
                                 >
                                     {name}
-                                </Text>
+                                </TextButton>
                             </Skeleton>
                             <Skeleton loading={loading}>
-                                <Text
+                                <TextButton
                                     size="2"
                                     color="gray"
-                                    className="app-link group-hover:text-[var(--accent-11)]"
+                                    interactive
+                                    className="group-hover:text-accent-11"
                                 >
                                     @{id}
-                                </Text>
+                                </TextButton>
                             </Skeleton>
                         </Flex>
                     </Flex>
@@ -260,33 +286,50 @@ export function ProfileView({ profile, onLogout, connection }: Props) {
                     </AlertDialog.Root>
                 </Flex>
 
-                <ul className="divide-y divide-white/10">
+                <Flex direction="column" className="divide-y divide-white/10">
                     {stats.map((stat) => (
-                        <li
+                        <Flex
                             key={stat.label}
-                            className="flex items-center justify-between px-3 py-1"
-                            title={stat.hint ?? undefined}
+                            align="center"
+                            justify="between"
+                            px="3"
+                            py="1"
                         >
                             <Text
                                 size="1"
-                                className="tracking-[0.3em] text-white/50 uppercase"
+                                color="gray"
+                                className="tracking-[0.3em] uppercase"
                             >
                                 {stat.label}
                             </Text>
-                            <Text size="2" weight="bold" className="text-white">
-                                {stat.value}
-                            </Text>
-                        </li>
+                            {stat.hint ? (
+                                <Tooltip
+                                    content={stat.hint}
+                                    className="shadow-lg"
+                                >
+                                    <Text size="2" weight="bold">
+                                        {stat.value}
+                                    </Text>
+                                </Tooltip>
+                            ) : (
+                                <Text size="2" weight="bold">
+                                    {stat.value}
+                                </Text>
+                            )}
+                        </Flex>
                     ))}
-                </ul>
+                </Flex>
 
                 <Flex direction="column" gap="1" pt="2">
                     <Text size="3" weight="bold">
                         Settings
                     </Text>
-                    <ul className="divide-y divide-white/10">
-                        <li className="flex items-center justify-between px-3 py-2">
-                            <Flex direction="column">
+                    <Flex
+                        direction="column"
+                        className="divide-y divide-white/10"
+                    >
+                        <Flex align="center" justify="between" px="3" py="2">
+                            <Flex direction="column" gap="1">
                                 <Text size="2">Reduced animation</Text>
                                 <Text size="1" color="gray">
                                     Marquees animate on hover only.
@@ -299,9 +342,19 @@ export function ProfileView({ profile, onLogout, connection }: Props) {
                                     updateSettings({ reducedMotion: checked })
                                 }
                             />
-                        </li>
-                        <li className="flex items-center justify-between gap-3 px-3 py-2">
-                            <Flex direction="column" className="min-w-0">
+                        </Flex>
+                        <Flex
+                            align="center"
+                            justify="between"
+                            gap="3"
+                            px="3"
+                            py="2"
+                        >
+                            <Flex
+                                direction="column"
+                                gap="1"
+                                className="min-w-0"
+                            >
                                 <Text size="2">Locale</Text>
                                 <Text
                                     size="1"
@@ -322,7 +375,7 @@ export function ProfileView({ profile, onLogout, connection }: Props) {
                                     <Button
                                         size="1"
                                         variant="soft"
-                                        className="max-w-[120px] truncate"
+                                        className="max-w-30 truncate"
                                     >
                                         {activeLocale.label}
                                     </Button>
@@ -330,9 +383,14 @@ export function ProfileView({ profile, onLogout, connection }: Props) {
                                 <Popover.Content
                                     align="end"
                                     sideOffset={6}
-                                    className="w-[260px] p-0"
+                                    className="w-65 p-0!"
+                                    style={{ padding: 0 }}
                                 >
-                                    <div className="px-1 py-1">
+                                    <Flex
+                                        direction="column"
+                                        gap="1"
+                                        className="px-1 pt-1"
+                                    >
                                         <SearchBar
                                             value={localeSearch}
                                             onChange={(value) =>
@@ -365,18 +423,28 @@ export function ProfileView({ profile, onLogout, connection }: Props) {
                                                 </IconButton>
                                             }
                                         />
-                                    </div>
-                                    <div className="max-h-[220px] overflow-y-auto">
+                                    </Flex>
+                                    <Flex
+                                        direction="column"
+                                        gap="1"
+                                        className="mt-1 max-h-55 overflow-y-auto px-1 pb-1"
+                                    >
                                         {localeOptions.length === 0 && (
-                                            <div className="px-2 py-1 text-[12px] text-[var(--gray-11)]">
+                                            <Text
+                                                size="1"
+                                                color="gray"
+                                                className="px-2 py-1"
+                                            >
                                                 No matches
-                                            </div>
+                                            </Text>
                                         )}
                                         {localeOptions.map((option) => (
-                                            <button
+                                            <Button
                                                 key={option.locale}
-                                                type="button"
-                                                className="flex w-full items-center justify-between gap-2 rounded-md px-2 py-1 text-left text-[12px] text-[var(--gray-12)] hover:bg-[var(--gray-a3)]"
+                                                size="1"
+                                                variant="ghost"
+                                                color="gray"
+                                                className="text-gray-12 w-full justify-between gap-2 px-2 py-1 text-left"
                                                 onClick={() => {
                                                     updateSettings({
                                                         locale: option.locale,
@@ -384,19 +452,33 @@ export function ProfileView({ profile, onLogout, connection }: Props) {
                                                     setLocaleOpen(false);
                                                 }}
                                             >
-                                                <span className="truncate">
-                                                    {option.label}
-                                                </span>
-                                                <span className="shrink-0 text-[11px] text-[var(--gray-11)]">
-                                                    {option.locale}
-                                                </span>
-                                            </button>
+                                                <Flex
+                                                    align="center"
+                                                    justify="between"
+                                                    gap="2"
+                                                    className="w-full"
+                                                >
+                                                    <Text
+                                                        size="1"
+                                                        className="truncate"
+                                                    >
+                                                        {option.label}
+                                                    </Text>
+                                                    <Text
+                                                        size="1"
+                                                        color="gray"
+                                                        className="shrink-0 text-[11px]"
+                                                    >
+                                                        {option.locale}
+                                                    </Text>
+                                                </Flex>
+                                            </Button>
                                         ))}
-                                    </div>
+                                    </Flex>
                                 </Popover.Content>
                             </Popover.Root>
-                        </li>
-                    </ul>
+                        </Flex>
+                    </Flex>
                 </Flex>
             </Flex>
         </Flex>

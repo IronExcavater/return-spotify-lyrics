@@ -14,10 +14,10 @@ export function IconToggle({
     return (
         <IconButton
             {...rest}
+            color={isPressed ? undefined : 'gray'}
             className={clsx(
-                'text-gray-11 hover:text-gray-12 transition-colors',
-                isPressed &&
-                    'text-[var(--accent-11)] hover:text-[var(--accent-12)]',
+                'transition-colors',
+                isPressed ? 'hover:text-accent-12' : 'hover:text-gray-11',
                 className
             )}
         >

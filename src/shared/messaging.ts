@@ -63,7 +63,8 @@ chrome.runtime.onMessage.addListener(
                 const result = await handler(msg);
                 sendResponse(result);
             } catch (e) {
-                sendResponse({ error: String(e) });
+                const message = e instanceof Error ? e.message : String(e);
+                sendResponse({ error: message });
             }
         })();
 

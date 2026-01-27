@@ -1,9 +1,16 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import {
+    useCallback,
+    useMemo,
+    useRef,
+    useState,
+    type PointerEvent as ReactPointerEvent,
+} from 'react';
 import clsx from 'clsx';
 import { usePlayer } from '../hooks/usePlayer';
 
 interface Props {
     className?: string;
+    disabled?: boolean;
 }
 
 function clamp01(v: number) {
@@ -17,7 +24,7 @@ function formatTime(ms: number) {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 }
 
-export function PlaybackSeek({ className }: Props) {
+export function PlaybackSeek({ className, disabled = false }: Props) {
     const { progressMs, durationMs, controls } = usePlayer();
 
     const trackRef = useRef<HTMLDivElement | null>(null);
@@ -33,9 +40,10 @@ export function PlaybackSeek({ className }: Props) {
     const updateFromEvent = useCallback(
         (clientX: number) => {
             const track = trackRef.current;
-            if (!track || durationMs <= 0) return 0;
+            if (!track || durationMs <= 0) return null;
 
             const rect = track.getBoundingClientRect();
+            if (!rect.width) return null;
             const ratio = clamp01((clientX - rect.left) / rect.width);
             setDragRatio(ratio);
             return ratio;
@@ -43,8 +51,8 @@ export function PlaybackSeek({ className }: Props) {
         [durationMs]
     );
 
-    const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-        if (durationMs <= 0) return;
+    const handlePointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
+        if (disabled || durationMs <= 0) return;
         (e.target as HTMLElement).setPointerCapture(e.pointerId);
         updateFromEvent(e.clientX);
 
@@ -56,7 +64,9 @@ export function PlaybackSeek({ className }: Props) {
             document.removeEventListener('pointerup', handleUp);
 
             const r = updateFromEvent(ev.clientX);
-            if (durationMs > 0) void controls.seek(r * durationMs);
+            if (durationMs > 0 && r != null && Number.isFinite(r)) {
+                void controls.seek(Math.round(r * durationMs));
+            }
             setDragRatio(null);
         };
 
@@ -68,11 +78,11 @@ export function PlaybackSeek({ className }: Props) {
         <div className={clsx('flex-1', className)}>
             <div
                 ref={trackRef}
-                className="relative h-4 w-full cursor-pointer overflow-hidden rounded-full bg-[var(--gray-6)]/60"
+                className="relative h-4 w-full cursor-pointer overflow-hidden rounded-full bg-(--gray-6)/60"
                 onPointerDown={handlePointerDown}
             >
                 <div
-                    className="absolute inset-y-0 left-0 rounded-full bg-[var(--accent-9)]"
+                    className="bg-accent-9 absolute inset-y-0 left-0 rounded-full"
                     style={{ width: `${effectiveRatio * 100}%` }}
                 />
                 <div className="pointer-events-none absolute inset-0 flex items-center justify-between px-2 font-mono text-[10px] text-white">

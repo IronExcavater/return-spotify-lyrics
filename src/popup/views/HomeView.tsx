@@ -23,8 +23,8 @@ import type {
 } from '@spotify/web-api-ts-sdk';
 import clsx from 'clsx';
 
-import { formatDurationShort } from '../../shared/date';
 import { resolveLocale } from '../../shared/locale';
+import { createLogger, logError } from '../../shared/logging';
 import {
     albumToItem,
     artistToItem,
@@ -49,17 +49,17 @@ import {
     type MediaSectionState,
 } from '../components/MediaSection';
 import type { MediaShelfItem } from '../components/MediaShelf';
-import {
-    SEARCH_SECTION_BASE,
-    buildSearchSections,
-} from '../helpers/searchSections';
+import { handleMenuTriggerKeyDown } from '../hooks/useActions';
 import { usePersonalisation } from '../hooks/usePersonalisation';
 import { useSettings } from '../hooks/useSettings';
+import { SEARCH_SECTION_BASE, buildSearchSections } from './searchSections';
 
 interface Props {
     searchQuery: string;
     filters: SearchFilter[];
 }
+
+const logger = createLogger('home');
 
 const buildHomeSections = (): MediaSectionState[] => [
     {
@@ -116,6 +116,7 @@ const buildHomeSections = (): MediaSectionState[] => [
         title: 'Your playlists',
         subtitle: 'Saved in your library',
         view: 'card',
+        cardSize: 3,
         infinite: 'columns',
         rows: 2,
         columns: 0,
@@ -221,19 +222,6 @@ const dedupeItems = (items: MediaShelfItem[]) => {
     });
 };
 
-const buildTrackSubtitle = (
-    trackItem: MediaShelfItem,
-    albumName?: string,
-    durationMs?: number
-) => {
-    const parts = [
-        trackItem.subtitle,
-        albumName,
-        durationMs ? formatDurationShort(durationMs) : undefined,
-    ].filter(Boolean);
-    return parts.length > 0 ? parts.join(' \u2022 ') : undefined;
-};
-
 export function HomeView({ searchQuery, filters }: Props) {
     const [homeSections, setHomeSections] = useState<MediaSectionState[]>(() =>
         buildHomeSections()
@@ -276,7 +264,7 @@ export function HomeView({ searchQuery, filters }: Props) {
     const isLoading = isSearching ? searchLoading : homeLoading;
 
     useEffect(() => {
-        getFromStorage<StoredHomeSection[]>(HOME_LAYOUT_KEY, (saved) => {
+        void getFromStorage<StoredHomeSection[]>(HOME_LAYOUT_KEY, (saved) => {
             setHomeSections(mergeLayout(saved ?? undefined));
         });
     }, []);
@@ -473,7 +461,7 @@ export function HomeView({ searchQuery, filters }: Props) {
                     })
                 );
             } catch (error) {
-                console.warn('[home] Search load more failed', error);
+                logError(logger, 'Search load more failed', error);
                 setSearchSections((prev) =>
                     prev.map((section) =>
                         section.id === sectionId
@@ -565,23 +553,13 @@ export function HomeView({ searchQuery, filters }: Props) {
                     });
                     topArtistsItems = Array.from(merged.values()).slice(0, 50);
                 } catch (error) {
-                    console.warn('[home] Top artists fallback failed', error);
+                    logError(logger, 'Top artists fallback failed', error);
                 }
             }
 
-            let topTracksItems =
+            let topTracksItems: MediaShelfItem[] =
                 topTracks.status === 'fulfilled'
-                    ? topTracks.value.items.map((track) => {
-                          const base = trackToItem(track);
-                          return {
-                              ...base,
-                              subtitle: buildTrackSubtitle(
-                                  base,
-                                  track.album?.name,
-                                  track.duration_ms
-                              ),
-                          };
-                      })
+                    ? topTracks.value.items.map((track) => trackToItem(track))
                     : [];
             if (topTracksItems.length < 12) {
                 try {
@@ -602,15 +580,7 @@ export function HomeView({ searchQuery, filters }: Props) {
                     fallbacks.forEach((result) => {
                         if (result.status !== 'fulfilled') return;
                         result.value.items.forEach((track) => {
-                            const base = trackToItem(track);
-                            const item = {
-                                ...base,
-                                subtitle: buildTrackSubtitle(
-                                    base,
-                                    track.album?.name,
-                                    track.duration_ms
-                                ),
-                            };
+                            const item = trackToItem(track);
                             if (item.id && !merged.has(item.id)) {
                                 merged.set(item.id, item);
                             }
@@ -618,7 +588,7 @@ export function HomeView({ searchQuery, filters }: Props) {
                     });
                     topTracksItems = Array.from(merged.values()).slice(0, 50);
                 } catch (error) {
-                    console.warn('[home] Top tracks fallback failed', error);
+                    logError(logger, 'Top tracks fallback failed', error);
                 }
             }
 
@@ -794,7 +764,7 @@ export function HomeView({ searchQuery, filters }: Props) {
                 setSearchLoading(false);
             } catch (error) {
                 if (!cancelled) {
-                    console.warn('[home] Search failed', error);
+                    logError(logger, 'Search failed', error);
                     setSearchLoading(false);
                 }
             }
@@ -831,17 +801,26 @@ export function HomeView({ searchQuery, filters }: Props) {
             direction="column"
             className="no-overflow-anchor scrollbar-gutter-stable min-h-0 min-w-0 overflow-y-auto"
         >
-            <Flex px="3" py="2" direction="column" gap="1" className="min-w-0">
+            <Flex
+                pl="3"
+                pr="1"
+                py="2"
+                direction="column"
+                gap="1"
+                className="min-w-0"
+            >
                 <Flex
                     justify="between"
                     direction="column"
                     className={clsx(
-                        'relative min-w-0 py-1',
+                        'relative min-w-0',
                         editing &&
-                            'sticky top-0 z-20 mb-4 bg-[var(--color-background)]'
+                            'sticky top-0 z-20 bg-[var(--color-background)]'
                     )}
                     mx="-3"
                     px="3"
+                    py="1"
+                    mb={editing ? '4' : undefined}
                 >
                     <Flex>
                         {!editing && (
@@ -858,7 +837,9 @@ export function HomeView({ searchQuery, filters }: Props) {
                         {isEditable && (
                             <Flex align="center" gap="2" className="relative">
                                 <DropdownMenu.Root>
-                                    <DropdownMenu.Trigger>
+                                    <DropdownMenu.Trigger
+                                        onKeyDown={handleMenuTriggerKeyDown}
+                                    >
                                         <IconButton
                                             size="1"
                                             variant="soft"
@@ -952,7 +933,7 @@ export function HomeView({ searchQuery, filters }: Props) {
                         )}
 
                         {isEditable && (
-                            <div className="pointer-events-none absolute top-full right-0 left-0 z-0 h-4 bg-gradient-to-b from-[var(--color-background)] to-transparent" />
+                            <div className="from-background pointer-events-none absolute top-full right-0 left-0 z-0 h-4 bg-linear-to-b to-transparent" />
                         )}
                     </Flex>
 
@@ -1012,7 +993,8 @@ export function HomeView({ searchQuery, filters }: Props) {
                                                 <MediaSection
                                                     section={section}
                                                     editing={isEditable}
-                                                    preview={isLoading}
+                                                    loading={isLoading}
+                                                    headerLoading={false}
                                                     dragging={
                                                         dragSnapshot.isDragging
                                                     }

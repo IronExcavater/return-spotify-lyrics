@@ -1,3 +1,4 @@
+import { createLogger, logError } from './logging';
 import { getFromStorage, setInStorage } from './storage';
 
 export const ANALYTICS_EVENTS_KEY = 'analyticsEvents';
@@ -73,6 +74,8 @@ export type AnalyticsKnowledge = {
     };
 };
 
+const logger = createLogger('analytics');
+
 const buildEventId = () =>
     typeof crypto !== 'undefined' && crypto.randomUUID
         ? crypto.randomUUID()
@@ -138,7 +141,7 @@ export function recordAnalyticsEvent(
 ): Promise<void> {
     const reason = input.reason?.trim();
     if (!reason) {
-        console.warn('[analytics] Event missing reason', input.name);
+        logger.warn('Event missing reason', input.name);
         return Promise.resolve();
     }
 
@@ -159,7 +162,7 @@ export function recordAnalyticsEvent(
             await setInStorage(ANALYTICS_KNOWLEDGE_KEY, knowledge);
         })
         .catch((error) => {
-            console.warn('[analytics] Failed to record event', error);
+            logError(logger, 'Failed to record event', error);
         });
 
     return recordQueue;

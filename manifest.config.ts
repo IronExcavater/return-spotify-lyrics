@@ -25,11 +25,14 @@ export default defineManifest({
             48: 'public/icon/icon48.png',
             128: 'public/icon/icon128.png',
         },
-        default_popup: 'src/popup/popup.html',
+        default_popup: 'popup.html',
+    },
+    side_panel: {
+        default_path: 'sidepanel.html',
     },
     background: {
         service_worker: 'src/background/background.ts',
         type: 'module',
     },
-    permissions: ['identity', 'storage'],
+    permissions: ['identity', 'storage', 'sidePanel'],
 });

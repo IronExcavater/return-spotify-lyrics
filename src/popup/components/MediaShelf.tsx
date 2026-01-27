@@ -1,4 +1,11 @@
-import { useEffect, useMemo, useRef, useCallback, ReactNode } from 'react';
+import {
+    Fragment,
+    ReactNode,
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+} from 'react';
 import {
     DragDropContext,
     Draggable,
@@ -6,24 +13,25 @@ import {
     type DroppableProvided,
     type DropResult,
 } from '@hello-pangea/dnd';
-import { Flex, DropdownMenu } from '@radix-ui/themes';
+import { Flex, Text } from '@radix-ui/themes';
 import clsx from 'clsx';
 import { MdMusicNote } from 'react-icons/md';
-
 import type { MediaItem } from '../../shared/types';
-import { buildMediaActions } from '../helpers/mediaActions';
-import { buildMediaRouteFromItem } from '../helpers/mediaRoute';
-import { createMenuShortcutHandler } from '../helpers/menuShortcuts';
 import { useHistory } from '../hooks/useHistory';
+import { buildMediaActions } from '../hooks/useMediaActions';
+import { buildMediaRouteFromItem } from '../hooks/useMediaRoute';
 import { useScrollFade } from '../hooks/useScrollFade';
+import { useShelfNavigation } from '../hooks/useShelfNavigation';
+import { MediaActionsMenu } from './MediaActionsMenu';
 import { MediaCard } from './MediaCard';
 import { MediaRow } from './MediaRow';
+import { TextButton } from './TextButton';
 
 export interface MediaShelfItem extends MediaItem {
     icon?: ReactNode;
     loading?: boolean;
 }
-
+type TrackSubtitleMode = 'artist' | 'artist-album' | 'artists';
 interface Props {
     droppableId?: string;
     interactive?: boolean;
@@ -44,8 +52,8 @@ interface Props {
     onReorder?: (items: MediaShelfItem[]) => void;
     showImage?: boolean;
     cardSize?: 1 | 2 | 3;
+    trackSubtitleMode?: TrackSubtitleMode;
 }
-
 const hashId = (value: string) => {
     let h = 0;
     for (let i = 0; i < value.length; i += 1) {
@@ -54,17 +62,13 @@ const hashId = (value: string) => {
     }
     return h >>> 0;
 };
-
 const getItemKey = (item: MediaShelfItem, index: number) =>
     item.id ?? `${item.title ?? 'item'}-${index}`;
-
 function getScrollParent(node: HTMLElement | null): HTMLElement | Window {
     let current: HTMLElement | null = node;
-
     while (current) {
         const style = getComputedStyle(current);
         const { overflowY, overflowX, overflow } = style;
-
         if (
             overflowY === 'auto' ||
             overflowY === 'scroll' ||
@@ -74,13 +78,10 @@ function getScrollParent(node: HTMLElement | null): HTMLElement | Window {
             overflow === 'scroll'
         )
             return current;
-
         current = current.parentElement;
     }
-
     return window;
 }
-
 export function MediaShelf({
     items,
     interactive = true,
@@ -100,6 +101,7 @@ export function MediaShelf({
     onReorder,
     showImage = true,
     cardSize,
+    trackSubtitleMode,
 }: Props) {
     const flattened = useMemo(
         () =>
@@ -108,7 +110,6 @@ export function MediaShelf({
             ),
         [items, itemLoading]
     );
-
     const visibleItems = useMemo(() => {
         if (maxVisible == null) return flattened;
         const capacity =
@@ -117,17 +118,14 @@ export function MediaShelf({
                 : maxVisible;
         return flattened.slice(0, capacity);
     }, [flattened, maxVisible, orientation, itemsPerColumn]);
-
     const { scrollRef, fade } = useScrollFade(orientation, [
         items.length,
         visibleItems.length,
     ]);
     const routeHistory = useHistory();
-
     const columns = useMemo(() => {
         if (orientation !== 'horizontal' || itemsPerColumn <= 0)
             return [visibleItems];
-
         const grouped: MediaShelfItem[][] = [];
         visibleItems.forEach((item, idx) => {
             const colIndex = Math.floor(idx / itemsPerColumn);
@@ -136,11 +134,23 @@ export function MediaShelf({
         });
         return grouped;
     }, [visibleItems, orientation, itemsPerColumn]);
-
     const effectiveColumnWidth =
         variant === 'list' ? (columnWidth ?? 300) : undefined;
-
     const sentinelRef = useRef<HTMLDivElement | null>(null);
+    const {
+        focusRefs,
+        activeIndex,
+        handleItemFocus,
+        handleContainerFocusCapture,
+        handleContainerKeyDown,
+        handleItemKeyDown,
+    } = useShelfNavigation({
+        containerRef: scrollRef,
+        itemCount: visibleItems.length,
+        orientation,
+        itemsPerColumn,
+        interactive,
+    });
     const lastItemsRef = useRef<{
         firstId: string | null;
         length: number;
@@ -152,12 +162,10 @@ export function MediaShelf({
             ? maxVisible * itemsPerColumn
             : maxVisible;
     }, [maxVisible, orientation, itemsPerColumn]);
-
     const reachedLimit = visibleItems.length >= capacity;
 
     useEffect(() => {
         if (!onLoadMore || !hasMore || loadingMore || reachedLimit) return;
-
         const rootEl = getScrollParent(scrollRef.current);
         const observer = new IntersectionObserver(
             (entries) => {
@@ -172,10 +180,8 @@ export function MediaShelf({
                         : '0px 0px 120px 0px',
             }
         );
-
         const node = sentinelRef.current;
         if (node) observer.observe(node);
-
         return () => observer.disconnect();
     }, [
         hasMore,
@@ -187,7 +193,6 @@ export function MediaShelf({
         visibleItems.length,
         reachedLimit,
     ]);
-
     const handleDragEnd = useCallback(
         (result: DropResult) => {
             if (!result.destination || !onReorder) return;
@@ -198,7 +203,6 @@ export function MediaShelf({
         },
         [flattened, onReorder]
     );
-
     useEffect(() => {
         const node = scrollRef.current;
         if (!node) return;
@@ -212,21 +216,20 @@ export function MediaShelf({
         if (orientation === 'horizontal') node.scrollLeft = 0;
         else node.scrollTop = 0;
     }, [items, orientation]);
-
     const renderFades = () => {
         if (orientation === 'horizontal') {
             return (
                 <>
                     <div
                         className={clsx(
-                            'pointer-events-none absolute top-0 left-0 z-10 h-full w-2 bg-gradient-to-r from-[var(--color-background)] via-[var(--color-background)]/60 to-transparent transition-opacity duration-200',
+                            'from-background via-background/60 pointer-events-none absolute top-0 -left-1 z-10 h-full w-2 bg-linear-to-r to-transparent transition-opacity',
                             fade.start ? 'opacity-100' : 'opacity-0'
                         )}
                         aria-hidden
                     />
                     <div
                         className={clsx(
-                            'pointer-events-none absolute top-0 right-0 z-10 h-full w-2 bg-gradient-to-l from-[var(--color-background)] via-[var(--color-background)]/60 to-transparent transition-opacity duration-200',
+                            'from-background via-background/60 pointer-events-none absolute top-0 right-1 z-10 h-full w-2 bg-linear-to-l to-transparent transition-opacity',
                             fade.end ? 'opacity-100' : 'opacity-0'
                         )}
                         aria-hidden
@@ -234,19 +237,18 @@ export function MediaShelf({
                 </>
             );
         }
-
         return (
             <>
                 <div
                     className={clsx(
-                        'pointer-events-none absolute top-0 right-0 left-0 z-10 h-2 bg-gradient-to-b from-[var(--color-background)] via-[var(--color-background)]/60 to-transparent transition-opacity duration-200',
+                        'from-background via-background/60 pointer-events-none absolute top-0 right-0 left-0 z-10 h-2 bg-linear-to-b to-transparent transition-opacity',
                         fade.start ? 'opacity-100' : 'opacity-0'
                     )}
                     aria-hidden
                 />
                 <div
                     className={clsx(
-                        'pointer-events-none absolute right-0 bottom-0 left-0 z-10 h-2 bg-gradient-to-t from-[var(--color-background)] via-[var(--color-background)]/60 to-transparent transition-opacity duration-200',
+                        'from-background via-background/60 pointer-events-none absolute right-0 bottom-0 left-0 z-10 h-2 bg-linear-to-t to-transparent transition-opacity',
                         fade.end ? 'opacity-100' : 'opacity-0'
                     )}
                     aria-hidden
@@ -254,93 +256,177 @@ export function MediaShelf({
             </>
         );
     };
-
     const renderItem = useCallback(
         (item: MediaShelfItem, seed: number) => {
+            const renderArtistLinks = (
+                artists: MediaShelfItem['artists'],
+                limit?: number
+            ) => {
+                if (!artists || artists.length === 0) return undefined;
+                const entries =
+                    limit != null ? artists.slice(0, limit) : artists;
+                return entries.map((artist, index) => (
+                    <Fragment key={artist.id ?? `${artist.name}-${index}`}>
+                        <TextButton
+                            size="1"
+                            color="gray"
+                            interactive={Boolean(artist.id)}
+                            onClick={
+                                artist.id
+                                    ? (event) => {
+                                          event.stopPropagation();
+                                          routeHistory.goTo('/media', {
+                                              kind: 'artist',
+                                              id: artist.id!,
+                                          });
+                                      }
+                                    : undefined
+                            }
+                        >
+                            {artist.name}
+                        </TextButton>
+                        {index < entries.length - 1 && (
+                            <Text as="span" size="1" color="gray">
+                                {',\u00A0'}
+                            </Text>
+                        )}
+                    </Fragment>
+                ));
+            };
+            const resolveTrackSubtitle = (
+                trackItem: MediaShelfItem,
+                mode: TrackSubtitleMode
+            ) => {
+                const artists = trackItem.artists;
+                const fallbackArtists = trackItem.subtitle ?? '';
+                const firstArtist =
+                    artists?.[0]?.name ??
+                    fallbackArtists.split(',')[0]?.trim() ??
+                    fallbackArtists;
+                const albumName =
+                    trackItem.parentIsSingle ||
+                    (trackItem.parentTitle &&
+                        trackItem.parentTitle.toLowerCase() ===
+                            trackItem.title?.toLowerCase())
+                        ? undefined
+                        : trackItem.parentTitle;
+                const albumOnClick = trackItem.parentId
+                    ? () =>
+                          routeHistory.goTo('/media', {
+                              kind: 'album',
+                              id: trackItem.parentId!,
+                          })
+                    : undefined;
+                if (mode === 'artists') {
+                    return (
+                        renderArtistLinks(artists) ||
+                        fallbackArtists ||
+                        undefined
+                    );
+                }
+                if (mode === 'artist-album') {
+                    if (!firstArtist && !albumName) return undefined;
+                    return (
+                        <>
+                            {renderArtistLinks(artists, 1) ??
+                                (firstArtist ? (
+                                    <Text as="span" size="1" color="gray">
+                                        {firstArtist}
+                                    </Text>
+                                ) : null)}
+                            {firstArtist && albumName && (
+                                <Text as="span" size="1" color="gray">
+                                    {'\u00A0•\u00A0'}
+                                </Text>
+                            )}
+                            {albumName &&
+                                (albumOnClick ? (
+                                    <TextButton
+                                        size="1"
+                                        color="gray"
+                                        onClick={albumOnClick}
+                                    >
+                                        {albumName}
+                                    </TextButton>
+                                ) : (
+                                    <Text as="span" size="1" color="gray">
+                                        {albumName}
+                                    </Text>
+                                ))}
+                        </>
+                    );
+                }
+                return (
+                    renderArtistLinks(artists, 1) ||
+                    (firstArtist ? (
+                        <Text as="span" size="1" color="gray">
+                            {firstArtist}
+                        </Text>
+                    ) : undefined)
+                );
+            };
+            const mode =
+                trackSubtitleMode ??
+                (variant === 'tile' ? 'artist' : 'artist-album');
+            const subtitle =
+                item.kind === 'track'
+                    ? resolveTrackSubtitle(item, mode)
+                    : (renderArtistLinks(item.artists) ?? item.subtitle);
             const actions = buildMediaActions(item);
             const hasActions =
                 actions.primary.length > 0 || actions.secondary.length > 0;
             const contextMenu = hasActions ? (
-                <DropdownMenu.Content
-                    align="end"
-                    size="1"
-                    onKeyDown={createMenuShortcutHandler([
-                        ...actions.primary,
-                        ...actions.secondary,
-                    ])}
-                >
-                    {actions.primary.map((action) => (
-                        <DropdownMenu.Item
-                            key={action.id}
-                            shortcut={action.shortcut}
-                            onSelect={() => action.onSelect()}
-                        >
-                            {action.label}
-                        </DropdownMenu.Item>
-                    ))}
-                    {actions.primary.length > 0 &&
-                        actions.secondary.length > 0 && (
-                            <DropdownMenu.Separator />
-                        )}
-                    {actions.secondary.map((action) => (
-                        <DropdownMenu.Item
-                            key={action.id}
-                            shortcut={action.shortcut}
-                            onSelect={() => action.onSelect()}
-                        >
-                            {action.label}
-                        </DropdownMenu.Item>
-                    ))}
-                </DropdownMenu.Content>
+                <MediaActionsMenu actions={actions} />
             ) : null;
-
             const route = buildMediaRouteFromItem(item);
             const handleNavigate = () => {
                 if (!route) return;
                 routeHistory.goTo('/media', route);
             };
-
-            if (variant === 'tile')
-                return (
+            const canActivate = !item.loading && Boolean(route);
+            const content =
+                variant === 'tile' ? (
                     <MediaCard
                         title={item.title}
-                        subtitle={item.subtitle}
+                        subtitle={subtitle}
                         imageUrl={item.imageUrl}
                         icon={item.icon ?? <MdMusicNote />}
                         contextMenu={contextMenu}
                         seed={seed}
                         loading={item.loading}
                         cardSize={cardSize}
-                        onClick={
-                            item.loading || !route ? undefined : handleNavigate
+                        onClick={canActivate ? handleNavigate : undefined}
+                    />
+                ) : (
+                    <MediaRow
+                        title={item.title}
+                        subtitle={subtitle}
+                        icon={item.icon ?? <MdMusicNote />}
+                        imageUrl={item.imageUrl}
+                        showImage={showImage}
+                        contextMenu={contextMenu}
+                        seed={seed}
+                        loading={item.loading}
+                        onClick={canActivate ? handleNavigate : undefined}
+                        style={
+                            orientation === 'horizontal' && effectiveColumnWidth
+                                ? { minWidth: effectiveColumnWidth }
+                                : undefined
                         }
                     />
                 );
-
-            return (
-                <MediaRow
-                    title={item.title}
-                    subtitle={item.subtitle}
-                    icon={item.icon ?? <MdMusicNote />}
-                    imageUrl={item.imageUrl}
-                    showImage={showImage}
-                    contextMenu={contextMenu}
-                    seed={seed}
-                    loading={item.loading}
-                    onClick={
-                        item.loading || !route ? undefined : handleNavigate
-                    }
-                    style={
-                        orientation === 'horizontal' && effectiveColumnWidth
-                            ? { minWidth: effectiveColumnWidth }
-                            : undefined
-                    }
-                />
-            );
+            return { content, canActivate, handleNavigate };
         },
-        [effectiveColumnWidth, orientation, routeHistory, variant]
+        [
+            cardSize,
+            effectiveColumnWidth,
+            orientation,
+            routeHistory,
+            showImage,
+            trackSubtitleMode,
+            variant,
+        ]
     );
-
     const renderItems = () => {
         if (orientation === 'horizontal') {
             return columns.map((col, colIndex) => (
@@ -357,6 +443,7 @@ export function MediaShelf({
                             ? {
                                   flex: '0 0 auto',
                                   width: effectiveColumnWidth,
+                                  flexBasis: effectiveColumnWidth,
                               }
                             : { flex: '0 0 auto' }
                     }
@@ -365,9 +452,38 @@ export function MediaShelf({
                         const flatIndex = colIndex * itemsPerColumn + idx;
                         const key = getItemKey(item, flatIndex);
                         const seed = hashId(item.id ?? '') ^ (flatIndex << 1);
+                        const { content, canActivate, handleNavigate } =
+                            renderItem(item, seed);
                         if (!draggable) {
                             return (
-                                <div key={key}>{renderItem(item, seed)}</div>
+                                <div
+                                    key={key}
+                                    ref={(node) => {
+                                        focusRefs.current[flatIndex] = node;
+                                    }}
+                                    data-index={flatIndex}
+                                    role="button"
+                                    aria-disabled={!canActivate}
+                                    className="group rounded-2 focus-visible:ring-accent-9 focus-visible:ring-offset-background focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
+                                    tabIndex={
+                                        interactive && flatIndex === activeIndex
+                                            ? 0
+                                            : -1
+                                    }
+                                    onFocus={(event) =>
+                                        handleItemFocus(event, flatIndex)
+                                    }
+                                    onKeyDown={(event) =>
+                                        handleItemKeyDown(
+                                            event,
+                                            flatIndex,
+                                            canActivate,
+                                            handleNavigate
+                                        )
+                                    }
+                                >
+                                    {content}
+                                </div>
                             );
                         }
                         return (
@@ -379,11 +495,35 @@ export function MediaShelf({
                             >
                                 {(dragProvided) => (
                                     <div
-                                        ref={dragProvided.innerRef}
+                                        ref={(node) => {
+                                            dragProvided.innerRef(node);
+                                            focusRefs.current[flatIndex] = node;
+                                        }}
+                                        data-index={flatIndex}
                                         {...dragProvided.draggableProps}
                                         {...dragProvided.dragHandleProps}
+                                        role="button"
+                                        aria-disabled={!canActivate}
+                                        className="group rounded-2 focus-visible:ring-accent-9 focus-visible:ring-offset-background focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
+                                        tabIndex={
+                                            interactive &&
+                                            flatIndex === activeIndex
+                                                ? 0
+                                                : -1
+                                        }
+                                        onFocus={(event) =>
+                                            handleItemFocus(event, flatIndex)
+                                        }
+                                        onKeyDown={(event) =>
+                                            handleItemKeyDown(
+                                                event,
+                                                flatIndex,
+                                                canActivate,
+                                                handleNavigate
+                                            )
+                                        }
                                     >
-                                        {renderItem(item, seed)}
+                                        {content}
                                     </div>
                                 )}
                             </Draggable>
@@ -392,12 +532,38 @@ export function MediaShelf({
                 </Flex>
             ));
         }
-
         return visibleItems.map((item, index) => {
             const seed = hashId(item.id ?? '') ^ (index << 1);
+            const { content, canActivate, handleNavigate } = renderItem(
+                item,
+                seed
+            );
             if (!draggable) {
                 const key = getItemKey(item, index);
-                return <div key={key}>{renderItem(item, seed)}</div>;
+                return (
+                    <div
+                        key={key}
+                        ref={(node) => {
+                            focusRefs.current[index] = node;
+                        }}
+                        data-index={index}
+                        role="button"
+                        aria-disabled={!canActivate}
+                        className="group rounded-2 focus-visible:ring-accent-9 focus-visible:ring-offset-background focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
+                        tabIndex={interactive && index === activeIndex ? 0 : -1}
+                        onFocus={(event) => handleItemFocus(event, index)}
+                        onKeyDown={(event) =>
+                            handleItemKeyDown(
+                                event,
+                                index,
+                                canActivate,
+                                handleNavigate
+                            )
+                        }
+                    >
+                        {content}
+                    </div>
+                );
             }
             return (
                 <Draggable
@@ -408,18 +574,36 @@ export function MediaShelf({
                 >
                     {(dragProvided) => (
                         <div
-                            ref={dragProvided.innerRef}
+                            ref={(node) => {
+                                dragProvided.innerRef(node);
+                                focusRefs.current[index] = node;
+                            }}
+                            data-index={index}
                             {...dragProvided.draggableProps}
                             {...dragProvided.dragHandleProps}
+                            role="button"
+                            aria-disabled={!canActivate}
+                            className="group rounded-2 focus-visible:ring-accent-9 focus-visible:ring-offset-background focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
+                            tabIndex={
+                                interactive && index === activeIndex ? 0 : -1
+                            }
+                            onFocus={(event) => handleItemFocus(event, index)}
+                            onKeyDown={(event) =>
+                                handleItemKeyDown(
+                                    event,
+                                    index,
+                                    canActivate,
+                                    handleNavigate
+                                )
+                            }
                         >
-                            {renderItem(item, seed)}
+                            {content}
                         </div>
                     )}
                 </Draggable>
             );
         });
     };
-
     const renderBody = (dropProvided?: DroppableProvided) => (
         <div className="relative">
             <Flex
@@ -427,10 +611,12 @@ export function MediaShelf({
                 gap="1"
                 wrap="nowrap"
                 {...(dropProvided?.droppableProps ?? {})}
+                onFocusCapture={handleContainerFocusCapture}
+                onKeyDownCapture={handleContainerKeyDown}
                 className={clsx(
-                    'no-overflow-anchor relative w-full min-w-0 transition-[opacity,filter] duration-200',
+                    'no-overflow-anchor relative -m-1 mb-1 w-full p-1 transition-[opacity,filter]',
                     !interactive && 'pointer-events-none opacity-70',
-                    'scrollbar-gutter-stable',
+                    orientation !== 'horizontal' && 'scrollbar-gutter-stable',
                     orientation === 'horizontal'
                         ? fixedHeight
                             ? 'overflow-x-auto overflow-y-hidden'
@@ -442,10 +628,7 @@ export function MediaShelf({
                 )}
                 style={
                     fixedHeight
-                        ? {
-                              maxHeight: fixedHeight,
-                              overflowAnchor: 'none',
-                          }
+                        ? { maxHeight: fixedHeight, overflowAnchor: 'none' }
                         : { overflowAnchor: 'none' }
                 }
                 ref={(node) => {
@@ -453,8 +636,7 @@ export function MediaShelf({
                     scrollRef.current = node;
                 }}
             >
-                {renderItems()}
-                {dropProvided?.placeholder}
+                {renderItems()} {dropProvided?.placeholder}
                 <div
                     ref={sentinelRef}
                     aria-hidden
@@ -468,9 +650,7 @@ export function MediaShelf({
             {renderFades()}
         </div>
     );
-
     if (!draggable) return renderBody();
-
     return (
         <DragDropContext onDragEnd={handleDragEnd}>
             <Droppable

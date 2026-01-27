@@ -22,6 +22,7 @@ export type MediaItem = {
     id: string;
     title: string;
     subtitle?: string;
+    artists?: Array<{ id?: string; name: string }>;
     imageUrl?: string;
     uri?: string;
     externalUrl?: string;
@@ -29,6 +30,8 @@ export type MediaItem = {
     kind?: MediaKind;
     parentKind?: MediaKind;
     parentId?: string;
+    parentTitle?: string;
+    parentIsSingle?: boolean;
 };
 
 export type MediaKind =
@@ -39,6 +42,18 @@ export type MediaKind =
     | 'show'
     | 'episode'
     | 'audiobook';
+
+export type MediaAction = {
+    id: string;
+    label: string;
+    shortcut?: string;
+    onSelect: () => void;
+};
+
+export type MediaActionGroup = {
+    primary: MediaAction[];
+    secondary: MediaAction[];
+};
 
 export function asTrack(item: Track | Episode | undefined): Track | undefined {
     return item && item.type === 'track' ? (item as Track) : undefined;

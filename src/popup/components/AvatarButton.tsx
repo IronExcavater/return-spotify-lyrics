@@ -13,6 +13,7 @@ interface AvatarButtonProps extends Omit<IconButtonProps, 'asChild'> {
     avatar: AvatarProps;
     children?: ReactNode;
     hideRing?: boolean;
+    overlayPointerEvents?: 'auto' | 'none';
 }
 
 export function AvatarButton({
@@ -20,7 +21,9 @@ export function AvatarButton({
     children,
     className,
     hideRing = false,
+    overlayPointerEvents = 'auto',
     disabled,
+    tabIndex,
     onKeyDown,
     onKeyUp,
     'aria-pressed': ariaPressed,
@@ -40,6 +43,11 @@ export function AvatarButton({
     const ringRadius =
         avatarRadius === 'full' ? '9999px' : 'calc(0.375rem + 4px)';
     const isActive = !!(ariaPressed || ariaSelected);
+    const resolvedTabIndex = disabled ? -1 : (tabIndex ?? 0);
+    const overlayClassName =
+        overlayPointerEvents === 'none'
+            ? '[&_.rt-AvatarOverlay]:pointer-events-none'
+            : undefined;
 
     const handleKeyDown: KeyboardEventHandler<HTMLButtonElement> = (event) => {
         onKeyDown?.(event);
@@ -73,7 +81,7 @@ export function AvatarButton({
             role="button"
             aria-pressed={ariaPressed}
             aria-selected={ariaSelected}
-            tabIndex={disabled ? -1 : 0}
+            tabIndex={resolvedTabIndex}
             className={className}
             onKeyDown={handleKeyDown}
             onKeyUp={handleKeyUp}
@@ -83,15 +91,15 @@ export function AvatarButton({
                 src={cachedSrc}
                 radius={avatarRadius}
                 className={clsx(
-                    'relative inline-flex items-center justify-center overflow-visible outline-none',
                     !hideRing &&
-                        'after:pointer-events-none after:absolute after:inset-[-4px] after:rounded-[var(--avatar-ring-radius)] after:border-2 after:border-transparent after:opacity-0 after:transition-opacity',
+                        'after:pointer-events-none after:absolute after:-inset-1 after:rounded-(--avatar-ring-radius) after:border-2 after:border-transparent after:opacity-0 after:transition-opacity',
                     !hideRing &&
                         isEnabled &&
-                        'hover:after:border-[var(--accent-8)] hover:after:opacity-100 focus-visible:after:border-[var(--accent-8)] focus-visible:after:opacity-100',
+                        'focus-within:after:border-accent-8 hover:after:border-accent-8 focus-visible:after:border-accent-8 focus-within:after:opacity-100 hover:after:opacity-100 focus-visible:after:opacity-100',
                     !hideRing &&
                         isActive &&
-                        'after:!border-[var(--accent-10)] after:opacity-100',
+                        'after:border-accent-10! after:opacity-100',
+                    overlayClassName,
                     avatarClassName
                 )}
                 style={
@@ -99,7 +107,10 @@ export function AvatarButton({
                         '--avatar-ring-radius': ringRadius,
                     } as CSSProperties
                 }
-                imageClassName={clsx('block transition-shadow', imageClassName)}
+                imageClassName={clsx(
+                    'focus-visible:outline-none',
+                    imageClassName
+                )}
             >
                 {children}
             </Avatar>

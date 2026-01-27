@@ -1,22 +1,18 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { DotsHorizontalIcon } from '@radix-ui/react-icons';
-import {
-    DropdownMenu,
-    Flex,
-    IconButton,
-    Skeleton,
-    Text,
-} from '@radix-ui/themes';
+import { DropdownMenu, Flex, IconButton, Skeleton } from '@radix-ui/themes';
 import clsx from 'clsx';
 
-import { hashSequence, seededWidths } from '../../shared/math';
+import { handleMenuTriggerKeyDown } from '../hooks/useActions';
 import { AvatarButton } from './AvatarButton';
 import { Fade } from './Fade';
 import { Marquee } from './Marquee';
+import { SkeletonText } from './SkeletonText';
+import { TextButton } from './TextButton';
 
 export interface MediaRowProps {
     title?: string;
-    subtitle?: string;
+    subtitle?: ReactNode;
     subtitleHeight?: number;
     imageUrl?: string;
     icon?: ReactNode;
@@ -46,28 +42,20 @@ export function MediaRow({
     seed = 0,
 }: MediaRowProps) {
     const radius = imageShape === 'round' ? 'full' : 'small';
-    const baseSeed =
-        hashSequence([title, subtitle, imageUrl], [11, 7, 31], [5]) ^ seed;
-    const { titleWidth, subtitleWidth } = seededWidths(baseSeed, {
-        titleMin: 68,
-        titleRange: 26,
-        subtitleMin: 26,
-        subtitleRange: 30,
-        titleOffset: 5,
-        subtitleOffset: 41,
-    });
-    const titleSkeletonStyle = loading ? { width: `${titleWidth}%` } : {};
-    const subtitleSkeletonStyle = loading ? { width: `${subtitleWidth}%` } : {};
-    const loadingLineClassName =
-        'flex min-w-0 flex-shrink overflow-hidden whitespace-nowrap';
-    const loadingLineStyle = { paddingInline: 2 };
+    const subtitleText = typeof subtitle === 'string' ? subtitle : undefined;
+    const skeletonParts = [title, subtitleText, imageUrl];
+    const handleRowClick = loading ? undefined : onClick;
 
     return (
         <Flex
             align="center"
             gap="1"
-            onClick={loading ? undefined : onClick}
-            className={clsx('group w-full', className)}
+            onClick={handleRowClick}
+            className={clsx(
+                'group w-full min-w-0',
+                handleRowClick && 'cursor-pointer',
+                className
+            )}
             style={style}
         >
             {showImage && (
@@ -81,141 +69,86 @@ export function MediaRow({
                         }}
                         aria-label={title}
                         hideRing
+                        tabIndex={-1}
                     />
                 </Skeleton>
             )}
-            <Flex direction="column" gap="0" flexGrow="1" className="min-w-0">
-                <Fade enabled={!loading}>
-                    <div
-                        className="transition-[width] duration-300 ease-out"
-                        style={titleSkeletonStyle}
+            <Flex direction="column" flexGrow="1" className="min-w-0">
+                <Fade enabled={!loading} grow>
+                    <SkeletonText
+                        loading={loading}
+                        parts={skeletonParts}
+                        seed={seed}
+                        preset="media-row"
                     >
-                        <Skeleton loading={loading} className="w-full">
-                            {loading ? (
-                                <div
-                                    className={loadingLineClassName}
-                                    style={loadingLineStyle}
-                                >
-                                    <Text
-                                        size="2"
-                                        weight="medium"
-                                        className={clsx(
-                                            'leading-tight',
-                                            onClick && 'app-link',
-                                            onClick &&
-                                                'group-hover:text-[var(--accent-11)]'
-                                        )}
-                                    >
-                                        {title}
-                                    </Text>
-                                </div>
-                            ) : (
-                                <Marquee
-                                    mode="bounce"
-                                    className={clsx(
-                                        'min-w-0',
-                                        !loading && 'w-full'
-                                    )}
-                                >
-                                    <Text
-                                        size="2"
-                                        weight="medium"
-                                        className={clsx(
-                                            'leading-tight',
-                                            onClick && 'app-link',
-                                            onClick &&
-                                                'group-hover:text-[var(--accent-11)]'
-                                        )}
-                                    >
-                                        {title}
-                                    </Text>
-                                </Marquee>
-                            )}
-                        </Skeleton>
-                    </div>
+                        <Marquee mode="bounce" grow>
+                            <TextButton
+                                size="2"
+                                weight="medium"
+                                interactive={Boolean(handleRowClick)}
+                                onClick={
+                                    handleRowClick
+                                        ? (event) => {
+                                              event.stopPropagation();
+                                              handleRowClick();
+                                          }
+                                        : undefined
+                                }
+                            >
+                                {title}
+                            </TextButton>
+                        </Marquee>
+                    </SkeletonText>
                 </Fade>
                 {subtitle && (
-                    <Fade enabled={!loading}>
-                        <div
-                            className="transition-[width] duration-300 ease-out"
+                    <Fade enabled={!loading} grow>
+                        <SkeletonText
+                            loading={loading}
+                            parts={skeletonParts}
+                            seed={seed}
+                            preset="media-row"
+                            variant="subtitle"
                             style={
                                 subtitleHeight
                                     ? {
-                                          ...subtitleSkeletonStyle,
+                                          lineHeight: `${subtitleHeight}px`,
                                           height: subtitleHeight,
                                       }
-                                    : subtitleSkeletonStyle
+                                    : undefined
                             }
                         >
-                            <Skeleton loading={loading} className="w-full">
-                                {loading ? (
-                                    <div
-                                        className={loadingLineClassName}
-                                        style={loadingLineStyle}
+                            <Marquee mode="left" grow>
+                                {subtitleText != null ? (
+                                    <TextButton
+                                        size="1"
+                                        color="gray"
+                                        interactive={false}
                                     >
-                                        <Text
-                                            size="1"
-                                            color="gray"
-                                            className={clsx(
-                                                onClick && 'app-link',
-                                                onClick &&
-                                                    'group-hover:text-[var(--accent-11)]'
-                                            )}
-                                            style={
-                                                subtitleHeight
-                                                    ? {
-                                                          lineHeight: `${subtitleHeight}px`,
-                                                          height: subtitleHeight,
-                                                      }
-                                                    : undefined
-                                            }
-                                        >
-                                            {subtitle}
-                                        </Text>
-                                    </div>
+                                        {subtitleText}
+                                    </TextButton>
                                 ) : (
-                                    <Marquee
-                                        mode="left"
-                                        className={clsx(
-                                            'min-w-0',
-                                            !loading && 'w-full'
-                                        )}
-                                    >
-                                        <Text
-                                            size="1"
-                                            color="gray"
-                                            className={clsx(
-                                                onClick && 'app-link',
-                                                onClick &&
-                                                    'group-hover:text-[var(--accent-11)]'
-                                            )}
-                                            style={
-                                                subtitleHeight
-                                                    ? {
-                                                          lineHeight: `${subtitleHeight}px`,
-                                                          height: subtitleHeight,
-                                                      }
-                                                    : undefined
-                                            }
-                                        >
-                                            {subtitle}
-                                        </Text>
-                                    </Marquee>
+                                    <span className="inline-flex items-center">
+                                        {subtitle}
+                                    </span>
                                 )}
-                            </Skeleton>
-                        </div>
+                            </Marquee>
+                        </SkeletonText>
                     </Fade>
                 )}
             </Flex>
             {contextMenu && (
                 <DropdownMenu.Root>
-                    <DropdownMenu.Trigger disabled={loading}>
+                    <DropdownMenu.Trigger
+                        disabled={loading}
+                        onKeyDown={handleMenuTriggerKeyDown}
+                    >
                         <IconButton
                             variant="ghost"
                             radius="full"
                             size="1"
                             color="gray"
                             onClick={(event) => event.stopPropagation()}
+                            onPointerDown={(event) => event.stopPropagation()}
                         >
                             <DotsHorizontalIcon />
                         </IconButton>

@@ -1,13 +1,17 @@
 import {
     createContext,
+    type ReactNode,
     useCallback,
     useEffect,
     useMemo,
     useState,
-    type ReactNode,
 } from 'react';
 
-import { getFromStorage, setInStorage } from '../../shared/storage';
+import {
+    getFromStorage,
+    onStorageChange,
+    setInStorage,
+} from '../../shared/storage';
 
 export type Settings = {
     reducedMotion?: boolean;
@@ -20,41 +24,36 @@ type SettingsContextValue = {
 };
 
 const SETTINGS_KEY = 'userSettings';
-const defaultSettings: Settings = {
+const DEFAULT_SETTINGS: Settings = {
     reducedMotion: false,
     locale: 'system',
 };
 
+const mergeSettings = (overrides?: Partial<Settings>): Settings => ({
+    ...DEFAULT_SETTINGS,
+    ...(overrides ?? {}),
+});
+
 export const SettingsContext = createContext<SettingsContextValue>({
-    settings: defaultSettings,
+    settings: DEFAULT_SETTINGS,
     updateSettings: () => undefined,
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
-    const [settings, setSettings] = useState<Settings>(defaultSettings);
+    const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
 
     useEffect(() => {
-        getFromStorage<Settings>(SETTINGS_KEY, (saved) => {
-            if (saved) setSettings({ ...defaultSettings, ...saved });
-        });
-
-        const listener = (
-            changes: Record<string, chrome.storage.StorageChange>,
-            areaName: string
-        ) => {
-            if (areaName !== 'local') return;
-            const change = changes[SETTINGS_KEY];
-            if (!change) return;
-            setSettings({ ...defaultSettings, ...(change.newValue ?? {}) });
-        };
-
-        chrome.storage.onChanged.addListener(listener);
-        return () => chrome.storage.onChanged.removeListener(listener);
+        void getFromStorage<Settings>(SETTINGS_KEY, (saved) =>
+            setSettings(mergeSettings(saved))
+        );
+        return onStorageChange<Settings>(SETTINGS_KEY, (next) =>
+            setSettings(mergeSettings(next))
+        );
     }, []);
 
     const updateSettings = useCallback((patch: Partial<Settings>) => {
         setSettings((prev) => {
-            const next = { ...prev, ...patch };
+            const next = mergeSettings({ ...prev, ...patch });
             void setInStorage(SETTINGS_KEY, next);
             return next;
         });

@@ -6,6 +6,10 @@ import {
     useSyncExternalStore,
 } from 'react';
 import type { PlaybackState } from '@spotify/web-api-ts-sdk';
+import type {
+    SpotifyRpcArgs,
+    SpotifyRpcName,
+} from '../../background/spotifyRpc';
 import {
     ANALYTICS_EVENTS,
     createAnalyticsTracker,
@@ -23,6 +27,17 @@ let snapshot: PlayerSnapshot = {
     progressMs: 0,
     durationMs: 0,
 };
+
+type OptimisticState = {
+    isPlaying?: boolean;
+    shuffle?: boolean;
+    repeatMode?: 'off' | 'track' | 'context';
+    volumePercent?: number;
+    progressMs?: number;
+    expiresAt: number;
+};
+
+let optimisticState: OptimisticState | null = null;
 
 const listeners = new Set<() => void>();
 let pollTimer: ReturnType<typeof setInterval> | null = null;
@@ -47,8 +62,18 @@ const setSnapshot = (next: Partial<PlayerSnapshot>) => {
     emit();
 };
 
+const applyOptimistic = (patch: Omit<OptimisticState, 'expiresAt'>) => {
+    optimisticState = {
+        ...(optimisticState ?? {}),
+        ...patch,
+        expiresAt: Date.now() + pollIntervalMs,
+    };
+    emit();
+};
+
 const sync = async () => {
     const state = await sendSpotifyMessage('getPlaybackState');
+    optimisticState = null;
     setSnapshot({ playback: state ?? null });
     const latestProgress = state?.progress_ms ?? 0;
     baseProgress.current = latestProgress;
@@ -118,6 +143,11 @@ const tick = () => {
         }
     }
 
+    if (optimisticState && optimisticState.expiresAt <= Date.now()) {
+        optimisticState = null;
+        emit();
+    }
+
     rafId = requestAnimationFrame(tick);
 };
 
@@ -161,22 +191,66 @@ export function usePlayer(pollMs = 4000) {
         }
     }, [pollMs]);
 
+    useEffect(() => {
+        const handleFocus = () => {
+            if (document.visibilityState === 'visible') void sync();
+        };
+        window.addEventListener('focus', handleFocus);
+        document.addEventListener('visibilitychange', handleFocus);
+        return () => {
+            window.removeEventListener('focus', handleFocus);
+            document.removeEventListener('visibilitychange', handleFocus);
+        };
+    }, []);
+
     const state = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 
     const playback = state.playback;
-    const progressMs = state.progressMs;
+    const progressMs = optimisticState?.progressMs ?? state.progressMs;
     const durationMs = state.durationMs;
 
-    const volumePercent = playback?.device?.volume_percent ?? 100;
+    const isPlaying =
+        optimisticState?.isPlaying ?? playback?.is_playing ?? false;
+
+    const volumePercent =
+        optimisticState?.volumePercent ??
+        playback?.device?.volume_percent ??
+        100;
     const muted = volumePercent === 0;
     const lastNonZero = useRef(volumePercent || 50);
     if (!muted) lastNonZero.current = volumePercent;
+
+    const device = playback?.device;
+    const disallows = (
+        playback?.actions as { disallows?: Record<string, boolean> } | undefined
+    )?.disallows;
+    const canControl = device?.is_restricted !== true;
+    const canSeek = canControl && disallows?.seeking !== true;
+    const canSkipNext = canControl && disallows?.skipping_next !== true;
+    const canSkipPrevious = canControl && disallows?.skipping_prev !== true;
+    const canShuffle = canControl && disallows?.toggling_shuffle !== true;
+    const canRepeat =
+        canControl &&
+        disallows?.toggling_repeat_context !== true &&
+        disallows?.toggling_repeat_track !== true;
+    const canResume = canControl && disallows?.resuming !== true;
+    const canPause = canControl && disallows?.pausing !== true;
+    const canTogglePlay = isPlaying ? canPause : canResume;
+    const supportsVolume =
+        device && 'supports_volume' in device
+            ? (device as { supports_volume?: boolean }).supports_volume !==
+              false
+            : true;
+    const canSetVolume =
+        canControl && supportsVolume && disallows?.setting_volume !== true;
 
     const setVolume = (v: number) => {
         void trackPlayback(ANALYTICS_EVENTS.playbackVolume, {
             reason: 'volume adjusted',
             data: { volume: v },
         });
+        if (!canSetVolume) return;
+        applyOptimistic({ volumePercent: v });
         void sendSpotifyMessage('setPlaybackVolume', v);
     };
 
@@ -186,25 +260,38 @@ export function usePlayer(pollMs = 4000) {
             reason: nextMuted ? 'muted playback' : 'unmuted playback',
             data: { muted: nextMuted },
         });
-        if (muted)
+        if (!canSetVolume) return;
+        if (muted) {
+            applyOptimistic({
+                volumePercent: lastNonZero.current || 50,
+            });
             void sendSpotifyMessage(
                 'setPlaybackVolume',
                 lastNonZero.current || 50
             );
-        else void sendSpotifyMessage('setPlaybackVolume', 0);
+        } else {
+            applyOptimistic({ volumePercent: 0 });
+            void sendSpotifyMessage('setPlaybackVolume', 0);
+        }
     };
 
-    const isShuffle = playback?.shuffle_state ?? false;
+    const isShuffle =
+        optimisticState?.shuffle ?? playback?.shuffle_state ?? false;
+    const shuffleActive = canShuffle ? isShuffle : false;
 
     const toggleShuffle = () => {
         void trackPlayback(ANALYTICS_EVENTS.playbackShuffle, {
             reason: 'shuffle toggled',
             data: { enabled: !isShuffle },
         });
+        if (!canShuffle) return;
+        applyOptimistic({ shuffle: !isShuffle });
         void sendSpotifyMessage('toggleShuffle', !isShuffle);
     };
 
-    const repeatMode = playback?.repeat_state ?? 'off';
+    const repeatMode =
+        optimisticState?.repeatMode ?? playback?.repeat_state ?? 'off';
+    const repeatActiveMode = canRepeat ? repeatMode : 'off';
 
     const toggleRepeat = () => {
         const next = repeatMode === 'off' ? 'context' : 'off';
@@ -212,12 +299,17 @@ export function usePlayer(pollMs = 4000) {
             reason: 'repeat toggled',
             data: { mode: next },
         });
+        if (!canRepeat) return;
+        applyOptimistic({ repeatMode: next });
         void sendSpotifyMessage('setRepeatMode', next);
     };
 
     const refreshAfter = useCallback(
-        async (action: string, payload?: number | boolean) => {
-            await sendSpotifyMessage(action as any, payload as any);
+        async <N extends SpotifyRpcName>(
+            action: N,
+            payload?: SpotifyRpcArgs<N>
+        ) => {
+            await sendSpotifyMessage(action, payload);
             void sync();
         },
         []
@@ -225,35 +317,59 @@ export function usePlayer(pollMs = 4000) {
 
     const controls = useMemo(
         () => ({
-            play: () => {
+            play: async () => {
+                if (!canTogglePlay) return;
                 void trackPlayback(ANALYTICS_EVENTS.playbackPlay, {
                     reason: 'playback resumed',
                 });
-                return refreshAfter('startResumePlayback');
+                applyOptimistic({ isPlaying: true });
+                const contextUri = playback?.context?.uri;
+                const uri = playback?.item?.uri;
+                const positionMs = playback?.progress_ms ?? 0;
+
+                if (contextUri || uri) {
+                    await sendSpotifyMessage('startPlayback', {
+                        contextUri: contextUri ?? undefined,
+                        uris: contextUri ? undefined : uri ? [uri] : undefined,
+                        positionMs,
+                    });
+                } else {
+                    await sendSpotifyMessage('startResumePlayback');
+                }
+                void sync();
             },
             pause: () => {
+                if (!canTogglePlay) return;
                 void trackPlayback(ANALYTICS_EVENTS.playbackPause, {
                     reason: 'playback paused',
                 });
+                applyOptimistic({ isPlaying: false });
                 return refreshAfter('pausePlayback');
             },
             next: () => {
+                if (!canSkipNext) return;
                 void trackPlayback(ANALYTICS_EVENTS.playbackNext, {
                     reason: 'skipped to next',
                 });
                 return refreshAfter('skipToNext');
             },
             previous: () => {
+                if (!canSkipPrevious) return;
                 void trackPlayback(ANALYTICS_EVENTS.playbackPrevious, {
                     reason: 'skipped to previous',
                 });
                 return refreshAfter('skipToPrevious');
             },
             seek: (ms: number) => {
+                if (!canSeek) return;
                 void trackPlayback(ANALYTICS_EVENTS.playbackSeek, {
                     reason: 'scrubbed playback',
                     data: { positionMs: ms },
                 });
+                applyOptimistic({ progressMs: ms });
+                baseProgress.current = ms;
+                lastSyncRef.current = Date.now();
+                setSnapshot({ progressMs: ms });
                 return refreshAfter('seekToPosition', ms);
             },
             setVolume,
@@ -261,18 +377,37 @@ export function usePlayer(pollMs = 4000) {
             toggleShuffle,
             toggleRepeat,
         }),
-        [refreshAfter, setVolume, toggleMute, toggleShuffle, toggleRepeat]
+        [
+            canSeek,
+            canSkipNext,
+            canSkipPrevious,
+            canTogglePlay,
+            playback,
+            refreshAfter,
+            setVolume,
+            toggleMute,
+            toggleShuffle,
+            toggleRepeat,
+        ]
     );
 
     return {
         playback,
         progressMs,
         durationMs,
-        isPlaying: playback?.is_playing ?? false,
+        isPlaying,
         volumePercent,
         muted,
-        isShuffle,
-        repeatMode,
+        isShuffle: shuffleActive,
+        repeatMode: repeatActiveMode,
+        canControl,
+        canSeek,
+        canSkipNext,
+        canSkipPrevious,
+        canShuffle,
+        canRepeat,
+        canSetVolume,
+        canTogglePlay,
         controls,
     };
 }

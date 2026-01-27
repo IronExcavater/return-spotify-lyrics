@@ -10,10 +10,14 @@ interface Props {
     animateOnHover?: boolean;
     pauseWhenOffscreen?: boolean;
     className?: string;
+    grow?: boolean | number;
+    style?: CSSProperties;
+    maxWidth?: number | string;
     sidePadding?: number;
     gap?: number;
-    separatorColor?: string;
+    separatorColor?: 'current' | 'accent' | 'gray' | string;
     separatorClassName?: string;
+    separatorSize?: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | string;
 }
 
 export function Marquee({
@@ -24,9 +28,13 @@ export function Marquee({
     pauseWhenOffscreen = true,
     sidePadding = 2,
     gap = 16,
-    separatorColor = 'currentColor',
+    separatorColor = 'current',
     separatorClassName,
+    separatorSize,
     className,
+    grow,
+    style,
+    maxWidth,
 }: Props) {
     const { settings } = useSettings();
     const containerRef = useRef<HTMLDivElement>(null);
@@ -37,7 +45,17 @@ export function Marquee({
     const [duration, setDuration] = useState(0);
     const [scroll, setScroll] = useState(false);
     const [isVisible, setIsVisible] = useState(true);
+    const [animationKey, setAnimationKey] = useState(0);
+    const [autoSeparatorStyle, setAutoSeparatorStyle] = useState<{
+        color?: string;
+        fontSize?: string;
+        lineHeight?: string;
+    }>({});
     const MIN_DURATION = 4;
+    const lastContentRef = useRef<string>('');
+    const lastSizeRef = useRef<{ container: number; original: number } | null>(
+        null
+    );
 
     useEffect(() => {
         const compute = () => {
@@ -45,6 +63,7 @@ export function Marquee({
             const rawContainerW = containerRef.current?.clientWidth ?? 0;
             const containerW = Math.max(0, rawContainerW - pad * 2);
             const originalW = originalRef.current?.scrollWidth ?? 0;
+            const content = originalRef.current?.textContent ?? '';
 
             const shouldScroll = originalW - containerW > 0.5;
             setScroll(shouldScroll);
@@ -53,6 +72,14 @@ export function Marquee({
             if (!shouldScroll || containerW === 0 || originalW === 0) {
                 setDistance(0);
                 setDuration(0);
+                if (content !== lastContentRef.current) {
+                    lastContentRef.current = content;
+                    setAnimationKey((key) => key + 1);
+                }
+                lastSizeRef.current = {
+                    container: containerW,
+                    original: originalW,
+                };
                 return;
             }
 
@@ -69,24 +96,62 @@ export function Marquee({
             const seconds = Math.max(travel / baseSpeed, MIN_DURATION);
             setDistance(travel);
             setDuration(seconds);
-            const firstChild = originalRef.current?.firstElementChild;
-            const styleSource = firstChild ?? originalRef.current;
-            if (styleSource && separatorRef.current) {
-                const styles = getComputedStyle(styleSource);
-                separatorRef.current.style.fontSize = styles.fontSize;
-                separatorRef.current.style.lineHeight = styles.lineHeight;
+
+            if (content !== lastContentRef.current) {
+                lastContentRef.current = content;
+                setAnimationKey((key) => key + 1);
             }
+
+            lastSizeRef.current = {
+                container: containerW,
+                original: originalW,
+            };
         };
 
         compute();
+
+        const sample =
+            originalRef.current?.querySelector<HTMLElement>('.rt-Text') ??
+            originalRef.current?.querySelector<HTMLElement>('*') ??
+            (originalRef.current?.firstElementChild as HTMLElement | null) ??
+            originalRef.current;
+        if (sample) {
+            const style = getComputedStyle(sample);
+            setAutoSeparatorStyle((prev) => {
+                if (
+                    prev.color === style.color &&
+                    prev.fontSize === style.fontSize &&
+                    prev.lineHeight === style.lineHeight
+                )
+                    return prev;
+                return {
+                    color: style.color,
+                    fontSize: style.fontSize,
+                    lineHeight: style.lineHeight,
+                };
+            });
+        }
 
         const observer = new ResizeObserver(compute);
         if (containerRef.current) observer.observe(containerRef.current);
         if (originalRef.current) observer.observe(originalRef.current);
         if (separatorRef.current) observer.observe(separatorRef.current);
 
-        return () => observer.disconnect();
-    }, [sidePadding, gap, mode, speed]);
+        return () => {
+            observer.disconnect();
+        };
+    }, [
+        sidePadding,
+        gap,
+        mode,
+        speed,
+        separatorColor,
+        separatorSize,
+        autoSeparatorStyle.color,
+        autoSeparatorStyle.fontSize,
+        autoSeparatorStyle.lineHeight,
+        animationKey,
+    ]);
 
     useEffect(() => {
         if (!pauseWhenOffscreen) return;
@@ -109,20 +174,54 @@ export function Marquee({
     const showClone = scroll && mode !== 'bounce';
     const shouldAnimate = scroll && (!pauseWhenOffscreen || isVisible);
     const separatorPadding = gap / 2;
+    const growClass = grow === true ? 'grow' : undefined;
+    const growStyle = typeof grow === 'number' ? { flexGrow: grow } : undefined;
+
+    const resolvedSeparatorColor =
+        separatorColor === 'accent'
+            ? 'var(--accent-11)'
+            : separatorColor === 'gray'
+              ? 'var(--gray-11)'
+              : separatorColor === 'current'
+                ? (autoSeparatorStyle.color ?? 'currentColor')
+                : (separatorColor ??
+                  autoSeparatorStyle.color ??
+                  'currentColor');
+    const resolvedSeparatorSize =
+        typeof separatorSize === 'number'
+            ? `var(--font-size-${separatorSize})`
+            : (separatorSize ?? autoSeparatorStyle.fontSize);
+    const resolvedSeparatorLineHeight =
+        autoSeparatorStyle.lineHeight ?? 'normal';
 
     return (
         <div
             ref={containerRef}
             className={clsx(
-                'flex min-w-0 flex-shrink overflow-hidden whitespace-nowrap',
+                'flex min-w-0 shrink overflow-hidden whitespace-nowrap',
+                growClass,
                 className
             )}
-            style={{ paddingInline: sidePadding }}
+            style={{
+                paddingInline: sidePadding,
+                ...growStyle,
+                maxWidth,
+                ...style,
+            }}
         >
+            {}
             <div
+                key={animationKey}
                 className={clsx(
                     'inline-flex items-center',
-                    shouldAnimate ? `animate-marquee-${mode}` : 'marquee-reset',
+                    shouldAnimate && mode === 'left' && 'animate-marquee-left',
+                    shouldAnimate &&
+                        mode === 'right' &&
+                        'animate-marquee-right',
+                    shouldAnimate &&
+                        mode === 'bounce' &&
+                        'animate-marquee-bounce',
+                    !shouldAnimate && 'marquee-reset',
                     resolvedAnimateOnHover &&
                         '[animation-play-state:paused] group-hover:[animation-play-state:running]'
                 )}
@@ -146,12 +245,14 @@ export function Marquee({
                                 ref={separatorRef}
                                 aria-hidden="true"
                                 className={clsx(
-                                    'inline-flex items-center',
+                                    'inline-flex items-center text-inherit',
                                     separatorClassName
                                 )}
                                 style={{
                                     paddingInline: separatorPadding,
-                                    color: separatorColor,
+                                    color: resolvedSeparatorColor,
+                                    fontSize: resolvedSeparatorSize,
+                                    lineHeight: resolvedSeparatorLineHeight,
                                 }}
                             >
                                 {'\u2022'}

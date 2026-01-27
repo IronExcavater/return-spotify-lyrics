@@ -18,6 +18,9 @@
 .rt-AvatarRoot.rt-IconButton {
     height: var(--avatar-size);
     width: var(--avatar-size);
+    min-height: var(--avatar-size);
+    min-width: var(--avatar-size);
+    padding: 0;
 }
 
 .rt-Button:not(:disabled),
@@ -28,6 +31,9 @@
 .rt-AvatarRoot {
     position: relative;
     user-select: none;
+    min-height: var(--avatar-size);
+    min-width: var(--avatar-size);
+    flex: 0 0 auto;
 }
 
 .rt-AvatarOverlay {

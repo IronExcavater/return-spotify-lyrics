@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { getFromStorage, setInStorage } from '../../shared/storage';
 import type { SearchFilter } from '../../shared/types';
-import type { MediaRouteState } from '../helpers/mediaRoute';
+import type { MediaRouteState } from './useMediaRoute';
 
 export type HomeRouteState = {
     searchQuery?: string;
@@ -62,17 +61,9 @@ const serializeState = (state?: RouteState) => {
 const listeners = new Set<() => void>();
 const historyStack: HistoryEntry[] = [];
 const MAX_HISTORY = 30;
-const HISTORY_KEY = 'popupHistory';
-let hasHydrated = false;
-let persistTimer: number | null = null;
 
 const emit = () => {
     listeners.forEach((listener) => listener());
-    if (persistTimer) return;
-    persistTimer = window.setTimeout(() => {
-        persistTimer = null;
-        void setInStorage(HISTORY_KEY, historyStack.slice(-MAX_HISTORY));
-    }, 150);
 };
 
 const getCanGoBack = () => historyStack.length > 1;
@@ -108,7 +99,6 @@ const recordRoute = (
         return;
     }
 
-    if (!normalizedState && path === '/home') return;
     historyStack.push({ path, state: normalizedState });
     trimHistory();
     emit();
@@ -135,22 +125,6 @@ export function useHistory() {
     }, []);
 
     useEffect(() => {
-        if (hasHydrated) return;
-        hasHydrated = true;
-        getFromStorage<HistoryEntry[]>(HISTORY_KEY, (stored) => {
-            const next = (stored ?? [])
-                .filter((entry) => shouldTrack(entry.path))
-                .map((entry) => ({
-                    path: entry.path,
-                    state: normalizeState(entry.state),
-                }));
-            historyStack.length = 0;
-            historyStack.push(...next.slice(-MAX_HISTORY));
-            emit();
-        });
-    }, []);
-
-    useEffect(() => {
         if (lastLocation.current === location.pathname) return;
         lastLocation.current = location.pathname;
         recordRoute(
@@ -160,8 +134,12 @@ export function useHistory() {
     }, [location.pathname, location.state]);
 
     const goTo = useCallback(
-        (path: string, state?: RouteState) => {
-            recordRoute(path, state, 'push');
+        (
+            path: string,
+            state?: RouteState,
+            options?: { samePathBehavior?: 'replace' | 'push' }
+        ) => {
+            recordRoute(path, state, options?.samePathBehavior ?? 'push');
             navigate(path, { state, replace: location.pathname === path });
         },
         [location.pathname, navigate]
@@ -176,7 +154,7 @@ export function useHistory() {
 
     const rememberState = useCallback(
         (state?: RouteState) => {
-            recordRoute(location.pathname, state, 'push');
+            recordRoute(location.pathname, state, 'replace');
         },
         [location.pathname]
     );

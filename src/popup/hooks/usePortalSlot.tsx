@@ -18,7 +18,7 @@ interface UsePortalSlotOptions<Key extends string> {
 }
 
 interface PortalSlotResult<Key extends string> {
-    anchors: Record<Key, JSX.Element>;
+    anchors: Record<Key, ReactNode>;
     portal: ReactNode;
 }
 
@@ -89,7 +89,7 @@ export function usePortalSlot<Key extends string>({
                 );
                 return result;
             },
-            {} as Record<Key, JSX.Element>
+            {} as Record<Key, ReactNode>
         );
     }, [anchorClassName, attachToAnchor, keys, instanceId]);
 

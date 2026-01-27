@@ -17,6 +17,7 @@ import clsx from 'clsx';
 import { formatDateWithFormatter } from '../../shared/date';
 import { resolveLocale } from '../../shared/locale';
 import type { PillValue } from '../../shared/types';
+import { handleMenuTriggerKeyDown } from '../hooks/useActions';
 import { useSettings } from '../hooks/useSettings';
 import { InlineInput } from './InlineInput';
 
@@ -499,8 +500,6 @@ export function Pill({
 
     const handleAddRange = () => setDateMode('date-range');
     const handleRemoveRange = () => setDateMode('date');
-    const transformButtonClassName =
-        'text-gray-12 shrink-0 !h-4 min-h-0 !w-4 min-w-0 bg-[var(--gray-a3)] hover:bg-[var(--gray-a4)]';
     const handleOptionToggle = (option: string) => {
         if (!onChange || !isOptionsValue) return;
         const isSelected = value.value.includes(option);
@@ -523,10 +522,10 @@ export function Pill({
             onKeyDown={handleContainerKeyDown}
             onBlur={handleBlur}
             className={clsx(
-                'group text-gray-12 max-w-full min-w-0 shrink items-center rounded-full bg-[var(--gray-a2)] p-0.5 ring-1 ring-[var(--gray-a6)] transition-colors',
-                'focus-within:ring-2 focus-within:ring-[var(--accent-8)] hover:ring-2 hover:ring-[var(--accent-8)] focus-visible:outline-none',
+                'group bg-grayA-2 text-gray-12 ring-grayA-6 max-w-full min-w-0 shrink items-center rounded-full p-0.5 ring-1 transition-colors',
+                'focus-within:ring-accent-8 hover:ring-accent-8 focus-within:ring-2 hover:ring-2 focus-visible:outline-none',
                 editable &&
-                    'cursor-text focus-within:border-[var(--accent-8)] hover:border-[var(--accent-8)]',
+                    'focus-within:border-accent-8 hover:border-accent-8 cursor-text',
                 className
             )}
         >
@@ -606,7 +605,7 @@ export function Pill({
                                     variant="ghost"
                                     radius="full"
                                     color="gray"
-                                    className={transformButtonClassName}
+                                    className="bg-grayA-3 text-gray-12 hover:bg-grayA-4 h-4! min-h-0 w-4! min-w-0 shrink-0"
                                     onClick={(event) => {
                                         event.stopPropagation();
                                         handleRemoveRange();
@@ -622,7 +621,7 @@ export function Pill({
                                 variant="ghost"
                                 radius="full"
                                 color="gray"
-                                className={transformButtonClassName}
+                                className="bg-grayA-3 text-gray-12 hover:bg-grayA-4 h-4! min-h-0 w-4! min-w-0 shrink-0"
                                 onClick={(event) => {
                                     event.stopPropagation();
                                     handleAddRange();
@@ -709,7 +708,10 @@ export function Pill({
                     if (open) setIsEditing(true);
                 }}
             >
-                <DropdownMenu.Trigger onPointerDown={startEditing}>
+                <DropdownMenu.Trigger
+                    onPointerDown={startEditing}
+                    onKeyDown={handleMenuTriggerKeyDown}
+                >
                     {pillBody}
                 </DropdownMenu.Trigger>
                 <DropdownMenu.Content

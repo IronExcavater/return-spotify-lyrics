@@ -17,7 +17,9 @@ export function LoginView({ onLogin }: Props) {
             flexGrow="1"
             justify="center"
             align="center"
-            className="relative bg-slate-950 px-4 py-6 text-white"
+            px="4"
+            py="6"
+            className="relative bg-slate-950 text-white"
         >
             <div className="relative flex w-full max-w-lg flex-col gap-6">
                 <div className="flex flex-col gap-1 text-[0.65rem] tracking-[0.5em] text-white/60 uppercase">
@@ -29,12 +31,11 @@ export function LoginView({ onLogin }: Props) {
                     the music keeps its voice even when Spotify free loses the
                     lyric button.
                 </Text>
-
                 <div className="flex flex-col gap-2 text-white/70">
                     {features.map((feature) => (
                         <div
                             key={feature}
-                            className="group flex flex-row items-center gap-2 transition-colors duration-200 hover:text-white"
+                            className="group flex flex-row items-center gap-2 transition-colors hover:text-white"
                         >
                             <span className="text-emerald-300 transition-colors group-hover:text-white">
                                 <CheckIcon />
@@ -48,13 +49,12 @@ export function LoginView({ onLogin }: Props) {
                         </div>
                     ))}
                 </div>
-
                 <div className="flex flex-col gap-2">
                     <Button
                         size="3"
                         variant="solid"
                         onClick={onLogin}
-                        className="w-fit px-6 text-base shadow-[0_20px_35px_rgba(0,0,0,0.35)] transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-[0_25px_45px_rgba(0,0,0,0.45)] active:translate-y-0"
+                        className="w-fit px-6 text-base shadow-[0_20px_35px_rgba(0,0,0,0.35)] transition-transform hover:-translate-y-0.5 hover:shadow-[0_25px_45px_rgba(0,0,0,0.45)] active:translate-y-0"
                     >
                         Continue with Spotify
                     </Button>

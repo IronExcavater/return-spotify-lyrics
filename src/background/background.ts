@@ -8,6 +8,17 @@ import {
     SpotifyRpcReturn,
 } from './spotifyRpc.ts';
 
+const enableSidePanel = () => {
+    if (!chrome.sidePanel) return;
+    void chrome.sidePanel.setOptions({
+        enabled: true,
+        path: 'sidepanel.html',
+    });
+};
+
+chrome.runtime.onInstalled.addListener(enableSidePanel);
+chrome.runtime.onStartup.addListener(enableSidePanel);
+
 addOnMessage(Msg.LOGIN_SPOTIFY, async () => {
     return await authenticate();
 });

@@ -1,21 +1,18 @@
 import { ReactNode } from 'react';
 import { DotsHorizontalIcon } from '@radix-ui/react-icons';
-import {
-    DropdownMenu,
-    Flex,
-    IconButton,
-    Skeleton,
-    Text,
-} from '@radix-ui/themes';
+import { DropdownMenu, Flex, IconButton, Skeleton } from '@radix-ui/themes';
 import clsx from 'clsx';
-import { hashSequence, seededWidths } from '../../shared/math';
+
+import { handleMenuTriggerKeyDown } from '../hooks/useActions';
 import { AvatarButton } from './AvatarButton';
 import { Fade } from './Fade';
 import { Marquee } from './Marquee';
+import { SkeletonText } from './SkeletonText';
+import { TextButton } from './TextButton';
 
 interface Props {
     title?: string;
-    subtitle?: string;
+    subtitle?: ReactNode;
     imageUrl?: string;
     icon?: ReactNode;
     imageShape?: 'round' | 'square';
@@ -47,32 +44,27 @@ export function MediaCard({
         1 | 2 | 3,
         { avatar: '5' | '6' | '7'; width: number }
     > = {
-        1: { avatar: '5', width: 72 },
-        2: { avatar: '6', width: 88 },
-        3: { avatar: '7', width: 104 },
+        1: { avatar: '5', width: 64 },
+        2: { avatar: '6', width: 80 },
+        3: { avatar: '7', width: 96 },
     };
     const resolvedSize = sizeConfig[cardSize] ?? sizeConfig[2];
     const resolvedWidth = width ?? resolvedSize.width;
-    const subtitleContent = subtitle?.trim() ? subtitle : ' ';
-    const baseSeed =
-        hashSequence([title, subtitle, imageUrl], [13, 17, 23], [7]) ^ seed;
-    const { titleWidth, subtitleWidth } = seededWidths(baseSeed, {
-        titleMin: 68,
-        titleRange: 28,
-        subtitleMin: 28,
-        subtitleRange: 32,
-        titleOffset: 11,
-        subtitleOffset: 29,
-    });
-    const titleSkeletonStyle = loading ? { width: `${titleWidth}%` } : {};
-    const subtitleSkeletonStyle = loading ? { width: `${subtitleWidth}%` } : {};
+    const subtitleText = typeof subtitle === 'string' ? subtitle : undefined;
+    const subtitleContent = subtitleText?.trim() ? subtitleText : ' ';
+    const skeletonParts = [title, subtitleText, imageUrl];
+    const handleRowClick = loading ? undefined : onClick;
 
     return (
         <Flex
             direction="column"
             gap="1"
-            onClick={loading ? undefined : onClick}
-            className={clsx('group', className)}
+            onClick={handleRowClick}
+            className={clsx(
+                'group',
+                handleRowClick && 'cursor-pointer',
+                className
+            )}
             style={{ width: resolvedWidth }}
         >
             <Skeleton loading={loading}>
@@ -86,21 +78,27 @@ export function MediaCard({
                     aria-label={title}
                     hideRing
                     className="relative"
+                    tabIndex={-1}
                 >
                     {contextMenu && (
                         <DropdownMenu.Root>
-                            <DropdownMenu.Trigger>
+                            <DropdownMenu.Trigger
+                                onKeyDown={handleMenuTriggerKeyDown}
+                            >
                                 <IconButton
                                     variant="ghost"
                                     radius="full"
                                     size="0"
                                     color="gray"
                                     onClick={(event) => event.stopPropagation()}
+                                    onPointerDown={(event) =>
+                                        event.stopPropagation()
+                                    }
                                     className={clsx(
                                         imageShape === 'round'
-                                            ? '!m-2'
-                                            : '!m-1',
-                                        'pointer-events-none !ml-auto !self-start !bg-[var(--color-panel-solid)]/10 !opacity-0 !backdrop-blur-[2px] transition-opacity group-hover:pointer-events-auto group-hover:!opacity-100 hover:!bg-[var(--accent-11)]/10 hover:!backdrop-blur-xs data-[state=open]:pointer-events-auto data-[state=open]:!opacity-100'
+                                            ? 'm-2!'
+                                            : 'm-1!',
+                                        'bg-panel-solid/10! pointer-events-none ml-auto! self-start! opacity-0! backdrop-blur-[2px]! transition-opacity group-focus-within:pointer-events-auto group-focus-within:opacity-100! group-hover:pointer-events-auto group-hover:opacity-100! group-focus-visible:pointer-events-auto group-focus-visible:opacity-100! hover:bg-(--accent-11)/10! hover:backdrop-blur-xs! data-[state=open]:pointer-events-auto data-[state=open]:opacity-100!'
                                     )}
                                 >
                                     <DotsHorizontalIcon />
@@ -111,62 +109,59 @@ export function MediaCard({
                     )}
                 </AvatarButton>
             </Skeleton>
-            <Flex direction="column" className="min-w-0">
-                <Fade enabled={!loading}>
-                    <div
-                        className="transition-all duration-300 ease-out"
-                        style={titleSkeletonStyle}
+            <Flex direction="column" className="w-full min-w-0">
+                <Fade enabled={!loading} grow>
+                    <SkeletonText
+                        loading={loading}
+                        parts={skeletonParts}
+                        seed={seed}
+                        preset="media-card"
+                        className="transition-all"
                     >
-                        <Skeleton loading={loading} className="w-full">
-                            <Marquee
-                                mode="bounce"
-                                className={clsx(
-                                    'min-w-0',
-                                    !loading && 'w-full'
-                                )}
+                        <Marquee mode="bounce" grow>
+                            <TextButton
+                                size="1"
+                                weight="medium"
+                                interactive={Boolean(handleRowClick)}
+                                onClick={
+                                    handleRowClick
+                                        ? (event) => {
+                                              event.stopPropagation();
+                                              handleRowClick();
+                                          }
+                                        : undefined
+                                }
                             >
-                                <Text
-                                    size="1"
-                                    weight="medium"
-                                    className={clsx(
-                                        onClick && 'app-link',
-                                        onClick &&
-                                            'group-hover:text-[var(--accent-11)]'
-                                    )}
-                                >
-                                    {title}
-                                </Text>
-                            </Marquee>
-                        </Skeleton>
-                    </div>
+                                {title}
+                            </TextButton>
+                        </Marquee>
+                    </SkeletonText>
                 </Fade>
-                <Fade enabled={!loading}>
-                    <div
-                        className="min-h-[14px] transition-all duration-300 ease-out"
-                        style={subtitleSkeletonStyle}
+                <Fade enabled={!loading} grow>
+                    <SkeletonText
+                        loading={loading}
+                        parts={skeletonParts}
+                        seed={seed}
+                        preset="media-card"
+                        variant="subtitle"
+                        className="min-h-3.5 transition-all"
                     >
-                        <Skeleton loading={loading} className="w-full">
-                            <Marquee
-                                mode="left"
-                                className={clsx(
-                                    'min-w-0',
-                                    !loading && 'w-full'
-                                )}
-                            >
-                                <Text
+                        <Marquee mode="left" grow>
+                            {subtitleText != null ? (
+                                <TextButton
                                     size="1"
                                     color="gray"
-                                    className={clsx(
-                                        onClick && 'app-link',
-                                        onClick &&
-                                            'group-hover:text-[var(--accent-11)]'
-                                    )}
+                                    interactive={false}
                                 >
                                     {subtitleContent}
-                                </Text>
-                            </Marquee>
-                        </Skeleton>
-                    </div>
+                                </TextButton>
+                            ) : (
+                                <span className="inline-flex items-center">
+                                    {subtitle}
+                                </span>
+                            )}
+                        </Marquee>
+                    </SkeletonText>
                 </Fade>
             </Flex>
         </Flex>

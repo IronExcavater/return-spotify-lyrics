@@ -16,6 +16,7 @@ import { NavBar } from './components/NavBar';
 import { PlaybackBar } from './components/PlaybackBar';
 import { ProtectedLayout } from './components/ProtectedLayout';
 import { SettingsProvider } from './context/SettingsContext';
+import { useGlobalShortcut } from './hooks/useActions';
 import { useAppState, BarKey } from './hooks/useAppState';
 import { useAuth } from './hooks/useAuth';
 import { useHistory } from './hooks/useHistory';
@@ -25,17 +26,24 @@ import { usePlayer } from './hooks/usePlayer.ts';
 import { usePortalSlot } from './hooks/usePortalSlot';
 import { Resizer } from './hooks/useResize.tsx';
 import { useSearch } from './hooks/useSearch';
+import { getSurfaceConfig, type Surface } from './surface';
 import { HomeView } from './views/HomeView';
 import { LoginView } from './views/LoginView';
 import { LyricsView } from './views/LyricsView';
 import { MediaView } from './views/MediaView';
 import { ProfileView } from './views/ProfileView';
+import { QueueView } from './views/QueueView';
 
 const BAR_KEYS: readonly BarKey[] = ['home', 'playback'];
 
-export default function App() {
+type AppProps = {
+    surface?: Surface;
+};
+
+export default function App({ surface = 'popup' }: AppProps) {
     const navigate = useNavigate();
     const location = useLocation();
+    const surfaceConfig = getSurfaceConfig(surface);
 
     const widthBounds = { min: 350, max: 500 } as const;
     const heightBounds = { min: 300, max: 600 } as const;
@@ -44,12 +52,14 @@ export default function App() {
     const appState = useAppState({
         fallbackWidth: widthBounds.min,
         fallbackHeight: heightBounds.min,
+        surface,
     });
     const routeHistory = useHistory();
     const { playback } = usePlayer();
 
     const search = useSearch();
     const trackSearch = useMemo(() => createAnalyticsTracker('search'), []);
+    const searchInputRef = useRef<HTMLInputElement | null>(null);
 
     const profileImage = profile?.images?.[0]?.url;
 
@@ -57,6 +67,8 @@ export default function App() {
         state: RouteState | null | undefined
     ): state is HomeRouteState =>
         !!state && ('searchQuery' in state || 'searchFilters' in state);
+
+    const lastHomeStateRef = useRef<HomeRouteState | null>(null);
 
     // Auth semantics
     const mustLogin = authed === false && authed !== undefined;
@@ -81,6 +93,15 @@ export default function App() {
 
     useEffect(() => {
         if (location.pathname !== '/home') return;
+        lastHomeStateRef.current = {
+            searchQuery: search.query,
+            searchFilters:
+                search.filters.length > 0 ? search.filters : undefined,
+        };
+    }, [location.pathname, search.filters, search.query]);
+
+    useEffect(() => {
+        if (location.pathname !== '/home') return;
         routeHistory.rememberState({
             searchQuery: search.debouncedQuery,
             searchFilters:
@@ -95,6 +116,25 @@ export default function App() {
         search.debouncedQuery,
     ]);
 
+    useGlobalShortcut(
+        (event) => {
+            if (!appState.showBars) return;
+            event.preventDefault();
+            if (appState.activeBar !== 'home') {
+                appState.setActiveBar('home');
+            }
+            requestAnimationFrame(() => {
+                searchInputRef.current?.focus();
+                searchInputRef.current?.select();
+            });
+        },
+        {
+            key: 'k',
+            metaOrCtrl: true,
+            enabled: appState.showBars,
+        }
+    );
+
     const profileSlot = useMemo(
         () => (
             <AvatarButton
@@ -107,11 +147,19 @@ export default function App() {
                 variant="ghost"
                 size="2"
                 onClick={() => {
-                    if (location.pathname === '/profile')
+                    if (location.pathname === '/profile') {
+                        const previous = routeHistory.goBack();
+                        if (previous) return;
                         navigate(lastContentPathRef.current || '/home', {
                             replace: true,
+                            state:
+                                lastContentPathRef.current === '/home'
+                                    ? (lastHomeStateRef.current ?? undefined)
+                                    : undefined,
                         });
-                    else navigate('/profile');
+                        return;
+                    }
+                    navigate('/profile');
                 }}
                 aria-pressed={location.pathname === '/profile'}
                 aria-selected={location.pathname === '/profile'}
@@ -168,195 +216,205 @@ export default function App() {
         };
     }, [appState.activeBar, location.pathname]);
 
-    return (
+    const appContent = (
         <SettingsProvider>
-            <Resizer
-                width={{
-                    value: appState.layout.width,
-                    min: widthBounds.min,
-                    max: widthBounds.max,
-                    override: appState.layout.widthOverride,
-                }}
-                height={{
-                    value: appState.layout.height,
-                    min: heightBounds.min,
-                    max: heightBounds.max,
-                    override: appState.layout.heightOverride,
-                }}
-                onWidthChange={appState.setWidth}
-                onHeightChange={appState.setHeight}
-            >
-                <Flex direction="column" className="h-full">
-                    {/* Top bar */}
-                    {appState.showBars && (
-                        <Flex className="border-b-2 border-[var(--gray-a6)] bg-[var(--color-panel-solid)]">
-                            {appState.activeBar === 'playback' && (
-                                <PlaybackBar
-                                    profileSlot={
-                                        profileFloating.anchors.playback
-                                    }
-                                    navSlot={navFloating.anchors.playback}
-                                    expanded={appState.playbackExpanded}
-                                    onExpandedChange={
-                                        appState.setPlaybackExpanded
-                                    }
-                                />
-                            )}
+            <Flex direction="column" className="h-full">
+                {/* Top bar */}
+                {appState.showBars && (
+                    <Flex className="border-grayA-6 bg-panel-solid border-b-2">
+                        {appState.activeBar === 'playback' && (
+                            <PlaybackBar
+                                profileSlot={profileFloating.anchors.playback}
+                                navSlot={navFloating.anchors.playback}
+                                expanded={appState.playbackExpanded}
+                                onExpandedChange={appState.setPlaybackExpanded}
+                            />
+                        )}
 
-                            {appState.activeBar === 'home' && (
-                                <HomeBar
-                                    profileSlot={profileFloating.anchors.home}
-                                    navSlot={navFloating.anchors.home}
-                                    searchQuery={search.query}
-                                    onSearchChange={search.setQuery}
-                                    onClearSearch={() => {
-                                        if (search.query.trim()) {
-                                            void trackSearch(
-                                                ANALYTICS_EVENTS.searchClear,
-                                                {
-                                                    reason: 'search query cleared',
-                                                }
-                                            );
-                                        }
-                                        search.setQuery('');
-                                    }}
-                                    onSearchSubmit={() => {
+                        {appState.activeBar === 'home' && (
+                            <HomeBar
+                                profileSlot={profileFloating.anchors.home}
+                                navSlot={navFloating.anchors.home}
+                                searchQuery={search.query}
+                                onSearchChange={search.setQuery}
+                                onClearSearch={() => {
+                                    if (search.query.trim()) {
                                         void trackSearch(
-                                            ANALYTICS_EVENTS.searchSubmit,
+                                            ANALYTICS_EVENTS.searchClear,
                                             {
-                                                reason: 'search submitted',
-                                                data: {
-                                                    query: search.query.trim(),
-                                                    filters: search.filters.map(
-                                                        (filter) => filter.kind
-                                                    ),
-                                                },
+                                                reason: 'search query cleared',
                                             }
                                         );
-                                        routeHistory.goTo('/home', {
-                                            searchQuery: search.query,
-                                            searchFilters:
-                                                search.filters.length > 0
-                                                    ? search.filters
-                                                    : undefined,
-                                        });
-                                    }}
-                                    canGoBack={routeHistory.canGoBack}
-                                    onGoBack={() => {
-                                        const previous = routeHistory.goBack();
-                                        if (previous?.path === '/home') {
-                                            const homeState = isHomeRouteState(
-                                                previous.state
-                                            )
-                                                ? previous.state
-                                                : undefined;
-                                            search.setSearchState({
-                                                query:
-                                                    homeState?.searchQuery ??
-                                                    '',
-                                                filters:
-                                                    homeState?.searchFilters ??
-                                                    [],
-                                            });
+                                    }
+                                    search.setQuery('');
+                                }}
+                                onSearchSubmit={() => {
+                                    void trackSearch(
+                                        ANALYTICS_EVENTS.searchSubmit,
+                                        {
+                                            reason: 'search submitted',
+                                            data: {
+                                                query: search.query.trim(),
+                                                filters: search.filters.map(
+                                                    (filter) => filter.kind
+                                                ),
+                                            },
                                         }
-                                    }}
-                                    filters={search.filters}
-                                    availableFilters={search.available}
-                                    onAddFilter={search.addFilter}
-                                    onUpdateFilter={search.updateFilter}
-                                    onRemoveFilter={search.removeFilter}
-                                    onClearFilters={search.clearFilters}
+                                    );
+                                    routeHistory.goTo('/home', {
+                                        searchQuery: search.query,
+                                        searchFilters:
+                                            search.filters.length > 0
+                                                ? search.filters
+                                                : undefined,
+                                    });
+                                }}
+                                canGoBack={routeHistory.canGoBack}
+                                onGoBack={() => {
+                                    const previous = routeHistory.goBack();
+                                    if (previous?.path === '/home') {
+                                        const homeState = isHomeRouteState(
+                                            previous.state
+                                        )
+                                            ? previous.state
+                                            : undefined;
+                                        search.setSearchState({
+                                            query: homeState?.searchQuery ?? '',
+                                            filters:
+                                                homeState?.searchFilters ?? [],
+                                        });
+                                    }
+                                }}
+                                filters={search.filters}
+                                availableFilters={search.available}
+                                onAddFilter={search.addFilter}
+                                onUpdateFilter={search.updateFilter}
+                                onRemoveFilter={search.removeFilter}
+                                onClearFilters={search.clearFilters}
+                                searchInputRef={searchInputRef}
+                            />
+                        )}
+                    </Flex>
+                )}
+
+                {/* Routes */}
+                <Routes>
+                    <Route
+                        path="/"
+                        element={
+                            <ProtectedLayout
+                                when={mustLogin}
+                                redirectTo="/login"
+                            >
+                                <></>
+                            </ProtectedLayout>
+                        }
+                    />
+
+                    <Route
+                        path="/home"
+                        element={
+                            <ProtectedLayout
+                                when={mustLogin}
+                                redirectTo="/login"
+                            >
+                                <HomeView
+                                    searchQuery={search.debouncedQuery}
+                                    filters={search.debouncedFilters}
                                 />
-                            )}
-                        </Flex>
-                    )}
+                            </ProtectedLayout>
+                        }
+                    />
 
-                    {/* Routes */}
-                    <Routes>
-                        <Route
-                            path="/"
-                            element={
-                                <ProtectedLayout
-                                    when={mustLogin}
-                                    redirectTo="/login"
-                                >
-                                    <></>
-                                </ProtectedLayout>
-                            }
-                        />
+                    <Route
+                        path="/lyrics"
+                        element={
+                            <ProtectedLayout
+                                when={mustLogin}
+                                redirectTo="/login"
+                            >
+                                <LyricsView />
+                            </ProtectedLayout>
+                        }
+                    />
 
-                        <Route
-                            path="/home"
-                            element={
-                                <ProtectedLayout
-                                    when={mustLogin}
-                                    redirectTo="/login"
-                                >
-                                    <HomeView
-                                        searchQuery={search.debouncedQuery}
-                                        filters={search.debouncedFilters}
-                                    />
-                                </ProtectedLayout>
-                            }
-                        />
+                    <Route
+                        path="/profile"
+                        element={
+                            <ProtectedLayout
+                                when={mustLogin}
+                                redirectTo="/login"
+                            >
+                                <ProfileView
+                                    profile={profile}
+                                    connection={connection}
+                                    onLogout={logout}
+                                />
+                            </ProtectedLayout>
+                        }
+                    />
+                    <Route
+                        path="/queue"
+                        element={
+                            <ProtectedLayout
+                                when={mustLogin}
+                                redirectTo="/login"
+                            >
+                                <QueueView />
+                            </ProtectedLayout>
+                        }
+                    />
+                    <Route
+                        path="/media"
+                        element={
+                            <ProtectedLayout
+                                when={mustLogin}
+                                redirectTo="/login"
+                            >
+                                <MediaView />
+                            </ProtectedLayout>
+                        }
+                    />
 
-                        <Route
-                            path="/lyrics"
-                            element={
-                                <ProtectedLayout
-                                    when={mustLogin}
-                                    redirectTo="/login"
-                                >
-                                    <LyricsView />
-                                </ProtectedLayout>
-                            }
-                        />
+                    <Route
+                        path="/login"
+                        element={
+                            <ProtectedLayout when={mustLogout} redirectTo="/">
+                                <LoginView onLogin={login} />
+                            </ProtectedLayout>
+                        }
+                    />
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
 
-                        <Route
-                            path="/profile"
-                            element={
-                                <ProtectedLayout
-                                    when={mustLogin}
-                                    redirectTo="/login"
-                                >
-                                    <ProfileView
-                                        profile={profile}
-                                        connection={connection}
-                                        onLogout={logout}
-                                    />
-                                </ProtectedLayout>
-                            }
-                        />
-                        <Route
-                            path="/media"
-                            element={
-                                <ProtectedLayout
-                                    when={mustLogin}
-                                    redirectTo="/login"
-                                >
-                                    <MediaView />
-                                </ProtectedLayout>
-                            }
-                        />
-
-                        <Route
-                            path="/login"
-                            element={
-                                <ProtectedLayout
-                                    when={mustLogout}
-                                    redirectTo="/"
-                                >
-                                    <LoginView onLogin={login} />
-                                </ProtectedLayout>
-                            }
-                        />
-                        <Route path="*" element={<Navigate to="/" replace />} />
-                    </Routes>
-
-                    {profileFloating.portal}
-                    {navFloating.portal}
-                </Flex>
-            </Resizer>
+                {profileFloating.portal}
+                {navFloating.portal}
+            </Flex>
         </SettingsProvider>
+    );
+
+    if (!surfaceConfig.resizer) {
+        return appContent;
+    }
+
+    return (
+        <Resizer
+            width={{
+                value: appState.layout.width,
+                min: widthBounds.min,
+                max: widthBounds.max,
+                override: appState.layout.widthOverride,
+            }}
+            height={{
+                value: appState.layout.height,
+                min: heightBounds.min,
+                max: heightBounds.max,
+                override: appState.layout.heightOverride,
+            }}
+            onWidthChange={appState.setWidth}
+            onHeightChange={appState.setHeight}
+        >
+            {appContent}
+        </Resizer>
     );
 }

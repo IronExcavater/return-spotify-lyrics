@@ -20,6 +20,11 @@ const getImageUrl = (images?: { url: string }[]) => images?.[0]?.url;
 const formatArtists = (artists?: SimplifiedArtist[]) =>
     artists?.map((artist) => artist.name).join(', ');
 
+const getEpisodeShow = (
+    episode: SimplifiedEpisode
+): SimplifiedShow | undefined =>
+    (episode as SimplifiedEpisode & { show?: SimplifiedShow }).show;
+
 type AlbumTypeSource = {
     album_type?: string;
     album_group?: string;
@@ -43,6 +48,10 @@ export const trackToItem = (track: Track): MediaItem => ({
     id: track.id ?? track.uri ?? track.name,
     title: track.name,
     subtitle: formatArtists(track.artists),
+    artists: track.artists?.map((artist) => ({
+        id: artist.id,
+        name: artist.name,
+    })),
     imageUrl: getImageUrl(track.album?.images),
     uri: track.uri,
     externalUrl: track.external_urls?.spotify,
@@ -50,12 +59,18 @@ export const trackToItem = (track: Track): MediaItem => ({
     kind: 'track',
     parentKind: track.album?.id ? 'album' : undefined,
     parentId: track.album?.id,
+    parentTitle: track.album?.name,
+    parentIsSingle: track.album?.total_tracks === 1,
 });
 
 export const albumToItem = (album: SimplifiedAlbum | Album): MediaItem => ({
     id: album.id ?? album.uri ?? album.name,
     title: album.name,
     subtitle: formatArtists(album.artists),
+    artists: album.artists?.map((artist) => ({
+        id: artist.id,
+        name: artist.name,
+    })),
     imageUrl: getImageUrl(album.images),
     uri: album.uri,
     externalUrl: album.external_urls?.spotify,
@@ -96,12 +111,32 @@ export const episodeToItem = (
         formatDurationShort(episode.duration_ms) ??
         formatIsoDate(episode.release_date, { dateStyle: 'medium' }, locale) ??
         undefined,
-    imageUrl: getImageUrl(show?.images) ?? getImageUrl(episode.images),
+    imageUrl: (() => {
+        const episodeShow = getEpisodeShow(episode);
+        return (
+            getImageUrl(show?.images) ??
+            getImageUrl(episodeShow?.images) ??
+            getImageUrl(episode.images)
+        );
+    })(),
     uri: episode.uri,
-    externalUrl: episode.external_urls?.spotify ?? show?.external_urls?.spotify,
+    externalUrl: (() => {
+        const episodeShow = getEpisodeShow(episode);
+        return (
+            episode.external_urls?.spotify ??
+            show?.external_urls?.spotify ??
+            episodeShow?.external_urls?.spotify
+        );
+    })(),
     kind: 'episode',
-    parentKind: show?.id ? 'show' : undefined,
-    parentId: show?.id,
+    parentKind: (() => {
+        const episodeShow = getEpisodeShow(episode);
+        return show?.id || episodeShow?.id ? ('show' as const) : undefined;
+    })(),
+    parentId: (() => {
+        const episodeShow = getEpisodeShow(episode);
+        return show?.id ?? episodeShow?.id;
+    })(),
 });
 
 export const audiobookToItem = (book: SimplifiedAudiobook): MediaItem => ({
@@ -146,11 +181,18 @@ export const topArtistToItem = (artist: Artist): MediaItem => ({
 
 export const albumTrackToItem = (
     track: SimplifiedTrack,
-    album: Pick<Album, 'id' | 'images' | 'external_urls'>
+    album: Pick<
+        Album,
+        'id' | 'images' | 'external_urls' | 'name' | 'total_tracks'
+    >
 ): MediaItem => ({
     id: track.id ?? track.uri ?? track.name,
     title: track.name,
     subtitle: formatArtists(track.artists),
+    artists: track.artists?.map((artist) => ({
+        id: artist.id,
+        name: artist.name,
+    })),
     imageUrl: getImageUrl(album.images),
     uri: track.uri,
     externalUrl: track.external_urls?.spotify,
@@ -158,6 +200,8 @@ export const albumTrackToItem = (
     kind: 'track',
     parentKind: 'album',
     parentId: album.id,
+    parentTitle: album.name,
+    parentIsSingle: album.total_tracks === 1,
 });
 
 export const showEpisodeToItem = (

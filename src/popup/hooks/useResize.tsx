@@ -38,6 +38,13 @@ function applyDimension(
     element.style[cssProp] = `${size}px`;
 }
 
+function applyToRoot(cssProp: 'width' | 'height', size: number | 'auto') {
+    const root = document.documentElement;
+    const body = document.body;
+    if (root) applyDimension(root, cssProp, size);
+    if (body) applyDimension(body, cssProp, size);
+}
+
 function clamp(value: number, min: number, max: number) {
     return Math.min(max, Math.max(min, value));
 }
@@ -89,11 +96,11 @@ export function Resizer({
     }, [resolvedHeight]);
 
     useEffect(() => {
-        applyDimension(document.body, 'width', resolvedWidth);
+        applyToRoot('width', resolvedWidth);
     }, [resolvedWidth]);
 
     useEffect(() => {
-        applyDimension(document.body, 'height', resolvedHeight);
+        applyToRoot('height', resolvedHeight);
     }, [resolvedHeight]);
 
     const addDragListener = (

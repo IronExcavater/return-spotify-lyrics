@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import clsx from 'clsx';
 
 interface Props {
@@ -14,7 +14,9 @@ interface Props {
         | 'vertical'
         | 'all';
     size?: number;
+    grow?: boolean | number;
     className?: string;
+    style?: CSSProperties;
 }
 
 export function Fade({
@@ -22,7 +24,9 @@ export function Fade({
     enabled = true,
     fade = 'horizontal',
     size = 4,
+    grow,
     className,
+    style,
 }: Props) {
     const DIRECTIONS: Record<string, string[]> = {
         none: [],
@@ -56,11 +60,17 @@ export function Fade({
                   WebkitMaskImage: maskImage,
                   WebkitMaskComposite: 'intersect',
               };
+    const growClass = grow === true ? 'grow' : undefined;
+    const growStyle = typeof grow === 'number' ? { flexGrow: grow } : undefined;
 
     return (
         <div
-            className={clsx('relative overflow-hidden', className)}
-            style={maskStyles}
+            className={clsx(
+                'relative min-w-0 overflow-hidden',
+                growClass,
+                className
+            )}
+            style={{ ...maskStyles, ...growStyle, ...style }}
         >
             {children}
         </div>

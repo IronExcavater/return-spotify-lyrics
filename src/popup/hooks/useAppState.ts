@@ -5,6 +5,7 @@ import {
     createAnalyticsTracker,
 } from '../../shared/analytics';
 import { getFromStorage, setInStorage } from '../../shared/storage';
+import type { Surface } from '../surface';
 import { useAuth } from './useAuth.ts';
 import { usePlayer } from './usePlayer.ts';
 
@@ -17,6 +18,7 @@ export const ROUTES = {
     login: '/login',
     lyrics: '/lyrics',
     profile: '/profile',
+    queue: '/queue',
 } as const;
 
 export type RouteKey = keyof typeof ROUTES;
@@ -30,9 +32,10 @@ type RouteRule = {
     allowedBars?: BarKey[];
     widthOverride?: number;
     heightOverride?: number | 'auto';
+    secondary?: boolean;
 };
 
-const BAR_RULES: Record<BarKey, BarRule> = {
+const BASE_BAR_RULES: Record<BarKey, BarRule> = {
     home: {
         defaultRoute: ROUTES.home,
     },
@@ -41,7 +44,7 @@ const BAR_RULES: Record<BarKey, BarRule> = {
     },
 };
 
-const ROUTE_RULES: Partial<Record<RouteValue, RouteRule>> = {
+const BASE_ROUTE_RULES: Partial<Record<RouteValue, RouteRule>> = {
     [ROUTES.root]: {
         allowedBars: ['playback'],
         heightOverride: 'auto',
@@ -51,6 +54,7 @@ const ROUTE_RULES: Partial<Record<RouteValue, RouteRule>> = {
     },
     [ROUTES.lyrics]: {
         allowedBars: ['playback'],
+        secondary: true,
     },
     [ROUTES.login]: {
         widthOverride: 300,
@@ -58,7 +62,51 @@ const ROUTE_RULES: Partial<Record<RouteValue, RouteRule>> = {
     },
     [ROUTES.profile]: {
         heightOverride: 'auto',
+        secondary: true,
     },
+    [ROUTES.media]: {
+        allowedBars: ['playback', 'home'],
+    },
+    [ROUTES.queue]: {
+        allowedBars: ['playback', 'home'],
+        secondary: true,
+    },
+};
+
+export const SECONDARY_ROUTES = Object.entries(BASE_ROUTE_RULES)
+    .filter(([, rule]) => rule?.secondary)
+    .map(([route]) => route as RouteValue);
+
+export const isSecondaryRoute = (route: string) =>
+    SECONDARY_ROUTES.includes(route as RouteValue);
+
+const getBarRules = (surface: Surface): Record<BarKey, BarRule> => {
+    if (surface === 'sidepanel') {
+        return {
+            ...BASE_BAR_RULES,
+            home: { defaultRoute: ROUTES.home },
+        };
+    }
+    return BASE_BAR_RULES;
+};
+
+const getRouteRules = (
+    surface: Surface
+): Partial<Record<RouteValue, RouteRule>> => {
+    if (surface !== 'sidepanel') return BASE_ROUTE_RULES;
+    const entries = Object.entries(BASE_ROUTE_RULES).map(([route, rule]) => {
+        if (!rule?.allowedBars) return [route, rule] as const;
+        return [
+            route,
+            {
+                ...rule,
+                allowedBars: Array.from(
+                    new Set<BarKey>([...rule.allowedBars, 'home'])
+                ),
+            },
+        ] as const;
+    });
+    return Object.fromEntries(entries);
 };
 
 const APP_STATE_KEY = 'appState';
@@ -72,8 +120,12 @@ type AppState = {
     lastRoute?: RouteValue;
 };
 
-function isRouteAllowed(pathname: RouteValue, bar: BarKey) {
-    const rule = ROUTE_RULES[pathname];
+function isRouteAllowed(
+    pathname: RouteValue,
+    bar: BarKey,
+    rules: Partial<Record<RouteValue, RouteRule>>
+) {
+    const rule = rules[pathname];
     if (!rule?.allowedBars) return true;
     return rule.allowedBars.includes(bar);
 }
@@ -81,11 +133,18 @@ function isRouteAllowed(pathname: RouteValue, bar: BarKey) {
 interface Props {
     fallbackWidth: number;
     fallbackHeight: number;
+    surface?: Surface;
 }
 
-export function useAppState({ fallbackWidth, fallbackHeight }: Props) {
+export function useAppState({
+    fallbackWidth,
+    fallbackHeight,
+    surface = 'popup',
+}: Props) {
     const navigate = useNavigate();
     const location = useLocation();
+    const barRules = useMemo(() => getBarRules(surface), [surface]);
+    const routeRules = useMemo(() => getRouteRules(surface), [surface]);
 
     const { authed } = useAuth();
     const { playback } = usePlayer();
@@ -95,17 +154,17 @@ export function useAppState({ fallbackWidth, fallbackHeight }: Props) {
     const [appState, setAppState] = useState<AppState>({});
     const [activeBar, setActiveBar] = useState<BarKey>('home');
 
-    const routeRule = ROUTE_RULES[location.pathname] as RouteRule;
+    const routeRule = routeRules[location.pathname] as RouteRule;
 
     // load app state
     useEffect(() => {
-        getFromStorage<AppState>(APP_STATE_KEY, (saved) => {
+        void getFromStorage<AppState>(APP_STATE_KEY, (saved) => {
             const nextState: AppState = saved ?? {};
             setAppState(nextState);
 
             const initialBar = nextState.lastBar ?? 'home';
             setActiveBar(initialBar);
-            navigate(nextState.lastRoute ?? BAR_RULES[initialBar].defaultRoute);
+            navigate(nextState.lastRoute ?? barRules[initialBar].defaultRoute);
             setHydrated(true);
         });
     }, []);
@@ -141,8 +200,9 @@ export function useAppState({ fallbackWidth, fallbackHeight }: Props) {
     // Update last route to location.pathname
     useEffect(() => {
         if (!hydrated) return;
-
-        void updateAppState({ lastRoute: location.pathname as RouteValue });
+        const nextRoute = location.pathname as RouteValue;
+        if (isSecondaryRoute(nextRoute)) return;
+        void updateAppState({ lastRoute: nextRoute });
     }, [hydrated, location.pathname, updateAppState]);
 
     const lastRouteRef = useRef<RouteValue | null>(null);
@@ -156,6 +216,9 @@ export function useAppState({ fallbackWidth, fallbackHeight }: Props) {
             reason: 'navigation',
             data: { to: nextRoute },
         });
+        if (!isSecondaryRoute(nextRoute)) {
+            void updateAppState({ lastRoute: nextRoute });
+        }
     }, [hydrated, location.pathname, trackApp]);
 
     // Initialise after load
@@ -230,8 +293,8 @@ export function useAppState({ fallbackWidth, fallbackHeight }: Props) {
         const last = lastEnforcedNav.current;
         if (last?.bar === activeBar && last.route === path) return;
 
-        if (!isRouteAllowed(path, activeBar)) {
-            const fallback = BAR_RULES[activeBar].defaultRoute;
+        if (!isRouteAllowed(path, activeBar, routeRules)) {
+            const fallback = barRules[activeBar].defaultRoute;
 
             if (path !== fallback) {
                 navigate(fallback, { replace: true });
@@ -240,7 +303,15 @@ export function useAppState({ fallbackWidth, fallbackHeight }: Props) {
         }
 
         lastEnforcedNav.current = { bar: activeBar, route: path };
-    }, [hydrated, activeBar, location.pathname, navigate, playback]);
+    }, [
+        hydrated,
+        activeBar,
+        location.pathname,
+        navigate,
+        playback,
+        barRules,
+        routeRules,
+    ]);
 
     // App size getters
     const widthOverride = routeRule?.widthOverride;

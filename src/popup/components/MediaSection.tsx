@@ -3,18 +3,31 @@ import {
     useMemo,
     useRef,
     useState,
-    MouseEvent as ReactMouseEvent,
+    type MouseEvent as ReactMouseEvent,
     type ReactNode,
     type RefObject,
 } from 'react';
-import { GridIcon, RowsIcon, ColumnsIcon } from '@radix-ui/react-icons';
-import { Button, DropdownMenu, Flex, Text } from '@radix-ui/themes';
+import {
+    ColumnsIcon,
+    Cross2Icon,
+    GridIcon,
+    RowsIcon,
+} from '@radix-ui/react-icons';
+import {
+    Button,
+    DropdownMenu,
+    Flex,
+    IconButton,
+    Skeleton,
+    Text,
+} from '@radix-ui/themes';
 import clsx from 'clsx';
-
+import { handleMenuTriggerKeyDown } from '../hooks/useActions';
 import { MediaRow } from './MediaRow';
 import { MediaShelf, type MediaShelfItem } from './MediaShelf';
 import { SegmentedControl } from './SegmentedControl';
 import { StepperControl } from './StepperControl';
+import { TextButton } from './TextButton';
 
 export type MediaSectionState = {
     id: string;
@@ -33,8 +46,8 @@ export type MediaSectionState = {
     loadingMore?: boolean;
     wideColumns?: boolean;
     showImage?: boolean;
+    trackSubtitleMode?: 'artist' | 'artist-album' | 'artists';
 };
-
 const CLAMP_PX_MAX = 720;
 const COLUMN_WIDTH_MIN = 180;
 const COLUMN_WIDTH_MAX = 520;
@@ -52,7 +65,6 @@ const LIMITS_BY_MODE = {
         cols: { min: 5, max: 20, allowInfinite: true },
     },
 } as const;
-
 const clampCount = (
     val: number,
     {
@@ -65,9 +77,7 @@ const clampCount = (
     if (val <= 0) return allowInfinite ? 0 : min;
     return Math.min(max, Math.max(min, val));
 };
-
 type ControlGroupId = 'type' | 'layout' | 'width' | 'clamp' | 'card';
-
 type ControlGroupProps = {
     id: ControlGroupId;
     label: string;
@@ -77,9 +87,9 @@ type ControlGroupProps = {
     labelRef: RefObject<HTMLButtonElement>;
     onToggle: () => void;
     disableTransition?: boolean;
+    disabled?: boolean;
     children: ReactNode;
 };
-
 function ControlGroup({
     id,
     label,
@@ -89,20 +99,18 @@ function ControlGroup({
     labelRef,
     onToggle,
     disableTransition = false,
+    disabled = false,
     children,
 }: ControlGroupProps) {
     const isActive = activeGroup === id;
     const transitionClass = disableTransition
         ? 'transition-none'
-        : 'transition-all duration-200 ease-out';
-
+        : 'transition-all ';
     return (
         <div
             className={clsx(
                 'relative flex min-w-0 items-center',
-                disableTransition
-                    ? 'transition-none'
-                    : 'transition-[width] duration-200 ease-out'
+                disableTransition ? 'transition-none' : 'transition-[width]'
             )}
             style={{ width: groupWidth || undefined }}
         >
@@ -125,21 +133,20 @@ function ControlGroup({
                         : 'translate-y-0 opacity-100'
                 )}
             >
-                <Text asChild size="2" weight="medium">
-                    <button
-                        type="button"
-                        className="app-link app-link-button px-2 py-1"
-                        ref={labelRef}
-                        onClick={onToggle}
-                    >
-                        {label}
-                    </button>
-                </Text>
+                <TextButton
+                    size="2"
+                    weight="medium"
+                    onClick={onToggle}
+                    buttonClassName="py-0.5 px-0.5"
+                    disabled={disabled}
+                    ref={labelRef}
+                >
+                    {label}
+                </TextButton>
             </div>
         </div>
     );
 }
-
 function ControlSeparator() {
     return (
         <Text size="1" color="gray" mx="1">
@@ -147,33 +154,36 @@ function ControlSeparator() {
         </Text>
     );
 }
-
 interface Props {
     section: MediaSectionState;
     editing: boolean;
-    preview?: boolean;
+    loading?: boolean;
     onChange: (id: string, patch: Partial<MediaSectionState>) => void;
     onDelete?: (id: string) => void;
     onReorderItems?: (id: string, next: MediaShelfItem[]) => void;
     onLoadMore?: (id: string) => void;
+    onTitleClick?: () => void;
     renderContent?: (context: {
         columnWidth?: number;
-        preview: boolean;
+        loading: boolean;
     }) => ReactNode;
     className?: string;
     dragging?: boolean;
+    headerLoading?: boolean;
 }
-
 export function MediaSection({
     section,
     editing,
-    preview = false,
+    loading = false,
     onChange,
+    onDelete,
     onReorderItems,
     onLoadMore,
+    onTitleClick,
     renderContent,
     className,
     dragging = false,
+    headerLoading = true,
 }: Props) {
     const { title, subtitle } = section;
     const [rowsDraft, setRowsDraft] = useState<string | null>(null);
@@ -239,43 +249,36 @@ export function MediaSection({
             ] as const,
         []
     );
-
     const derivedView = section.view ?? 'list';
     const toggleGroup = (id: ControlGroupId) => {
         setActiveGroup((prev) => (prev === id ? null : id));
     };
-
     const derivedInfinite =
         section.infinite !== undefined
             ? section.infinite
             : derivedView === 'card'
               ? 'columns'
               : null;
-
     const mode: 'card' | 'h-list' | 'v-list' =
         derivedView === 'card'
             ? 'card'
             : derivedInfinite === 'columns'
               ? 'h-list'
               : 'v-list';
-
-    const defaultColsByMode = mode === 'v-list' ? 1 : 0; // ∞ for h-list/card
+    const defaultColsByMode = mode === 'v-list' ? 1 : 0;
+    // ∞ for h-list/card
     const defaultRowsByMode =
         mode === 'v-list' ? 0 : LIMITS_BY_MODE[mode].rows.min;
     const defaultColsPlaceholder =
         defaultColsByMode === 0 ? '∞' : String(defaultColsByMode);
     const defaultRowsPlaceholder =
         defaultRowsByMode === 0 ? '∞' : String(defaultRowsByMode);
-
     const orientation = mode === 'v-list' ? 'vertical' : 'horizontal';
     const variant = mode === 'card' ? 'tile' : 'list';
-
     const rawCols = section.columns;
     const rawRows = section.rows;
-
     const rowLimits = LIMITS_BY_MODE[mode].rows;
     const colLimits = LIMITS_BY_MODE[mode].cols;
-
     const layoutCols = clampCount(
         Number.isFinite(Number(rawCols)) ? Number(rawCols) : defaultColsByMode,
         colLimits
@@ -284,7 +287,6 @@ export function MediaSection({
         Number.isFinite(Number(rawRows)) ? Number(rawRows) : defaultRowsByMode,
         rowLimits
     );
-
     const isColsBlank = typeof rawCols === 'number' && Number.isNaN(rawCols);
     const isRowsBlank = typeof rawRows === 'number' && Number.isNaN(rawRows);
     const displayCols = isColsBlank ? '' : layoutCols === 0 ? '∞' : layoutCols;
@@ -331,7 +333,6 @@ export function MediaSection({
         if (!Number.isFinite(next)) return null;
         return clamp(next);
     };
-
     const parseClamp = (raw: string) => {
         const trimmed = raw.trim();
         if (!trimmed) return null;
@@ -340,14 +341,12 @@ export function MediaSection({
         if (!Number.isFinite(next) || next <= 0) return null;
         return next;
     };
-
     const focusDraft = (
         display: string,
         setDraft: (value: string | null) => void
     ) => {
         setDraft(display === '∞' ? '' : display);
     };
-
     const changeCount = (
         value: string,
         clamp: (val: number) => number,
@@ -359,7 +358,6 @@ export function MediaSection({
         if (parsed === null) return;
         onChange(section.id, { [key]: parsed });
     };
-
     const changeCardSize = (value: string) => {
         setCardSizeDraft(value);
         const parsed = parseCount(value, (next) =>
@@ -368,7 +366,6 @@ export function MediaSection({
         if (parsed === null) return;
         onChange(section.id, { cardSize: parsed as 1 | 2 | 3 });
     };
-
     const blurCardSize = (draft: string | null) => {
         if (draft === null) return;
         const parsed = parseCount(draft, (next) =>
@@ -379,7 +376,6 @@ export function MediaSection({
         onChange(section.id, { cardSize: next });
         setCardSizeDraft(null);
     };
-
     const blurCount = (
         draft: string | null,
         clamp: (val: number) => number,
@@ -447,15 +443,13 @@ export function MediaSection({
                 ? Math.ceil(rowsToPx(clampClampRows(clampValue))) + 1
                 : clampClampPx(clampValue)
             : undefined;
-
     const fixedHeight = orientation === 'vertical' ? clampPx : undefined;
-
     const clampUnitLabel = clampUnit === 'items' ? 'rows' : 'px';
     const clampColumnWidth = (val: number) =>
         Math.min(COLUMN_WIDTH_MAX, Math.max(COLUMN_WIDTH_MIN, val));
 
     const placeholderItems = useMemo(() => {
-        if (!preview) return [];
+        if (!loading) return [];
         const cols = maxVisible ?? (orientation === 'horizontal' ? 4 : 8);
         const rows = itemsPerColumn ?? 3;
         const count = orientation === 'horizontal' ? cols * rows : cols;
@@ -465,52 +459,42 @@ export function MediaSection({
             title: 'Loading',
             subtitle: 'Loading',
         }));
-    }, [itemsPerColumn, maxVisible, orientation, preview, section.id]);
+    }, [itemsPerColumn, maxVisible, orientation, loading, section.id]);
 
     const shelfItems =
-        preview && section.items.length === 0
+        loading && section.items.length === 0
             ? placeholderItems
             : section.items;
-
     const toRows = pxToRows ? (px: number) => Math.round(pxToRows(px)) : null;
     const toPx = rowsToPx ? (rows: number) => Math.round(rowsToPx(rows)) : null;
-
     const updateClampUnit = (nextUnit: 'px' | 'items') => {
         if (nextUnit === clampUnit) return;
         if (!toRows || !toPx) return;
         const raw =
             clampDraft ??
             (clampValue === undefined ? undefined : String(clampValue));
-
         if (raw === undefined) {
             onChange(section.id, { clampUnit: nextUnit });
             return;
         }
-
         const parsed = parseClamp(raw);
         if (parsed === null) {
             onChange(section.id, { clampUnit: nextUnit });
             setClampDraft(null);
             return;
         }
-
         if (parsed === undefined) {
             onChange(section.id, { clampUnit: nextUnit, rowHeight: undefined });
             setClampDraft(null);
             return;
         }
-
         const converted =
             clampUnit === 'px' && nextUnit === 'items'
                 ? clampClampRows(toRows(parsed))
                 : clampUnit === 'items' && nextUnit === 'px'
                   ? clampClampPx(toPx(parsed))
                   : parsed;
-
-        onChange(section.id, {
-            clampUnit: nextUnit,
-            rowHeight: converted,
-        });
+        onChange(section.id, { clampUnit: nextUnit, rowHeight: converted });
         setClampDraft(String(converted));
     };
 
@@ -518,9 +502,7 @@ export function MediaSection({
         if (mode !== 'v-list') return;
         const rowEl = measureRowRef.current;
         const stackEl = measureStackRef.current;
-        if (!rowEl) return;
-        if (!stackEl) return;
-
+        if (!rowEl || !stackEl) return;
         const compute = () => {
             const rect = rowEl.getBoundingClientRect();
             const style = getComputedStyle(stackEl);
@@ -536,13 +518,12 @@ export function MediaSection({
                 return prev;
             });
         };
-
         compute();
         const observer = new ResizeObserver(() => compute());
         observer.observe(rowEl);
         observer.observe(stackEl);
         return () => observer.disconnect();
-    }, [mode, section.items.length, preview]);
+    }, [mode, section.items.length, loading]);
 
     useLayoutEffect(() => {
         if (!editing) return;
@@ -564,17 +545,28 @@ export function MediaSection({
 
     useLayoutEffect(() => {
         if (!editing) return;
-        setGroupWidths((prev) => {
-            const next = { ...prev };
-            controlGroups.forEach((group) => {
-                const width =
-                    activeGroup === group.id
-                        ? group.controlsRef.current?.offsetWidth
-                        : group.labelRef.current?.offsetWidth;
-                if (width !== undefined) next[group.id] = width;
+        const update = () => {
+            setGroupWidths((prev) => {
+                const next = { ...prev };
+                controlGroups.forEach((group) => {
+                    const width =
+                        activeGroup === group.id
+                            ? group.controlsRef.current?.offsetWidth
+                            : group.labelRef.current?.offsetWidth;
+                    if (width !== undefined) next[group.id] = width;
+                });
+                return next;
             });
-            return next;
+        };
+        update();
+        const observer = new ResizeObserver(update);
+        controlGroups.forEach((group) => {
+            if (group.labelRef.current)
+                observer.observe(group.labelRef.current);
+            if (group.controlsRef.current)
+                observer.observe(group.controlsRef.current);
         });
+        return () => observer.disconnect();
     }, [activeGroup, controlGroups, editing, mode]);
 
     useLayoutEffect(() => {
@@ -582,7 +574,7 @@ export function MediaSection({
     }, [editing]);
 
     const content = renderContent ? (
-        renderContent({ columnWidth, preview })
+        renderContent({ columnWidth, loading })
     ) : (
         <MediaShelf
             droppableId={`media-shelf-${section.id}`}
@@ -595,11 +587,12 @@ export function MediaSection({
             maxVisible={maxVisible}
             fixedHeight={fixedHeight}
             cardSize={section.cardSize}
-            hasMore={preview ? false : section.hasMore}
-            loadingMore={preview ? false : section.loadingMore}
+            trackSubtitleMode={section.trackSubtitleMode}
+            hasMore={loading ? false : section.hasMore}
+            loadingMore={loading ? false : section.loadingMore}
             showImage={section.showImage}
             onLoadMore={
-                preview || !onLoadMore
+                loading || !onLoadMore
                     ? undefined
                     : () => onLoadMore(section.id)
             }
@@ -610,16 +603,16 @@ export function MediaSection({
             }
             interactive={!editing}
             draggable={false}
-            itemLoading={preview}
+            itemLoading={loading}
         />
     );
 
     return (
         <div
             className={clsx(
-                'rounded-2 relative m-1 min-w-0 bg-[var(--color-background)] ring-2 ring-transparent ring-offset-3 ring-offset-[var(--color-background)] transition-all',
-                editing && 'hover:!ring-[var(--accent-8)]',
-                editing && dragging && '!ring-[var(--accent-10)]',
+                'rounded-2 bg-background ring-offset-background relative ring-2 ring-transparent ring-offset-3 transition-all',
+                editing && 'hover:ring-accent-8!',
+                editing && dragging && 'ring-accent-10!',
                 className
             )}
             data-dragging={dragging ? 'true' : 'false'}
@@ -640,44 +633,54 @@ export function MediaSection({
                     </div>
                 </Flex>
             </div>
-            <Flex direction="column" gap="1" className="relative min-w-0">
-                <Flex
-                    direction="row"
-                    align="baseline"
-                    gap="2"
-                    className="min-w-0"
-                >
-                    <Text size="3" weight="bold">
-                        {title}
-                    </Text>
+            <Flex direction="column" gap="1" className="relative">
+                <Flex direction="row" align="baseline" gap="2">
+                    <Skeleton loading={loading && headerLoading}>
+                        {onTitleClick ? (
+                            <TextButton
+                                size="3"
+                                weight="bold"
+                                onClick={onTitleClick}
+                            >
+                                {title}
+                            </TextButton>
+                        ) : (
+                            <Text size="3" weight="bold">
+                                {title}
+                            </Text>
+                        )}
+                    </Skeleton>
                     {subtitle && (
-                        <Text size="2" color="gray">
-                            {subtitle}
-                        </Text>
+                        <Skeleton loading={loading && headerLoading}>
+                            <Text size="2" color="gray">
+                                {subtitle}
+                            </Text>
+                        </Skeleton>
                     )}
                 </Flex>
-
                 <div
                     className={clsx(
                         'pointer-events-none absolute -top-0.5 right-0 z-10 overflow-hidden will-change-[opacity,transform]',
                         skipEditTransition
                             ? 'transition-none'
-                            : 'transition-[opacity,transform] duration-200',
-                        editing ? 'opacity-100' : 'max-h-0 opacity-0'
+                            : 'transition-[opacity,transform]',
+                        editing ? 'opacity-100' : 'opacity-0'
                     )}
                 >
                     <Flex
                         align="center"
                         direction="row"
                         wrap="nowrap"
-                        gap="1"
+                        gap="0.5"
                         p="1"
                         className={clsx(
-                            'pointer-events-auto min-h-[36px] rounded-full bg-[var(--color-panel-solid)]/90 shadow-sm backdrop-blur',
+                            'bg-panel-solid/90 min-h-9 rounded-full shadow-sm backdrop-blur',
                             skipEditTransition
                                 ? 'transition-none'
-                                : 'transition-[opacity,width] duration-200',
-                            editing ? 'opacity-100' : 'opacity-0'
+                                : 'transition-[opacity,width]',
+                            editing
+                                ? 'pointer-events-auto opacity-100'
+                                : 'pointer-events-none opacity-0'
                         )}
                         onMouseDownCapture={(event: ReactMouseEvent) => {
                             const target = event.target;
@@ -696,6 +699,7 @@ export function MediaSection({
                             labelRef={typeLabelRef}
                             onToggle={() => toggleGroup('type')}
                             disableTransition={skipEditTransition}
+                            disabled={!editing}
                         >
                             <Flex align="center" direction="row" gap="1">
                                 <SegmentedControl
@@ -730,14 +734,24 @@ export function MediaSection({
                                                     : viewNext === 'h-list'
                                                       ? 'columns'
                                                       : null,
+                                            columns:
+                                                viewNext === 'v-list'
+                                                    ? 1
+                                                    : viewNext === 'card'
+                                                      ? 0
+                                                      : 0,
+                                            rows:
+                                                viewNext === 'v-list'
+                                                    ? 0
+                                                    : LIMITS_BY_MODE[viewNext]
+                                                          .rows.min,
                                         })
                                     }
+                                    disabled={!editing}
                                 />
                             </Flex>
                         </ControlGroup>
-
                         <ControlSeparator />
-
                         <ControlGroup
                             id="layout"
                             label="Layout"
@@ -747,6 +761,7 @@ export function MediaSection({
                             labelRef={layoutLabelRef}
                             onToggle={() => toggleGroup('layout')}
                             disableTransition={skipEditTransition}
+                            disabled={!editing}
                         >
                             <Flex
                                 align="center"
@@ -760,11 +775,16 @@ export function MediaSection({
                                     placeholder={defaultRowsPlaceholder}
                                     onDecrement={() => {
                                         setRowsDraft(null);
+                                        const next =
+                                            rowLimits.allowInfinite &&
+                                            layoutRows === rowLimits.min
+                                                ? 0
+                                                : clampCount(
+                                                      (layoutRows || 0) - 1,
+                                                      rowLimits
+                                                  );
                                         onChange(section.id, {
-                                            rows: clampCount(
-                                                (layoutRows || 0) - 1,
-                                                rowLimits
-                                            ),
+                                            rows: next,
                                         });
                                     }}
                                     onIncrement={() => {
@@ -800,8 +820,8 @@ export function MediaSection({
                                     onValueFocus={() =>
                                         focusDraft(displayRowsStr, setRowsDraft)
                                     }
+                                    disabled={!editing}
                                 />
-
                                 {mode !== 'v-list' && (
                                     <StepperControl
                                         label="Cols"
@@ -809,11 +829,16 @@ export function MediaSection({
                                         placeholder={defaultColsPlaceholder}
                                         onDecrement={() => {
                                             setColsDraft(null);
+                                            const next =
+                                                colLimits.allowInfinite &&
+                                                layoutCols === colLimits.min
+                                                    ? 0
+                                                    : clampCount(
+                                                          (layoutCols || 0) - 1,
+                                                          colLimits
+                                                      );
                                             onChange(section.id, {
-                                                columns: clampCount(
-                                                    (layoutCols || 0) - 1,
-                                                    colLimits
-                                                ),
+                                                columns: next,
                                             });
                                         }}
                                         onIncrement={() => {
@@ -858,11 +883,11 @@ export function MediaSection({
                                                 setColsDraft
                                             )
                                         }
+                                        disabled={!editing}
                                     />
                                 )}
                             </Flex>
                         </ControlGroup>
-
                         {mode === 'h-list' && (
                             <>
                                 <ControlSeparator />
@@ -875,6 +900,7 @@ export function MediaSection({
                                     labelRef={widthLabelRef}
                                     onToggle={() => toggleGroup('width')}
                                     disableTransition={skipEditTransition}
+                                    disabled={!editing}
                                 >
                                     <StepperControl
                                         label="Width"
@@ -919,16 +945,16 @@ export function MediaSection({
                                             <Text
                                                 size="1"
                                                 color="gray"
-                                                className="px-0.25"
+                                                className="px-px"
                                             >
                                                 px
                                             </Text>
                                         }
+                                        disabled={!editing}
                                     />
                                 </ControlGroup>
                             </>
                         )}
-
                         {mode === 'v-list' && (
                             <>
                                 <ControlSeparator />
@@ -941,6 +967,7 @@ export function MediaSection({
                                     labelRef={clampLabelRef}
                                     onToggle={() => toggleGroup('clamp')}
                                     disableTransition={skipEditTransition}
+                                    disabled={!editing}
                                 >
                                     <StepperControl
                                         label="Clamp"
@@ -991,12 +1018,17 @@ export function MediaSection({
                                         }}
                                         suffix={
                                             <DropdownMenu.Root>
-                                                <DropdownMenu.Trigger>
+                                                <DropdownMenu.Trigger
+                                                    onKeyDown={
+                                                        handleMenuTriggerKeyDown
+                                                    }
+                                                >
                                                     <Button
                                                         size="0"
                                                         variant="ghost"
                                                         radius="small"
-                                                        className="!px-0.25"
+                                                        className="px-px!"
+                                                        disabled={!editing}
                                                     >
                                                         {clampUnitLabel}
                                                     </Button>
@@ -1026,11 +1058,11 @@ export function MediaSection({
                                                 </DropdownMenu.Content>
                                             </DropdownMenu.Root>
                                         }
+                                        disabled={!editing}
                                     />
                                 </ControlGroup>
                             </>
                         )}
-
                         {mode === 'card' && (
                             <>
                                 <ControlSeparator />
@@ -1043,6 +1075,7 @@ export function MediaSection({
                                     labelRef={cardLabelRef}
                                     onToggle={() => toggleGroup('card')}
                                     disableTransition={skipEditTransition}
+                                    disabled={!editing}
                                 >
                                     <StepperControl
                                         label="Size"
@@ -1080,13 +1113,28 @@ export function MediaSection({
                                                 setCardSizeDraft
                                             )
                                         }
+                                        disabled={!editing}
                                     />
                                 </ControlGroup>
                             </>
                         )}
+                        {onDelete && (
+                            <>
+                                <IconButton
+                                    size="1"
+                                    variant="ghost"
+                                    radius="full"
+                                    color="red"
+                                    disabled={!editing}
+                                    onClick={() => onDelete(section.id)}
+                                    aria-label={`Remove ${title}`}
+                                >
+                                    <Cross2Icon />
+                                </IconButton>
+                            </>
+                        )}
                     </Flex>
                 </div>
-
                 <div
                     className={clsx(
                         editing && 'pointer-events-none select-none'
@@ -1094,14 +1142,14 @@ export function MediaSection({
                 >
                     {content}
                 </div>
-                {!preview && section.loadingMore && (
+                {!loading && section.loadingMore && (
                     <div className="pointer-events-none absolute right-2 bottom-2 z-20">
                         <Flex
                             align="center"
                             gap="1"
-                            className="rounded-full bg-[var(--color-panel-solid)]/90 px-2 py-[6px] text-[11px] text-[var(--gray-12)] shadow-sm backdrop-blur"
+                            className="bg-panel-solid/90 text-1 text-gray-12 rounded-full px-2 py-1.5 shadow-sm backdrop-blur"
                         >
-                            <span className="h-2 w-2 animate-pulse rounded-full bg-[var(--accent-9)]" />
+                            <span className="bg-accent-9 h-2 w-2 animate-pulse rounded-full" />
                             Loading more
                         </Flex>
                     </div>

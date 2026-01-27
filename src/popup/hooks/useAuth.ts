@@ -4,11 +4,17 @@ import {
     ANALYTICS_EVENTS,
     createAnalyticsTracker,
 } from '../../shared/analytics';
+import {
+    createLogger,
+    isSpotifySessionError,
+    logError,
+} from '../../shared/logging';
 import { Msg, sendMessage, sendSpotifyMessage } from '../../shared/messaging';
 import { getFromStorage, setInStorage } from '../../shared/storage';
 
 const SPOTIFY_USER_KEY = 'spotifyUser';
 const SPOTIFY_CONNECTION_KEY = 'spotifyConnectionMeta';
+const logger = createLogger('auth');
 
 export interface SpotifyConnectionMeta {
     userId: string;
@@ -66,7 +72,9 @@ export function useAuth() {
                 sessionActiveRef.current = false;
             }
         } catch (error) {
-            console.warn('[auth] Failed to sync Spotify user', error);
+            logError(logger, 'Failed to sync Spotify user', error, {
+                suppress: isSpotifySessionError,
+            });
             setAuthed(false);
             setUser(undefined);
             sessionActiveRef.current = false;
@@ -104,11 +112,11 @@ export function useAuth() {
 
     // Initial auth sync
     useEffect(() => {
-        getFromStorage<UserProfile>(SPOTIFY_USER_KEY, (user) => {
+        void getFromStorage<UserProfile>(SPOTIFY_USER_KEY, (user) => {
             if (user) setCachedUser(user);
             if (!sessionActiveRef.current && user) setUser(user);
         });
-        getFromStorage<SpotifyConnectionMeta>(
+        void getFromStorage<SpotifyConnectionMeta>(
             SPOTIFY_CONNECTION_KEY,
             (meta) => {
                 connectionRef.current = meta;

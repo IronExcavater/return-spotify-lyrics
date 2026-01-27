@@ -14,6 +14,7 @@ type StepperControlProps = {
     onValueFocus: () => void;
     hideSteppers?: boolean;
     suffix?: ReactNode;
+    disabled?: boolean;
 };
 
 export function StepperControl({
@@ -27,6 +28,7 @@ export function StepperControl({
     onValueFocus,
     hideSteppers = false,
     suffix,
+    disabled = false,
 }: StepperControlProps) {
     return (
         <Flex align="center" direction="row" wrap="nowrap">
@@ -39,6 +41,7 @@ export function StepperControl({
                     variant="ghost"
                     radius="small"
                     onClick={onDecrement}
+                    disabled={disabled}
                 >
                     –
                 </Button>
@@ -51,6 +54,7 @@ export function StepperControl({
                 onBlur={onValueBlur}
                 onFocus={onValueFocus}
                 className="text-center"
+                disabled={disabled}
             />
             {!hideSteppers && (
                 <Button
@@ -58,6 +62,7 @@ export function StepperControl({
                     variant="ghost"
                     radius="small"
                     onClick={onIncrement}
+                    disabled={disabled}
                 >
                     +
                 </Button>

@@ -10,6 +10,7 @@ import {
     SPOTIFY_SCOPES,
     SPOTIFY_TOKEN_URL,
 } from '../shared/config.ts';
+import { createLogger, logError } from '../shared/logging';
 import { createPkcePair } from '../shared/pkce.ts';
 import {
     getFromStorage,
@@ -26,6 +27,8 @@ const SPOTIFY_SCOPE_STRING = SPOTIFY_SCOPES.join(' ');
 let refreshTimer: ReturnType<typeof setTimeout> | undefined;
 let sdk: SpotifyApi | null = null;
 let refreshInFlight: Promise<SpotifyToken> | null = null;
+
+const logger = createLogger('spotifyAuth');
 
 export interface SpotifyToken extends AccessToken {
     expires_by: number;
@@ -107,7 +110,7 @@ export async function requestAccessToken(code: string): Promise<SpotifyToken> {
         }),
     });
 
-    const raw = (await response.json()) as AccessToken;
+    const raw = (await response.json()) as AccessToken & { scope?: string };
     if (!response.ok || !raw) throw new Error('Token exchange failed');
 
     const token = withExpiry(raw);
@@ -139,7 +142,10 @@ export async function refreshAccessToken(
             }),
         });
 
-        let raw: AccessToken | { error?: string } | undefined;
+        let raw:
+            | (AccessToken & { scope?: string; refresh_token?: string })
+            | { error?: string }
+            | undefined;
         try {
             raw = (await response.json()) as typeof raw;
         } catch {
@@ -187,7 +193,7 @@ export async function getAccessToken(): Promise<SpotifyToken | undefined> {
         try {
             token = await refreshAccessToken(token.refresh_token);
         } catch (err) {
-            console.warn('[spotifyAuth] Token refresh failed', err);
+            logError(logger, 'Token refresh failed', err);
             await clearSpotifySession();
             return undefined;
         }
@@ -226,7 +232,7 @@ async function refreshNow(token: SpotifyToken) {
             (await getFromStorage<SpotifyToken>(SPOTIFY_TOKEN_KEY)) ?? token;
         await refreshAccessToken(latest.refresh_token);
     } catch (err) {
-        console.warn('[spotifyAuth] Failed to refresh token', err);
+        logError(logger, 'Failed to refresh token', err);
     }
 }
 

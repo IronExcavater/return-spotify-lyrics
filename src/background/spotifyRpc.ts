@@ -7,6 +7,57 @@ async function requireClient() {
     return client;
 }
 
+const isNoActiveDeviceError = (error: unknown) => {
+    const message = error instanceof Error ? error.message : String(error);
+    return (
+        message.includes('NO_ACTIVE_DEVICE') ||
+        message.includes('No active device')
+    );
+};
+
+const isJsonParseError = (error: unknown) => {
+    if (!(error instanceof SyntaxError)) return false;
+    const message = error.message;
+    return (
+        message.includes('is not valid JSON') ||
+        message.includes('Unexpected token') ||
+        message.includes('Unexpected non-whitespace character')
+    );
+};
+
+const getFallbackDeviceId = async (
+    client: Awaited<ReturnType<typeof requireClient>>
+) => {
+    const devices = await client.player.getAvailableDevices();
+    const available = devices.devices?.filter(
+        (device) => !device.is_restricted && device.id
+    );
+    if (!available || available.length === 0) return null;
+    const active = available.find((device) => device.is_active);
+    return (active ?? available[0])?.id ?? null;
+};
+
+const withActiveDevice = async <T>(
+    client: Awaited<ReturnType<typeof requireClient>>,
+    fn: (deviceId?: string) => Promise<T>
+) => {
+    try {
+        return await fn(undefined);
+    } catch (error) {
+        if (isJsonParseError(error)) return undefined as T;
+        if (!isNoActiveDeviceError(error)) throw error;
+        const deviceId = await getFallbackDeviceId(client);
+        if (!deviceId) throw error;
+        await client.player.transferPlayback([deviceId], false);
+        try {
+            return await fn(deviceId);
+        } catch (retryError) {
+            if (isJsonParseError(retryError)) return undefined as T;
+            throw retryError;
+        }
+    }
+};
+
 export const spotifyRpc = {
     currentUser: async () => {
         const client = await requireClient();
@@ -19,35 +70,51 @@ export const spotifyRpc = {
     },
     pausePlayback: async () => {
         const client = await requireClient();
-        return client.player.pausePlayback('');
+        return withActiveDevice(client, (deviceId) =>
+            client.player.pausePlayback(deviceId)
+        );
     },
     startResumePlayback: async () => {
         const client = await requireClient();
-        return client.player.startResumePlayback('');
+        return withActiveDevice(client, (deviceId) =>
+            client.player.startResumePlayback(deviceId)
+        );
     },
     seekToPosition: async (positionMs: number) => {
         const client = await requireClient();
-        return client.player.seekToPosition(positionMs);
+        return withActiveDevice(client, (deviceId) =>
+            client.player.seekToPosition(positionMs, deviceId)
+        );
     },
     skipToNext: async () => {
         const client = await requireClient();
-        return client.player.skipToNext('');
+        return withActiveDevice(client, (deviceId) =>
+            client.player.skipToNext(deviceId)
+        );
     },
     skipToPrevious: async () => {
         const client = await requireClient();
-        return client.player.skipToPrevious('');
+        return withActiveDevice(client, (deviceId) =>
+            client.player.skipToPrevious(deviceId)
+        );
     },
     toggleShuffle: async (state: boolean) => {
         const client = await requireClient();
-        return client.player.togglePlaybackShuffle(state);
+        return withActiveDevice(client, (deviceId) =>
+            client.player.togglePlaybackShuffle(state, deviceId)
+        );
     },
     setRepeatMode: async (mode: 'off' | 'track' | 'context') => {
         const client = await requireClient();
-        return client.player.setRepeatMode(mode);
+        return withActiveDevice(client, (deviceId) =>
+            client.player.setRepeatMode(mode, deviceId)
+        );
     },
     setPlaybackVolume: async (volume: number) => {
         const client = await requireClient();
-        return client.player.setPlaybackVolume(volume);
+        return withActiveDevice(client, (deviceId) =>
+            client.player.setPlaybackVolume(volume, deviceId)
+        );
     },
     getAvailableDevices: async () => {
         const client = await requireClient();
@@ -64,7 +131,9 @@ export const spotifyRpc = {
     },
     addToQueue: async (uri: string) => {
         const client = await requireClient();
-        return client.player.addItemToPlaybackQueue(uri);
+        return withActiveDevice(client, (deviceId) =>
+            client.player.addItemToPlaybackQueue(uri, deviceId)
+        );
     },
     startPlayback: async ({
         uris,
@@ -78,12 +147,14 @@ export const spotifyRpc = {
         positionMs?: number;
     }) => {
         const client = await requireClient();
-        return client.player.startResumePlayback(
-            '',
-            contextUri,
-            uris,
-            offset,
-            positionMs
+        return withActiveDevice(client, (deviceId) =>
+            client.player.startResumePlayback(
+                deviceId,
+                contextUri,
+                uris,
+                offset,
+                positionMs
+            )
         );
     },
 

@@ -4,4 +4,8 @@ declare module '@radix-ui/themes' {
     interface AvatarProps {
         imageClassName?: string;
     }
+
+    interface AvatarImplProps {
+        imageClassName?: string;
+    }
 }

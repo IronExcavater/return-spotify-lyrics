@@ -5,6 +5,7 @@ export type MediaRouteState = {
     kind: MediaKind;
     id: string;
     selectedId?: string;
+    singleTrack?: boolean;
 };
 
 let lastMediaRouteState: MediaRouteState | null = null;
@@ -13,8 +14,17 @@ const MEDIA_STATE_KEY = 'mediaRouteState';
 export const getLastMediaRouteState = () => lastMediaRouteState;
 
 export const setLastMediaRouteState = (state: MediaRouteState | null) => {
+    const previous = lastMediaRouteState;
     lastMediaRouteState = state;
-    void setInStorage(MEDIA_STATE_KEY, state ?? undefined);
+    const shouldPersist =
+        !previous ||
+        !state ||
+        previous.kind !== state.kind ||
+        previous.id !== state.id ||
+        previous.singleTrack !== state.singleTrack;
+    if (shouldPersist) {
+        void setInStorage(MEDIA_STATE_KEY, state ?? undefined);
+    }
 };
 
 export const loadLastMediaRouteState = async () => {
@@ -37,6 +47,8 @@ export const buildMediaRouteFromItem = (
             kind: item.parentKind,
             id: item.parentId,
             selectedId: item.id,
+            singleTrack:
+                item.kind === 'track' ? item.parentIsSingle : undefined,
         };
     }
 
