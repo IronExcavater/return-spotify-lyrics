@@ -10,7 +10,7 @@ import {
     ChevronUpIcon,
     ListBulletIcon,
 } from '@radix-ui/react-icons';
-import { Flex, IconButton, Skeleton, Separator } from '@radix-ui/themes';
+import { Flex, IconButton, Separator } from '@radix-ui/themes';
 import { SimplifiedArtist, SimplifiedShow } from '@spotify/web-api-ts-sdk';
 import clsx from 'clsx';
 import { MdMusicNote } from 'react-icons/md';
@@ -29,6 +29,7 @@ import { IconToggle } from './IconToggle';
 import { Marquee } from './Marquee';
 import { PlaybackSeek } from './PlaybackSeek';
 import { PlaybackVolume } from './PlaybackVolume';
+import { SkeletonText } from './SkeletonText';
 import { TextButton } from './TextButton';
 
 interface Props {
@@ -70,14 +71,11 @@ export function PlaybackBar({
     const track = asTrack(playback?.item);
     const episode = asEpisode(playback?.item);
 
-    const title = playback?.item?.name ?? 'Placeholder';
+    const title = playback?.item?.name ?? '';
     const artists: (SimplifiedArtist | SimplifiedShow)[] = useMemo(() => {
         if (track?.artists) return track.artists;
         if (episode?.show) return [episode.show];
-        return [
-            { name: 'Placeholder' },
-            { name: 'Faker' },
-        ] as SimplifiedArtist[];
+        return [{ name: '' }] as SimplifiedArtist[];
     }, [track?.artists, episode?.show]);
 
     const albumImage =
@@ -191,7 +189,13 @@ export function PlaybackBar({
                                 {/* Title */}
                                 <Fade enabled={!loading} grow>
                                     <Marquee mode="bounce" grow>
-                                        <Skeleton loading={loading}>
+                                        <SkeletonText
+                                            loading={loading}
+                                            parts={[title]}
+                                            preset="media-row"
+                                            variant="title"
+                                            className="w-fit"
+                                        >
                                             <TextButton
                                                 size="3"
                                                 weight="bold"
@@ -199,7 +203,7 @@ export function PlaybackBar({
                                             >
                                                 {title}
                                             </TextButton>
-                                        </Skeleton>
+                                        </SkeletonText>
                                     </Marquee>
                                 </Fade>
                             </Flex>
@@ -216,8 +220,12 @@ export function PlaybackBar({
                                                         : artist.name;
 
                                                 return (
-                                                    <Skeleton
+                                                    <SkeletonText
                                                         loading={loading}
+                                                        parts={[label, title]}
+                                                        preset="media-row"
+                                                        variant="subtitle"
+                                                        className="w-fit"
                                                         key={artist.id ?? label}
                                                     >
                                                         <TextButton
@@ -231,7 +239,7 @@ export function PlaybackBar({
                                                         >
                                                             {label}
                                                         </TextButton>
-                                                    </Skeleton>
+                                                    </SkeletonText>
                                                 );
                                             })}
                                         </Flex>

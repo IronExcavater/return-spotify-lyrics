@@ -11,16 +11,14 @@ type SurfaceRootProps = {
 
 export function SurfaceRoot({ surface }: SurfaceRootProps) {
     return (
-        <React.StrictMode>
-            <Theme
-                appearance="dark"
-                accentColor="grass"
-                panelBackground="translucent"
-            >
-                <MemoryRouter>
-                    <App surface={surface} />
-                </MemoryRouter>
-            </Theme>
-        </React.StrictMode>
+        <Theme
+            appearance="dark"
+            accentColor="grass"
+            panelBackground="translucent"
+        >
+            <MemoryRouter>
+                <App surface={surface} />
+            </MemoryRouter>
+        </Theme>
     );
 }

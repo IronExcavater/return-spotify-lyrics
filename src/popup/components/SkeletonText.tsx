@@ -41,6 +41,7 @@ interface Props extends Omit<SkeletonProps, 'children'> {
     widthOptions?: WidthOptions;
     className?: string;
     style?: CSSProperties;
+    fullWidth?: boolean;
 }
 
 export function SkeletonText({
@@ -53,6 +54,7 @@ export function SkeletonText({
     widthOptions,
     className,
     style,
+    fullWidth = true,
     ...skeletonProps
 }: Props) {
     const presetConfig = PRESETS[preset];
@@ -66,18 +68,23 @@ export function SkeletonText({
     );
     const width = variant === 'title' ? titleWidth : subtitleWidth;
     const widthStyle =
-        skeletonProps.loading !== false
+        skeletonProps.loading !== false && fullWidth
             ? { width: `${width}%`, ...style }
             : style;
+    const wrapperClass = [
+        fullWidth ? 'w-full' : 'inline-flex',
+        'min-w-0',
+        className,
+    ]
+        .filter(Boolean)
+        .join(' ');
+    const innerClass = [fullWidth ? 'w-full' : 'inline-flex', 'min-w-0']
+        .filter(Boolean)
+        .join(' ');
 
     return (
-        <Skeleton
-            {...skeletonProps}
-            className={['w-full', 'min-w-0', className]
-                .filter(Boolean)
-                .join(' ')}
-        >
-            <Flex className="w-full min-w-0" style={widthStyle}>
+        <Skeleton {...skeletonProps} className={wrapperClass}>
+            <Flex className={innerClass} style={widthStyle}>
                 {children}
             </Flex>
         </Skeleton>

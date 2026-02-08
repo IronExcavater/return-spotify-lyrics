@@ -1,4 +1,3 @@
-import { getFromStorage, setInStorage } from '../../shared/storage';
 import type { MediaItem, MediaKind } from '../../shared/types';
 
 export type MediaRouteState = {
@@ -6,31 +5,6 @@ export type MediaRouteState = {
     id: string;
     selectedId?: string;
     singleTrack?: boolean;
-};
-
-let lastMediaRouteState: MediaRouteState | null = null;
-const MEDIA_STATE_KEY = 'mediaRouteState';
-
-export const getLastMediaRouteState = () => lastMediaRouteState;
-
-export const setLastMediaRouteState = (state: MediaRouteState | null) => {
-    const previous = lastMediaRouteState;
-    lastMediaRouteState = state;
-    const shouldPersist =
-        !previous ||
-        !state ||
-        previous.kind !== state.kind ||
-        previous.id !== state.id ||
-        previous.singleTrack !== state.singleTrack;
-    if (shouldPersist) {
-        void setInStorage(MEDIA_STATE_KEY, state ?? undefined);
-    }
-};
-
-export const loadLastMediaRouteState = async () => {
-    const stored = await getFromStorage<MediaRouteState>(MEDIA_STATE_KEY);
-    if (stored) lastMediaRouteState = stored;
-    return stored ?? null;
 };
 
 export const buildMediaRouteFromItem = (
@@ -56,4 +30,15 @@ export const buildMediaRouteFromItem = (
         kind: item.kind,
         id: item.id,
     };
+};
+
+export const buildMediaNavigationFromItem = (
+    item: MediaItem
+): { path: '/media' | '/playlist'; state: MediaRouteState } | null => {
+    const state = buildMediaRouteFromItem(item);
+    if (!state) return null;
+    if (state.kind === 'playlist') {
+        return { path: '/playlist', state };
+    }
+    return { path: '/media', state };
 };

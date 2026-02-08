@@ -6,6 +6,10 @@ export const SPOTIFY_SCOPES = [
     'user-read-recently-played',
     'user-top-read',
     'user-library-read',
+    'playlist-read-private',
+    'playlist-read-collaborative',
+    'playlist-modify-public',
+    'playlist-modify-private',
 ];
 
 export const SPOTIFY_REDIRECT = 'oauth-complete';

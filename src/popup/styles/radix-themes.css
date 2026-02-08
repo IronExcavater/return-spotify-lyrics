@@ -51,3 +51,48 @@
     user-select: none;
     -webkit-user-drag: none;
 }
+
+.rt-TooltipContent {
+    --tooltip-bg: var(--gray-2);
+    --tooltip-fg: var(--gray-12);
+    --tooltip-border: rgb(255 255 255 / 18%);
+    --tooltip-shadow: 0 12px 30px rgb(0 0 0 / 35%);
+
+    background-color: var(--tooltip-bg);
+    box-shadow:
+        0 0 0 1px var(--tooltip-border),
+        var(--tooltip-shadow);
+}
+
+.rt-TooltipText {
+    color: var(--tooltip-fg);
+}
+
+.rt-TooltipArrow {
+    fill: var(--tooltip-bg);
+    overflow: visible;
+}
+
+.rt-TooltipContent[data-side='top'] .rt-TooltipArrow {
+    filter: drop-shadow(1px 0 0 var(--tooltip-border))
+        drop-shadow(-1px 0 0 var(--tooltip-border))
+        drop-shadow(0 1px 0 var(--tooltip-border));
+}
+
+.rt-TooltipContent[data-side='bottom'] .rt-TooltipArrow {
+    filter: drop-shadow(1px 0 0 var(--tooltip-border))
+        drop-shadow(-1px 0 0 var(--tooltip-border))
+        drop-shadow(0 -1px 0 var(--tooltip-border));
+}
+
+.rt-TooltipContent[data-side='left'] .rt-TooltipArrow {
+    filter: drop-shadow(1px 0 0 var(--tooltip-border))
+        drop-shadow(0 1px 0 var(--tooltip-border))
+        drop-shadow(0 -1px 0 var(--tooltip-border));
+}
+
+.rt-TooltipContent[data-side='right'] .rt-TooltipArrow {
+    filter: drop-shadow(-1px 0 0 var(--tooltip-border))
+        drop-shadow(0 1px 0 var(--tooltip-border))
+        drop-shadow(0 -1px 0 var(--tooltip-border));
+}

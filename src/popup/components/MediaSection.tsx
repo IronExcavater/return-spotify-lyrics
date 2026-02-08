@@ -13,19 +13,13 @@ import {
     GridIcon,
     RowsIcon,
 } from '@radix-ui/react-icons';
-import {
-    Button,
-    DropdownMenu,
-    Flex,
-    IconButton,
-    Skeleton,
-    Text,
-} from '@radix-ui/themes';
+import { Button, DropdownMenu, Flex, IconButton, Text } from '@radix-ui/themes';
 import clsx from 'clsx';
 import { handleMenuTriggerKeyDown } from '../hooks/useActions';
 import { MediaRow } from './MediaRow';
 import { MediaShelf, type MediaShelfItem } from './MediaShelf';
 import { SegmentedControl } from './SegmentedControl';
+import { SkeletonText } from './SkeletonText';
 import { StepperControl } from './StepperControl';
 import { TextButton } from './TextButton';
 
@@ -447,6 +441,7 @@ export function MediaSection({
     const clampUnitLabel = clampUnit === 'items' ? 'rows' : 'px';
     const clampColumnWidth = (val: number) =>
         Math.min(COLUMN_WIDTH_MAX, Math.max(COLUMN_WIDTH_MIN, val));
+    const skeletonLabel = '\u00A0';
 
     const placeholderItems = useMemo(() => {
         if (!loading) return [];
@@ -456,10 +451,17 @@ export function MediaSection({
         const safeCount = Math.max(6, Math.min(count, 48));
         return Array.from({ length: safeCount }).map((_, idx) => ({
             id: `${section.id}-placeholder-${idx}`,
-            title: 'Loading',
-            subtitle: 'Loading',
+            title: skeletonLabel,
+            subtitle: skeletonLabel,
         }));
-    }, [itemsPerColumn, maxVisible, orientation, loading, section.id]);
+    }, [
+        itemsPerColumn,
+        maxVisible,
+        orientation,
+        loading,
+        section.id,
+        skeletonLabel,
+    ]);
 
     const shelfItems =
         loading && section.items.length === 0
@@ -635,7 +637,14 @@ export function MediaSection({
             </div>
             <Flex direction="column" gap="1" className="relative">
                 <Flex direction="row" align="baseline" gap="2">
-                    <Skeleton loading={loading && headerLoading}>
+                    <SkeletonText
+                        loading={loading && headerLoading}
+                        parts={[title]}
+                        preset="media-row"
+                        variant="title"
+                        className="w-fit"
+                        fullWidth={false}
+                    >
                         {onTitleClick ? (
                             <TextButton
                                 size="3"
@@ -649,13 +658,20 @@ export function MediaSection({
                                 {title}
                             </Text>
                         )}
-                    </Skeleton>
+                    </SkeletonText>
                     {subtitle && (
-                        <Skeleton loading={loading && headerLoading}>
+                        <SkeletonText
+                            loading={loading && headerLoading}
+                            parts={[subtitle]}
+                            preset="media-row"
+                            variant="subtitle"
+                            className="w-fit"
+                            fullWidth={false}
+                        >
                             <Text size="2" color="gray">
                                 {subtitle}
                             </Text>
-                        </Skeleton>
+                        </SkeletonText>
                     )}
                 </Flex>
                 <div

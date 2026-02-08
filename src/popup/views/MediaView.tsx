@@ -10,10 +10,8 @@ import { Flex, Text, Tooltip } from '@radix-ui/themes';
 import type {
     Album,
     Artist,
-    Episode,
     Market,
     MaxInt,
-    Playlist,
     Show,
     SimplifiedAlbum,
     SimplifiedEpisode,
@@ -38,9 +36,7 @@ import {
     albumToItem,
     albumTrackToItem,
     artistToItem,
-    episodeToItem,
     formatAlbumType,
-    playlistToItem,
     showEpisodeToItem,
     showToItem,
     trackToItem,
@@ -56,18 +52,24 @@ import {
     MediaSection,
     type MediaSectionState,
 } from '../components/MediaSection';
-import { MediaShelf } from '../components/MediaShelf';
 import { SkeletonText } from '../components/SkeletonText';
 import { TextButton } from '../components/TextButton';
 import { useHistory } from '../hooks/useHistory';
 import { buildMediaActions } from '../hooks/useMediaActions';
-import {
-    getLastMediaRouteState,
-    loadLastMediaRouteState,
-    type MediaRouteState,
-    setLastMediaRouteState,
-} from '../hooks/useMediaRoute';
+import type { MediaRouteState } from '../hooks/useMediaRoute';
+import { mediaRouteStore, useRouteState } from '../hooks/useRouteState';
 import { useSettings } from '../hooks/useSettings';
+import {
+    buildEpisodeLookup,
+    buildTrackLookup,
+    sumDurationMs,
+} from '../utils/mediaLookup';
+import {
+    buildGenreRecommendationQuery,
+    buildShowRecommendationQuery,
+    buildTrackRecommendationQuery,
+    searchItems,
+} from '../utils/mediaSearch';
 
 const logger = createLogger('media');
 const SHOW_EPISODE_PAGE_SIZE = 30;
@@ -120,14 +122,6 @@ type MediaViewState =
           recommended: MediaItem[];
           relatedArtistsLoading: boolean;
           recommendedLoading: boolean;
-      }
-    | {
-          kind: 'playlist';
-          playlist: Playlist<Track>;
-          items: MediaItem[];
-          totalDurationMs: number;
-          recommended: MediaItem[];
-          recommendedLoading: boolean;
       };
 
 const buildDiscographyEntries = async (
@@ -162,68 +156,6 @@ const buildDiscographyEntries = async (
     );
 
     return entries.filter(Boolean) as DiscographyEntry[];
-};
-
-type SearchResults = {
-    albums?: { items: unknown[] };
-    artists?: { items: unknown[] };
-    playlists?: { items: unknown[] };
-    shows?: { items: unknown[] };
-    tracks?: { items: unknown[] };
-};
-
-const searchItems = async <T,>(
-    query: string,
-    types: Array<'album' | 'artist' | 'playlist' | 'show' | 'track'>,
-    map: (results: SearchResults) => T[],
-    onError: (error: unknown) => void
-) => {
-    try {
-        if (!query.trim()) return [];
-        const results = await sendSpotifyMessage('search', {
-            query,
-            types,
-            limit: 12,
-        });
-        return map(results);
-    } catch (error) {
-        onError(error);
-        return [];
-    }
-};
-
-const buildTrackRecommendationQuery = (input: {
-    artistName?: string;
-    trackName?: string;
-    albumName?: string;
-}) => {
-    if (input.artistName) {
-        return `artist:"${input.artistName}"`;
-    }
-    if (input.trackName) {
-        return `track:"${input.trackName}"`;
-    }
-    if (input.albumName) {
-        return `album:"${input.albumName}"`;
-    }
-    return '';
-};
-
-const buildShowRecommendationQuery = (input: {
-    showName: string;
-    publisher?: string;
-}) => {
-    if (input.publisher) {
-        return `${input.publisher} ${input.showName}`;
-    }
-    return input.showName;
-};
-
-const buildPlaylistRecommendationQuery = (name: string) => name;
-
-const buildGenreRecommendationQuery = (genres?: string[]) => {
-    const topGenre = genres?.find((genre) => genre.trim().length > 0);
-    return topGenre ? `genre:"${topGenre}"` : '';
 };
 
 const rankRelatedArtists = (
@@ -412,17 +344,6 @@ const buildMediaHeroData = (
             item: artistToItem(data.artist),
         };
     }
-    if (data.kind === 'playlist') {
-        return {
-            title: data.playlist.name,
-            subtitle: data.playlist.owner?.display_name,
-            info: `${data.playlist.tracks.total} tracks`,
-            imageUrl: data.playlist.images?.[0]?.url,
-            heroUrl: data.playlist.images?.[0]?.url,
-            duration: formatDurationLong(data.totalDurationMs),
-            item: playlistToItem(data.playlist),
-        };
-    }
     return null;
 };
 
@@ -434,12 +355,12 @@ export function MediaView() {
     const locale = resolveLocale(settings.locale);
 
     const locationState = location.state as MediaRouteState | null;
-    const [restoredState, setRestoredState] = useState<MediaRouteState | null>(
-        null
-    );
-    const [restoring, setRestoring] = useState(locationState == null);
-    const restoreGuard = useRef(false);
-    const state = locationState ?? restoredState ?? getLastMediaRouteState();
+    const { state, restoring } = useRouteState<MediaRouteState>({
+        locationState,
+        store: mediaRouteStore,
+        routeHistory,
+        routePath: '/media',
+    });
 
     const [data, setData] = useState<MediaViewState | null>(null);
     const [loading, setLoading] = useState(true);
@@ -448,14 +369,15 @@ export function MediaView() {
         'newest'
     );
     const discographyTrackCount = 5;
+    const skeletonLabel = '\u00A0';
     const skeletonRows = useMemo(
         () =>
             Array.from({ length: 6 }, (_, index) => ({
                 id: `skeleton-${index}`,
-                title: 'Loading',
-                subtitle: 'Loading',
+                title: skeletonLabel,
+                subtitle: skeletonLabel,
             })),
-        []
+        [skeletonLabel]
     );
     const logSearchError = useCallback((error: unknown) => {
         logError(logger, 'search failed', error);
@@ -464,34 +386,6 @@ export function MediaView() {
     useEffect(() => {
         dataRef.current = data;
     }, [data]);
-
-    useEffect(() => {
-        if (locationState) {
-            setRestoring(false);
-            return;
-        }
-        let cancelled = false;
-        void loadLastMediaRouteState().then((stored) => {
-            if (cancelled) return;
-            if (stored) setRestoredState(stored);
-            setRestoring(false);
-        });
-        return () => {
-            cancelled = true;
-        };
-    }, [locationState]);
-
-    useEffect(() => {
-        if (locationState) {
-            setLastMediaRouteState(locationState);
-            restoreGuard.current = false;
-            return;
-        }
-        if (state && !restoreGuard.current) {
-            restoreGuard.current = true;
-            routeHistory.goTo('/media', state);
-        }
-    }, [locationState, routeHistory, state]);
 
     useEffect(() => {
         if (!state?.id || !state?.kind) return;
@@ -638,21 +532,11 @@ export function MediaView() {
                                 limit: 50,
                             }),
                         ]);
-                        const totalDurationMs = tracksPage.items.reduce(
-                            (acc, track) => acc + (track.duration_ms ?? 0),
-                            0
-                        );
+                        const totalDurationMs = sumDurationMs(tracksPage.items);
                         const tracks = tracksPage.items.map((track) =>
                             albumTrackToItem(track, album)
                         );
-                        const trackLookup = tracksPage.items.reduce(
-                            (acc, track) => {
-                                const key = track.id ?? track.uri;
-                                if (key) acc[key] = track;
-                                return acc;
-                            },
-                            {} as Record<string, SimplifiedTrack>
-                        );
+                        const trackLookup = buildTrackLookup(tracksPage.items);
                         const selectedTrack =
                             state.selectedId != null
                                 ? (trackLookup[state.selectedId] ?? null)
@@ -766,9 +650,8 @@ export function MediaView() {
                                 limit: SHOW_EPISODE_PAGE_SIZE,
                             }),
                         ]);
-                        const totalDurationMs = episodesPage.items.reduce(
-                            (acc, episode) => acc + (episode.duration_ms ?? 0),
-                            0
+                        const totalDurationMs = sumDurationMs(
+                            episodesPage.items
                         );
                         const episodes = episodesPage.items.map((episode) =>
                             showEpisodeToItem(episode, show, settings.locale)
@@ -778,13 +661,8 @@ export function MediaView() {
                             { year: 'numeric' },
                             settings.locale
                         );
-                        const episodeLookup = episodesPage.items.reduce(
-                            (acc, episode) => {
-                                const key = episode.id ?? episode.uri;
-                                if (key) acc[key] = episode;
-                                return acc;
-                            },
-                            {} as Record<string, SimplifiedEpisode>
+                        const episodeLookup = buildEpisodeLookup(
+                            episodesPage.items
                         );
                         const selectedEpisode =
                             state.selectedId != null
@@ -1050,79 +928,6 @@ export function MediaView() {
                         })();
                         break;
                     }
-                    case 'playlist': {
-                        const [playlist, itemsPage] = await Promise.all([
-                            sendSpotifyMessage('getPlaylist', {
-                                id: state.id,
-                                market,
-                            }),
-                            sendSpotifyMessage('getPlaylistItems', {
-                                id: state.id,
-                                market,
-                                limit: 50,
-                            }),
-                        ]);
-                        const playlistTracks = itemsPage.items
-                            .map((entry) => entry.track)
-                            .filter(Boolean) as Array<Track | Episode>;
-                        const totalDurationMs = playlistTracks.reduce(
-                            (acc, track) => acc + (track.duration_ms ?? 0),
-                            0
-                        );
-                        const items = playlistTracks.map((track) =>
-                            track.type === 'episode'
-                                ? episodeToItem(
-                                      track as Episode,
-                                      settings.locale
-                                  )
-                                : trackToItem(track as Track)
-                        );
-                        if (!cancelled) {
-                            setData({
-                                kind: 'playlist',
-                                playlist,
-                                items,
-                                totalDurationMs,
-                                recommended: [],
-                                recommendedLoading: true,
-                            });
-                        }
-                        void (async () => {
-                            const query = buildPlaylistRecommendationQuery(
-                                playlist.name
-                            );
-                            const recommended = await searchItems(
-                                query,
-                                ['playlist'],
-                                (results) =>
-                                    (results.playlists?.items ?? [])
-                                        .filter(
-                                            (item): item is Playlist<Track> =>
-                                                typeof item === 'object' &&
-                                                item !== null
-                                        )
-                                        .filter(
-                                            (item) =>
-                                                item.id &&
-                                                item.id !== playlist.id
-                                        )
-                                        .map(playlistToItem),
-                                logSearchError
-                            );
-                            if (!cancelled) {
-                                setData((prev) =>
-                                    prev?.kind === 'playlist'
-                                        ? {
-                                              ...prev,
-                                              recommended,
-                                              recommendedLoading: false,
-                                          }
-                                        : prev
-                                );
-                            }
-                        })();
-                        break;
-                    }
                     default: {
                         setData(null);
                     }
@@ -1158,10 +963,7 @@ export function MediaView() {
                 limit: SHOW_EPISODE_PAGE_SIZE,
                 offset,
             });
-            const addedDuration = page.items.reduce(
-                (acc, episode) => acc + (episode.duration_ms ?? 0),
-                0
-            );
+            const addedDuration = sumDurationMs(page.items);
             setData((prev) => {
                 if (!prev || prev.kind !== 'show') return prev;
                 if (prev.episodesOffset !== offset) {
@@ -1170,13 +972,7 @@ export function MediaView() {
                 const episodes = page.items.map((episode) =>
                     showEpisodeToItem(episode, prev.show, settings.locale)
                 );
-                const lookup = page.items.reduce(
-                    (acc, episode) => {
-                        if (episode.id) acc[episode.id] = episode;
-                        return acc;
-                    },
-                    {} as Record<string, SimplifiedEpisode>
-                );
+                const lookup = buildEpisodeLookup(page.items);
                 const nextOffset = offset + page.items.length;
                 const hasMore = nextOffset < (page.total ?? nextOffset);
                 return {
@@ -1253,28 +1049,6 @@ export function MediaView() {
         ]
     );
 
-    const heroTitle = hero?.title ?? 'Loading';
-    const heroSubtitle = hero?.subtitle ?? 'Loading';
-    const heroInfo = hero?.info ?? 'Loading';
-    const heroSubtitleText =
-        typeof heroSubtitle === 'string' ? heroSubtitle : undefined;
-    const heroInfoText = typeof heroInfo === 'string' ? heroInfo : undefined;
-    const heroDurationText =
-        typeof hero?.duration === 'string' ? hero.duration : undefined;
-    const heroTextParts = [
-        heroTitle,
-        heroSubtitleText,
-        heroInfoText,
-        heroDurationText,
-    ];
-    const heroSubtitleNode =
-        typeof heroSubtitle === 'string' || typeof heroSubtitle === 'number' ? (
-            <Text size="2" weight="medium" color="gray">
-                {heroSubtitle}
-            </Text>
-        ) : (
-            heroSubtitle
-        );
     const activeKind =
         data?.kind ??
         (state?.kind === 'track'
@@ -1286,7 +1060,6 @@ export function MediaView() {
     const albumData = data?.kind === 'album' ? data : null;
     const showData = data?.kind === 'show' ? data : null;
     const artistData = data?.kind === 'artist' ? data : null;
-    const playlistData = data?.kind === 'playlist' ? data : null;
     const shouldShowAlbumSection = isLoadingView
         ? !state?.singleTrack
         : (albumData?.tracks?.length ?? 0) > 1;
@@ -1408,10 +1181,6 @@ export function MediaView() {
                         : undefined,
             };
         }
-        if (playlistData) {
-            const contextUri = playlistData.playlist.uri ?? hero.item.uri;
-            return contextUri ? { contextUri } : null;
-        }
         return hero.item.uri ? { uris: [hero.item.uri] } : null;
     };
 
@@ -1434,8 +1203,6 @@ export function MediaView() {
         isLoadingView || (data?.kind === 'show' && data.recommendedLoading);
     const artistRecommendedLoading =
         isLoadingView || (data?.kind === 'artist' && data.recommendedLoading);
-    const playlistRecommendedLoading =
-        isLoadingView || (data?.kind === 'playlist' && data.recommendedLoading);
 
     const scrollRef = useRef<HTMLDivElement | null>(null);
     const heroStickyRef = useRef<HTMLDivElement | null>(null);
@@ -1480,22 +1247,22 @@ export function MediaView() {
                 <Flex p="3" direction="column" gap="2">
                     <SkeletonText
                         loading
-                        parts={['Loading', 'Title']}
+                        parts={[skeletonLabel]}
                         preset="media-row"
                         variant="title"
                     >
                         <Text size="5" weight="bold">
-                            Loading
+                            {skeletonLabel}
                         </Text>
                     </SkeletonText>
                     <SkeletonText
                         loading
-                        parts={['Loading', 'Subtitle']}
+                        parts={[skeletonLabel]}
                         preset="media-row"
                         variant="subtitle"
                     >
                         <Text size="2" color="gray">
-                            Loading
+                            {skeletonLabel}
                         </Text>
                     </SkeletonText>
                 </Flex>
@@ -1524,7 +1291,7 @@ export function MediaView() {
         <Flex
             key={viewKey}
             direction="column"
-            className="scrollbar-gutter-stable min-h-0 overflow-y-auto"
+            className="no-overflow-anchor scrollbar-gutter-stable min-h-0 overflow-y-auto"
             ref={scrollRef}
             onScroll={handleScroll}
         >
@@ -1532,11 +1299,7 @@ export function MediaView() {
                 hero={hero}
                 loading={loading}
                 heroUrl={hero?.heroUrl}
-                heroStickyRef={heroStickyRef}
-                heroTextParts={heroTextParts}
-                heroSubtitleNode={heroSubtitleNode}
-                heroTitle={heroTitle}
-                heroInfo={heroInfo}
+                heroRef={heroStickyRef}
                 mergedHeroActions={mergedHeroActions}
                 canTogglePlayback={canTogglePlayback}
                 onPlay={() => {
@@ -1751,47 +1514,6 @@ export function MediaView() {
                                           )
                                         : undefined
                                 }
-                            />
-                        )}
-                    </>
-                )}
-
-                {activeKind === 'playlist' && (
-                    <>
-                        <Text size="3" weight="bold">
-                            Playlist
-                        </Text>
-                        <MediaShelf
-                            items={
-                                isLoadingView
-                                    ? skeletonRows
-                                    : (playlistData?.items ?? [])
-                            }
-                            variant="list"
-                            orientation="vertical"
-                            itemsPerColumn={6}
-                            draggable={false}
-                            interactive={!isLoadingView}
-                            itemLoading={isLoadingView}
-                        />
-                        {(playlistRecommendedLoading ||
-                            (playlistData?.recommended?.length ?? 0) > 0) && (
-                            <MediaSection
-                                editing={false}
-                                loading={playlistRecommendedLoading}
-                                section={
-                                    {
-                                        id: 'playlist-recommended',
-                                        title: 'Recommended',
-                                        view: 'list',
-                                        infinite: 'rows',
-                                        rows: 0,
-                                        items: playlistRecommendedLoading
-                                            ? skeletonRows
-                                            : (playlistData?.recommended ?? []),
-                                    } satisfies MediaSectionState
-                                }
-                                onChange={() => undefined}
                             />
                         )}
                     </>

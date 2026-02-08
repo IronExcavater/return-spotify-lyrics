@@ -1,0 +1,178 @@
+diff --git a/node_modules/@hello-pangea/dnd/src/view/use-draggable-publisher/get-dimension.ts b/node_modules/@hello-pangea/dnd/src/view/use-draggable-publisher/get-dimension.ts
+index 7b0f0c1..a5a8f5c 100644
+--- a/node_modules/@hello-pangea/dnd/src/view/use-draggable-publisher/get-dimension.ts
++++ b/node_modules/@hello-pangea/dnd/src/view/use-draggable-publisher/get-dimension.ts
+@@ -6,6 +6,25 @@ import type {
+ } from '../../types';
+ import { origin } from '../../state/position';
+ 
++const parseGapValue = (value: string | null | undefined) => {
++  if (!value) return 0;
++  const parsed = parseFloat(value);
++  return Number.isNaN(parsed) ? 0 : parsed;
++};
++
++const getParentGap = (el: HTMLElement) => {
++  const parent = el.parentElement;
++  if (!parent) return { rowGap: 0, columnGap: 0 };
++  const styles = window.getComputedStyle(parent);
++  const display = styles.display ?? '';
++  if (!display.includes('flex') && !display.includes('grid')) {
++    return { rowGap: 0, columnGap: 0 };
++  }
++  return {
++    rowGap: parseGapValue(styles.rowGap),
++    columnGap: parseGapValue(styles.columnGap),
++  };
++};
++
+ export default function getDimension(
+   descriptor: DraggableDescriptor,
+   el: HTMLElement,
+@@ -23,9 +42,11 @@ export default function getDimension(
+     tagName: el.tagName.toLowerCase(),
+     display: computedStyles.display,
+   };
++  const { rowGap, columnGap } = getParentGap(el);
+   const displaceBy: Position = {
+-    x: client.marginBox.width,
+-    y: client.marginBox.height,
++    x: client.marginBox.width + columnGap,
++    y: client.marginBox.height + rowGap,
+   };
+ 
+   const dimension: DraggableDimension = {
+     descriptor,
+     placeholder,
+     displaceBy,
+     client,
+     page,
+   };
+@@ -33,4 +54,4 @@ export default function getDimension(
+ 
+   return dimension;
+ }
+
+diff --git a/node_modules/@hello-pangea/dnd/dist/dnd.esm.js b/node_modules/@hello-pangea/dnd/dist/dnd.esm.js
+index 68277f3..1e0c5a3 100644
+--- a/node_modules/@hello-pangea/dnd/dist/dnd.esm.js
++++ b/node_modules/@hello-pangea/dnd/dist/dnd.esm.js
+@@ -6205,6 +6205,30 @@ function getStyle$1(mapped) {
+   return mapped.type === 'DRAGGING' ? getDraggingStyle(mapped) : getSecondaryStyle(mapped);
+ }
+ 
++function parseGapValue(value) {
++  if (!value) return 0;
++  const parsed = parseFloat(value);
++  return Number.isNaN(parsed) ? 0 : parsed;
++}
++function getParentGap(el) {
++  const parent = el.parentElement;
++  if (!parent) return {
++    rowGap: 0,
++    columnGap: 0
++  };
++  const styles = window.getComputedStyle(parent);
++  const display = styles.display ?? '';
++  if (!display.includes('flex') && !display.includes('grid')) {
++    return {
++      rowGap: 0,
++      columnGap: 0
++    };
++  }
++  return {
++    rowGap: parseGapValue(styles.rowGap),
++    columnGap: parseGapValue(styles.columnGap)
++  };
++}
+ function getDimension$1(descriptor, el, windowScroll = origin) {
+   const computedStyles = window.getComputedStyle(el);
+   const borderBox = el.getBoundingClientRect();
+   const client = calculateBox(borderBox, computedStyles);
+   const page = withScroll(client, windowScroll);
+   const placeholder = {
+     client,
+     tagName: el.tagName.toLowerCase(),
+     display: computedStyles.display
+   };
++  const {
++    rowGap,
++    columnGap
++  } = getParentGap(el);
+   const displaceBy = {
+-    x: client.marginBox.width,
+-    y: client.marginBox.height
++    x: client.marginBox.width + columnGap,
++    y: client.marginBox.height + rowGap
+   };
+   const dimension = {
+     descriptor,
+     placeholder,
+     displaceBy,
+     client,
+     page
+   };
+   return dimension;
+ }
+
+diff --git a/node_modules/@hello-pangea/dnd/dist/dnd.cjs.js b/node_modules/@hello-pangea/dnd/dist/dnd.cjs.js
+index 1db4d11..2d6b44f 100644
+--- a/node_modules/@hello-pangea/dnd/dist/dnd.cjs.js
++++ b/node_modules/@hello-pangea/dnd/dist/dnd.cjs.js
+@@ -6207,6 +6207,30 @@ function getStyle$1(mapped) {
+   return mapped.type === 'DRAGGING' ? getDraggingStyle(mapped) : getSecondaryStyle(mapped);
+ }
+ 
++function parseGapValue(value) {
++  if (!value) return 0;
++  const parsed = parseFloat(value);
++  return Number.isNaN(parsed) ? 0 : parsed;
++}
++function getParentGap(el) {
++  const parent = el.parentElement;
++  if (!parent) return {
++    rowGap: 0,
++    columnGap: 0
++  };
++  const styles = window.getComputedStyle(parent);
++  const display = styles.display ?? '';
++  if (!display.includes('flex') && !display.includes('grid')) {
++    return {
++      rowGap: 0,
++      columnGap: 0
++    };
++  }
++  return {
++    rowGap: parseGapValue(styles.rowGap),
++    columnGap: parseGapValue(styles.columnGap)
++  };
++}
+ function getDimension$1(descriptor, el, windowScroll = origin) {
+   const computedStyles = window.getComputedStyle(el);
+   const borderBox = el.getBoundingClientRect();
+   const client = cssBoxModel.calculateBox(borderBox, computedStyles);
+   const page = cssBoxModel.withScroll(client, windowScroll);
+   const placeholder = {
+     client,
+     tagName: el.tagName.toLowerCase(),
+     display: computedStyles.display
+   };
++  const {
++    rowGap,
++    columnGap
++  } = getParentGap(el);
+   const displaceBy = {
+-    x: client.marginBox.width,
+-    y: client.marginBox.height
++    x: client.marginBox.width + columnGap,
++    y: client.marginBox.height + rowGap
+   };
+   const dimension = {
+     descriptor,
+     placeholder,
+     displaceBy,
+     client,
+     page
+   };
+   return dimension;
+ }

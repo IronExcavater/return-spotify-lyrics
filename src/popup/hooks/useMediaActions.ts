@@ -10,6 +10,47 @@ const openExternal = (url: string) => {
     window.open(url, '_blank', 'noopener,noreferrer');
 };
 
+const addUrisToQueue = async (uris: string[]) => {
+    for (const uri of uris) {
+        if (!uri) continue;
+        await sendSpotifyMessage('addToQueue', uri);
+    }
+};
+
+const addAlbumToQueue = async (albumId: string) => {
+    let offset = 0;
+    const limit = 50;
+    while (true) {
+        const page = await sendSpotifyMessage('getAlbumTracks', {
+            id: albumId,
+            limit,
+            offset,
+        });
+        const uris = page.items.map((track) => track.uri).filter(Boolean);
+        await addUrisToQueue(uris);
+        if (!page.next || page.items.length === 0) break;
+        offset += page.items.length;
+    }
+};
+
+const addPlaylistToQueue = async (playlistId: string) => {
+    let offset = 0;
+    const limit = 50;
+    while (true) {
+        const page = await sendSpotifyMessage('getPlaylistItems', {
+            id: playlistId,
+            limit,
+            offset,
+        });
+        const uris = page.items
+            .map((entry) => entry.track?.uri)
+            .filter(Boolean) as string[];
+        await addUrisToQueue(uris);
+        if (!page.next || page.items.length === 0) break;
+        offset += page.items.length;
+    }
+};
+
 export const buildMediaActions = (item: MediaItem): MediaActionGroup => {
     const primary: MediaAction[] = [];
     const secondary: MediaAction[] = [];
@@ -52,6 +93,26 @@ export const buildMediaActions = (item: MediaItem): MediaActionGroup => {
                     });
                 },
             });
+            if (item.kind === 'album' && item.id) {
+                primary.push({
+                    id: 'add-queue',
+                    label: 'Add to queue',
+                    shortcut: 'Q',
+                    onSelect: () => {
+                        void addAlbumToQueue(item.id!);
+                    },
+                });
+            }
+            if (item.kind === 'playlist' && item.id) {
+                primary.push({
+                    id: 'add-queue',
+                    label: 'Add to queue',
+                    shortcut: 'Q',
+                    onSelect: () => {
+                        void addPlaylistToQueue(item.id!);
+                    },
+                });
+            }
         }
     }
 

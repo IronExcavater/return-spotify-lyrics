@@ -1,12 +1,6 @@
 import { useRef } from 'react';
 import { DotsHorizontalIcon } from '@radix-ui/react-icons';
-import {
-    DropdownMenu,
-    Flex,
-    IconButton,
-    Skeleton,
-    Text,
-} from '@radix-ui/themes';
+import { DropdownMenu, Flex, IconButton, Text } from '@radix-ui/themes';
 import type { SimplifiedAlbum, SimplifiedTrack } from '@spotify/web-api-ts-sdk';
 import clsx from 'clsx';
 import { MdMusicNote } from 'react-icons/md';
@@ -103,11 +97,18 @@ export function MediaAlbum({
                 >
                     <span className="min-w-0 truncate">{item.title}</span>
                 </SkeletonText>
-                <Skeleton loading={loading}>
+                <SkeletonText
+                    loading={loading}
+                    parts={[duration, item.title]}
+                    seed={seed}
+                    preset="media-row"
+                    variant="subtitle"
+                    className="w-fit"
+                >
                     <Text size="1" color="gray" className="shrink-0">
                         {duration}
                     </Text>
-                </Skeleton>
+                </SkeletonText>
             </Flex>
         );
     };
@@ -223,18 +224,31 @@ export function MediaAlbum({
                                 </Fade>
                             </Flex>
                         )}
-                        {tracks[0] && (
-                            <Skeleton loading={loading}>
-                                <Text
-                                    ref={durationRef}
-                                    size="1"
-                                    color="gray"
-                                    className="shrink-0"
-                                >
-                                    {formatDurationShort(tracks[0].duration_ms)}
-                                </Text>
-                            </Skeleton>
-                        )}
+                        {tracks[0] &&
+                            (() => {
+                                const durationLabel = formatDurationShort(
+                                    tracks[0].duration_ms
+                                );
+                                return (
+                                    <SkeletonText
+                                        loading={loading}
+                                        parts={[durationLabel, subtitle]}
+                                        seed={seed}
+                                        preset="media-row"
+                                        variant="subtitle"
+                                        className="w-fit"
+                                    >
+                                        <Text
+                                            ref={durationRef}
+                                            size="1"
+                                            color="gray"
+                                            className="shrink-0"
+                                        >
+                                            {durationLabel}
+                                        </Text>
+                                    </SkeletonText>
+                                );
+                            })()}
                     </Flex>
                 </Flex>
             ) : (
