@@ -14,24 +14,15 @@ import {
     IconButton,
     AlertDialog,
     DropdownMenu,
-    Skeleton,
 } from '@radix-ui/themes';
-import type {
-    ItemTypes,
-    SearchResults,
-    SimplifiedPlaylist,
-} from '@spotify/web-api-ts-sdk';
+import type { ItemTypes, SearchResults } from '@spotify/web-api-ts-sdk';
 import clsx from 'clsx';
 
 import { resolveLocale } from '../../shared/locale';
 import { createLogger, logError } from '../../shared/logging';
 import {
     albumToItem,
-    artistToItem,
-    audiobookToItem,
-    episodeToItem,
     playlistToItem,
-    showToItem,
     topArtistToItem,
     trackToItem,
 } from '../../shared/media';
@@ -49,9 +40,15 @@ import {
     type MediaSectionState,
 } from '../components/MediaSection';
 import type { MediaShelfItem } from '../components/MediaShelf';
+import { SkeletonText } from '../components/SkeletonText';
 import { handleMenuTriggerKeyDown } from '../hooks/useActions';
 import { usePersonalisation } from '../hooks/usePersonalisation';
 import { useSettings } from '../hooks/useSettings';
+import {
+    buildSearchOffsets,
+    mapSearchPage,
+    mapSearchResults,
+} from '../utils/searchMapping';
 import { SEARCH_SECTION_BASE, buildSearchSections } from './searchSections';
 
 interface Props {
@@ -390,64 +387,12 @@ export function HomeView({ searchQuery, filters }: Props) {
                     offset,
                 })) as SearchResults<[ItemTypes]>;
 
-                let items: MediaShelfItem[] = [];
-                let hasMore = false;
-
-                switch (type) {
-                    case 'track': {
-                        const page = result.tracks;
-                        items = page?.items.map(trackToItem) ?? [];
-                        hasMore = !!page?.next;
-                        break;
-                    }
-                    case 'album': {
-                        const page = result.albums;
-                        items = page?.items.map(albumToItem) ?? [];
-                        hasMore = !!page?.next;
-                        break;
-                    }
-                    case 'artist': {
-                        const page = result.artists;
-                        items = page?.items.map(artistToItem) ?? [];
-                        hasMore = !!page?.next;
-                        break;
-                    }
-                    case 'playlist': {
-                        const page = result.playlists;
-                        items =
-                            page?.items
-                                .filter(
-                                    (item): item is SimplifiedPlaylist => !!item
-                                )
-                                .map(playlistToItem) ?? [];
-                        hasMore = !!page?.next;
-                        break;
-                    }
-                    case 'show': {
-                        const page = result.shows;
-                        items = page?.items.map(showToItem) ?? [];
-                        hasMore = !!page?.next;
-                        break;
-                    }
-                    case 'episode': {
-                        const page = result.episodes;
-                        items =
-                            page?.items.map((episode) =>
-                                episodeToItem(episode, locale)
-                            ) ?? [];
-                        hasMore = !!page?.next;
-                        break;
-                    }
-                    case 'audiobook': {
-                        const page = result.audiobooks;
-                        items = page?.items.map(audiobookToItem) ?? [];
-                        hasMore = !!page?.next;
-                        break;
-                    }
-                }
-                searchOffsetsRef.current[type] = hasMore
-                    ? offset + SEARCH_LIMIT
-                    : null;
+                const { items, hasMore, nextOffset } = mapSearchPage(
+                    type,
+                    result,
+                    locale
+                );
+                searchOffsetsRef.current[type] = nextOffset;
 
                 setSearchSections((prev) =>
                     prev.map((section) => {
@@ -690,47 +635,14 @@ export function HomeView({ searchQuery, filters }: Props) {
 
                 if (cancelled) return;
 
-                const itemsByType: Record<SearchType, MediaShelfItem[]> = {
-                    track:
-                        result.tracks?.items.map((track) =>
-                            trackToItem(track)
-                        ) ?? [],
-                    album:
-                        result.albums?.items.map((album) =>
-                            albumToItem(album)
-                        ) ?? [],
-                    artist:
-                        result.artists?.items.map((artist) =>
-                            artistToItem(artist)
-                        ) ?? [],
-                    playlist:
-                        result.playlists?.items
-                            .filter(
-                                (item): item is SimplifiedPlaylist => !!item
-                            )
-                            .map((playlist) => playlistToItem(playlist)) ?? [],
-                    show:
-                        result.shows?.items.map((show) => showToItem(show)) ??
-                        [],
-                    episode:
-                        result.episodes?.items.map((episode) =>
-                            episodeToItem(episode, locale)
-                        ) ?? [],
-                    audiobook:
-                        result.audiobooks?.items.map((book) =>
-                            audiobookToItem(book)
-                        ) ?? [],
-                };
-
-                searchOffsetsRef.current = {
-                    track: result.tracks?.next ? SEARCH_LIMIT : null,
-                    album: result.albums?.next ? SEARCH_LIMIT : null,
-                    artist: result.artists?.next ? SEARCH_LIMIT : null,
-                    playlist: result.playlists?.next ? SEARCH_LIMIT : null,
-                    show: result.shows?.next ? SEARCH_LIMIT : null,
-                    episode: result.episodes?.next ? SEARCH_LIMIT : null,
-                    audiobook: result.audiobooks?.next ? SEARCH_LIMIT : null,
-                };
+                const { itemsByType, hasMoreByType } = mapSearchResults(
+                    result,
+                    locale
+                );
+                searchOffsetsRef.current = buildSearchOffsets(
+                    result,
+                    SEARCH_LIMIT
+                );
 
                 setSearchSections((prev) =>
                     prev.map((section) => {
@@ -743,20 +655,7 @@ export function HomeView({ searchQuery, filters }: Props) {
                         return {
                             ...section,
                             items: itemsByType[type],
-                            hasMore:
-                                type === 'track'
-                                    ? !!result.tracks?.next
-                                    : type === 'album'
-                                      ? !!result.albums?.next
-                                      : type === 'artist'
-                                        ? !!result.artists?.next
-                                        : type === 'playlist'
-                                          ? !!result.playlists?.next
-                                          : type === 'show'
-                                            ? !!result.shows?.next
-                                            : type === 'episode'
-                                              ? !!result.episodes?.next
-                                              : !!result.audiobooks?.next,
+                            hasMore: hasMoreByType[type],
                             loadingMore: false,
                         };
                     })
@@ -824,14 +723,17 @@ export function HomeView({ searchQuery, filters }: Props) {
                 >
                     <Flex>
                         {!editing && (
-                            <Skeleton
+                            <SkeletonText
                                 loading={headingLoading}
+                                parts={[heading.title, heading.subtitle]}
+                                preset="media-row"
+                                variant="title"
                                 className="inline-flex w-fit"
                             >
                                 <Text size="3" weight="bold">
                                     {heading.title}
                                 </Text>
-                            </Skeleton>
+                            </SkeletonText>
                         )}
 
                         {isEditable && (
@@ -938,14 +840,17 @@ export function HomeView({ searchQuery, filters }: Props) {
                     </Flex>
 
                     {!isEditable && (
-                        <Skeleton
+                        <SkeletonText
                             loading={headingLoading}
+                            parts={[heading.subtitle, heading.title]}
+                            preset="media-row"
+                            variant="subtitle"
                             className="inline-flex w-fit"
                         >
                             <Text size="1" color="gray">
                                 {heading.subtitle}
                             </Text>
-                        </Skeleton>
+                        </SkeletonText>
                     )}
                 </Flex>
 

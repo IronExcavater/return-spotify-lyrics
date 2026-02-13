@@ -15,15 +15,20 @@ import { HomeBar } from './components/HomeBar';
 import { NavBar } from './components/NavBar';
 import { PlaybackBar } from './components/PlaybackBar';
 import { ProtectedLayout } from './components/ProtectedLayout';
+import { ReauthDialog } from './components/ReauthDialog';
 import { SettingsProvider } from './context/SettingsContext';
 import { useGlobalShortcut } from './hooks/useActions';
 import { useAppState, BarKey } from './hooks/useAppState';
 import { useAuth } from './hooks/useAuth';
-import { useHistory } from './hooks/useHistory';
+import {
+    useHistory,
+    type HomeRouteState,
+    type RouteState,
+} from './hooks/useHistory';
 
-import type { HomeRouteState, RouteState } from './hooks/useHistory';
 import { usePlayer } from './hooks/usePlayer.ts';
 import { usePortalSlot } from './hooks/usePortalSlot';
+import { useReauthGate } from './hooks/useReauthGate.ts';
 import { Resizer } from './hooks/useResize.tsx';
 import { useSearch } from './hooks/useSearch';
 import { getSurfaceConfig, type Surface } from './surface';
@@ -31,10 +36,16 @@ import { HomeView } from './views/HomeView';
 import { LoginView } from './views/LoginView';
 import { LyricsView } from './views/LyricsView';
 import { MediaView } from './views/MediaView';
+import { PlaylistView } from './views/PlaylistView';
 import { ProfileView } from './views/ProfileView';
 import { QueueView } from './views/QueueView';
 
 const BAR_KEYS: readonly BarKey[] = ['home', 'playback'];
+
+const isHomeRouteState = (
+    state: RouteState | null | undefined
+): state is HomeRouteState =>
+    !!state && ('searchQuery' in state || 'searchFilters' in state);
 
 type AppProps = {
     surface?: Surface;
@@ -49,6 +60,7 @@ export default function App({ surface = 'popup' }: AppProps) {
     const heightBounds = { min: 300, max: 600 } as const;
 
     const { authed, profile, login, logout, connection } = useAuth();
+    const { needsReauth, missingScopes } = useReauthGate();
     const appState = useAppState({
         fallbackWidth: widthBounds.min,
         fallbackHeight: heightBounds.min,
@@ -63,24 +75,7 @@ export default function App({ surface = 'popup' }: AppProps) {
 
     const profileImage = profile?.images?.[0]?.url;
 
-    const isHomeRouteState = (
-        state: RouteState | null | undefined
-    ): state is HomeRouteState =>
-        !!state && ('searchQuery' in state || 'searchFilters' in state);
-
     const lastHomeStateRef = useRef<HomeRouteState | null>(null);
-
-    // Auth semantics
-    const mustLogin = authed === false && authed !== undefined;
-    const mustLogout = authed === true;
-
-    // Slots
-    const lastContentPathRef = useRef('/home');
-
-    useEffect(() => {
-        if (location.pathname !== '/profile')
-            lastContentPathRef.current = location.pathname;
-    }, [location.pathname]);
 
     useEffect(() => {
         if (location.pathname !== '/home') return;
@@ -88,15 +83,30 @@ export default function App({ surface = 'popup' }: AppProps) {
         const homeState = isHomeRouteState(state) ? state : undefined;
         const nextQuery = homeState?.searchQuery ?? '';
         const nextFilters = homeState?.searchFilters ?? [];
+        const sameQuery = search.query === nextQuery;
+        const sameFilters =
+            search.filters.length === nextFilters.length &&
+            search.filters.every(
+                (filter, index) => filter.id === nextFilters[index]?.id
+            );
+        if (sameQuery && sameFilters) return;
         search.setSearchState({ query: nextQuery, filters: nextFilters });
-    }, [location.pathname, location.state, search.setSearchState]);
+    }, [
+        location.pathname,
+        location.state,
+        search.filters,
+        search.query,
+        search.setSearchState,
+    ]);
 
     useEffect(() => {
         if (location.pathname !== '/home') return;
         lastHomeStateRef.current = {
             searchQuery: search.query,
             searchFilters:
-                search.filters.length > 0 ? search.filters : undefined,
+                search.filters && search.filters.length > 0
+                    ? search.filters
+                    : undefined,
         };
     }, [location.pathname, search.filters, search.query]);
 
@@ -105,7 +115,7 @@ export default function App({ surface = 'popup' }: AppProps) {
         routeHistory.rememberState({
             searchQuery: search.debouncedQuery,
             searchFilters:
-                search.debouncedFilters.length > 0
+                search.debouncedFilters && search.debouncedFilters.length > 0
                     ? search.debouncedFilters
                     : undefined,
         });
@@ -115,6 +125,24 @@ export default function App({ surface = 'popup' }: AppProps) {
         search.debouncedFilters,
         search.debouncedQuery,
     ]);
+
+    // Auth semantics
+    const mustLogin = authed === false && authed !== undefined;
+    const mustLogout = authed === true;
+    const mustReauth = authed === true && needsReauth;
+
+    const handleReauth = () => {
+        logout();
+        window.setTimeout(() => login(), 150);
+    };
+
+    // Slots
+    const lastContentPathRef = useRef('/home');
+
+    useEffect(() => {
+        if (location.pathname !== '/profile')
+            lastContentPathRef.current = location.pathname;
+    }, [location.pathname]);
 
     useGlobalShortcut(
         (event) => {
@@ -375,6 +403,17 @@ export default function App({ surface = 'popup' }: AppProps) {
                             </ProtectedLayout>
                         }
                     />
+                    <Route
+                        path="/playlist"
+                        element={
+                            <ProtectedLayout
+                                when={mustLogin}
+                                redirectTo="/login"
+                            >
+                                <PlaylistView />
+                            </ProtectedLayout>
+                        }
+                    />
 
                     <Route
                         path="/login"
@@ -386,6 +425,13 @@ export default function App({ surface = 'popup' }: AppProps) {
                     />
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
+
+                <ReauthDialog
+                    open={mustReauth}
+                    reasons={needsReauth ? ['missing-scopes'] : []}
+                    missingScopes={missingScopes}
+                    onReconnect={handleReauth}
+                />
 
                 {profileFloating.portal}
                 {navFloating.portal}

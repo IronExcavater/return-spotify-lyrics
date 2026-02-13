@@ -19,6 +19,7 @@ const shouldTrack = (path: string) =>
     path === '/home' ||
     path === '/profile' ||
     path === '/media' ||
+    path === '/playlist' ||
     path.startsWith('/media/');
 
 const isMediaState = (state?: RouteState): state is MediaRouteState =>
@@ -139,8 +140,20 @@ export function useHistory() {
             state?: RouteState,
             options?: { samePathBehavior?: 'replace' | 'push' }
         ) => {
+            const nextState = normalizeState(state);
+            const currentState = normalizeState(
+                location.state as RouteState | undefined
+            );
+            const isSamePath = location.pathname === path;
+            if (
+                isSamePath &&
+                serializeState(currentState) === serializeState(nextState)
+            ) {
+                recordRoute(path, state, options?.samePathBehavior ?? 'push');
+                return;
+            }
             recordRoute(path, state, options?.samePathBehavior ?? 'push');
-            navigate(path, { state, replace: location.pathname === path });
+            navigate(path, { state, replace: isSamePath });
         },
         [location.pathname, navigate]
     );

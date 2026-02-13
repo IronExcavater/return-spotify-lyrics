@@ -12,7 +12,6 @@ import {
     Flex,
     IconButton,
     Popover,
-    Skeleton,
     Switch,
     Text,
     Tooltip,
@@ -20,6 +19,7 @@ import {
 import { UserProfile } from '@spotify/web-api-ts-sdk';
 import { resolveLocale } from '../../shared/locale';
 import { SearchBar } from '../components/SearchBar';
+import { SkeletonText } from '../components/SkeletonText';
 import { TextButton } from '../components/TextButton';
 import { SpotifyConnectionMeta } from '../hooks/useAuth';
 import { useCachedImage } from '../hooks/useCachedImage';
@@ -213,8 +213,10 @@ export function ProfileView({ profile, onLogout, connection }: Props) {
                     <Flex
                         gap="3"
                         align="center"
-                        onClick={() => window.open(link, '_blank')}
-                        className="group cursor-pointer"
+                        onClick={
+                            link ? () => window.open(link, '_blank') : undefined
+                        }
+                        className={link ? 'group cursor-pointer' : 'group'}
                     >
                         <Avatar
                             radius="full"
@@ -223,7 +225,13 @@ export function ProfileView({ profile, onLogout, connection }: Props) {
                             size="4"
                         />
                         <Flex direction="column" gap="1" align="start">
-                            <Skeleton loading={loading}>
+                            <SkeletonText
+                                loading={loading}
+                                parts={[name]}
+                                preset="media-row"
+                                variant="title"
+                                className="w-fit"
+                            >
                                 <TextButton
                                     size="4"
                                     weight="bold"
@@ -232,8 +240,14 @@ export function ProfileView({ profile, onLogout, connection }: Props) {
                                 >
                                     {name}
                                 </TextButton>
-                            </Skeleton>
-                            <Skeleton loading={loading}>
+                            </SkeletonText>
+                            <SkeletonText
+                                loading={loading}
+                                parts={[id]}
+                                preset="media-row"
+                                variant="subtitle"
+                                className="w-fit"
+                            >
                                 <TextButton
                                     size="2"
                                     color="gray"
@@ -242,7 +256,7 @@ export function ProfileView({ profile, onLogout, connection }: Props) {
                                 >
                                     @{id}
                                 </TextButton>
-                            </Skeleton>
+                            </SkeletonText>
                         </Flex>
                     </Flex>
                     <AlertDialog.Root>

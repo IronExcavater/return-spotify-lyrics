@@ -354,6 +354,63 @@ export const spotifyRpc = {
             offset
         );
     },
+    changePlaylistDetails: async ({
+        id,
+        name,
+        description,
+        public: isPublic,
+        collaborative,
+    }: {
+        id: string;
+        name?: string;
+        description?: string;
+        public?: boolean | null;
+        collaborative?: boolean;
+    }) => {
+        const client = await requireClient();
+        return client.playlists.changePlaylistDetails(id, {
+            name,
+            description,
+            public: isPublic ?? undefined,
+            collaborative,
+        });
+    },
+    movePlaylistItems: async ({
+        id,
+        rangeStart,
+        rangeLength = 1,
+        insertBefore,
+        snapshotId,
+    }: {
+        id: string;
+        rangeStart: number;
+        rangeLength?: number;
+        insertBefore: number;
+        snapshotId?: string;
+    }) => {
+        const client = await requireClient();
+        return client.playlists.updatePlaylistItems(id, {
+            range_start: rangeStart,
+            range_length: rangeLength,
+            insert_before: insertBefore,
+            snapshot_id: snapshotId,
+        });
+    },
+    removePlaylistItems: async ({
+        id,
+        uris,
+        snapshotId,
+    }: {
+        id: string;
+        uris: string[];
+        snapshotId?: string;
+    }) => {
+        const client = await requireClient();
+        return client.playlists.removeItemsFromPlaylist(id, {
+            snapshot_id: snapshotId,
+            tracks: uris.map((uri) => ({ uri })),
+        });
+    },
     getTrack: async ({ id }: { id: string }) => {
         const client = await requireClient();
         return client.tracks.get(id);

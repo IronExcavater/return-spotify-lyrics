@@ -44,6 +44,7 @@ export function DiscographyShelf({
 }: Props) {
     const resolvedLocale = resolveLocale(locale);
     const resolvedCardWidth = 220;
+    const skeletonLabel = '\u00A0';
     const ordered = useMemo(() => {
         const next = [...entries];
         next.sort((a, b) => {
@@ -59,7 +60,7 @@ export function DiscographyShelf({
         return Array.from({ length: 5 }, (_, index) => ({
             album: {
                 id: `loading-${index}`,
-                name: 'Loading',
+                name: skeletonLabel,
                 album_type: 'album',
                 total_tracks: 1,
                 images: [],
@@ -75,7 +76,7 @@ export function DiscographyShelf({
             tracks: [
                 {
                     id: `loading-track-${index}`,
-                    name: 'Loading',
+                    name: skeletonLabel,
                     duration_ms: 0,
                     artists: [],
                     available_markets: [],
@@ -91,7 +92,7 @@ export function DiscographyShelf({
                 } as SimplifiedTrack,
             ],
         }));
-    }, [loading, ordered.length]);
+    }, [loading, ordered.length, skeletonLabel]);
     const displayEntries =
         placeholderEntries.length > 0 ? placeholderEntries : ordered;
     const { scrollRef, fade } = useScrollFade('horizontal', [
