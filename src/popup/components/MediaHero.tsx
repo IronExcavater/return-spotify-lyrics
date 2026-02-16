@@ -54,8 +54,8 @@ const heroMaskStyle: CSSProperties = {
 };
 const HERO_TOP_PAD_MAX = 12;
 const HERO_TOP_PAD_MIN = 4;
-const HERO_BOTTOM_PAD_MAX = 16;
-const HERO_BOTTOM_PAD_MIN = 8;
+const HERO_BOTTOM_PAD_MAX = 18;
+const HERO_BOTTOM_PAD_MIN = 10;
 
 export function MediaHero({
     hero,
@@ -92,6 +92,7 @@ export function MediaHero({
             mergedHeroActions.secondary.length > 0);
     const skeletonLabel = '\u00A0';
     const resolvedHeroTitle = heroTitle ?? hero?.title ?? '';
+    const resolvedHeroTitleLabel = loading ? skeletonLabel : resolvedHeroTitle;
     const resolvedHeroSubtitle = hero?.subtitle;
     const resolvedSubtitleNode =
         heroSubtitleNode ??
@@ -205,7 +206,7 @@ export function MediaHero({
                         <Fade enabled={!loading} grow>
                             <Marquee mode="bounce" grow>
                                 <Text size="5" weight="bold">
-                                    {resolvedHeroTitle}
+                                    {resolvedHeroTitleLabel}
                                 </Text>
                             </Marquee>
                         </Fade>
@@ -296,6 +297,12 @@ export function MediaHero({
                                             titleOffset: 11,
                                             subtitleOffset: 29,
                                         }}
+                                        fullWidth={false}
+                                        style={
+                                            loading
+                                                ? { minWidth: '3.5rem' }
+                                                : undefined
+                                        }
                                     >
                                         <Text size="1" color="gray">
                                             {hero?.duration ?? '0m'}

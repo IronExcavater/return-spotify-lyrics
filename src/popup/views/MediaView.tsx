@@ -1258,11 +1258,7 @@ export function MediaView() {
             className="no-overflow-anchor scrollbar-gutter-stable flex min-h-0 flex-col overflow-y-auto"
             scrollRef={scrollRef}
         >
-            <StickyLayout.Sticky
-                order={0}
-                className="z-30"
-                data-sticky-offset={6}
-            >
+            <StickyLayout.Sticky order={0} className="z-30" heightOffset={8}>
                 <MediaHero
                     hero={hero}
                     loading={loading}

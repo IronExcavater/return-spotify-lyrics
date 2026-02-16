@@ -190,6 +190,7 @@ type StickyProps = {
     style?: CSSProperties;
     zIndex?: number;
     scope?: 'auto' | 'root';
+    heightOffset?: number;
 } & Omit<HTMLAttributes<HTMLDivElement>, 'className' | 'style' | 'children'>;
 
 function Sticky({
@@ -199,6 +200,7 @@ function Sticky({
     style,
     zIndex = 30,
     scope = 'auto',
+    heightOffset = 0,
     ...rest
 }: StickyProps) {
     const id = useId();
@@ -221,15 +223,8 @@ function Sticky({
             node.querySelector<HTMLElement>('[data-sticky-size]') ?? node;
         const measure = () => {
             const rect = measureNode.getBoundingClientRect();
-            const offsetRaw =
-                measureNode.getAttribute('data-sticky-offset') ??
-                node.getAttribute('data-sticky-offset') ??
-                '0';
-            const offset = Number.parseFloat(offsetRaw);
-            const height = Math.max(
-                0,
-                Math.ceil(rect.height - (Number.isFinite(offset) ? offset : 0))
-            );
+            const offset = Number.isFinite(heightOffset) ? heightOffset : 0;
+            const height = Math.max(0, Math.ceil(rect.height - offset));
             updateHeight(id, height);
             node.style.setProperty('--sticky-height', `${height}px`);
         };
@@ -240,7 +235,7 @@ function Sticky({
             observer.observe(node);
         }
         return () => observer.disconnect();
-    }, [id, updateHeight]);
+    }, [heightOffset, id, updateHeight]);
 
     const offset = baseOffset + getOffset(id);
 

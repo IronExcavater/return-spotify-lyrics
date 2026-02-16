@@ -27,6 +27,7 @@ type UseHeroCollapseOptions = {
         bottomMax: number;
         bottomMin: number;
     };
+    onProgress?: (progress: number) => void;
 };
 
 export function useHeroCollapse({
@@ -37,6 +38,7 @@ export function useHeroCollapse({
     collapseDistance,
     resetScroll = true,
     padding,
+    onProgress,
 }: UseHeroCollapseOptions) {
     const resolvedPadding = {
         topMax: padding?.topMax ?? HERO_COLLAPSE_METRICS.topMax,
@@ -61,8 +63,6 @@ export function useHeroCollapse({
         scaledRange
     );
     const heroRef = useRef<HTMLDivElement | null>(null);
-    const lastScrollTopRef = useRef(0);
-    const rafRef = useRef<number | null>(null);
     const heroProgressRef = useRef(0);
     const buildPaddingCalc = (max: number, min: number) =>
         `calc(${max}px - ${max - min}px * var(--hero-collapse, 0))`;
@@ -76,20 +76,16 @@ export function useHeroCollapse({
     );
 
     const reset = useCallback(() => {
-        lastScrollTopRef.current = 0;
         heroProgressRef.current = 0;
         heroRef.current?.style.setProperty('--hero-collapse', '0');
+        onProgress?.(0);
         if (resetScroll && scrollRef?.current) {
             scrollRef.current.scrollTop = 0;
         }
-    }, [resetScroll, scrollRef]);
+    }, [onProgress, resetScroll, scrollRef]);
 
     useEffect(() => {
         reset();
-        return () => {
-            if (rafRef.current) cancelAnimationFrame(rafRef.current);
-            rafRef.current = null;
-        };
     }, [reset, resetKey]);
 
     useEffect(() => {
@@ -100,31 +96,24 @@ export function useHeroCollapse({
         const node = scrollRef?.current;
         if (!node) return;
         const handleScroll = () => {
-            lastScrollTopRef.current = node.scrollTop;
-            if (rafRef.current) return;
-            rafRef.current = requestAnimationFrame(() => {
-                rafRef.current = null;
-                const compensatedScroll =
-                    lastScrollTopRef.current +
-                    heroProgressRef.current * resolvedCollapseDistance;
-                const progress = Math.min(
-                    1,
-                    Math.max(0, compensatedScroll / resolvedRange)
-                );
-                if (Math.abs(progress - heroProgressRef.current) < 0.001)
-                    return;
-                heroProgressRef.current = progress;
-                heroRef.current?.style.setProperty(
-                    '--hero-collapse',
-                    String(progress)
-                );
-            });
+            const progress = Math.min(
+                1,
+                Math.max(0, node.scrollTop / resolvedRange)
+            );
+            if (progress === heroProgressRef.current) return;
+            heroProgressRef.current = progress;
+            heroRef.current?.style.setProperty(
+                '--hero-collapse',
+                String(progress)
+            );
+            onProgress?.(progress);
         };
         node.addEventListener('scroll', handleScroll, { passive: true });
+        handleScroll();
         return () => {
             node.removeEventListener('scroll', handleScroll);
         };
-    }, [enabled, resolvedRange, resolvedCollapseDistance, scrollRef]);
+    }, [enabled, onProgress, resolvedRange, scrollRef]);
 
     return { heroRef, paddingTop, paddingBottom };
 }
