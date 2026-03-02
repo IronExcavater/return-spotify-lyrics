@@ -80,24 +80,12 @@ export default function App({ surface = 'popup' }: AppProps) {
     useEffect(() => {
         if (location.pathname !== '/home') return;
         const state = location.state as RouteState | null;
-        const homeState = isHomeRouteState(state) ? state : undefined;
-        const nextQuery = homeState?.searchQuery ?? '';
-        const nextFilters = homeState?.searchFilters ?? [];
-        const sameQuery = search.query === nextQuery;
-        const sameFilters =
-            search.filters.length === nextFilters.length &&
-            search.filters.every(
-                (filter, index) => filter.id === nextFilters[index]?.id
-            );
-        if (sameQuery && sameFilters) return;
-        search.setSearchState({ query: nextQuery, filters: nextFilters });
-    }, [
-        location.pathname,
-        location.state,
-        search.filters,
-        search.query,
-        search.setSearchState,
-    ]);
+        if (!isHomeRouteState(state)) return;
+        search.setSearchState({
+            query: state.searchQuery ?? '',
+            filters: state.searchFilters ?? [],
+        });
+    }, [location.pathname, location.state, search.setSearchState]);
 
     useEffect(() => {
         if (location.pathname !== '/home') return;

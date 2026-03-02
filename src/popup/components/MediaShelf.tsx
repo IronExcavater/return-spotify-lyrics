@@ -466,38 +466,6 @@ export function MediaShelf({
                         const seed = hashId(item.id ?? '') ^ (flatIndex << 1);
                         const { content, canActivate, handleNavigate } =
                             renderItem(item, seed, flatIndex);
-                        if (!draggable) {
-                            return (
-                                <div
-                                    key={key}
-                                    ref={(node) => {
-                                        focusRefs.current[flatIndex] = node;
-                                    }}
-                                    data-index={flatIndex}
-                                    role="button"
-                                    aria-disabled={!canActivate}
-                                    className="group rounded-2 focus-visible:ring-accent-9 focus-visible:ring-offset-background focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
-                                    tabIndex={
-                                        interactive && flatIndex === activeIndex
-                                            ? 0
-                                            : -1
-                                    }
-                                    onFocus={(event) =>
-                                        handleItemFocus(event, flatIndex)
-                                    }
-                                    onKeyDown={(event) =>
-                                        handleItemKeyDown(
-                                            event,
-                                            flatIndex,
-                                            canActivate,
-                                            handleNavigate
-                                        )
-                                    }
-                                >
-                                    {content}
-                                </div>
-                            );
-                        }
                         return (
                             <Draggable
                                 key={key}
@@ -555,33 +523,6 @@ export function MediaShelf({
                 seed,
                 index
             );
-            if (!draggable) {
-                const key = getItemKey(item, index);
-                return (
-                    <div
-                        key={key}
-                        ref={(node) => {
-                            focusRefs.current[index] = node;
-                        }}
-                        data-index={index}
-                        role="button"
-                        aria-disabled={!canActivate}
-                        className="group rounded-2 focus-visible:ring-accent-9 focus-visible:ring-offset-background focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
-                        tabIndex={interactive && index === activeIndex ? 0 : -1}
-                        onFocus={(event) => handleItemFocus(event, index)}
-                        onKeyDown={(event) =>
-                            handleItemKeyDown(
-                                event,
-                                index,
-                                canActivate,
-                                handleNavigate
-                            )
-                        }
-                    >
-                        {content}
-                    </div>
-                );
-            }
             return (
                 <Draggable
                     key={getItemKey(item, index)}
@@ -670,7 +611,6 @@ export function MediaShelf({
             {renderFades()}
         </div>
     );
-    if (!draggable) return renderBody();
     return (
         <DragDropContext onDragEnd={handleDragEnd}>
             <Droppable

@@ -37,16 +37,16 @@ type RouteRule = {
 
 const BASE_BAR_RULES: Record<BarKey, BarRule> = {
     home: {
-        defaultRoute: ROUTES.home,
+        defaultRoute: ROUTES.root,
     },
     playback: {
-        defaultRoute: ROUTES.root,
+        defaultRoute: ROUTES.lyrics,
     },
 };
 
 const BASE_ROUTE_RULES: Partial<Record<RouteValue, RouteRule>> = {
     [ROUTES.root]: {
-        allowedBars: ['playback'],
+        allowedBars: ['home'],
         heightOverride: 'auto',
     },
     [ROUTES.home]: {
@@ -85,6 +85,7 @@ const getBarRules = (surface: Surface): Record<BarKey, BarRule> => {
         return {
             ...BASE_BAR_RULES,
             home: { defaultRoute: ROUTES.home },
+            playback: { defaultRoute: ROUTES.lyrics },
         };
     }
     return BASE_BAR_RULES;
@@ -96,6 +97,15 @@ const getRouteRules = (
     if (surface !== 'sidepanel') return BASE_ROUTE_RULES;
     const entries = Object.entries(BASE_ROUTE_RULES).map(([route, rule]) => {
         if (!rule?.allowedBars) return [route, rule] as const;
+        if (route === ROUTES.root) {
+            return [
+                route,
+                {
+                    ...rule,
+                    allowedBars: [],
+                },
+            ] as const;
+        }
         return [
             route,
             {
@@ -109,7 +119,7 @@ const getRouteRules = (
     return Object.fromEntries(entries);
 };
 
-const APP_STATE_KEY = 'appState';
+const getAppStateKey = (surface: Surface) => `appState:${surface}`;
 const PLAYBACK_STALE_MS = 60_000;
 
 type AppState = {
@@ -130,6 +140,23 @@ function isRouteAllowed(
     return rule.allowedBars.includes(bar);
 }
 
+function resolveAllowedRoute(
+    bar: BarKey,
+    preferredRoute: RouteValue | undefined,
+    barRules: Record<BarKey, BarRule>,
+    routeRules: Partial<Record<RouteValue, RouteRule>>
+): RouteValue {
+    const defaultRoute = barRules[bar].defaultRoute;
+    if (preferredRoute && isRouteAllowed(preferredRoute, bar, routeRules))
+        return preferredRoute;
+    if (isRouteAllowed(defaultRoute, bar, routeRules)) return defaultRoute;
+
+    const firstAllowed = (Object.values(ROUTES) as RouteValue[]).find((route) =>
+        isRouteAllowed(route, bar, routeRules)
+    );
+    return firstAllowed ?? ROUTES.home;
+}
+
 interface Props {
     fallbackWidth: number;
     fallbackHeight: number;
@@ -145,6 +172,7 @@ export function useAppState({
     const location = useLocation();
     const barRules = useMemo(() => getBarRules(surface), [surface]);
     const routeRules = useMemo(() => getRouteRules(surface), [surface]);
+    const appStateKey = useMemo(() => getAppStateKey(surface), [surface]);
 
     const { authed } = useAuth();
     const { playback } = usePlayer();
@@ -153,30 +181,43 @@ export function useAppState({
     const [hydrated, setHydrated] = useState(false);
     const [appState, setAppState] = useState<AppState>({});
     const [activeBar, setActiveBar] = useState<BarKey>('home');
+    const hydratedForKey = useRef<string | null>(null);
 
     const routeRule = routeRules[location.pathname] as RouteRule;
 
     // load app state
     useEffect(() => {
-        void getFromStorage<AppState>(APP_STATE_KEY, (saved) => {
+        if (hydratedForKey.current === appStateKey) return;
+        hydratedForKey.current = appStateKey;
+
+        void getFromStorage<AppState>(appStateKey, (saved) => {
             const nextState: AppState = saved ?? {};
             setAppState(nextState);
 
             const initialBar = nextState.lastBar ?? 'home';
+            const initialRoute = resolveAllowedRoute(
+                initialBar,
+                nextState.lastRoute,
+                barRules,
+                routeRules
+            );
             setActiveBar(initialBar);
-            navigate(nextState.lastRoute ?? barRules[initialBar].defaultRoute);
+            navigate(initialRoute, { replace: true });
             setHydrated(true);
         });
-    }, []);
+    }, [appStateKey, barRules, navigate, routeRules]);
 
     // Update app state
-    const updateAppState = useCallback(async (patch: Partial<AppState>) => {
-        setAppState((prev) => {
-            const next = { ...prev, ...patch };
-            void setInStorage(APP_STATE_KEY, next);
-            return next;
-        });
-    }, []);
+    const updateAppState = useCallback(
+        async (patch: Partial<AppState>) => {
+            setAppState((prev) => {
+                const next = { ...prev, ...patch };
+                void setInStorage(appStateKey, next);
+                return next;
+            });
+        },
+        [appStateKey]
+    );
 
     // Update last bar to active bar
     useEffect(() => {
@@ -294,7 +335,12 @@ export function useAppState({
         if (last?.bar === activeBar && last.route === path) return;
 
         if (!isRouteAllowed(path, activeBar, routeRules)) {
-            const fallback = barRules[activeBar].defaultRoute;
+            const fallback = resolveAllowedRoute(
+                activeBar,
+                undefined,
+                barRules,
+                routeRules
+            );
 
             if (path !== fallback) {
                 navigate(fallback, { replace: true });
