@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from 'react';
+import { isValidElement, type CSSProperties, type ReactNode } from 'react';
 import { Flex, Skeleton, type SkeletonProps } from '@radix-ui/themes';
 
 import { skeletonTextWidths } from '../../shared/math';
@@ -44,6 +44,33 @@ interface Props extends Omit<SkeletonProps, 'children'> {
     fullWidth?: boolean;
 }
 
+const TEXT_SIZE_TOKENS = new Set(['1', '2', '3', '4', '5', '6', '7', '8', '9']);
+
+const normalizeTextSize = (value: unknown): string | undefined => {
+    if (typeof value === 'number') {
+        const token = String(value);
+        return TEXT_SIZE_TOKENS.has(token) ? token : undefined;
+    }
+    if (typeof value !== 'string') return undefined;
+    const token = value.trim();
+    return TEXT_SIZE_TOKENS.has(token) ? token : undefined;
+};
+
+const findTextSize = (node: ReactNode): string | undefined => {
+    if (Array.isArray(node)) {
+        for (const child of node) {
+            const token = findTextSize(child);
+            if (token) return token;
+        }
+        return undefined;
+    }
+    if (!isValidElement(node)) return undefined;
+    const props = node.props as { size?: unknown; children?: ReactNode };
+    const own = normalizeTextSize(props.size);
+    if (own) return own;
+    return findTextSize(props.children);
+};
+
 export function SkeletonText({
     children,
     parts,
@@ -67,10 +94,23 @@ export function SkeletonText({
         resolvedOptions
     );
     const width = variant === 'title' ? titleWidth : subtitleWidth;
+    const textSizeToken = findTextSize(children);
     const widthStyle =
         skeletonProps.loading !== false && fullWidth
-            ? { width: `${width}%`, ...style }
-            : style;
+            ? { width: `${width}%` }
+            : undefined;
+    const heightStyle =
+        skeletonProps.loading !== false && textSizeToken
+            ? {
+                  height: `var(--line-height-${textSizeToken})`,
+                  lineHeight: `var(--line-height-${textSizeToken})`,
+              }
+            : undefined;
+    const resolvedStyle = {
+        ...widthStyle,
+        ...heightStyle,
+        ...style,
+    };
     const wrapperClass = [
         fullWidth ? 'w-full' : 'inline-flex',
         'min-w-0',
@@ -84,7 +124,7 @@ export function SkeletonText({
 
     return (
         <Skeleton {...skeletonProps} className={wrapperClass}>
-            <Flex className={innerClass} style={widthStyle}>
+            <Flex className={innerClass} style={resolvedStyle}>
                 {children}
             </Flex>
         </Skeleton>

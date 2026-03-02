@@ -138,6 +138,13 @@ const buildHomeSections = (): MediaSectionState[] => [
 
 const HOME_LAYOUT_KEY = 'homeLayout';
 type SectionStatus = { loading: boolean; error: string | null };
+const SEARCH_TYPE_BY_SECTION_ID: Record<string, SearchType> =
+    Object.fromEntries(
+        (Object.keys(SEARCH_SECTION_BASE) as SearchType[]).map((type) => [
+            SEARCH_SECTION_BASE[type].id,
+            type,
+        ])
+    ) as Record<string, SearchType>;
 
 const describeRpcError = (error: unknown) => {
     if (error instanceof Error) return error.message || 'Request failed.';
@@ -370,9 +377,7 @@ export function HomeView({ searchQuery, filters }: Props) {
     );
 
     const resolveSearchType = useCallback((sectionId: string) => {
-        return (Object.keys(SEARCH_SECTION_BASE) as SearchType[]).find(
-            (key) => SEARCH_SECTION_BASE[key].id === sectionId
-        );
+        return SEARCH_TYPE_BY_SECTION_ID[sectionId];
     }, []);
 
     const loadMoreSearch = useCallback(
@@ -432,14 +437,16 @@ export function HomeView({ searchQuery, filters }: Props) {
     );
 
     const loadHomeSection = useCallback(
-        async (sectionId: string) => {
+        async (sectionId: string, options: { markLoading?: boolean } = {}) => {
             if (isSearching) return;
             const seq = (homeLoadSeqRef.current[sectionId] ?? 0) + 1;
             homeLoadSeqRef.current[sectionId] = seq;
-            setHomeStatus((prev) => ({
-                ...prev,
-                [sectionId]: { loading: true, error: null },
-            }));
+            if (options.markLoading !== false) {
+                setHomeStatus((prev) => ({
+                    ...prev,
+                    [sectionId]: { loading: true, error: null },
+                }));
+            }
 
             try {
                 let items: MediaShelfItem[] = [];
@@ -654,16 +661,29 @@ export function HomeView({ searchQuery, filters }: Props) {
         searchLoadSeqRef.current = seq;
 
         const nextSections = buildSearchSections(searchContext.types);
-        setSearchSections(nextSections);
-        setSearchStatus(
-            nextSections.reduce<Record<string, SectionStatus>>(
-                (acc, section) => {
-                    acc[section.id] = { loading: true, error: null };
-                    return acc;
-                },
-                {}
-            )
-        );
+        const nextSectionIds = nextSections.map((section) => section.id);
+        setSearchSections((prev) => {
+            const prevById = new Map(
+                prev.map((section) => [section.id, section])
+            );
+            return nextSections.map((template) => {
+                const existing = prevById.get(template.id);
+                if (!existing) return template;
+                return {
+                    ...template,
+                    items: existing.items,
+                    hasMore: existing.hasMore,
+                    loadingMore: false,
+                };
+            });
+        });
+        setSearchStatus(() => {
+            const next: Record<string, SectionStatus> = {};
+            nextSectionIds.forEach((id) => {
+                next[id] = { loading: true, error: null };
+            });
+            return next;
+        });
         searchOffsetsRef.current = {
             track: 0,
             album: 0,
@@ -705,11 +725,7 @@ export function HomeView({ searchQuery, filters }: Props) {
 
                 setSearchSections((prev) =>
                     prev.map((section) => {
-                        const type = (
-                            Object.keys(SEARCH_SECTION_BASE) as SearchType[]
-                        ).find(
-                            (key) => SEARCH_SECTION_BASE[key].id === section.id
-                        );
+                        const type = SEARCH_TYPE_BY_SECTION_ID[section.id];
                         if (!type) return section;
                         return {
                             ...section,
@@ -786,7 +802,7 @@ export function HomeView({ searchQuery, filters }: Props) {
             return next;
         });
         ids.forEach((id) => {
-            void loadHomeSection(id);
+            void loadHomeSection(id, { markLoading: false });
         });
     }, [homeRefreshKey, isSearching, loadHomeSection]);
 
@@ -841,7 +857,6 @@ export function HomeView({ searchQuery, filters }: Props) {
                         variant="title"
                         fullWidth={false}
                         className="inline-flex"
-                        style={{ minHeight: 'var(--line-height-3)' }}
                     >
                         <Text size="3" weight="bold">
                             {heading.title}
@@ -948,7 +963,6 @@ export function HomeView({ searchQuery, filters }: Props) {
                     variant="subtitle"
                     fullWidth={false}
                     className="inline-flex"
-                    style={{ minHeight: 'var(--line-height-1)' }}
                 >
                     <Text size="1" color="gray">
                         {heading.subtitle}
@@ -1048,10 +1062,8 @@ export function HomeView({ searchQuery, filters }: Props) {
                                                             errorMessage={
                                                                 errorMessage
                                                             }
-                                                            onRetry={() =>
-                                                                handleSectionRetry(
-                                                                    section.id
-                                                                )
+                                                            onRetry={
+                                                                handleSectionRetry
                                                             }
                                                             dragging={
                                                                 dragSnapshot.isDragging

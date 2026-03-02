@@ -1,4 +1,6 @@
 import {
+    memo,
+    useEffect,
     useLayoutEffect,
     useMemo,
     useRef,
@@ -170,9 +172,9 @@ interface Props {
     dragging?: boolean;
     headerLoading?: boolean;
     errorMessage?: string | null;
-    onRetry?: () => void;
+    onRetry?: (id: string) => void;
 }
-export function MediaSection({
+function MediaSectionImpl({
     section,
     editing,
     loading = false,
@@ -516,7 +518,7 @@ export function MediaSection({
         setClampDraft(String(converted));
     };
 
-    useLayoutEffect(() => {
+    useEffect(() => {
         if (mode !== 'v-list') return;
         const rowEl = measureRowRef.current;
         const stackEl = measureStackRef.current;
@@ -544,11 +546,6 @@ export function MediaSection({
     }, [mode, section.items.length, loading]);
 
     useLayoutEffect(() => {
-        if (!editing) return;
-        setActiveGroup('type');
-    }, [editing]);
-
-    useLayoutEffect(() => {
         const header = headerRef.current;
         const root = sectionRef.current;
         if (!header || !root) return;
@@ -567,7 +564,7 @@ export function MediaSection({
         return () => observer.disconnect();
     }, []);
 
-    useLayoutEffect(() => {
+    useEffect(() => {
         if (editing && !prevEditingRef.current) {
             setSkipEditTransition(true);
             const raf = requestAnimationFrame(() => {
@@ -580,8 +577,8 @@ export function MediaSection({
         prevEditingRef.current = editing;
     }, [editing]);
 
-    useLayoutEffect(() => {
-        if (!editing) return;
+    useEffect(() => {
+        if (!editing || activeGroup === null) return;
         const update = () => {
             setGroupWidths((prev) => {
                 const next = { ...prev };
@@ -606,7 +603,7 @@ export function MediaSection({
         return () => observer.disconnect();
     }, [activeGroup, controlGroups, editing, mode]);
 
-    useLayoutEffect(() => {
+    useEffect(() => {
         if (!editing) setActiveGroup(null);
     }, [editing]);
 
@@ -647,7 +644,7 @@ export function MediaSection({
     return (
         <div
             className={clsx(
-                'rounded-2 bg-background relative ring-2 ring-transparent transition-all',
+                'rounded-2 bg-background ring-offset-background relative ring-2 ring-transparent ring-offset-1 transition-all',
                 'focus-within:z-20',
                 editing && 'hover:ring-accent-8! hover:z-20',
                 editing && dragging && 'ring-accent-10! z-30',
@@ -1339,7 +1336,7 @@ export function MediaSection({
                                 <Button
                                     size="1"
                                     variant="soft"
-                                    onClick={onRetry}
+                                    onClick={() => onRetry(section.id)}
                                     disabled={!showError}
                                 >
                                     Reload
@@ -1364,3 +1361,24 @@ export function MediaSection({
         </div>
     );
 }
+
+const areMediaSectionPropsEqual = (prev: Props, next: Props) =>
+    prev.section === next.section &&
+    prev.editing === next.editing &&
+    prev.loading === next.loading &&
+    prev.dragging === next.dragging &&
+    prev.headerLoading === next.headerLoading &&
+    prev.errorMessage === next.errorMessage &&
+    prev.className === next.className &&
+    prev.stickyHeader === next.stickyHeader &&
+    prev.headerFade === next.headerFade &&
+    prev.headerRight === next.headerRight &&
+    prev.onChange === next.onChange &&
+    prev.onDelete === next.onDelete &&
+    prev.onReorderItems === next.onReorderItems &&
+    prev.onLoadMore === next.onLoadMore &&
+    prev.onTitleClick === next.onTitleClick &&
+    prev.renderContent === next.renderContent &&
+    prev.onRetry === next.onRetry;
+
+export const MediaSection = memo(MediaSectionImpl, areMediaSectionPropsEqual);
