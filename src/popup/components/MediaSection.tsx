@@ -16,6 +16,8 @@ import {
 import { Button, DropdownMenu, Flex, IconButton, Text } from '@radix-ui/themes';
 import clsx from 'clsx';
 import { handleMenuTriggerKeyDown } from '../hooks/useActions';
+import { Fade } from './Fade';
+import { Marquee } from './Marquee';
 import { MediaRow } from './MediaRow';
 import { MediaShelf, type MediaShelfItem } from './MediaShelf';
 import { SegmentedControl } from './SegmentedControl';
@@ -167,6 +169,8 @@ interface Props {
     className?: string;
     dragging?: boolean;
     headerLoading?: boolean;
+    errorMessage?: string | null;
+    onRetry?: () => void;
 }
 export function MediaSection({
     section,
@@ -184,6 +188,8 @@ export function MediaSection({
     className,
     dragging = false,
     headerLoading = true,
+    errorMessage = null,
+    onRetry,
 }: Props) {
     const { title, subtitle } = section;
     const [rowsDraft, setRowsDraft] = useState<string | null>(null);
@@ -450,9 +456,11 @@ export function MediaSection({
     const clampColumnWidth = (val: number) =>
         Math.min(COLUMN_WIDTH_MAX, Math.max(COLUMN_WIDTH_MIN, val));
     const skeletonLabel = '\u00A0';
+    const showError = Boolean(errorMessage);
+    const isPending = loading || showError;
 
     const placeholderItems = useMemo(() => {
-        if (!loading) return [];
+        if (!isPending) return [];
         const cols = maxVisible ?? (orientation === 'horizontal' ? 4 : 8);
         const rows = itemsPerColumn ?? 3;
         const count = orientation === 'horizontal' ? cols * rows : cols;
@@ -466,13 +474,13 @@ export function MediaSection({
         itemsPerColumn,
         maxVisible,
         orientation,
-        loading,
+        isPending,
         section.id,
         skeletonLabel,
     ]);
 
     const shelfItems =
-        loading && section.items.length === 0
+        isPending && section.items.length === 0
             ? placeholderItems
             : section.items;
     const toRows = pxToRows ? (px: number) => Math.round(pxToRows(px)) : null;
@@ -603,7 +611,7 @@ export function MediaSection({
     }, [editing]);
 
     const content = renderContent ? (
-        renderContent({ columnWidth, loading })
+        renderContent({ columnWidth, loading: isPending })
     ) : (
         <MediaShelf
             droppableId={`media-shelf-${section.id}`}
@@ -617,11 +625,11 @@ export function MediaSection({
             fixedHeight={fixedHeight}
             cardSize={section.cardSize}
             trackSubtitleMode={section.trackSubtitleMode}
-            hasMore={loading ? false : section.hasMore}
-            loadingMore={loading ? false : section.loadingMore}
+            hasMore={isPending ? false : section.hasMore}
+            loadingMore={isPending ? false : section.loadingMore}
             showImage={section.showImage}
             onLoadMore={
-                loading || !onLoadMore
+                isPending || !onLoadMore
                     ? undefined
                     : () => onLoadMore(section.id)
             }
@@ -632,16 +640,17 @@ export function MediaSection({
             }
             interactive={!editing}
             draggable={false}
-            itemLoading={loading}
+            itemLoading={isPending}
         />
     );
 
     return (
         <div
             className={clsx(
-                'rounded-2 bg-background ring-offset-background relative ring-2 ring-transparent ring-offset-3 transition-all',
-                editing && 'hover:ring-accent-8!',
-                editing && dragging && 'ring-accent-10!',
+                'rounded-2 bg-background relative ring-2 ring-transparent transition-all',
+                'focus-within:z-20',
+                editing && 'hover:ring-accent-8! hover:z-20',
+                editing && dragging && 'ring-accent-10! z-30',
                 className
             )}
             data-dragging={dragging ? 'true' : 'false'}
@@ -696,22 +705,29 @@ export function MediaSection({
                                     parts={[title]}
                                     preset="media-row"
                                     variant="title"
-                                    className="w-fit"
+                                    className="min-w-0"
                                     fullWidth={false}
                                 >
-                                    {onTitleClick ? (
-                                        <TextButton
-                                            size="3"
-                                            weight="bold"
-                                            onClick={onTitleClick}
-                                        >
-                                            {title}
-                                        </TextButton>
-                                    ) : (
-                                        <Text size="3" weight="bold">
-                                            {title}
-                                        </Text>
-                                    )}
+                                    <Fade
+                                        enabled={!loading || !headerLoading}
+                                        grow
+                                    >
+                                        <Marquee mode="bounce" grow>
+                                            {onTitleClick ? (
+                                                <TextButton
+                                                    size="3"
+                                                    weight="bold"
+                                                    onClick={onTitleClick}
+                                                >
+                                                    {title}
+                                                </TextButton>
+                                            ) : (
+                                                <Text size="3" weight="bold">
+                                                    {title}
+                                                </Text>
+                                            )}
+                                        </Marquee>
+                                    </Fade>
                                 </SkeletonText>
                                 {subtitle && (
                                     <SkeletonText
@@ -719,12 +735,19 @@ export function MediaSection({
                                         parts={[subtitle]}
                                         preset="media-row"
                                         variant="subtitle"
-                                        className="w-fit"
+                                        className="min-w-0"
                                         fullWidth={false}
                                     >
-                                        <Text size="2" color="gray">
-                                            {subtitle}
-                                        </Text>
+                                        <Fade
+                                            enabled={!loading || !headerLoading}
+                                            grow
+                                        >
+                                            <Marquee mode="left" grow>
+                                                <Text size="2" color="gray">
+                                                    {subtitle}
+                                                </Text>
+                                            </Marquee>
+                                        </Fade>
                                     </SkeletonText>
                                 )}
                             </Flex>
@@ -1128,7 +1151,9 @@ export function MediaSection({
                                                 );
                                             }}
                                             suffix={
-                                                <DropdownMenu.Root>
+                                                <DropdownMenu.Root
+                                                    modal={false}
+                                                >
                                                     <DropdownMenu.Trigger
                                                         onKeyDown={
                                                             handleMenuTriggerKeyDown
@@ -1281,13 +1306,47 @@ export function MediaSection({
                         </div>
                     )}
                 </div>
-                <div
-                    className={clsx(
-                        'relative',
-                        editing && 'pointer-events-none select-none'
-                    )}
-                >
-                    {content}
+                <div className="relative">
+                    <div
+                        className={clsx(
+                            'relative',
+                            editing && 'pointer-events-none select-none'
+                        )}
+                    >
+                        {content}
+                    </div>
+                    <div
+                        className={clsx(
+                            'absolute inset-0 z-10 flex items-center justify-center transition-opacity duration-200',
+                            showError
+                                ? 'opacity-100'
+                                : 'pointer-events-none opacity-0'
+                        )}
+                        aria-hidden={!showError}
+                    >
+                        <div
+                            className={clsx(
+                                'rounded-2 bg-panel-solid/85 text-1 text-gray-12 flex max-w-65 flex-col items-center gap-2 px-4 py-3 text-center shadow-sm backdrop-blur transition-[opacity,transform] duration-200',
+                                showError
+                                    ? 'translate-y-0 opacity-100'
+                                    : '-translate-y-1 opacity-0'
+                            )}
+                        >
+                            <Text size="1" color="gray">
+                                {errorMessage ?? 'Failed to load this section.'}
+                            </Text>
+                            {onRetry && (
+                                <Button
+                                    size="1"
+                                    variant="soft"
+                                    onClick={onRetry}
+                                    disabled={!showError}
+                                >
+                                    Reload
+                                </Button>
+                            )}
+                        </div>
+                    </div>
                 </div>
                 {!loading && section.loadingMore && (
                     <div className="pointer-events-none absolute right-2 bottom-2 z-20">

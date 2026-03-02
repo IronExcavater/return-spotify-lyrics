@@ -448,18 +448,16 @@ export function MediaShelf({
                     key={`col-${colIndex}`}
                     direction="column"
                     gap="1"
-                    className={clsx(
-                        'min-w-0',
-                        variant === 'list' && 'flex-none'
-                    )}
+                    className="min-w-0"
                     style={
                         effectiveColumnWidth
                             ? {
-                                  flex: '0 0 auto',
+                                  flexGrow: 0,
+                                  flexShrink: 0,
                                   width: effectiveColumnWidth,
                                   flexBasis: effectiveColumnWidth,
                               }
-                            : { flex: '0 0 auto' }
+                            : { flexGrow: 0, flexShrink: 0 }
                     }
                 >
                     {col.map((item, idx) => {

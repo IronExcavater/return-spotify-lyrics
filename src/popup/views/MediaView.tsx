@@ -1004,63 +1004,88 @@ export function MediaView() {
         return value;
     }, []);
 
+    const isResolvingRoute =
+        state?.kind === 'track' || state?.kind === 'episode';
+    const dataMatchesState = useMemo(() => {
+        if (!data || !state?.id || !state?.kind || isResolvingRoute)
+            return false;
+        if (data.kind === 'album') {
+            return state.kind === 'album' && data.album.id === state.id;
+        }
+        if (data.kind === 'show') {
+            return state.kind === 'show' && data.show.id === state.id;
+        }
+        if (data.kind === 'artist') {
+            return state.kind === 'artist' && data.artist.id === state.id;
+        }
+        return false;
+    }, [data, isResolvingRoute, state?.id, state?.kind]);
+    const viewData = dataMatchesState ? data : null;
+    const resolvedSelectedId = useMemo(
+        () => resolveLookupId(state?.selectedId),
+        [resolveLookupId, state?.selectedId]
+    );
     const selectedTrack = useMemo(() => {
-        if (!data || data.kind !== 'album') return null;
-        const resolvedId = resolveLookupId(state?.selectedId);
-        if (!resolvedId) return null;
+        if (!viewData || viewData.kind !== 'album' || !resolvedSelectedId)
+            return null;
         return (
-            data.trackLookup[resolvedId] ??
-            data.trackLookup[state?.selectedId ?? ''] ??
+            viewData.trackLookup[resolvedSelectedId] ??
+            viewData.trackLookup[state?.selectedId ?? ''] ??
             null
         );
-    }, [data, resolveLookupId, state?.selectedId]);
-
+    }, [resolvedSelectedId, state?.selectedId, viewData]);
     const selectedEpisode = useMemo(() => {
-        if (!data || data.kind !== 'show') return null;
-        const resolvedId = resolveLookupId(state?.selectedId);
-        if (!resolvedId) return null;
+        if (!viewData || viewData.kind !== 'show' || !resolvedSelectedId)
+            return null;
         return (
-            data.episodeLookup[resolvedId] ??
-            data.episodeLookup[state?.selectedId ?? ''] ??
+            viewData.episodeLookup[resolvedSelectedId] ??
+            viewData.episodeLookup[state?.selectedId ?? ''] ??
             null
         );
-    }, [data, resolveLookupId, state?.selectedId]);
-
+    }, [resolvedSelectedId, state?.selectedId, viewData]);
+    const heroRoutes = useMemo(
+        () => ({
+            goToArtist: (id: string) =>
+                routeHistory.goTo('/media', { kind: 'artist', id }),
+            goToShow: (id: string) =>
+                routeHistory.goTo('/media', { kind: 'show', id }),
+        }),
+        [routeHistory]
+    );
     const hero = useMemo<HeroData | null>(
         () =>
-            buildMediaHeroData(data, {
+            buildMediaHeroData(viewData, {
                 locale,
                 settingsLocale: settings.locale,
                 selectedTrack,
                 selectedEpisode,
-                routes: {
-                    goToArtist: (id) =>
-                        routeHistory.goTo('/media', { kind: 'artist', id }),
-                    goToShow: (id) =>
-                        routeHistory.goTo('/media', { kind: 'show', id }),
-                },
+                routes: heroRoutes,
             }),
         [
-            data,
+            heroRoutes,
             locale,
-            routeHistory,
             selectedEpisode,
             selectedTrack,
             settings.locale,
+            viewData,
         ]
     );
 
+    const hasSelection = Boolean(state?.id && state?.kind);
+    const isStaleSelection =
+        hasSelection && !dataMatchesState && !isResolvingRoute;
+
     const activeKind =
-        data?.kind ??
+        viewData?.kind ??
         (state?.kind === 'track'
             ? 'album'
             : state?.kind === 'episode'
               ? 'show'
               : state?.kind);
-    const isLoadingView = loading || !data;
-    const albumData = data?.kind === 'album' ? data : null;
-    const showData = data?.kind === 'show' ? data : null;
-    const artistData = data?.kind === 'artist' ? data : null;
+    const isLoadingView = loading || !viewData || isStaleSelection;
+    const albumData = viewData?.kind === 'album' ? viewData : null;
+    const showData = viewData?.kind === 'show' ? viewData : null;
+    const artistData = viewData?.kind === 'artist' ? viewData : null;
     const shouldShowAlbumSection = isLoadingView
         ? !state?.singleTrack
         : (albumData?.tracks?.length ?? 0) > 1;
@@ -1105,42 +1130,52 @@ export function MediaView() {
         skeletonRows,
     ]);
 
-    const artistUris = artistData
-        ? artistData.topTracks
-              .map((track) => track.uri)
-              .filter((uri): uri is string => Boolean(uri))
-        : [];
-    const heroActions = hero ? buildMediaActions(hero.item) : null;
-    const artistPlayAction =
-        artistData && artistUris.length > 0
-            ? {
-                  id: 'play-popular',
-                  label: 'Play popular',
-                  shortcut: '↵',
-                  onSelect: () => {
-                      void sendSpotifyMessage('startPlayback', {
-                          uris: artistUris,
-                      });
-                  },
-              }
-            : null;
-    const mergedHeroActions = heroActions
-        ? (() => {
-              const primary = [...heroActions.primary];
-              const secondary = [...heroActions.secondary];
-
-              if (artistPlayAction) primary.unshift(artistPlayAction);
-              return { primary, secondary };
-          })()
-        : null;
-    const playNowAction = heroActions?.primary.find(
-        (action) => action.id === 'play-now'
+    const artistUris = useMemo(
+        () =>
+            artistData
+                ? artistData.topTracks
+                      .map((track) => track.uri)
+                      .filter((uri): uri is string => Boolean(uri))
+                : [],
+        [artistData]
     );
-    const canTogglePlayback = artistData
-        ? artistUris.length > 0
-        : Boolean(hero?.item?.uri);
+    const heroActions = useMemo(
+        () => (hero ? buildMediaActions(hero.item) : null),
+        [hero?.item]
+    );
+    const artistPlayAction = useMemo(
+        () =>
+            artistData && artistUris.length > 0
+                ? {
+                      id: 'play-popular',
+                      label: 'Play popular',
+                      shortcut: '↵',
+                      onSelect: () => {
+                          void sendSpotifyMessage('startPlayback', {
+                              uris: artistUris,
+                          });
+                      },
+                  }
+                : null,
+        [artistData, artistUris]
+    );
+    const mergedHeroActions = useMemo(() => {
+        if (!heroActions) return null;
+        const primary = [...heroActions.primary];
+        const secondary = [...heroActions.secondary];
+        if (artistPlayAction) primary.unshift(artistPlayAction);
+        return { primary, secondary };
+    }, [artistPlayAction, heroActions]);
+    const playNowAction = useMemo(
+        () => heroActions?.primary.find((action) => action.id === 'play-now'),
+        [heroActions]
+    );
+    const canTogglePlayback = useMemo(
+        () => (artistData ? artistUris.length > 0 : Boolean(hero?.item?.uri)),
+        [artistData, artistUris.length, hero?.item?.uri]
+    );
 
-    const buildPlaybackRequest = () => {
+    const buildPlaybackRequest = useCallback(() => {
         if (!hero?.item) return null;
         if (artistData) {
             return artistUris.length > 0 ? { uris: artistUris } : null;
@@ -1148,7 +1183,7 @@ export function MediaView() {
         if (albumData) {
             const contextUri = albumData.album.uri ?? hero.item.uri;
             if (!contextUri) return null;
-            const selectedId = state?.selectedId;
+            const selectedId = resolvedSelectedId ?? state?.selectedId;
             const selectedIndex =
                 selectedId != null
                     ? albumData.tracks.findIndex(
@@ -1166,7 +1201,7 @@ export function MediaView() {
         if (showData) {
             const contextUri = showData?.show.uri ?? hero.item.uri;
             if (!contextUri) return null;
-            const selectedId = state?.selectedId;
+            const selectedId = resolvedSelectedId ?? state?.selectedId;
             const selectedIndex =
                 selectedId != null
                     ? (showData?.episodes ?? []).findIndex(
@@ -1183,27 +1218,53 @@ export function MediaView() {
             };
         }
         return hero.item.uri ? { uris: [hero.item.uri] } : null;
-    };
+    }, [
+        albumData,
+        artistData,
+        artistUris,
+        hero?.item,
+        resolvedSelectedId,
+        showData,
+        state?.selectedId,
+    ]);
 
     const viewKey = `${state?.kind ?? 'none'}:${state?.id ?? 'none'}`;
 
-    const popularAlbumTracks = albumData
-        ? (albumData.artistTopTracks ?? [])
-              .filter(
-                  (track) =>
-                      track.id !== selectedTrack?.id &&
-                      !albumData.trackLookup?.[track.id ?? '']
-              )
-              .slice(0, 12)
-        : [];
+    const handlePlay = useCallback(() => {
+        if (playNowAction) {
+            playNowAction.onSelect();
+            return;
+        }
+        const request = buildPlaybackRequest();
+        if (!request) return;
+        void sendSpotifyMessage('startPlayback', request);
+    }, [buildPlaybackRequest, playNowAction]);
+
+    const popularAlbumTracks = useMemo(
+        () =>
+            albumData
+                ? (albumData.artistTopTracks ?? [])
+                      .filter(
+                          (track) =>
+                              track.id !== selectedTrack?.id &&
+                              !albumData.trackLookup?.[track.id ?? '']
+                      )
+                      .slice(0, 12)
+                : [],
+        [albumData, selectedTrack?.id]
+    );
     const albumPopularLoading =
-        isLoadingView || (data?.kind === 'album' && data.popularLoading);
+        isLoadingView ||
+        (viewData?.kind === 'album' && viewData.popularLoading);
     const albumRecommendedLoading =
-        isLoadingView || (data?.kind === 'album' && data.recommendedLoading);
+        isLoadingView ||
+        (viewData?.kind === 'album' && viewData.recommendedLoading);
     const showRecommendedLoading =
-        isLoadingView || (data?.kind === 'show' && data.recommendedLoading);
+        isLoadingView ||
+        (viewData?.kind === 'show' && viewData.recommendedLoading);
     const artistRecommendedLoading =
-        isLoadingView || (data?.kind === 'artist' && data.recommendedLoading);
+        isLoadingView ||
+        (viewData?.kind === 'artist' && viewData.recommendedLoading);
 
     const scrollRef = useRef<HTMLDivElement | null>(null);
 
@@ -1243,7 +1304,7 @@ export function MediaView() {
         );
     }
 
-    if (!loading && !data) {
+    if (!loading && !viewData && !isResolvingRoute && !isStaleSelection) {
         return (
             <Flex p="3" direction="column">
                 <Text size="2" color="gray">
@@ -1261,22 +1322,14 @@ export function MediaView() {
             <StickyLayout.Sticky order={0} className="z-30" heightOffset={8}>
                 <MediaHero
                     hero={hero}
-                    loading={loading}
+                    loading={isLoadingView}
                     heroUrl={hero?.heroUrl}
                     scrollRef={scrollRef}
                     collapseKey={viewKey}
                     mergedHeroActions={mergedHeroActions}
                     canTogglePlayback={canTogglePlayback}
                     sticky={false}
-                    onPlay={() => {
-                        if (playNowAction) {
-                            playNowAction.onSelect();
-                            return;
-                        }
-                        const request = buildPlaybackRequest();
-                        if (!request) return;
-                        void sendSpotifyMessage('startPlayback', request);
-                    }}
+                    onPlay={handlePlay}
                 />
             </StickyLayout.Sticky>
 
