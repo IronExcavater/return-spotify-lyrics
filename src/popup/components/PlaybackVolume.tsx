@@ -100,14 +100,16 @@ export function PlaybackVolume({
                 className={clsx(
                     'pointer-events-none absolute z-1 p-1',
                     POPOVER_POSITION[direction],
-                    'group-focus-within:pointer-events-auto group-hover:pointer-events-auto'
+                    canSetVolume &&
+                        'group-focus-within:pointer-events-auto group-hover:pointer-events-auto'
                 )}
             >
                 {' '}
                 <div
                     className={clsx(
                         'rounded-full bg-black/60 p-2 opacity-0 backdrop-blur-xs transition-opacity',
-                        'group-focus-within:opacity-100 group-hover:opacity-100'
+                        canSetVolume &&
+                            'group-focus-within:opacity-100 group-hover:opacity-100'
                     )}
                 >
                     {' '}
