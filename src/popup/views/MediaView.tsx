@@ -83,6 +83,13 @@ const logOptionalNotFound = createOptionalRequestLogger(
     suppressNotFound
 );
 
+const CONTEXT_KIND_LABEL: Partial<Record<MediaItem['parentKind'], string>> = {
+    album: 'album',
+    playlist: 'playlist',
+    show: 'show',
+    audiobook: 'audiobook',
+};
+
 type MediaViewState =
     | {
           kind: 'album';
@@ -351,7 +358,8 @@ const buildMediaHeroData = (
 export function MediaView() {
     const location = useLocation();
     const { settings } = useSettings();
-    const routeHistory = useHistory();
+    const { goTo } = useHistory();
+    const routeHistory = useMemo(() => ({ goTo }), [goTo]);
     const market = resolveMarket(settings.locale);
     const locale = resolveLocale(settings.locale);
 
@@ -366,6 +374,7 @@ export function MediaView() {
     const [data, setData] = useState<MediaViewState | null>(null);
     const [loading, setLoading] = useState(true);
     const dataRef = useRef<MediaViewState | null>(null);
+    const loadRequestIdRef = useRef(0);
     const [discographySort, setDiscographySort] = useState<'newest' | 'oldest'>(
         'newest'
     );
@@ -417,7 +426,7 @@ export function MediaView() {
                     data.trackLookup[state.id] ??
                     null;
                 if (!track) return false;
-                routeHistory.goTo(
+                goTo(
                     '/media',
                     {
                         kind: 'album',
@@ -436,7 +445,7 @@ export function MediaView() {
                     data.episodeLookup[state.id] ??
                     null;
                 if (!episode) return false;
-                routeHistory.goTo(
+                goTo(
                     '/media',
                     {
                         kind: 'show',
@@ -460,7 +469,7 @@ export function MediaView() {
                     });
                     if (cancelled) return;
                     if (track.album?.id) {
-                        routeHistory.goTo(
+                        goTo(
                             '/media',
                             {
                                 kind: 'album',
@@ -479,7 +488,7 @@ export function MediaView() {
                     });
                     if (cancelled) return;
                     if (episode.show?.id) {
-                        routeHistory.goTo(
+                        goTo(
                             '/media',
                             {
                                 kind: 'show',
@@ -499,7 +508,7 @@ export function MediaView() {
         return () => {
             cancelled = true;
         };
-    }, [data, market, routeHistory, state?.id, state?.kind]);
+    }, [data, goTo, market, state?.id, state?.kind]);
 
     useEffect(() => {
         if (!state?.id || !state?.kind) {
@@ -516,6 +525,11 @@ export function MediaView() {
         }
 
         let cancelled = false;
+        const requestId = loadRequestIdRef.current + 1;
+        loadRequestIdRef.current = requestId;
+        const isStale = () =>
+            cancelled || loadRequestIdRef.current !== requestId;
+
         const load = async () => {
             setData(null);
             setLoading(true);
@@ -533,6 +547,7 @@ export function MediaView() {
                                 limit: 50,
                             }),
                         ]);
+                        if (isStale()) break;
                         const totalDurationMs = sumDurationMs(tracksPage.items);
                         const tracks = tracksPage.items.map((track) =>
                             albumTrackToItem(track, album)
@@ -548,7 +563,7 @@ export function MediaView() {
                         const mainArtistName =
                             selectedTrack?.artists?.[0]?.name ??
                             album.artists?.[0]?.name;
-                        if (!cancelled) {
+                        if (!isStale()) {
                             setData({
                                 kind: 'album',
                                 album,
@@ -565,8 +580,9 @@ export function MediaView() {
                                 recommendedLoading: Boolean(mainArtistName),
                             });
                         }
-                        if (mainArtistId) {
+                        if (mainArtistId && !isStale()) {
                             void (async () => {
+                                if (isStale()) return;
                                 const topTracks = await safeRequest(
                                     () =>
                                         sendSpotifyMessage(
@@ -579,7 +595,7 @@ export function MediaView() {
                                     { tracks: [] },
                                     logOptionalError
                                 );
-                                if (!cancelled) {
+                                if (!isStale()) {
                                     setData((prev) =>
                                         prev?.kind === 'album'
                                             ? {
@@ -595,48 +611,51 @@ export function MediaView() {
                                 }
                             })();
                         }
-                        void (async () => {
-                            const seedArtist = mainArtistName;
-                            const trackIds = new Set(
-                                tracksPage.items
-                                    .map((track) => track.id)
-                                    .filter(Boolean)
-                            );
-                            const query = buildTrackRecommendationQuery({
-                                artistName: seedArtist,
-                                trackName: selectedTrack?.name,
-                                albumName: album.name,
-                            });
-                            const recommended = await searchItems(
-                                query,
-                                ['track'],
-                                (results) =>
-                                    (results.tracks?.items ?? [])
-                                        .filter(
-                                            (item): item is Track =>
-                                                typeof item === 'object' &&
-                                                item !== null
-                                        )
-                                        .filter(
-                                            (item) =>
-                                                item.id &&
-                                                !trackIds.has(item.id)
-                                        )
-                                        .map(trackToItem),
-                                logSearchError
-                            );
-                            if (!cancelled) {
-                                setData((prev) =>
-                                    prev?.kind === 'album'
-                                        ? {
-                                              ...prev,
-                                              recommended,
-                                              recommendedLoading: false,
-                                          }
-                                        : prev
+                        if (!isStale()) {
+                            void (async () => {
+                                if (isStale()) return;
+                                const seedArtist = mainArtistName;
+                                const trackIds = new Set(
+                                    tracksPage.items
+                                        .map((track) => track.id)
+                                        .filter(Boolean)
                                 );
-                            }
-                        })();
+                                const query = buildTrackRecommendationQuery({
+                                    artistName: seedArtist,
+                                    trackName: selectedTrack?.name,
+                                    albumName: album.name,
+                                });
+                                const recommended = await searchItems(
+                                    query,
+                                    ['track'],
+                                    (results) =>
+                                        (results.tracks?.items ?? [])
+                                            .filter(
+                                                (item): item is Track =>
+                                                    typeof item === 'object' &&
+                                                    item !== null
+                                            )
+                                            .filter(
+                                                (item) =>
+                                                    item.id &&
+                                                    !trackIds.has(item.id)
+                                            )
+                                            .map(trackToItem),
+                                    logSearchError
+                                );
+                                if (!isStale()) {
+                                    setData((prev) =>
+                                        prev?.kind === 'album'
+                                            ? {
+                                                  ...prev,
+                                                  recommended,
+                                                  recommendedLoading: false,
+                                              }
+                                            : prev
+                                    );
+                                }
+                            })();
+                        }
                         break;
                     }
                     case 'show': {
@@ -651,6 +670,7 @@ export function MediaView() {
                                 limit: SHOW_EPISODE_PAGE_SIZE,
                             }),
                         ]);
+                        if (isStale()) break;
                         const totalDurationMs = sumDurationMs(
                             episodesPage.items
                         );
@@ -672,7 +692,7 @@ export function MediaView() {
                         const nextOffset = episodesPage.items.length;
                         const hasMore =
                             nextOffset < (episodesPage.total ?? nextOffset);
-                        if (!cancelled) {
+                        if (!isStale()) {
                             setData({
                                 kind: 'show',
                                 show,
@@ -689,40 +709,44 @@ export function MediaView() {
                                 recommendedLoading: true,
                             });
                         }
-                        void (async () => {
-                            const query = buildShowRecommendationQuery({
-                                showName: show.name,
-                                publisher: show.publisher,
-                            });
-                            const recommended = await searchItems(
-                                query,
-                                ['show'],
-                                (results) =>
-                                    (results.shows?.items ?? [])
-                                        .filter(
-                                            (item): item is Show =>
-                                                typeof item === 'object' &&
-                                                item !== null
-                                        )
-                                        .filter(
-                                            (item) =>
-                                                item.id && item.id !== show.id
-                                        )
-                                        .map(showToItem),
-                                logSearchError
-                            );
-                            if (!cancelled) {
-                                setData((prev) =>
-                                    prev?.kind === 'show'
-                                        ? {
-                                              ...prev,
-                                              recommended,
-                                              recommendedLoading: false,
-                                          }
-                                        : prev
+                        if (!isStale()) {
+                            void (async () => {
+                                if (isStale()) return;
+                                const query = buildShowRecommendationQuery({
+                                    showName: show.name,
+                                    publisher: show.publisher,
+                                });
+                                const recommended = await searchItems(
+                                    query,
+                                    ['show'],
+                                    (results) =>
+                                        (results.shows?.items ?? [])
+                                            .filter(
+                                                (item): item is Show =>
+                                                    typeof item === 'object' &&
+                                                    item !== null
+                                            )
+                                            .filter(
+                                                (item) =>
+                                                    item.id &&
+                                                    item.id !== show.id
+                                            )
+                                            .map(showToItem),
+                                    logSearchError
                                 );
-                            }
-                        })();
+                                if (!isStale()) {
+                                    setData((prev) =>
+                                        prev?.kind === 'show'
+                                            ? {
+                                                  ...prev,
+                                                  recommended,
+                                                  recommendedLoading: false,
+                                              }
+                                            : prev
+                                    );
+                                }
+                            })();
+                        }
                         break;
                     }
                     case 'artist': {
@@ -745,6 +769,7 @@ export function MediaView() {
                                     logOptionalNotFound
                                 ),
                             ]);
+                        if (isStale()) break;
                         const fansAlsoLike = rankRelatedArtists(
                             relatedArtists.artists.filter(
                                 (artist) => artist.id && artist.id !== state.id
@@ -754,7 +779,7 @@ export function MediaView() {
                             .slice(0, 12)
                             .map(artistToItem);
                         const initialRelatedLoading = fansAlsoLike.length === 0;
-                        if (!cancelled) {
+                        if (!isStale()) {
                             setData({
                                 kind: 'artist',
                                 artist,
@@ -766,167 +791,180 @@ export function MediaView() {
                                 recommendedLoading: true,
                             });
                         }
-                        void (async () => {
-                            const genreQuery = buildGenreRecommendationQuery(
-                                artist.genres
-                            );
-                            const genreCandidates = genreQuery
-                                ? await searchItems(
-                                      genreQuery,
-                                      ['artist'],
-                                      (results) =>
-                                          (results.artists?.items ?? [])
-                                              .filter(
-                                                  (item): item is Artist =>
-                                                      typeof item ===
-                                                          'object' &&
-                                                      item !== null
-                                              )
-                                              .filter(
-                                                  (item) =>
-                                                      item.id &&
-                                                      item.id !== state.id
-                                              ),
-                                      logSearchError
-                                  )
-                                : [];
-                            const shouldUseNameFallback =
-                                fansAlsoLike.length === 0 &&
-                                genreCandidates.length === 0;
-                            const nameCandidates = shouldUseNameFallback
-                                ? await searchItems(
-                                      artist.name,
-                                      ['artist'],
-                                      (results) =>
-                                          (results.artists?.items ?? [])
-                                              .filter(
-                                                  (item): item is Artist =>
-                                                      typeof item ===
-                                                          'object' &&
-                                                      item !== null
-                                              )
-                                              .filter(
-                                                  (item) =>
-                                                      item.id &&
-                                                      item.id !== state.id
-                                              )
-                                              .filter(
-                                                  (item) =>
-                                                      (item.popularity ?? 0) >=
-                                                      20
-                                              ),
-                                      logSearchError
-                                  )
-                                : [];
-                            const merged = Array.from(
-                                new Map(
-                                    [
-                                        ...relatedArtists.artists,
-                                        ...genreCandidates,
-                                        ...nameCandidates,
-                                    ]
-                                        .filter(
-                                            (item) =>
-                                                item.id && item.id !== state.id
-                                        )
-                                        .map((item) => [item.id!, item])
-                                ).values()
-                            );
-                            const ranked = rankRelatedArtists(
-                                merged,
-                                artist.genres
-                            )
-                                .slice(0, 12)
-                                .map(artistToItem);
-                            if (cancelled) return;
-                            setData((prev) =>
-                                prev?.kind === 'artist'
-                                    ? {
-                                          ...prev,
-                                          relatedArtists:
-                                              ranked.length > 0
-                                                  ? ranked
-                                                  : prev.relatedArtists,
-                                          relatedArtistsLoading: false,
-                                      }
-                                    : prev
-                            );
-                        })();
-                        void (async () => {
-                            const albumsPage = await safeRequest(
-                                () =>
-                                    sendSpotifyMessage('getArtistAlbums', {
-                                        id: state.id,
-                                        market,
-                                        limit: 20,
-                                    }),
-                                null,
-                                logOptionalError
-                            );
-                            const discographySeed =
-                                albumsPage?.items?.filter((item) => item.id) ??
-                                [];
-                            if (!discographySeed.length) return;
-                            const discographyAlbums = Array.from(
-                                new Map(
-                                    discographySeed.map((item) => [
-                                        item.id!,
-                                        item,
-                                    ])
-                                ).values()
-                            ).slice(0, 10);
-                            const discography = await buildDiscographyEntries(
-                                discographyAlbums,
-                                market,
-                                discographyTrackCount
-                            );
-                            if (!cancelled) {
-                                setData((prev) =>
-                                    prev?.kind === 'artist'
-                                        ? { ...prev, discography }
-                                        : prev
+                        if (!isStale()) {
+                            void (async () => {
+                                if (isStale()) return;
+                                const genreQuery =
+                                    buildGenreRecommendationQuery(
+                                        artist.genres
+                                    );
+                                const genreCandidates = genreQuery
+                                    ? await searchItems(
+                                          genreQuery,
+                                          ['artist'],
+                                          (results) =>
+                                              (results.artists?.items ?? [])
+                                                  .filter(
+                                                      (item): item is Artist =>
+                                                          typeof item ===
+                                                              'object' &&
+                                                          item !== null
+                                                  )
+                                                  .filter(
+                                                      (item) =>
+                                                          item.id &&
+                                                          item.id !== state.id
+                                                  ),
+                                          logSearchError
+                                      )
+                                    : [];
+                                const shouldUseNameFallback =
+                                    fansAlsoLike.length === 0 &&
+                                    genreCandidates.length === 0;
+                                const nameCandidates = shouldUseNameFallback
+                                    ? await searchItems(
+                                          artist.name,
+                                          ['artist'],
+                                          (results) =>
+                                              (results.artists?.items ?? [])
+                                                  .filter(
+                                                      (item): item is Artist =>
+                                                          typeof item ===
+                                                              'object' &&
+                                                          item !== null
+                                                  )
+                                                  .filter(
+                                                      (item) =>
+                                                          item.id &&
+                                                          item.id !== state.id
+                                                  )
+                                                  .filter(
+                                                      (item) =>
+                                                          (item.popularity ??
+                                                              0) >= 20
+                                                  ),
+                                          logSearchError
+                                      )
+                                    : [];
+                                const merged = Array.from(
+                                    new Map(
+                                        [
+                                            ...relatedArtists.artists,
+                                            ...genreCandidates,
+                                            ...nameCandidates,
+                                        ]
+                                            .filter(
+                                                (item) =>
+                                                    item.id &&
+                                                    item.id !== state.id
+                                            )
+                                            .map((item) => [item.id!, item])
+                                    ).values()
                                 );
-                            }
-                        })();
-                        void (async () => {
-                            const query = buildTrackRecommendationQuery({
-                                artistName: artist.name,
-                            });
-                            const topTrackIds = new Set(
-                                topTracks.tracks
-                                    .map((track) => track.id)
-                                    .filter(Boolean)
-                            );
-                            const recommended = await searchItems(
-                                query,
-                                ['track'],
-                                (results) =>
-                                    (results.tracks?.items ?? [])
-                                        .filter(
-                                            (item): item is Track =>
-                                                typeof item === 'object' &&
-                                                item !== null
-                                        )
-                                        .filter(
-                                            (item) =>
-                                                item.id &&
-                                                !topTrackIds.has(item.id)
-                                        )
-                                        .map(trackToItem),
-                                logSearchError
-                            );
-                            if (!cancelled) {
+                                const ranked = rankRelatedArtists(
+                                    merged,
+                                    artist.genres
+                                )
+                                    .slice(0, 12)
+                                    .map(artistToItem);
+                                if (isStale()) return;
                                 setData((prev) =>
                                     prev?.kind === 'artist'
                                         ? {
                                               ...prev,
-                                              recommended,
-                                              recommendedLoading: false,
+                                              relatedArtists:
+                                                  ranked.length > 0
+                                                      ? ranked
+                                                      : prev.relatedArtists,
+                                              relatedArtistsLoading: false,
                                           }
                                         : prev
                                 );
-                            }
-                        })();
+                            })();
+                        }
+                        if (!isStale()) {
+                            void (async () => {
+                                if (isStale()) return;
+                                const albumsPage = await safeRequest(
+                                    () =>
+                                        sendSpotifyMessage('getArtistAlbums', {
+                                            id: state.id,
+                                            market,
+                                            limit: 20,
+                                        }),
+                                    null,
+                                    logOptionalError
+                                );
+                                const discographySeed =
+                                    albumsPage?.items?.filter(
+                                        (item) => item.id
+                                    ) ?? [];
+                                if (!discographySeed.length) return;
+                                const discographyAlbums = Array.from(
+                                    new Map(
+                                        discographySeed.map((item) => [
+                                            item.id!,
+                                            item,
+                                        ])
+                                    ).values()
+                                ).slice(0, 10);
+                                const discography =
+                                    await buildDiscographyEntries(
+                                        discographyAlbums,
+                                        market,
+                                        discographyTrackCount
+                                    );
+                                if (!isStale()) {
+                                    setData((prev) =>
+                                        prev?.kind === 'artist'
+                                            ? { ...prev, discography }
+                                            : prev
+                                    );
+                                }
+                            })();
+                        }
+                        if (!isStale()) {
+                            void (async () => {
+                                if (isStale()) return;
+                                const query = buildTrackRecommendationQuery({
+                                    artistName: artist.name,
+                                });
+                                const topTrackIds = new Set(
+                                    topTracks.tracks
+                                        .map((track) => track.id)
+                                        .filter(Boolean)
+                                );
+                                const recommended = await searchItems(
+                                    query,
+                                    ['track'],
+                                    (results) =>
+                                        (results.tracks?.items ?? [])
+                                            .filter(
+                                                (item): item is Track =>
+                                                    typeof item === 'object' &&
+                                                    item !== null
+                                            )
+                                            .filter(
+                                                (item) =>
+                                                    item.id &&
+                                                    !topTrackIds.has(item.id)
+                                            )
+                                            .map(trackToItem),
+                                    logSearchError
+                                );
+                                if (!isStale()) {
+                                    setData((prev) =>
+                                        prev?.kind === 'artist'
+                                            ? {
+                                                  ...prev,
+                                                  recommended,
+                                                  recommendedLoading: false,
+                                              }
+                                            : prev
+                                    );
+                                }
+                            })();
+                        }
                         break;
                     }
                     default: {
@@ -934,7 +972,7 @@ export function MediaView() {
                     }
                 }
             } finally {
-                if (!cancelled) setLoading(false);
+                if (!isStale()) setLoading(false);
             }
         };
 
@@ -1045,12 +1083,10 @@ export function MediaView() {
     }, [resolvedSelectedId, state?.selectedId, viewData]);
     const heroRoutes = useMemo(
         () => ({
-            goToArtist: (id: string) =>
-                routeHistory.goTo('/media', { kind: 'artist', id }),
-            goToShow: (id: string) =>
-                routeHistory.goTo('/media', { kind: 'show', id }),
+            goToArtist: (id: string) => goTo('/media', { kind: 'artist', id }),
+            goToShow: (id: string) => goTo('/media', { kind: 'show', id }),
         }),
-        [routeHistory]
+        [goTo]
     );
     const hero = useMemo<HeroData | null>(
         () =>
@@ -1099,7 +1135,7 @@ export function MediaView() {
                 onTitleClick={
                     albumData?.album.id
                         ? () =>
-                              routeHistory.goTo('/media', {
+                              goTo('/media', {
                                   kind: 'album',
                                   id: albumData.album.id,
                               })
@@ -1125,7 +1161,7 @@ export function MediaView() {
         albumData?.album.name,
         albumData?.tracks,
         isLoadingView,
-        routeHistory,
+        goTo,
         shouldShowAlbumSection,
         skeletonRows,
     ]);
@@ -1139,42 +1175,6 @@ export function MediaView() {
                 : [],
         [artistData]
     );
-    const heroActions = useMemo(
-        () => (hero ? buildMediaActions(hero.item) : null),
-        [hero?.item]
-    );
-    const artistPlayAction = useMemo(
-        () =>
-            artistData && artistUris.length > 0
-                ? {
-                      id: 'play-popular',
-                      label: 'Play popular',
-                      shortcut: '↵',
-                      onSelect: () => {
-                          void sendSpotifyMessage('startPlayback', {
-                              uris: artistUris,
-                          });
-                      },
-                  }
-                : null,
-        [artistData, artistUris]
-    );
-    const mergedHeroActions = useMemo(() => {
-        if (!heroActions) return null;
-        const primary = [...heroActions.primary];
-        const secondary = [...heroActions.secondary];
-        if (artistPlayAction) primary.unshift(artistPlayAction);
-        return { primary, secondary };
-    }, [artistPlayAction, heroActions]);
-    const playNowAction = useMemo(
-        () => heroActions?.primary.find((action) => action.id === 'play-now'),
-        [heroActions]
-    );
-    const canTogglePlayback = useMemo(
-        () => (artistData ? artistUris.length > 0 : Boolean(hero?.item?.uri)),
-        [artistData, artistUris.length, hero?.item?.uri]
-    );
-
     const buildPlaybackRequest = useCallback(() => {
         if (!hero?.item) return null;
         if (artistData) {
@@ -1227,6 +1227,75 @@ export function MediaView() {
         showData,
         state?.selectedId,
     ]);
+    const heroActions = useMemo(
+        () => (hero ? buildMediaActions(hero.item) : null),
+        [hero?.item]
+    );
+    const artistPlayAction = useMemo(
+        () =>
+            artistData && artistUris.length > 0
+                ? {
+                      id: 'play-popular',
+                      label: 'Play popular',
+                      shortcut: '↵',
+                      onSelect: () => {
+                          void sendSpotifyMessage('startPlayback', {
+                              uris: artistUris,
+                          });
+                      },
+                  }
+                : null,
+        [artistData, artistUris]
+    );
+    const playContextAction = useMemo(() => {
+        if (!hero?.item) return null;
+        if (hero.item.kind !== 'track' && hero.item.kind !== 'episode') {
+            return null;
+        }
+        const request = buildPlaybackRequest();
+        if (!request || !('contextUri' in request) || !request.contextUri) {
+            return null;
+        }
+        const contextLabel =
+            CONTEXT_KIND_LABEL[hero.item.parentKind] ?? 'context';
+        return {
+            id: 'play-context',
+            label: `Play from ${contextLabel}`,
+            onSelect: () => {
+                void sendSpotifyMessage('startPlayback', request);
+            },
+        };
+    }, [
+        buildPlaybackRequest,
+        hero?.item,
+        hero?.item?.kind,
+        hero?.item?.parentKind,
+    ]);
+    const mergedHeroActions = useMemo(() => {
+        if (!heroActions) return null;
+        const primary = [...heroActions.primary];
+        const secondary = [...heroActions.secondary];
+        if (playContextAction) {
+            const playNowIndex = primary.findIndex(
+                (action) => action.id === 'play-now'
+            );
+            if (playNowIndex >= 0) {
+                primary.splice(playNowIndex + 1, 0, playContextAction);
+            } else {
+                primary.unshift(playContextAction);
+            }
+        }
+        if (artistPlayAction) primary.unshift(artistPlayAction);
+        return { primary, secondary };
+    }, [artistPlayAction, heroActions, playContextAction]);
+    const playNowAction = useMemo(
+        () => heroActions?.primary.find((action) => action.id === 'play-now'),
+        [heroActions]
+    );
+    const canTogglePlayback = useMemo(
+        () => (artistData ? artistUris.length > 0 : Boolean(hero?.item?.uri)),
+        [artistData, artistUris.length, hero?.item?.uri]
+    );
 
     const viewKey = `${state?.kind ?? 'none'}:${state?.id ?? 'none'}`;
 
@@ -1514,7 +1583,7 @@ export function MediaView() {
                                     loading={isLoadingView}
                                     onAlbumClick={(album) =>
                                         album.id
-                                            ? routeHistory.goTo(
+                                            ? goTo(
                                                   '/media',
                                                   {
                                                       kind: 'album',
@@ -1528,7 +1597,7 @@ export function MediaView() {
                                     }
                                     onTrackClick={(track) =>
                                         track.id
-                                            ? routeHistory.goTo(
+                                            ? goTo(
                                                   '/media',
                                                   {
                                                       kind: 'track',

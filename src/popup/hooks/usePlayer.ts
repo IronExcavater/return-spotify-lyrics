@@ -14,7 +14,11 @@ import {
     ANALYTICS_EVENTS,
     createAnalyticsTracker,
 } from '../../shared/analytics';
-import { sendSpotifyMessage } from '../../shared/messaging';
+import {
+    sendSpotifyMessage,
+    SPOTIFY_RPC_DISPATCH_EVENT,
+    type SpotifyRpcDispatchEventDetail,
+} from '../../shared/messaging';
 
 type PlayerSnapshot = {
     playback: PlaybackState | null | undefined;
@@ -34,6 +38,7 @@ type OptimisticState = {
     repeatMode?: 'off' | 'track' | 'context';
     volumePercent?: number;
     progressMs?: number;
+    assumeCanControl?: boolean;
     expiresAt: number;
 };
 
@@ -117,7 +122,8 @@ const sync = async () => {
 const tick = () => {
     const playback = snapshot.playback;
     const durationMs = snapshot.durationMs;
-    const isPlaying = playback?.is_playing ?? false;
+    const isPlaying =
+        optimisticState?.isPlaying ?? playback?.is_playing ?? false;
 
     if (durationMs > 0) {
         const elapsed =
@@ -203,6 +209,77 @@ export function usePlayer(pollMs = 4000) {
         };
     }, []);
 
+    useEffect(() => {
+        const handleDispatch = (event: Event) => {
+            const detail = (event as CustomEvent<SpotifyRpcDispatchEventDetail>)
+                .detail;
+            if (!detail) return;
+
+            switch (detail.op) {
+                case 'startResumePlayback':
+                case 'startPlayback':
+                    applyOptimistic({
+                        isPlaying: true,
+                        assumeCanControl: true,
+                    });
+                    baseProgress.current = snapshot.progressMs;
+                    lastSyncRef.current = Date.now();
+                    break;
+                case 'pausePlayback':
+                    applyOptimistic({
+                        isPlaying: false,
+                        assumeCanControl: true,
+                    });
+                    baseProgress.current = snapshot.progressMs;
+                    lastSyncRef.current = Date.now();
+                    break;
+                case 'seekToPosition': {
+                    const ms =
+                        typeof detail.args === 'number' ? detail.args : null;
+                    if (ms == null || !Number.isFinite(ms)) return;
+                    applyOptimistic({
+                        progressMs: ms,
+                        assumeCanControl: true,
+                    });
+                    baseProgress.current = ms;
+                    lastSyncRef.current = Date.now();
+                    setSnapshot({ progressMs: ms });
+                    break;
+                }
+                case 'setPlaybackVolume': {
+                    const volume =
+                        typeof detail.args === 'number' ? detail.args : null;
+                    if (volume == null || !Number.isFinite(volume)) return;
+                    applyOptimistic({
+                        volumePercent: volume,
+                        assumeCanControl: true,
+                    });
+                    break;
+                }
+                case 'skipToNext':
+                case 'skipToPrevious':
+                case 'toggleShuffle':
+                case 'setRepeatMode':
+                case 'addToQueue':
+                    applyOptimistic({ assumeCanControl: true });
+                    break;
+                default:
+                    break;
+            }
+        };
+
+        window.addEventListener(
+            SPOTIFY_RPC_DISPATCH_EVENT,
+            handleDispatch as EventListener
+        );
+        return () => {
+            window.removeEventListener(
+                SPOTIFY_RPC_DISPATCH_EVENT,
+                handleDispatch as EventListener
+            );
+        };
+    }, []);
+
     const state = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 
     const playback = state.playback;
@@ -224,7 +301,9 @@ export function usePlayer(pollMs = 4000) {
     const disallows = (
         playback?.actions as { disallows?: Record<string, boolean> } | undefined
     )?.disallows;
-    const canControl = device?.is_restricted !== true;
+    const canControl =
+        device?.is_restricted !== true ||
+        optimisticState?.assumeCanControl === true;
     const canSeek = canControl && disallows?.seeking !== true;
     const canSkipNext = canControl && disallows?.skipping_next !== true;
     const canSkipPrevious = canControl && disallows?.skipping_prev !== true;
@@ -322,7 +401,12 @@ export function usePlayer(pollMs = 4000) {
                 void trackPlayback(ANALYTICS_EVENTS.playbackPlay, {
                     reason: 'playback resumed',
                 });
-                applyOptimistic({ isPlaying: true });
+                applyOptimistic({
+                    isPlaying: true,
+                    assumeCanControl: true,
+                });
+                baseProgress.current = progressMs;
+                lastSyncRef.current = Date.now();
                 const contextUri = playback?.context?.uri;
                 const uri = playback?.item?.uri;
                 const positionMs = playback?.progress_ms ?? 0;
@@ -343,7 +427,13 @@ export function usePlayer(pollMs = 4000) {
                 void trackPlayback(ANALYTICS_EVENTS.playbackPause, {
                     reason: 'playback paused',
                 });
-                applyOptimistic({ isPlaying: false });
+                applyOptimistic({
+                    isPlaying: false,
+                    assumeCanControl: true,
+                });
+                baseProgress.current = progressMs;
+                lastSyncRef.current = Date.now();
+                setSnapshot({ progressMs });
                 return refreshAfter('pausePlayback');
             },
             next: () => {
@@ -383,6 +473,7 @@ export function usePlayer(pollMs = 4000) {
             canSkipPrevious,
             canTogglePlay,
             playback,
+            progressMs,
             refreshAfter,
             setVolume,
             toggleMute,

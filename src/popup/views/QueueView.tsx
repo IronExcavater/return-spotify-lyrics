@@ -63,6 +63,26 @@ const queueSignature = (item: MediaItem) =>
         item.imageUrl ?? '',
     ].join('|');
 
+const normalizeLabel = (value?: string) => value?.trim().toLowerCase() ?? '';
+
+const isSameQueueItem = (left: MediaItem, right: MediaItem) => {
+    if (left.uri && right.uri && left.uri === right.uri) return true;
+    if (
+        left.id &&
+        right.id &&
+        left.id === right.id &&
+        left.kind === right.kind
+    ) {
+        return true;
+    }
+
+    return (
+        left.kind === right.kind &&
+        normalizeLabel(left.title) === normalizeLabel(right.title) &&
+        normalizeLabel(left.subtitle) === normalizeLabel(right.subtitle)
+    );
+};
+
 const mapQueueEntries = (
     queue: Array<Track | Episode> | undefined,
     locale: string
@@ -81,6 +101,24 @@ const mapQueueEntries = (
             listKey: queueKey,
         };
     });
+};
+
+const normalizeUpcomingQueue = (
+    queue: QueueEntry[],
+    current: MediaItem | null
+): QueueEntry[] => {
+    if (!current || queue.length === 0) return queue;
+    let leadingCurrentCount = 0;
+    while (
+        leadingCurrentCount < queue.length &&
+        isSameQueueItem(queue[leadingCurrentCount], current)
+    ) {
+        leadingCurrentCount += 1;
+    }
+
+    if (leadingCurrentCount === 0) return queue;
+    if (leadingCurrentCount === queue.length) return [];
+    return queue.slice(leadingCurrentCount);
 };
 
 const mergeQueueState = (prev: QueueState, next: QueueState): QueueState => {
@@ -125,9 +163,10 @@ export function QueueView() {
             data.queue as Array<Track | Episode> | undefined,
             locale
         );
+        const normalizedQueue = normalizeUpcomingQueue(queueItems, currentItem);
         return {
             current: currentItem,
-            queue: queueItems,
+            queue: normalizedQueue,
         } satisfies QueueState;
     }, [locale, playback?.item]);
 
