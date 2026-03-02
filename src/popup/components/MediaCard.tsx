@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode, useCallback, useState } from 'react';
 import { DotsHorizontalIcon } from '@radix-ui/react-icons';
 import { DropdownMenu, Flex, IconButton, Skeleton } from '@radix-ui/themes';
 import clsx from 'clsx';
@@ -54,12 +54,27 @@ export function MediaCard({
     const subtitleContent = subtitleText?.trim() ? subtitleText : ' ';
     const skeletonParts = [title, subtitleText, imageUrl];
     const handleRowClick = loading ? undefined : onClick;
+    const [isTitleProxyHovered, setIsTitleProxyHovered] = useState(false);
+
+    const updateTitleProxyHover = useCallback(
+        (target: EventTarget | null) => {
+            const element = target instanceof Element ? target : null;
+            const next =
+                Boolean(handleRowClick) &&
+                !element?.closest('[data-title-hover-stop="true"]');
+            setIsTitleProxyHovered((prev) => (prev === next ? prev : next));
+        },
+        [handleRowClick]
+    );
 
     return (
         <Flex
             direction="column"
             gap="1"
             onClick={handleRowClick}
+            onPointerEnter={(event) => updateTitleProxyHover(event.target)}
+            onPointerMove={(event) => updateTitleProxyHover(event.target)}
+            onPointerLeave={() => setIsTitleProxyHovered(false)}
             className={clsx(
                 'group',
                 handleRowClick && 'cursor-pointer',
@@ -86,6 +101,7 @@ export function MediaCard({
                                 onKeyDown={handleMenuTriggerKeyDown}
                             >
                                 <IconButton
+                                    data-title-hover-stop="true"
                                     variant="ghost"
                                     radius="full"
                                     size="0"
@@ -123,6 +139,7 @@ export function MediaCard({
                                 size="1"
                                 weight="medium"
                                 interactive={Boolean(handleRowClick)}
+                                forceHover={isTitleProxyHovered}
                                 onClick={
                                     handleRowClick
                                         ? (event) => {
@@ -156,7 +173,10 @@ export function MediaCard({
                                     {subtitleContent}
                                 </TextButton>
                             ) : (
-                                <span className="inline-flex items-center">
+                                <span
+                                    data-title-hover-stop="true"
+                                    className="inline-flex items-center"
+                                >
                                     {subtitle}
                                 </span>
                             )}

@@ -1,4 +1,9 @@
-import type { CSSProperties, ReactNode } from 'react';
+import {
+    useCallback,
+    useState,
+    type CSSProperties,
+    type ReactNode,
+} from 'react';
 import { DotsHorizontalIcon } from '@radix-ui/react-icons';
 import { DropdownMenu, Flex, IconButton, Skeleton } from '@radix-ui/themes';
 import clsx from 'clsx';
@@ -45,12 +50,27 @@ export function MediaRow({
     const subtitleText = typeof subtitle === 'string' ? subtitle : undefined;
     const skeletonParts = [title, subtitleText, imageUrl];
     const handleRowClick = loading ? undefined : onClick;
+    const [isTitleProxyHovered, setIsTitleProxyHovered] = useState(false);
+
+    const updateTitleProxyHover = useCallback(
+        (target: EventTarget | null) => {
+            const element = target instanceof Element ? target : null;
+            const next =
+                Boolean(handleRowClick) &&
+                !element?.closest('[data-title-hover-stop="true"]');
+            setIsTitleProxyHovered((prev) => (prev === next ? prev : next));
+        },
+        [handleRowClick]
+    );
 
     return (
         <Flex
             align="center"
             gap="1"
             onClick={handleRowClick}
+            onPointerEnter={(event) => updateTitleProxyHover(event.target)}
+            onPointerMove={(event) => updateTitleProxyHover(event.target)}
+            onPointerLeave={() => setIsTitleProxyHovered(false)}
             className={clsx(
                 'group w-full min-w-0',
                 handleRowClick && 'cursor-pointer',
@@ -86,6 +106,7 @@ export function MediaRow({
                                 size="2"
                                 weight="medium"
                                 interactive={Boolean(handleRowClick)}
+                                forceHover={isTitleProxyHovered}
                                 onClick={
                                     handleRowClick
                                         ? (event) => {
@@ -127,7 +148,10 @@ export function MediaRow({
                                         {subtitleText}
                                     </TextButton>
                                 ) : (
-                                    <span className="inline-flex items-center">
+                                    <span
+                                        data-title-hover-stop="true"
+                                        className="inline-flex items-center"
+                                    >
                                         {subtitle}
                                     </span>
                                 )}
@@ -143,6 +167,7 @@ export function MediaRow({
                         onKeyDown={handleMenuTriggerKeyDown}
                     >
                         <IconButton
+                            data-title-hover-stop="true"
                             variant="ghost"
                             radius="full"
                             size="1"

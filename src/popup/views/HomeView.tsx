@@ -839,7 +839,9 @@ export function HomeView({ searchQuery, filters }: Props) {
                         parts={[heading.title, heading.subtitle]}
                         preset="media-row"
                         variant="title"
-                        className="inline-flex w-fit"
+                        fullWidth={false}
+                        className="inline-flex"
+                        style={{ minHeight: 'var(--line-height-3)' }}
                     >
                         <Text size="3" weight="bold">
                             {heading.title}
@@ -944,7 +946,9 @@ export function HomeView({ searchQuery, filters }: Props) {
                     parts={[heading.subtitle, heading.title]}
                     preset="media-row"
                     variant="subtitle"
-                    className="inline-flex w-fit"
+                    fullWidth={false}
+                    className="inline-flex"
+                    style={{ minHeight: 'var(--line-height-1)' }}
                 >
                     <Text size="1" color="gray">
                         {heading.subtitle}
