@@ -71,27 +71,34 @@
 .rt-TooltipArrow {
     fill: var(--tooltip-bg);
     overflow: visible;
+    display: block;
 }
 
 .rt-TooltipContent[data-side='top'] .rt-TooltipArrow {
+    transform: translateY(-1px);
     filter: drop-shadow(1px 0 0 var(--tooltip-border))
         drop-shadow(-1px 0 0 var(--tooltip-border))
-        drop-shadow(0 1px 0 var(--tooltip-border));
+        drop-shadow(0 1px 0 var(--tooltip-border))
+        drop-shadow(0 -1px 0 var(--tooltip-bg));
 }
 
 .rt-TooltipContent[data-side='bottom'] .rt-TooltipArrow {
+    transform: translateY(-1px);
     filter: drop-shadow(1px 0 0 var(--tooltip-border))
         drop-shadow(-1px 0 0 var(--tooltip-border))
-        drop-shadow(0 -1px 0 var(--tooltip-border));
+        drop-shadow(0 1px 0 var(--tooltip-border))
+        drop-shadow(0 -1px 0 var(--tooltip-bg));
 }
 
 .rt-TooltipContent[data-side='left'] .rt-TooltipArrow {
+    transform: translateX(-1px);
     filter: drop-shadow(1px 0 0 var(--tooltip-border))
         drop-shadow(0 1px 0 var(--tooltip-border))
         drop-shadow(0 -1px 0 var(--tooltip-border));
 }
 
 .rt-TooltipContent[data-side='right'] .rt-TooltipArrow {
+    transform: translateX(1px);
     filter: drop-shadow(-1px 0 0 var(--tooltip-border))
         drop-shadow(0 1px 0 var(--tooltip-border))
         drop-shadow(0 -1px 0 var(--tooltip-border));

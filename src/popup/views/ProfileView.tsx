@@ -21,8 +21,12 @@ import { resolveLocale } from '../../shared/locale';
 import { SearchBar } from '../components/SearchBar';
 import { SkeletonText } from '../components/SkeletonText';
 import { TextButton } from '../components/TextButton';
+import {
+    MEDIA_CACHE_KEYS,
+    type ProfileCacheEntry,
+} from '../hooks/mediaCacheEntries';
 import { SpotifyConnectionMeta } from '../hooks/useAuth';
-import { useCachedImage } from '../hooks/useCachedImage';
+import { useCachedImage, useMediaCacheEntry } from '../hooks/useMediaCache';
 import { useSettings } from '../hooks/useSettings';
 
 const relativeFormatter = new Intl.RelativeTimeFormat(undefined, {
@@ -103,7 +107,10 @@ interface Props {
 }
 
 export function ProfileView({ profile, onLogout, connection }: Props) {
-    const loading = !profile;
+    const cachedProfile = useMediaCacheEntry<ProfileCacheEntry>(
+        MEDIA_CACHE_KEYS.profile
+    );
+    const loading = !profile && !cachedProfile;
     const [relativeNow, setRelativeNow] = useState(Date.now());
     const [localeSearch, setLocaleSearch] = useState('');
     const [localeOpen, setLocaleOpen] = useState(false);
@@ -134,10 +141,12 @@ export function ProfileView({ profile, onLogout, connection }: Props) {
         return () => window.clearInterval(interval);
     }, []);
 
-    const id = profile?.id ?? '0000000000000000000000000';
-    const name = profile?.display_name ?? 'John Does Nuts';
-    const image = useCachedImage(profile?.images?.[0]?.url);
-    const link = profile?.external_urls?.spotify;
+    const id = profile?.id ?? cachedProfile?.id;
+    const name = profile?.display_name ?? cachedProfile?.name;
+    const image = useCachedImage(
+        profile?.images?.[0]?.url ?? cachedProfile?.imageUrl
+    );
+    const link = profile?.external_urls?.spotify ?? cachedProfile?.externalUrl;
     const followers = profile?.followers?.total;
 
     const stats = useMemo(() => {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { PersonIcon } from '@radix-ui/react-icons';
 import { Flex } from '@radix-ui/themes';
 import {
@@ -17,7 +17,11 @@ import { PlaybackBar } from './components/PlaybackBar';
 import { ProtectedLayout } from './components/ProtectedLayout';
 import { ReauthDialog } from './components/ReauthDialog';
 import { SettingsProvider } from './context/SettingsContext';
-import { useGlobalShortcut } from './hooks/useActions';
+import {
+    MEDIA_CACHE_KEYS,
+    type ProfileCacheEntry,
+} from './hooks/mediaCacheEntries';
+import { useAppShortcuts } from './hooks/useAppShortcuts';
 import { useAppState, BarKey } from './hooks/useAppState';
 import { useAuth } from './hooks/useAuth';
 import {
@@ -26,7 +30,12 @@ import {
     type RouteState,
 } from './hooks/useHistory';
 
-import { usePlayer } from './hooks/usePlayer.ts';
+import { useMediaCacheEntry } from './hooks/useMediaCache';
+import type { MediaRouteState } from './hooks/useMediaRoute';
+import {
+    usePlayerShortcutControls,
+    usePlayerShortcutState,
+} from './hooks/usePlayer.ts';
 import { usePortalSlot } from './hooks/usePortalSlot';
 import { useReauthGate } from './hooks/useReauthGate.ts';
 import { Resizer } from './hooks/useResize.tsx';
@@ -60,20 +69,34 @@ export default function App({ surface = 'popup' }: AppProps) {
     const heightBounds = { min: 300, max: 600 } as const;
 
     const { authed, profile, login, logout, connection } = useAuth();
+    const {
+        hasPlayback,
+        playbackKnown,
+        isPlaying,
+        canTogglePlay,
+        canSetVolume,
+    } = usePlayerShortcutState();
+    const controls = usePlayerShortcutControls();
     const { needsReauth, missingScopes } = useReauthGate();
     const appState = useAppState({
         fallbackWidth: widthBounds.min,
         fallbackHeight: heightBounds.min,
         surface,
+        showBars: authed !== false,
+        hasPlayback,
+        playbackKnown,
     });
     const routeHistory = useHistory();
-    const { playback } = usePlayer();
+    const cachedProfile = useMediaCacheEntry<ProfileCacheEntry>(
+        MEDIA_CACHE_KEYS.profile
+    );
 
     const search = useSearch();
     const trackSearch = useMemo(() => createAnalyticsTracker('search'), []);
     const searchInputRef = useRef<HTMLInputElement | null>(null);
+    const canShowPlaybackBar = hasPlayback || !playbackKnown;
 
-    const profileImage = profile?.images?.[0]?.url;
+    const profileImage = profile?.images?.[0]?.url ?? cachedProfile?.imageUrl;
 
     const lastHomeStateRef = useRef<HomeRouteState | null>(null);
 
@@ -132,24 +155,20 @@ export default function App({ surface = 'popup' }: AppProps) {
             lastContentPathRef.current = location.pathname;
     }, [location.pathname]);
 
-    useGlobalShortcut(
-        (event) => {
-            if (!appState.showBars) return;
-            event.preventDefault();
-            if (appState.activeBar !== 'home') {
-                appState.setActiveBar('home');
-            }
-            requestAnimationFrame(() => {
-                searchInputRef.current?.focus();
-                searchInputRef.current?.select();
-            });
+    useAppShortcuts({
+        showBars: appState.showBars,
+        activeBar: appState.activeBar,
+        setActiveBar: appState.setActiveBar,
+        searchInputRef,
+        isPlaying,
+        canTogglePlay,
+        canSetVolume,
+        playbackControls: {
+            play: controls.play,
+            pause: controls.pause,
+            toggleMute: controls.toggleMute,
         },
-        {
-            key: 'k',
-            metaOrCtrl: true,
-            enabled: appState.showBars,
-        }
-    );
+    });
 
     const profileSlot = useMemo(
         () => (
@@ -191,12 +210,12 @@ export default function App({ surface = 'popup' }: AppProps) {
         () => (
             <NavBar
                 active={appState.activeBar}
-                canShowPlayback={!!playback}
+                canShowPlayback={canShowPlaybackBar}
                 onShowHome={() => appState.setActiveBar('home')}
                 onShowPlayback={() => appState.setActiveBar('playback')}
             />
         ),
-        [appState.activeBar, appState.setActiveBar, playback]
+        [appState.activeBar, appState.setActiveBar, canShowPlaybackBar]
     );
 
     const profileFloating = usePortalSlot<BarKey>({
@@ -232,6 +251,18 @@ export default function App({ surface = 'popup' }: AppProps) {
         };
     }, [appState.activeBar, location.pathname]);
 
+    const handleOpenMediaFromPlayback = useCallback(
+        (route: MediaRouteState) => {
+            appState.setActiveBar('home');
+            requestAnimationFrame(() => {
+                routeHistory.goTo('/media', route, {
+                    samePathBehavior: 'replace',
+                });
+            });
+        },
+        [appState.setActiveBar, routeHistory.goTo]
+    );
+
     const appContent = (
         <SettingsProvider>
             <Flex direction="column" className="h-full">
@@ -244,6 +275,7 @@ export default function App({ surface = 'popup' }: AppProps) {
                                 navSlot={navFloating.anchors.playback}
                                 expanded={appState.playbackExpanded}
                                 onExpandedChange={appState.setPlaybackExpanded}
+                                onOpenMediaRoute={handleOpenMediaFromPlayback}
                             />
                         )}
 

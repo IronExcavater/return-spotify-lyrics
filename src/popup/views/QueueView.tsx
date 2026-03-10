@@ -12,11 +12,17 @@ import {
     type MediaSectionState,
 } from '../components/MediaSection';
 import { MediaShelf, type MediaShelfItem } from '../components/MediaShelf';
-import { SkeletonText } from '../components/SkeletonText';
 import { StickyLayout } from '../components/StickyLayout';
+import {
+    MEDIA_CACHE_KEYS,
+    type NowPlayingCacheEntry,
+} from '../hooks/mediaCacheEntries';
 import { useLazyPolling } from '../hooks/useLazyPolling';
 import { buildMediaActions } from '../hooks/useMediaActions';
-import { usePlayer } from '../hooks/usePlayer';
+import {
+    updateMediaCacheEntry,
+    useMediaCacheEntry,
+} from '../hooks/useMediaCache';
 import { useSettings } from '../hooks/useSettings';
 
 const logger = createLogger('queue');
@@ -142,22 +148,40 @@ const mergeQueueState = (prev: QueueState, next: QueueState): QueueState => {
     return { current: nextCurrent, queue: mergedQueue };
 };
 
+const queueStateSignature = (state: QueueState) =>
+    [
+        mediaIdentity(state.current),
+        ...state.queue.map((item) => item.queueKey),
+    ].join('||');
+
 export function QueueView() {
     const { settings } = useSettings();
     const locale = resolveLocale(settings.locale);
-    const { playback } = usePlayer();
+    const cachedQueueState = useMediaCacheEntry<QueueState>(
+        MEDIA_CACHE_KEYS.queueView
+    );
+    const cachedNowPlaying = useMediaCacheEntry<NowPlayingCacheEntry>(
+        MEDIA_CACHE_KEYS.nowPlaying
+    );
     const [reorderMode, setReorderMode] = useState(false);
     const [syncingQueue, setSyncingQueue] = useState(false);
     const syncingQueueRef = useRef(false);
     const queueStateRef = useRef<QueueState | null>(null);
     const skeletonLabel = '\u00A0';
+    const cachedNowPlayingItem = useMemo(
+        () =>
+            cachedNowPlaying?.item
+                ? mapQueueItem(cachedNowPlaying.item, locale)
+                : null,
+        [cachedNowPlaying?.item, locale]
+    );
 
     const loadQueue = useCallback(async () => {
         const data = await sendSpotifyMessage('getQueue');
         const currentItem = data.currently_playing
             ? mapQueueItem(data.currently_playing, locale)
-            : playback?.item
-              ? mapQueueItem(playback.item as Track | Episode, locale)
+            : cachedNowPlayingItem
+              ? cachedNowPlayingItem
               : null;
         const queueItems = mapQueueEntries(
             data.queue as Array<Track | Episode> | undefined,
@@ -168,7 +192,7 @@ export function QueueView() {
             current: currentItem,
             queue: normalizedQueue,
         } satisfies QueueState;
-    }, [locale, playback?.item]);
+    }, [cachedNowPlayingItem, locale]);
 
     const {
         data: queueState,
@@ -177,13 +201,22 @@ export function QueueView() {
         setData,
     } = useLazyPolling<QueueState>({
         load: loadQueue,
+        enabled: !reorderMode && !syncingQueue,
         intervalMs: POLL_MS,
+        initialData: cachedQueueState,
         merge: mergeQueueState,
         onError: (error) => logError(logger, 'Failed to load queue', error),
     });
 
     useEffect(() => {
         queueStateRef.current = queueState;
+    }, [queueState]);
+
+    useEffect(() => {
+        if (!queueState) return;
+        updateMediaCacheEntry(MEDIA_CACHE_KEYS.queueView, queueState, {
+            signature: queueStateSignature(queueState),
+        });
     }, [queueState]);
 
     const skeletonRows = useMemo(
@@ -195,8 +228,21 @@ export function QueueView() {
             })),
         [skeletonLabel]
     );
+    const nowPlayingSkeletonRows = useMemo(
+        () => [
+            {
+                id: 'skeleton-now-playing',
+                title: skeletonLabel,
+                subtitle: skeletonLabel,
+            },
+        ],
+        [skeletonLabel]
+    );
 
     const upcoming = queueState?.queue ?? [];
+    const nowPlaying = queueState?.current ?? cachedNowPlayingItem;
+    const nowPlayingLoading = loading && !nowPlaying;
+    const upcomingLoading = loading && upcoming.length === 0;
 
     const syncQueueToSpotify = useCallback(
         async (nextQueue: QueueEntry[]) => {
@@ -205,35 +251,14 @@ export function QueueView() {
             setSyncingQueue(true);
 
             try {
-                const playbackState =
-                    await sendSpotifyMessage('getPlaybackState');
-                const currentUri =
-                    queueStateRef.current?.current?.uri ??
-                    playbackState?.item?.uri ??
-                    null;
+                const currentUri = queueStateRef.current?.current?.uri ?? null;
                 const upcomingUris = nextQueue
                     .map((item) => item.uri)
                     .filter((uri): uri is string => Boolean(uri));
-                const uris = currentUri
-                    ? [currentUri, ...upcomingUris]
-                    : upcomingUris;
-
-                if (uris.length === 0) {
-                    await refresh();
-                    return;
-                }
-
-                await sendSpotifyMessage('startPlayback', {
-                    uris,
-                    positionMs: currentUri
-                        ? (playbackState?.progress_ms ?? undefined)
-                        : undefined,
+                await sendSpotifyMessage('syncQueue', {
+                    upcomingUris,
+                    currentUri: currentUri ?? undefined,
                 });
-
-                if (playbackState?.is_playing === false) {
-                    await sendSpotifyMessage('pausePlayback');
-                }
-
                 await refresh();
             } catch (error) {
                 logError(logger, 'Failed to sync queue order', error);
@@ -304,36 +329,8 @@ export function QueueView() {
         [setData, syncQueueToSpotify]
     );
 
-    if (!queueState && loading) {
-        return (
-            <Flex p="3" direction="column" gap="2">
-                <SkeletonText
-                    loading
-                    parts={[skeletonLabel]}
-                    preset="media-row"
-                    variant="title"
-                >
-                    <Text size="5" weight="bold">
-                        {skeletonLabel}
-                    </Text>
-                </SkeletonText>
-                <SkeletonText
-                    loading
-                    parts={[skeletonLabel]}
-                    preset="media-row"
-                    variant="subtitle"
-                >
-                    <Text size="2" color="gray">
-                        {skeletonLabel}
-                    </Text>
-                </SkeletonText>
-            </Flex>
-        );
-    }
-
-    const nowPlaying = queueState?.current;
     const reorderEnabled =
-        reorderMode && !loading && !syncingQueue && upcoming.length > 1;
+        reorderMode && !upcomingLoading && !syncingQueue && upcoming.length > 1;
     const queueHeaderRight = (
         <Flex align="center" gap="2">
             <Text size="1" color="gray">
@@ -342,7 +339,9 @@ export function QueueView() {
             <Switch
                 size="1"
                 checked={reorderMode}
-                disabled={loading || syncingQueue || upcoming.length < 2}
+                disabled={
+                    upcomingLoading || syncingQueue || upcoming.length < 2
+                }
                 onCheckedChange={setReorderMode}
                 aria-label="Toggle queue reorder mode"
             />
@@ -355,35 +354,62 @@ export function QueueView() {
                 <Flex
                     pl="3"
                     pr="1"
-                    pb="3"
+                    pt="2"
+                    pb="1"
                     direction="column"
                     gap="3"
                     className="min-w-0"
                 >
-                    <Flex direction="column" gap="2" pt="2">
-                        <Text size="3" weight="bold">
-                            Now playing
-                        </Text>
-                        {nowPlaying ? (
-                            <MediaShelf
-                                items={[nowPlaying]}
-                                variant="list"
-                                orientation="vertical"
-                                itemsPerColumn={1}
-                                interactive={!loading}
-                                itemLoading={loading}
-                                getActions={getNowPlayingActions}
-                            />
-                        ) : (
-                            <Text size="2" color="gray">
-                                Nothing is playing right now.
-                            </Text>
-                        )}
-                    </Flex>
+                    <MediaSection
+                        editing={false}
+                        loading={nowPlayingLoading}
+                        stickyHeader={false}
+                        section={
+                            {
+                                id: 'queue-now-playing',
+                                title: 'Now playing',
+                                view: 'list',
+                                infinite: 'rows',
+                                rows: 0,
+                                items: nowPlayingLoading
+                                    ? nowPlayingSkeletonRows
+                                    : nowPlaying
+                                      ? [nowPlaying]
+                                      : [],
+                            } satisfies MediaSectionState
+                        }
+                        onChange={() => undefined}
+                        renderContent={({ loading: sectionLoading }) => {
+                            if (!sectionLoading && !nowPlaying) {
+                                return (
+                                    <Text size="2" color="gray">
+                                        Nothing is playing right now.
+                                    </Text>
+                                );
+                            }
+                            return (
+                                <MediaShelf
+                                    items={
+                                        sectionLoading
+                                            ? nowPlayingSkeletonRows
+                                            : nowPlaying
+                                              ? [nowPlaying]
+                                              : []
+                                    }
+                                    variant="list"
+                                    orientation="vertical"
+                                    itemsPerColumn={1}
+                                    interactive={!sectionLoading}
+                                    itemLoading={sectionLoading}
+                                    getActions={getNowPlayingActions}
+                                />
+                            );
+                        }}
+                    />
 
                     <MediaSection
                         editing={false}
-                        loading={loading}
+                        loading={upcomingLoading}
                         headerRight={queueHeaderRight}
                         section={
                             {
@@ -392,7 +418,9 @@ export function QueueView() {
                                 view: 'list',
                                 infinite: 'rows',
                                 rows: 0,
-                                items: loading ? skeletonRows : upcoming,
+                                items: upcomingLoading
+                                    ? skeletonRows
+                                    : upcoming,
                             } satisfies MediaSectionState
                         }
                         onChange={() => undefined}

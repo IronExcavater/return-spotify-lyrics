@@ -644,7 +644,7 @@ function MediaSectionImpl({
     return (
         <div
             className={clsx(
-                'rounded-2 bg-background ring-offset-background relative ring-2 ring-transparent ring-offset-1 transition-all',
+                'rounded-2 bg-background ring-offset-background relative ring-2 ring-transparent ring-offset-2 transition-all',
                 'focus-within:z-20',
                 editing && 'hover:ring-accent-8! hover:z-20',
                 editing && dragging && 'ring-accent-10! z-30',

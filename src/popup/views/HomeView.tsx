@@ -50,6 +50,7 @@ import {
     mapSearchPage,
     mapSearchResults,
 } from '../utils/searchMapping';
+import { buildHomeSections } from './homeSections';
 import { SEARCH_SECTION_BASE, buildSearchSections } from './searchSections';
 
 interface Props {
@@ -58,83 +59,6 @@ interface Props {
 }
 
 const logger = createLogger('home');
-
-const buildHomeSections = (): MediaSectionState[] => [
-    {
-        id: 'recent',
-        title: 'Recently played',
-        subtitle: 'Back in the rotation',
-        view: 'list',
-        infinite: 'columns',
-        rows: 3,
-        columns: 0,
-        wideColumns: true,
-        items: [],
-        hasMore: false,
-        loadingMore: false,
-    },
-    {
-        id: 'top-tracks',
-        title: 'Top tracks',
-        subtitle: 'Your short-term replay list',
-        view: 'list',
-        infinite: 'columns',
-        rows: 6,
-        clampUnit: 'items',
-        items: [],
-        hasMore: false,
-        loadingMore: false,
-    },
-    {
-        id: 'top-artists',
-        title: 'Top artists',
-        subtitle: 'Creators you gravitate to',
-        view: 'card',
-        infinite: 'columns',
-        rows: 2,
-        columns: 0,
-        items: [],
-        hasMore: false,
-        loadingMore: false,
-    },
-    {
-        id: 'new-releases',
-        title: 'New releases',
-        subtitle: 'Latest drops',
-        view: 'list',
-        infinite: 'columns',
-        rows: 5,
-        columns: 0,
-        items: [],
-        hasMore: false,
-        loadingMore: false,
-    },
-    {
-        id: 'user-playlists',
-        title: 'Your playlists',
-        subtitle: 'Saved in your library',
-        view: 'card',
-        cardSize: 3,
-        infinite: 'columns',
-        rows: 2,
-        columns: 0,
-        items: [],
-        hasMore: false,
-        loadingMore: false,
-    },
-    {
-        id: 'saved-tracks',
-        title: 'Saved tracks',
-        subtitle: 'Your likes, right here',
-        view: 'list',
-        rows: 0,
-        infinite: 'rows',
-        clampUnit: 'items',
-        items: [],
-        hasMore: false,
-        loadingMore: false,
-    },
-];
 
 const HOME_LAYOUT_KEY = 'homeLayout';
 type SectionStatus = { loading: boolean; error: string | null };

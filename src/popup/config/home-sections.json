@@ -1,0 +1,58 @@
+[
+    {
+        "id": "recent",
+        "title": "Recently played",
+        "subtitle": "Back in the rotation",
+        "view": "list",
+        "infinite": "columns",
+        "rows": 3,
+        "columns": 0,
+        "wideColumns": true
+    },
+    {
+        "id": "top-tracks",
+        "title": "Top tracks",
+        "subtitle": "Your short-term replay list",
+        "view": "list",
+        "infinite": "columns",
+        "rows": 6,
+        "clampUnit": "items"
+    },
+    {
+        "id": "top-artists",
+        "title": "Top artists",
+        "subtitle": "Creators you gravitate to",
+        "view": "card",
+        "infinite": "columns",
+        "rows": 2,
+        "columns": 0
+    },
+    {
+        "id": "new-releases",
+        "title": "New releases",
+        "subtitle": "Latest drops",
+        "view": "list",
+        "infinite": "columns",
+        "rows": 5,
+        "columns": 0
+    },
+    {
+        "id": "user-playlists",
+        "title": "Your playlists",
+        "subtitle": "Saved in your library",
+        "view": "card",
+        "cardSize": 3,
+        "infinite": "columns",
+        "rows": 2,
+        "columns": 0
+    },
+    {
+        "id": "saved-tracks",
+        "title": "Saved tracks",
+        "subtitle": "Your likes, right here",
+        "view": "list",
+        "rows": 0,
+        "infinite": "rows",
+        "clampUnit": "items"
+    }
+]

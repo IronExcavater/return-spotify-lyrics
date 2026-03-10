@@ -1,80 +1,33 @@
 import type { SearchType } from '../../shared/search';
 import type { MediaSectionState } from '../components/MediaSection';
+import searchSectionsJson from '../config/search-sections.json';
 
-export const SEARCH_SECTION_BASE: Record<SearchType, MediaSectionState> = {
-    track: {
-        id: 'search-tracks',
-        title: 'Tracks',
-        view: 'list',
-        infinite: 'columns',
-        rows: 3,
-        wideColumns: true,
-        items: [],
-        hasMore: false,
-        loadingMore: false,
-    },
-    album: {
-        id: 'search-albums',
-        title: 'Albums',
-        view: 'card',
-        infinite: 'columns',
-        rows: 2,
-        items: [],
-        hasMore: false,
-        loadingMore: false,
-    },
-    artist: {
-        id: 'search-artists',
-        title: 'Artists',
-        view: 'card',
-        infinite: 'columns',
-        rows: 2,
-        items: [],
-        hasMore: false,
-        loadingMore: false,
-    },
-    playlist: {
-        id: 'search-playlists',
-        title: 'Playlists',
-        view: 'card',
-        infinite: 'columns',
-        rows: 2,
-        items: [],
-        hasMore: false,
-        loadingMore: false,
-    },
-    show: {
-        id: 'search-shows',
-        title: 'Shows',
-        view: 'card',
-        infinite: 'columns',
-        rows: 2,
-        items: [],
-        hasMore: false,
-        loadingMore: false,
-    },
-    episode: {
-        id: 'search-episodes',
-        title: 'Episodes',
-        view: 'list',
-        infinite: 'columns',
-        rows: 3,
-        wideColumns: true,
-        items: [],
-        hasMore: false,
-        loadingMore: false,
-    },
-    audiobook: {
-        id: 'search-audiobooks',
-        title: 'Audiobooks',
-        view: 'card',
-        infinite: 'columns',
-        rows: 2,
-        items: [],
-        hasMore: false,
-        loadingMore: false,
-    },
-};
+type SearchSectionTemplate = Omit<
+    MediaSectionState,
+    'items' | 'hasMore' | 'loadingMore'
+>;
+
+const SEARCH_SECTION_TEMPLATES = searchSectionsJson as Record<
+    SearchType,
+    SearchSectionTemplate
+>;
+
+const toSectionState = (
+    template: SearchSectionTemplate
+): MediaSectionState => ({
+    ...template,
+    items: [],
+    hasMore: false,
+    loadingMore: false,
+});
+
+export const SEARCH_SECTION_BASE: Record<SearchType, MediaSectionState> =
+    Object.fromEntries(
+        (Object.keys(SEARCH_SECTION_TEMPLATES) as SearchType[]).map((type) => [
+            type,
+            toSectionState(SEARCH_SECTION_TEMPLATES[type]),
+        ])
+    ) as Record<SearchType, MediaSectionState>;
 
 export const buildSearchSections = (types: SearchType[]): MediaSectionState[] =>
-    types.map((type) => ({ ...SEARCH_SECTION_BASE[type], items: [] }));
+    types.map((type) => toSectionState(SEARCH_SECTION_TEMPLATES[type]));

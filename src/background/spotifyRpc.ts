@@ -157,6 +157,39 @@ export const spotifyRpc = {
             )
         );
     },
+    syncQueue: async ({
+        upcomingUris,
+        currentUri,
+    }: {
+        upcomingUris: string[];
+        currentUri?: string;
+    }) => {
+        const client = await requireClient();
+        return withActiveDevice(client, async (deviceId) => {
+            const playback = await client.player.getPlaybackState();
+            const resolvedCurrentUri =
+                playback?.item?.uri ?? currentUri ?? null;
+            const queueUris = upcomingUris.filter((uri) => Boolean(uri));
+            const uris = resolvedCurrentUri
+                ? [resolvedCurrentUri, ...queueUris]
+                : queueUris;
+            if (uris.length === 0) return;
+
+            await client.player.startResumePlayback(
+                deviceId,
+                undefined,
+                uris,
+                undefined,
+                resolvedCurrentUri
+                    ? (playback?.progress_ms ?? undefined)
+                    : undefined
+            );
+
+            if (playback?.is_playing === false) {
+                await client.player.pausePlayback(deviceId);
+            }
+        });
+    },
 
     saveTracks: async (ids: string[]) => {
         const client = await requireClient();

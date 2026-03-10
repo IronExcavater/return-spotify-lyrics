@@ -8,14 +8,14 @@ import { IconButton, Slider } from '@radix-ui/themes';
 import clsx from 'clsx';
 import { usePlayer } from '../hooks/usePlayer';
 
-export type PlaybackVolumeDirection = 'left' | 'right' | 'up' | 'down';
-export type PlaybackVolumeDisplayMode = 'popover' | 'inline';
+export type VolumeSliderDirection = 'left' | 'right' | 'up' | 'down';
+export type VolumeSliderDisplayMode = 'popover' | 'inline';
 interface Props {
     className?: string;
-    direction?: PlaybackVolumeDirection;
-    display?: PlaybackVolumeDisplayMode;
+    direction?: VolumeSliderDirection;
+    display?: VolumeSliderDisplayMode;
 }
-const POPOVER_POSITION: Record<PlaybackVolumeDirection, string> = {
+const POPOVER_POSITION: Record<VolumeSliderDirection, string> = {
     right: 'left-full top-1/2 -translate-y-1/2',
     left: 'right-full top-1/2 -translate-y-1/2',
     up: 'bottom-full left-1/2 -translate-x-1/2',
@@ -27,7 +27,7 @@ function getVolumeIcon(volumePercent: number, muted: boolean) {
     if (volumePercent < 66) return <SpeakerModerateIcon />;
     return <SpeakerLoudIcon />;
 }
-export function PlaybackVolume({
+export function VolumeSlider({
     className,
     direction = 'right',
     display = 'popover',
@@ -58,7 +58,8 @@ export function PlaybackVolume({
                 orientation === 'horizontal' ? 'min-w-28' : 'min-h-28'
             )}
             value={[currentVolume]}
-            onValueChange={(v) => controls.setVolume(v[0] ?? 0)}
+            onValueChange={(v) => controls.previewVolume(v[0] ?? 0)}
+            onValueCommit={(v) => controls.setVolume(v[0] ?? 0)}
             min={0}
             max={100}
             step={1}

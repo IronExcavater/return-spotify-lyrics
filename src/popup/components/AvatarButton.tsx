@@ -7,7 +7,7 @@ import {
 } from '@radix-ui/themes';
 import clsx from 'clsx';
 
-import { useCachedImage } from '../hooks/useCachedImage';
+import { useCachedImage } from '../hooks/useMediaCache';
 
 interface AvatarButtonProps extends Omit<IconButtonProps, 'asChild'> {
     avatar: AvatarProps;
@@ -15,6 +15,33 @@ interface AvatarButtonProps extends Omit<IconButtonProps, 'asChild'> {
     hideRing?: boolean;
     overlayPointerEvents?: 'auto' | 'none';
 }
+
+const AVATAR_RADIUS_BY_SIZE: Record<string, string> = {
+    '1': 'var(--radius-2)',
+    '2': 'var(--radius-2)',
+    '3': 'var(--radius-3)',
+    '4': 'var(--radius-3)',
+    '5': 'var(--radius-4)',
+    '6': 'var(--radius-5)',
+    '7': 'var(--radius-5)',
+    '8': 'var(--radius-6)',
+    '9': 'var(--radius-6)',
+};
+
+const resolveAvatarBaseRadius = (size?: AvatarProps['size']) => {
+    const normalizedSize = typeof size === 'string' ? size : '3';
+    const radiusBySize =
+        AVATAR_RADIUS_BY_SIZE[normalizedSize] ?? 'var(--radius-3)';
+    return `max(${radiusBySize}, var(--radius-full))`;
+};
+
+const resolveAvatarRingRadius = (
+    size?: AvatarProps['size'],
+    radius?: AvatarProps['radius']
+) => {
+    if (radius === 'full') return '9999px';
+    return `calc(${resolveAvatarBaseRadius(size)} + 4px)`;
+};
 
 export function AvatarButton({
     avatar,
@@ -36,18 +63,26 @@ export function AvatarButton({
         imageClassName,
         radius: avatarRadius,
         src,
+        style: avatarStyle,
         ...avatarProps
     } = avatar;
     const cachedSrc = useCachedImage(src);
 
-    const ringRadius =
-        avatarRadius === 'full' ? '9999px' : 'calc(0.375rem + 4px)';
     const isActive = !!(ariaPressed || ariaSelected);
     const resolvedTabIndex = disabled ? -1 : (tabIndex ?? 0);
     const overlayClassName =
         overlayPointerEvents === 'none'
             ? '[&_.rt-AvatarOverlay]:pointer-events-none'
             : undefined;
+    const ringColor = isActive ? 'var(--accent-10)' : 'var(--accent-8)';
+    const ringRadius = resolveAvatarRingRadius(avatarProps.size, avatarRadius);
+    const mergedAvatarStyle = hideRing
+        ? avatarStyle
+        : ({
+              ...(avatarStyle ?? {}),
+              '--avatar-ring-color': ringColor,
+              '--avatar-ring-radius': ringRadius,
+          } as CSSProperties);
 
     const handleKeyDown: KeyboardEventHandler<HTMLButtonElement> = (event) => {
         onKeyDown?.(event);
@@ -95,18 +130,14 @@ export function AvatarButton({
                         'after:pointer-events-none after:absolute after:-inset-1 after:rounded-(--avatar-ring-radius) after:border-2 after:border-transparent after:opacity-0 after:transition-opacity',
                     !hideRing &&
                         isEnabled &&
-                        'focus-within:after:border-accent-8 hover:after:border-accent-8 focus-visible:after:border-accent-8 focus-within:after:opacity-100 hover:after:opacity-100 focus-visible:after:opacity-100',
+                        'focus-within:after:border-(--avatar-ring-color) focus-within:after:opacity-100 hover:after:border-(--avatar-ring-color) hover:after:opacity-100 focus-visible:after:border-(--avatar-ring-color) focus-visible:after:opacity-100',
                     !hideRing &&
                         isActive &&
-                        'after:border-accent-10! after:opacity-100',
+                        'after:border-(--avatar-ring-color)! after:opacity-100',
                     overlayClassName,
                     avatarClassName
                 )}
-                style={
-                    {
-                        '--avatar-ring-radius': ringRadius,
-                    } as CSSProperties
-                }
+                style={mergedAvatarStyle}
                 imageClassName={clsx(
                     'focus-visible:outline-none',
                     imageClassName

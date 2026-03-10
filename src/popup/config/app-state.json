@@ -41,6 +41,9 @@
             "/media": {
                 "allowedBars": ["playback", "home"]
             },
+            "/playlist": {
+                "allowedBars": ["playback", "home"]
+            },
             "/queue": {
                 "allowedBars": ["playback"],
                 "secondary": true
@@ -67,6 +70,9 @@
                 "secondary": true
             },
             "/media": {
+                "allowedBars": ["playback", "home"]
+            },
+            "/playlist": {
                 "allowedBars": ["playback", "home"]
             },
             "/queue": {

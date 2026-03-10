@@ -11,6 +11,7 @@ type UseLazyPollingOptions<T> = {
     load: () => Promise<T>;
     enabled?: boolean;
     intervalMs?: number;
+    initialData?: T | null;
     merge?: (prev: T, next: T) => T;
     equals?: (prev: T, next: T) => boolean;
     onError?: (error: unknown) => void;
@@ -29,12 +30,13 @@ export function useLazyPolling<T>({
     load,
     enabled = true,
     intervalMs,
+    initialData = null,
     merge,
     equals,
     onError,
 }: UseLazyPollingOptions<T>): UseLazyPollingResult<T> {
-    const [data, setData] = useState<T | null>(null);
-    const [loading, setLoading] = useState(enabled);
+    const [data, setData] = useState<T | null>(initialData);
+    const [loading, setLoading] = useState(enabled && initialData == null);
     const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState<unknown>(null);
 

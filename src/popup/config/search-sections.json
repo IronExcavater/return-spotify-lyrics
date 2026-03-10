@@ -1,0 +1,53 @@
+{
+    "track": {
+        "id": "search-tracks",
+        "title": "Tracks",
+        "view": "list",
+        "infinite": "columns",
+        "rows": 3,
+        "wideColumns": true
+    },
+    "album": {
+        "id": "search-albums",
+        "title": "Albums",
+        "view": "card",
+        "infinite": "columns",
+        "rows": 2
+    },
+    "artist": {
+        "id": "search-artists",
+        "title": "Artists",
+        "view": "card",
+        "infinite": "columns",
+        "rows": 2
+    },
+    "playlist": {
+        "id": "search-playlists",
+        "title": "Playlists",
+        "view": "card",
+        "infinite": "columns",
+        "rows": 2
+    },
+    "show": {
+        "id": "search-shows",
+        "title": "Shows",
+        "view": "card",
+        "infinite": "columns",
+        "rows": 2
+    },
+    "episode": {
+        "id": "search-episodes",
+        "title": "Episodes",
+        "view": "list",
+        "infinite": "columns",
+        "rows": 3,
+        "wideColumns": true
+    },
+    "audiobook": {
+        "id": "search-audiobooks",
+        "title": "Audiobooks",
+        "view": "card",
+        "infinite": "columns",
+        "rows": 2
+    }
+}

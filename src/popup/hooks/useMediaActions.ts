@@ -5,6 +5,7 @@ import type {
     MediaActionGroup,
     MediaItem,
 } from '../../shared/types';
+import { updateCachedAssumedNowPlaying } from './mediaCacheEntries';
 
 const openExternal = (url: string) => {
     window.open(url, '_blank', 'noopener,noreferrer');
@@ -69,6 +70,7 @@ export const buildMediaActions = (item: MediaItem): MediaActionGroup => {
                 label: 'Play now',
                 shortcut: '↵',
                 onSelect: () => {
+                    updateCachedAssumedNowPlaying(item);
                     void sendSpotifyMessage('startPlayback', {
                         uris: [item.uri!],
                     });

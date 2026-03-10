@@ -1,4 +1,4 @@
-import { ReactNode, useMemo } from 'react';
+import { Fragment, ReactNode, useMemo } from 'react';
 import {
     PauseIcon,
     PlayIcon,
@@ -10,14 +10,20 @@ import {
     ChevronUpIcon,
     ListBulletIcon,
 } from '@radix-ui/react-icons';
-import { Flex, IconButton, Separator } from '@radix-ui/themes';
+import { Flex, IconButton, Separator, Text, Tooltip } from '@radix-ui/themes';
 import { SimplifiedArtist, SimplifiedShow } from '@spotify/web-api-ts-sdk';
 import clsx from 'clsx';
 import { MdMusicNote } from 'react-icons/md';
 
 import { episodeToItem, artistToItem, trackToItem } from '../../shared/media';
 import { asEpisode, asTrack } from '../../shared/types';
+import {
+    MEDIA_CACHE_KEYS,
+    type NowPlayingCacheEntry,
+} from '../hooks/mediaCacheEntries';
 import { useHistory } from '../hooks/useHistory';
+import { useMediaCacheEntry } from '../hooks/useMediaCache';
+import type { MediaRouteState } from '../hooks/useMediaRoute';
 import { buildMediaRouteFromItem } from '../hooks/useMediaRoute';
 import { usePlayer } from '../hooks/usePlayer';
 import { useRouteToggle } from '../hooks/useRouteToggle';
@@ -27,16 +33,17 @@ import { BackgroundImage } from './BackgroundImage';
 import { Fade } from './Fade';
 import { IconToggle } from './IconToggle';
 import { Marquee } from './Marquee';
-import { PlaybackSeek } from './PlaybackSeek';
-import { PlaybackVolume } from './PlaybackVolume';
+import { SeekSlider } from './SeekSlider';
 import { SkeletonText } from './SkeletonText';
 import { TextButton } from './TextButton';
+import { VolumeSlider } from './VolumeSlider';
 
 interface Props {
     profileSlot?: ReactNode;
     navSlot?: ReactNode;
     expanded: boolean;
     onExpandedChange: (value: boolean) => void;
+    onOpenMediaRoute?: (route: MediaRouteState) => void;
 }
 
 export function PlaybackBar({
@@ -44,6 +51,7 @@ export function PlaybackBar({
     navSlot,
     expanded,
     onExpandedChange,
+    onOpenMediaRoute,
 }: Props) {
     const {
         playback,
@@ -57,7 +65,12 @@ export function PlaybackBar({
         canRepeat,
         canSeek,
         canTogglePlay,
+        pendingItemChange,
     } = usePlayer();
+    const cachedNowPlaying = useMediaCacheEntry<NowPlayingCacheEntry>(
+        MEDIA_CACHE_KEYS.nowPlaying
+    );
+    const cachedNowPlayingItem = cachedNowPlaying?.item ?? null;
     const { isActive: isLyricsRoute, toggle: toggleLyricsRoute } =
         useRouteToggle('/lyrics', { fallbackPath: '/' });
     const { isActive: isQueueRoute, toggle: toggleQueueRoute } = useRouteToggle(
@@ -66,17 +79,40 @@ export function PlaybackBar({
     );
     const routeHistory = useHistory();
 
-    const loading = playback === undefined;
+    const playbackItem = useMemo(() => {
+        if (pendingItemChange && cachedNowPlayingItem) {
+            return cachedNowPlayingItem;
+        }
+        if (playback === undefined) {
+            return cachedNowPlayingItem ?? undefined;
+        }
+        return playback?.item ?? cachedNowPlayingItem ?? undefined;
+    }, [cachedNowPlayingItem, pendingItemChange, playback]);
+    const loading = !playbackItem;
+    const playbackReady = playback !== undefined;
 
-    const track = asTrack(playback?.item);
-    const episode = asEpisode(playback?.item);
+    const track = asTrack(playbackItem);
+    const episode = asEpisode(playbackItem);
 
-    const title = playback?.item?.name ?? '';
+    const title = playbackItem?.name ?? '';
+    const skeletonLabel = '\u00A0';
+    const titleLabel = title.trim() || skeletonLabel;
     const artists: (SimplifiedArtist | SimplifiedShow)[] = useMemo(() => {
         if (track?.artists) return track.artists;
         if (episode?.show) return [episode.show];
         return [{ name: '' }] as SimplifiedArtist[];
     }, [track?.artists, episode?.show]);
+    const artistLabels = useMemo(
+        () =>
+            artists.map((artist) =>
+                'publisher' in artist ? artist.publisher : artist.name
+            ),
+        [artists]
+    );
+    const subtitleLabel = useMemo(() => {
+        const joined = artistLabels.filter(Boolean).join(', ');
+        return joined || skeletonLabel;
+    }, [artistLabels]);
 
     const albumImage =
         track?.album?.images?.[0]?.url ?? episode?.images?.[0]?.url;
@@ -99,23 +135,36 @@ export function PlaybackBar({
               : null;
         const route = item ? buildMediaRouteFromItem(item) : null;
         if (!route) return;
+        if (onOpenMediaRoute) {
+            onOpenMediaRoute(route);
+            return;
+        }
         routeHistory.goTo('/media', route, { samePathBehavior: 'replace' });
     };
 
     const handleOpenArtist = (artist: SimplifiedArtist | SimplifiedShow) => {
         if (!('id' in artist) || !artist.id) return;
         if ('publisher' in artist) {
-            routeHistory.goTo(
-                '/media',
-                { kind: 'show', id: artist.id },
-                { samePathBehavior: 'replace' }
-            );
+            const route: MediaRouteState = { kind: 'show', id: artist.id };
+            if (onOpenMediaRoute) {
+                onOpenMediaRoute(route);
+            } else {
+                routeHistory.goTo('/media', route, {
+                    samePathBehavior: 'replace',
+                });
+            }
             return;
         }
         const item = artistToItem(artist);
         const route = buildMediaRouteFromItem(item);
         if (!route) return;
-        routeHistory.goTo('/media', route, { samePathBehavior: 'replace' });
+        if (onOpenMediaRoute) {
+            onOpenMediaRoute(route);
+        } else {
+            routeHistory.goTo('/media', route, {
+                samePathBehavior: 'replace',
+            });
+        }
     };
 
     return (
@@ -156,7 +205,7 @@ export function PlaybackBar({
                                 isPlaying ? 'Pause playback' : 'Start playback'
                             }
                             onClick={handlePlayPause}
-                            disabled={loading || !canTogglePlay}
+                            disabled={!playbackReady || !canTogglePlay}
                             className="group p-0"
                             overlayPointerEvents="none"
                         >
@@ -191,18 +240,24 @@ export function PlaybackBar({
                                     <Marquee mode="bounce" grow>
                                         <SkeletonText
                                             loading={loading}
-                                            parts={[title]}
+                                            parts={[titleLabel]}
                                             preset="media-row"
                                             variant="title"
                                             className="w-fit"
                                         >
-                                            <TextButton
-                                                size="3"
-                                                weight="bold"
-                                                onClick={handleOpenMedia}
-                                            >
-                                                {title}
-                                            </TextButton>
+                                            {loading ? (
+                                                <Text size="3" weight="bold">
+                                                    {titleLabel}
+                                                </Text>
+                                            ) : (
+                                                <TextButton
+                                                    size="3"
+                                                    weight="bold"
+                                                    onClick={handleOpenMedia}
+                                                >
+                                                    {titleLabel}
+                                                </TextButton>
+                                            )}
                                         </SkeletonText>
                                     </Marquee>
                                 </Fade>
@@ -212,63 +267,117 @@ export function PlaybackBar({
                                 {/* Artists */}
                                 <Fade enabled={!loading} grow>
                                     <Marquee mode="right" grow>
-                                        <Flex align="center" gap="2">
-                                            {artists.map((artist) => {
-                                                const label =
-                                                    'publisher' in artist
-                                                        ? artist.publisher
-                                                        : artist.name;
+                                        <SkeletonText
+                                            loading={loading}
+                                            parts={[subtitleLabel, titleLabel]}
+                                            preset="media-row"
+                                            variant="subtitle"
+                                            className="w-fit"
+                                        >
+                                            {loading ? (
+                                                <Text size="2" color="gray">
+                                                    {subtitleLabel}
+                                                </Text>
+                                            ) : (
+                                                <Flex
+                                                    align="center"
+                                                    className="min-w-0"
+                                                >
+                                                    {artists.map(
+                                                        (artist, index) => {
+                                                            const label =
+                                                                artistLabels[
+                                                                    index
+                                                                ] ?? '';
+                                                            const canOpenArtist =
+                                                                Boolean(
+                                                                    'id' in
+                                                                        artist &&
+                                                                        artist.id
+                                                                );
 
-                                                return (
-                                                    <SkeletonText
-                                                        loading={loading}
-                                                        parts={[label, title]}
-                                                        preset="media-row"
-                                                        variant="subtitle"
-                                                        className="w-fit"
-                                                        key={artist.id ?? label}
-                                                    >
-                                                        <TextButton
-                                                            size="2"
-                                                            color="gray"
-                                                            onClick={() =>
-                                                                handleOpenArtist(
-                                                                    artist
-                                                                )
-                                                            }
-                                                        >
-                                                            {label}
-                                                        </TextButton>
-                                                    </SkeletonText>
-                                                );
-                                            })}
-                                        </Flex>
+                                                            return (
+                                                                <Fragment
+                                                                    key={`${artist.id ?? label}-${index}`}
+                                                                >
+                                                                    <TextButton
+                                                                        size="2"
+                                                                        color="gray"
+                                                                        interactive={
+                                                                            canOpenArtist
+                                                                        }
+                                                                        onClick={
+                                                                            canOpenArtist
+                                                                                ? () =>
+                                                                                      handleOpenArtist(
+                                                                                          artist
+                                                                                      )
+                                                                                : undefined
+                                                                        }
+                                                                    >
+                                                                        {label ||
+                                                                            skeletonLabel}
+                                                                    </TextButton>
+                                                                    {index <
+                                                                        artists.length -
+                                                                            1 && (
+                                                                        <Text
+                                                                            as="span"
+                                                                            size="2"
+                                                                            color="gray"
+                                                                        >
+                                                                            {
+                                                                                ',\u00A0'
+                                                                            }
+                                                                        </Text>
+                                                                    )}
+                                                                </Fragment>
+                                                            );
+                                                        }
+                                                    )}
+                                                </Flex>
+                                            )}
+                                        </SkeletonText>
                                     </Marquee>
                                 </Fade>
 
                                 {/* Previous button */}
-                                <IconButton
-                                    variant="ghost"
-                                    radius="full"
-                                    size="1"
-                                    onClick={controls.previous}
-                                    aria-label="Previous track"
-                                    disabled={!canSkipPrevious}
+                                <Tooltip
+                                    content="Previous track"
+                                    className="shadow-lg"
                                 >
-                                    <TrackPreviousIcon />
-                                </IconButton>
+                                    <IconButton
+                                        variant="ghost"
+                                        radius="full"
+                                        size="1"
+                                        onClick={controls.previous}
+                                        aria-label="Previous track"
+                                        disabled={
+                                            !playbackReady || !canSkipPrevious
+                                        }
+                                    >
+                                        <TrackPreviousIcon />
+                                    </IconButton>
+                                </Tooltip>
 
                                 {/* Next button */}
-                                <IconButton
-                                    variant="ghost"
-                                    radius="full"
-                                    size="1"
-                                    onClick={controls.next}
-                                    aria-label="Next track"
-                                    disabled={!canSkipNext}
+                                <Tooltip
+                                    content="Next track"
+                                    className="shadow-lg"
                                 >
-                                    <TrackNextIcon />
-                                </IconButton>
+                                    <IconButton
+                                        variant="ghost"
+                                        radius="full"
+                                        size="1"
+                                        onClick={controls.next}
+                                        aria-label="Next track"
+                                        disabled={
+                                            !playbackReady || !canSkipNext
+                                        }
+                                    >
+                                        <TrackNextIcon />
+                                    </IconButton>
+                                </Tooltip>
                             </Flex>
                         </Flex>
 
@@ -278,8 +387,8 @@ export function PlaybackBar({
                     </Flex>
 
                     <Flex direction="row" align="center" gap="1">
-                        <PlaybackVolume />
-                        <PlaybackSeek disabled={!canSeek} />
+                        <VolumeSlider />
+                        <SeekSlider disabled={!playbackReady || !canSeek} />
                     </Flex>
 
                     <button
@@ -303,50 +412,58 @@ export function PlaybackBar({
                     <Flex direction="column" gap="1">
                         <Separator size="4" />
                         <Flex align="center" justify="end" gap="1">
-                            <IconButton
-                                variant="ghost"
-                                radius="full"
-                                size="1"
-                                onClick={toggleQueueRoute}
-                                aria-pressed={isQueueRoute}
-                                aria-label="Toggle queue view"
-                            >
-                                <ListBulletIcon />
-                            </IconButton>
-                            <IconToggle
-                                variant="ghost"
-                                radius="full"
-                                size="1"
-                                isPressed={isShuffle}
-                                onClick={controls.toggleShuffle}
-                                aria-label="Toggle shuffle"
-                                disabled={!canShuffle}
-                            >
-                                <ShuffleIcon />
-                            </IconToggle>
+                            <Tooltip content="Queue" className="shadow-lg">
+                                <IconButton
+                                    variant="ghost"
+                                    radius="full"
+                                    size="1"
+                                    onClick={toggleQueueRoute}
+                                    aria-pressed={isQueueRoute}
+                                    aria-label="Toggle queue view"
+                                >
+                                    <ListBulletIcon />
+                                </IconButton>
+                            </Tooltip>
+                            <Tooltip content="Shuffle" className="shadow-lg">
+                                <IconToggle
+                                    variant="ghost"
+                                    radius="full"
+                                    size="1"
+                                    isPressed={isShuffle}
+                                    onClick={controls.toggleShuffle}
+                                    aria-label="Toggle shuffle"
+                                    disabled={!playbackReady || !canShuffle}
+                                >
+                                    <ShuffleIcon />
+                                </IconToggle>
+                            </Tooltip>
 
-                            <IconToggle
-                                variant="ghost"
-                                radius="full"
-                                size="1"
-                                isPressed={repeatActive}
-                                onClick={controls.toggleRepeat}
-                                aria-label="Toggle repeat"
-                                disabled={!canRepeat}
-                            >
-                                <LoopIcon />
-                            </IconToggle>
+                            <Tooltip content="Repeat" className="shadow-lg">
+                                <IconToggle
+                                    variant="ghost"
+                                    radius="full"
+                                    size="1"
+                                    isPressed={repeatActive}
+                                    onClick={controls.toggleRepeat}
+                                    aria-label="Toggle repeat"
+                                    disabled={!playbackReady || !canRepeat}
+                                >
+                                    <LoopIcon />
+                                </IconToggle>
+                            </Tooltip>
 
-                            <IconButton
-                                variant="ghost"
-                                radius="full"
-                                size="1"
-                                onClick={toggleLyricsRoute}
-                                aria-pressed={isLyricsRoute}
-                                aria-label="Toggle lyrics view"
-                            >
-                                <MdMusicNote />
-                            </IconButton>
+                            <Tooltip content="Lyrics" className="shadow-lg">
+                                <IconButton
+                                    variant="ghost"
+                                    radius="full"
+                                    size="1"
+                                    onClick={toggleLyricsRoute}
+                                    aria-pressed={isLyricsRoute}
+                                    aria-label="Toggle lyrics view"
+                                >
+                                    <MdMusicNote />
+                                </IconButton>
+                            </Tooltip>
                         </Flex>
                     </Flex>
                 )}

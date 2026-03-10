@@ -1,5 +1,4 @@
 import { Flex, Text } from '@radix-ui/themes';
-import { usePlayer } from '../hooks/usePlayer';
 
 const FALLBACK_LYRICS = [
     'Falling into midnight lines,',
@@ -9,7 +8,6 @@ const FALLBACK_LYRICS = [
 ];
 
 export function LyricsView() {
-    usePlayer();
     const averageColor = false;
 
     return (
