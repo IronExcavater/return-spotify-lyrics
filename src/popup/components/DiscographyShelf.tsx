@@ -186,15 +186,35 @@ export function DiscographyShelf({
                 </Flex>
             );
         });
+
+    const focusActiveShelfItem = () => {
+        const fallback = focusRefs.current.find((node) => Boolean(node));
+        const target = focusRefs.current[activeIndex] ?? fallback;
+        target?.focus();
+    };
     return (
         <Flex direction="column" gap="2">
-            <Flex align="center" justify="between" gap="2">
+            <Flex
+                align="center"
+                justify="between"
+                gap="2"
+                className="py-1 pr-1"
+            >
                 <Text size="3" weight="bold">
                     Discography
                 </Text>
                 <DropdownMenu.Root>
-                    <DropdownMenu.Trigger onKeyDown={handleMenuTriggerKeyDown}>
-                        <Button size="1" variant="ghost" color="gray">
+                    <DropdownMenu.Trigger
+                        onKeyDown={(event) => {
+                            handleMenuTriggerKeyDown(event);
+                            if (event.key !== 'ArrowDown') return;
+                            event.preventDefault();
+                            requestAnimationFrame(() => {
+                                focusActiveShelfItem();
+                            });
+                        }}
+                    >
+                        <Button size="0" variant="ghost" color="gray">
                             <Flex align="center">
                                 <Text size="1" color="gray">
                                     {sort === 'newest' ? 'Newest' : 'Oldest'}
@@ -220,7 +240,7 @@ export function DiscographyShelf({
             <Flex direction="column" className="relative">
                 <Flex
                     ref={scrollRef}
-                    className="no-overflow-anchor overflow-x-scroll overflow-y-hidden"
+                    className="no-overflow-anchor overflow-x-scroll overflow-y-hidden p-1 pt-0"
                     onFocusCapture={handleContainerFocusCapture}
                     onKeyDownCapture={handleContainerKeyDown}
                 >
@@ -245,7 +265,7 @@ export function DiscographyShelf({
                                             index === activeIndex ? 0 : -1
                                         }
                                         aria-disabled={!canActivate}
-                                        className="rounded-2 focus-visible:ring-accent-9 focus-visible:ring-offset-background focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
+                                        className="rounded-2 focus-visible:ring-accent-9 focus-visible:ring-offset-background shrink-0 focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
                                         style={
                                             entry.tracks.length > 1
                                                 ? { width: resolvedCardWidth }

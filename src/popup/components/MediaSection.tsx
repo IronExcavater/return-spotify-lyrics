@@ -49,6 +49,7 @@ export type MediaSectionState = {
 const CLAMP_PX_MAX = 720;
 const COLUMN_WIDTH_MIN = 180;
 const COLUMN_WIDTH_MAX = 520;
+const DEFAULT_HEADER_FADE_BLEED_PX = 8;
 const LIMITS_BY_MODE = {
     'v-list': {
         rows: { min: 5, max: 20, allowInfinite: true },
@@ -168,6 +169,7 @@ interface Props {
     headerRight?: ReactNode;
     stickyHeader?: boolean;
     headerFade?: boolean;
+    headerFadeBleed?: number;
     className?: string;
     dragging?: boolean;
     headerLoading?: boolean;
@@ -187,6 +189,7 @@ function MediaSectionImpl({
     headerRight,
     stickyHeader = true,
     headerFade = true,
+    headerFadeBleed = DEFAULT_HEADER_FADE_BLEED_PX,
     className,
     dragging = false,
     headerLoading = true,
@@ -460,6 +463,11 @@ function MediaSectionImpl({
     const skeletonLabel = '\u00A0';
     const showError = Boolean(errorMessage);
     const isPending = loading || showError;
+    const headerFadeBleedPx = Math.max(0, headerFadeBleed);
+    const headerFadeEdgeMask =
+        headerFadeBleedPx > 0
+            ? `linear-gradient(to right, rgba(0,0,0,1) 0px, rgba(0,0,0,0) ${headerFadeBleedPx}px, rgba(0,0,0,0) calc(100% - ${headerFadeBleedPx}px), rgba(0,0,0,1) 100%)`
+            : null;
 
     const placeholderItems = useMemo(() => {
         if (!isPending) return [];
@@ -683,7 +691,7 @@ function MediaSectionImpl({
                             : undefined
                     }
                 >
-                    <div className="relative z-10">
+                    <div className="relative z-10 py-1">
                         <Flex
                             direction="row"
                             align="baseline"
@@ -752,7 +760,7 @@ function MediaSectionImpl({
                                 <Flex
                                     align="center"
                                     gap="2"
-                                    className="shrink-0"
+                                    className="shrink-0 overflow-visible"
                                 >
                                     {headerRight}
                                 </Flex>
@@ -1272,34 +1280,60 @@ function MediaSectionImpl({
                     {stickyHeader && headerFade && (
                         <div
                             aria-hidden="true"
-                            className="pointer-events-none absolute inset-x-0 z-0"
-                            style={{ top: 0, height: '100%' }}
+                            className="pointer-events-none absolute z-0"
+                            style={{
+                                top: 0,
+                                left: `-${headerFadeBleedPx}px`,
+                                right: `-${headerFadeBleedPx}px`,
+                                height: '100%',
+                            }}
                         >
                             <div
                                 className="absolute inset-0"
                                 style={{
                                     backgroundImage:
-                                        'linear-gradient(to bottom, var(--color-background) 0%, var(--color-background) 40%, transparent 100%)',
+                                        'linear-gradient(to bottom, var(--color-background) 0%, var(--color-background) 68%, transparent 100%)',
                                 }}
                             />
                             <div
                                 className="absolute inset-0"
                                 style={{
                                     backgroundColor: 'rgba(0,0,0,0.001)',
-                                    backdropFilter: 'blur(12px)',
-                                    WebkitBackdropFilter: 'blur(12px)',
+                                    // Keep blur clipped to the real header bounds so
+                                    // outside items are not sampled into the effect.
+                                    left: `${headerFadeBleedPx}px`,
+                                    right: `${headerFadeBleedPx}px`,
+                                    backdropFilter: 'blur(14px)',
+                                    WebkitBackdropFilter: 'blur(14px)',
                                     WebkitMaskImage:
-                                        'linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0.5) 80%, rgba(0,0,0,0) 100%)',
+                                        'linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 66%, rgba(0,0,0,0) 100%)',
                                     WebkitMaskRepeat: 'no-repeat',
                                     WebkitMaskSize: '100% 100%',
                                     WebkitMaskPosition: 'top',
                                     maskImage:
-                                        'linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0.5) 80%, rgba(0,0,0,0) 100%)',
+                                        'linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 66%, rgba(0,0,0,0) 100%)',
                                     maskRepeat: 'no-repeat',
                                     maskSize: '100% 100%',
                                     maskPosition: 'top',
                                 }}
                             />
+                            {headerFadeEdgeMask && (
+                                <div
+                                    className="absolute inset-0"
+                                    style={{
+                                        backgroundColor:
+                                            'var(--color-background)',
+                                        WebkitMaskImage: headerFadeEdgeMask,
+                                        WebkitMaskRepeat: 'no-repeat',
+                                        WebkitMaskSize: '100% 100%',
+                                        WebkitMaskPosition: 'center',
+                                        maskImage: headerFadeEdgeMask,
+                                        maskRepeat: 'no-repeat',
+                                        maskSize: '100% 100%',
+                                        maskPosition: 'center',
+                                    }}
+                                />
+                            )}
                         </div>
                     )}
                 </div>
@@ -1372,6 +1406,7 @@ const areMediaSectionPropsEqual = (prev: Props, next: Props) =>
     prev.className === next.className &&
     prev.stickyHeader === next.stickyHeader &&
     prev.headerFade === next.headerFade &&
+    prev.headerFadeBleed === next.headerFadeBleed &&
     prev.headerRight === next.headerRight &&
     prev.onChange === next.onChange &&
     prev.onDelete === next.onDelete &&

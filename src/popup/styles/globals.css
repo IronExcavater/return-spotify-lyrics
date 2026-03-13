@@ -18,6 +18,15 @@
     .overflow-y-auto {
         overflow-x: hidden;
     }
+
+    .scrollbar-hide::-webkit-scrollbar {
+        display: none; /* Chrome */
+    }
+
+    .scrollbar-hide {
+        -ms-overflow-style: none; /* IE and Edge */
+        scrollbar-width: none; /* Firefox */
+    }
 }
 
 html,

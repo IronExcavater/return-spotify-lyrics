@@ -10,6 +10,7 @@ import { Button, DropdownMenu, Flex, IconButton, Text } from '@radix-ui/themes';
 import clsx from 'clsx';
 import type { FilterKind, SearchFilter, PillValue } from '../../shared/types';
 import { handleMenuTriggerKeyDown } from '../hooks/useActions';
+import { useScrollFade } from '../hooks/useScrollFade';
 import { Pill } from './Pill';
 import { SearchBar } from './SearchBar';
 
@@ -56,9 +57,20 @@ export function HomeBar({
     onClearFilters,
 }: Props) {
     const hasQuery = searchQuery.trim().length > 0;
+    const hasFilters = filters.length > 0;
+    const { scrollRef: filterScrollRef, fade: filterFade } = useScrollFade(
+        'horizontal',
+        [filters.length]
+    );
 
     return (
-        <Flex direction="column" p="2" flexGrow="1" className="w-full min-w-0">
+        <Flex
+            direction="column"
+            p="2"
+            gap="1"
+            flexGrow="1"
+            className="w-full min-w-0"
+        >
             <Flex align="start" gap="2">
                 <Flex direction="column" gap="1" className="w-full">
                     <Flex align="center" gap="1" className="w-full">
@@ -126,7 +138,7 @@ export function HomeBar({
                         />
                     </Flex>
                     <Flex align="center" justify="between">
-                        <Text size="2" weight="medium">
+                        <Text size="2" weight="medium" className="self-end">
                             Search Filters
                         </Text>
                         <Flex gap="1">
@@ -179,36 +191,63 @@ export function HomeBar({
                     </Flex>
                 )}
             </Flex>
-            <Flex
-                align="center"
-                gap="2"
-                pt={filters.length > 0 && '2'}
-                className="flex-wrap"
-            >
-                {filters.map((filter) => (
-                    <Pill
-                        key={filter.id}
-                        label={filter.label}
-                        value={filter.value}
-                        dateGranularity={
-                            filter.kind === 'year' ? 'year' : undefined
-                        }
-                        placeholder={
-                            filter.kind === 'artist'
-                                ? 'Name'
-                                : filter.kind === 'genre'
-                                  ? 'Tag'
-                                  : filter.kind === 'type'
-                                    ? 'Select'
-                                    : 'YYYY'
-                        }
-                        onChange={(value) =>
-                            onUpdateFilter(filter.id, value as PillValue)
-                        }
-                        onRemove={() => onRemoveFilter(filter.id)}
+            {hasFilters && (
+                <div className="relative">
+                    <Flex
+                        ref={filterScrollRef}
+                        align="center"
+                        direction="row"
+                        overflowX="auto"
+                        gap="2"
+                        wrap="nowrap"
+                        className="no-overflow-anchor scrollbar-hide p-0.5"
+                    >
+                        {filters.map((filter) => (
+                            <div key={filter.id}>
+                                <Pill
+                                    label={filter.label}
+                                    value={filter.value}
+                                    dateGranularity={
+                                        filter.kind === 'year'
+                                            ? 'year'
+                                            : undefined
+                                    }
+                                    placeholder={
+                                        filter.kind === 'artist'
+                                            ? 'Name'
+                                            : filter.kind === 'genre'
+                                              ? 'Tag'
+                                              : filter.kind === 'type'
+                                                ? 'Select'
+                                                : 'YYYY'
+                                    }
+                                    onChange={(value) =>
+                                        onUpdateFilter(
+                                            filter.id,
+                                            value as PillValue
+                                        )
+                                    }
+                                    onRemove={() => onRemoveFilter(filter.id)}
+                                />
+                            </div>
+                        ))}
+                    </Flex>
+                    <div
+                        className={clsx(
+                            'from-background via-background/60 pointer-events-none absolute top-2 left-0 h-[calc(100%-0.5rem)] w-2 bg-linear-to-r to-transparent transition-opacity',
+                            filterFade.start ? 'opacity-100' : 'opacity-0'
+                        )}
+                        aria-hidden
                     />
-                ))}
-            </Flex>
+                    <div
+                        className={clsx(
+                            'from-background via-background/60 pointer-events-none absolute top-2 right-0 h-[calc(100%-0.5rem)] w-2 bg-linear-to-l to-transparent transition-opacity',
+                            filterFade.end ? 'opacity-100' : 'opacity-0'
+                        )}
+                        aria-hidden
+                    />
+                </div>
+            )}
         </Flex>
     );
 }

@@ -80,7 +80,7 @@ export function MediaAlbum({
                 justify="between"
                 gap="2"
                 className={clsx(
-                    'text-[12px]',
+                    'w-full min-w-0 self-stretch text-[12px]',
                     canClick &&
                         'text-gray-12 hover:text-accent-11 cursor-pointer'
                 )}
@@ -89,26 +89,33 @@ export function MediaAlbum({
                     onTrackClick(track, album);
                 }}
             >
-                <SkeletonText
-                    loading={loading}
-                    parts={[item.title, duration]}
-                    seed={seed}
-                    preset="media-row"
-                >
-                    <span className="min-w-0 truncate">{item.title}</span>
-                </SkeletonText>
-                <SkeletonText
-                    loading={loading}
-                    parts={[duration, item.title]}
-                    seed={seed}
-                    preset="media-row"
-                    variant="subtitle"
-                    className="w-fit"
-                >
-                    <Text size="1" color="gray" className="shrink-0">
-                        {duration}
-                    </Text>
-                </SkeletonText>
+                <Flex className="min-w-0 grow">
+                    <SkeletonText
+                        loading={loading}
+                        parts={[item.title, duration]}
+                        seed={seed}
+                        preset="media-row"
+                        className="w-full"
+                    >
+                        <span className="block min-w-0 truncate">
+                            {item.title}
+                        </span>
+                    </SkeletonText>
+                </Flex>
+                <Flex className="shrink-0">
+                    <SkeletonText
+                        loading={loading}
+                        parts={[duration, item.title]}
+                        seed={seed}
+                        preset="media-row"
+                        variant="subtitle"
+                        className="w-fit shrink-0"
+                    >
+                        <Text size="1" color="gray" className="shrink-0">
+                            {duration}
+                        </Text>
+                    </SkeletonText>
+                </Flex>
             </Flex>
         );
     };
@@ -116,21 +123,13 @@ export function MediaAlbum({
         <Flex
             direction="column"
             gap="1"
-            p={isSingleTrack ? '2' : '1'}
-            className={clsx(
-                'rounded-2 bg-panel-solid/5 min-w-0',
-                !isSingleTrack && 'w-full'
-            )}
+            p="1"
+            className="rounded-2 bg-panel-solid/5"
         >
             {isSingleTrack ? (
-                <Flex direction="column" gap="1" className="min-w-0">
-                    <Flex
-                        align="start"
-                        justify="between"
-                        gap="1"
-                        className="min-w-0"
-                    >
-                        <Flex className="min-w-0" flexGrow="1">
+                <Flex direction="column" gap="1">
+                    <Flex align="start" justify="between" gap="1">
+                        <Flex flexGrow="1">
                             <Fade enabled={!loading} grow>
                                 <SkeletonText
                                     loading={loading}
@@ -195,14 +194,9 @@ export function MediaAlbum({
                             </DropdownMenu.Root>
                         )}
                     </AvatarButton>
-                    <Flex
-                        align="center"
-                        justify="between"
-                        gap="2"
-                        className="min-w-0"
-                    >
+                    <Flex align="center" justify="between" gap="2">
                         {subtitle && (
-                            <Flex className="min-w-0" flexGrow="1">
+                            <Flex>
                                 <Fade enabled={!loading} grow>
                                     <SkeletonText
                                         loading={loading}
@@ -235,14 +229,13 @@ export function MediaAlbum({
                                         parts={[durationLabel, subtitle]}
                                         seed={seed}
                                         preset="media-row"
+                                        fullWidth={false}
                                         variant="subtitle"
-                                        className="w-fit"
                                     >
                                         <Text
                                             ref={durationRef}
                                             size="1"
                                             color="gray"
-                                            className="shrink-0"
                                         >
                                             {durationLabel}
                                         </Text>
