@@ -264,6 +264,7 @@ export function MediaHero({
                                         </DropdownMenu.Trigger>
                                         <MediaActionsMenu
                                             actions={mergedHeroActions}
+                                            item={hero?.item}
                                         />
                                     </DropdownMenu.Root>
                                 )}

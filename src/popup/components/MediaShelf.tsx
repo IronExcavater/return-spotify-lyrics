@@ -375,9 +375,10 @@ export function MediaShelf({
             const actions = buildMediaActions(item);
             const hasActions =
                 actions.primary.length > 0 || actions.secondary.length > 0;
-            const contextMenu = hasActions ? (
-                <MediaActionsMenu actions={actions} />
-            ) : null;
+            const contextMenu =
+                hasActions || item.kind === 'track' ? (
+                    <MediaActionsMenu actions={actions} item={item} />
+                ) : null;
             const route = buildMediaRouteFromItem(item);
             const handleNavigate = () => {
                 if (!route) return;

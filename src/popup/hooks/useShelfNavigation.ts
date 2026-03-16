@@ -45,21 +45,19 @@ export function useShelfNavigation({
     }, [containerRef]);
 
     useEffect(() => {
-        const node = containerRef.current;
-        if (!node) return;
         const handlePointerDown = () => {
             lastInteraction.current = 'pointer';
         };
         const handleKeyDown = () => {
             lastInteraction.current = 'keyboard';
         };
-        node.addEventListener('pointerdown', handlePointerDown);
-        node.addEventListener('keydown', handleKeyDown);
+        window.addEventListener('pointerdown', handlePointerDown, true);
+        window.addEventListener('keydown', handleKeyDown, true);
         return () => {
-            node.removeEventListener('pointerdown', handlePointerDown);
-            node.removeEventListener('keydown', handleKeyDown);
+            window.removeEventListener('pointerdown', handlePointerDown, true);
+            window.removeEventListener('keydown', handleKeyDown, true);
         };
-    }, [containerRef]);
+    }, []);
 
     useEffect(() => {
         if (activeIndex < itemCount) return;

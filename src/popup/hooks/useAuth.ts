@@ -11,6 +11,7 @@ import {
 } from '../../shared/logging';
 import { Msg, sendMessage, sendSpotifyMessage } from '../../shared/messaging';
 import { getFromStorage, setInStorage } from '../../shared/storage';
+import { clearSpotifyReads } from './useSpotifyRead';
 
 const SPOTIFY_USER_KEY = 'spotifyUser';
 const SPOTIFY_CONNECTION_KEY = 'spotifyConnectionMeta';
@@ -47,6 +48,9 @@ export function useAuth() {
             if (resp) {
                 const prev = connectionRef.current;
                 const sameUser = prev?.userId === resp.id;
+                if (!sameUser) {
+                    clearSpotifyReads();
+                }
                 const now = Date.now();
                 const baseSessions = sameUser ? (prev?.sessionCount ?? 0) : 0;
                 const nextSessions = Math.max(
@@ -70,6 +74,7 @@ export function useAuth() {
                 void setInStorage(SPOTIFY_CONNECTION_KEY, nextMeta);
             } else {
                 sessionActiveRef.current = false;
+                clearSpotifyReads();
             }
         } catch (error) {
             logError(logger, 'Failed to sync Spotify user', error, {
@@ -78,6 +83,7 @@ export function useAuth() {
             setAuthed(false);
             setUser(undefined);
             sessionActiveRef.current = false;
+            clearSpotifyReads();
         }
     };
 
@@ -89,6 +95,7 @@ export function useAuth() {
     };
 
     const logout = () => {
+        clearSpotifyReads();
         void trackAuth(ANALYTICS_EVENTS.authLogout, {
             reason: 'user requested Spotify logout',
         });

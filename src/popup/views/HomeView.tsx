@@ -52,6 +52,7 @@ import type { MediaShelfItem } from '../components/MediaShelf';
 import { handleMenuTriggerKeyDown } from '../hooks/useActions';
 import { usePersonalisation } from '../hooks/usePersonalisation';
 import { useSettings } from '../hooks/useSettings';
+import { readSpotify, useSpotifyRead } from '../hooks/useSpotifyRead';
 import { SEARCH_SECTION_BASE, buildSearchSections } from './searchSections';
 
 interface Props {
@@ -139,6 +140,14 @@ const buildHomeSections = (): MediaSectionState[] => [
 ];
 
 const HOME_LAYOUT_KEY = 'homeLayout';
+const SEARCH_TYPES = Object.keys(SEARCH_SECTION_BASE) as SearchType[];
+const INITIAL_HOME_SECTION_COUNT = 3;
+
+type SearchQueryData = {
+    itemsByType: Record<SearchType, MediaShelfItem[]>;
+    hasMoreByType: Record<SearchType, boolean>;
+    nextOffsets: Record<SearchType, number | null>;
+};
 
 type StoredHomeSection = Pick<
     MediaSectionState,
@@ -222,6 +231,244 @@ const dedupeItems = (items: MediaShelfItem[]) => {
     });
 };
 
+const sameIds = (left: string[], right: string[]) =>
+    left.length === right.length &&
+    left.every((value, index) => value === right[index]);
+
+const createSearchOffsets = (value: number | null) => ({
+    track: value,
+    album: value,
+    artist: value,
+    playlist: value,
+    show: value,
+    episode: value,
+    audiobook: value,
+});
+
+const findSearchTypeBySectionId = (sectionId: string) =>
+    SEARCH_TYPES.find((type) => SEARCH_SECTION_BASE[type].id === sectionId);
+
+const loadTopArtistsItems = async () => {
+    let items: MediaShelfItem[] = [];
+
+    try {
+        const shortTerm = await sendSpotifyMessage('getTopArtists', {
+            limit: 50,
+            timeRange: 'short_term',
+        });
+        items = shortTerm.items.map((artist) => topArtistToItem(artist));
+    } catch (error) {
+        logError(logger, 'Top artists request failed', error);
+    }
+
+    if (items.length >= 12) return items;
+
+    const merged = new Map<string, MediaShelfItem>();
+    items.forEach((item) => {
+        if (item.id) merged.set(item.id, item);
+    });
+
+    try {
+        const fallbacks = await Promise.allSettled([
+            sendSpotifyMessage('getTopArtists', {
+                limit: 50,
+                timeRange: 'medium_term',
+            }),
+            sendSpotifyMessage('getTopArtists', {
+                limit: 50,
+                timeRange: 'long_term',
+            }),
+        ]);
+
+        fallbacks.forEach((result) => {
+            if (result.status !== 'fulfilled') return;
+            result.value.items.forEach((artist) => {
+                const item = topArtistToItem(artist);
+                if (item.id && !merged.has(item.id)) {
+                    merged.set(item.id, item);
+                }
+            });
+        });
+    } catch (error) {
+        logError(logger, 'Top artists fallback failed', error);
+    }
+
+    return Array.from(merged.values()).slice(0, 50);
+};
+
+const loadTopTracksItems = async () => {
+    let items: MediaShelfItem[] = [];
+
+    try {
+        const shortTerm = await sendSpotifyMessage('getTopTracks', {
+            limit: 50,
+            timeRange: 'short_term',
+        });
+        items = shortTerm.items.map((track) => trackToItem(track));
+    } catch (error) {
+        logError(logger, 'Top tracks request failed', error);
+    }
+
+    if (items.length >= 12) return items;
+
+    const merged = new Map<string, MediaShelfItem>();
+    items.forEach((item) => {
+        if (item.id) merged.set(item.id, item);
+    });
+
+    try {
+        const fallbacks = await Promise.allSettled([
+            sendSpotifyMessage('getTopTracks', {
+                limit: 50,
+                timeRange: 'medium_term',
+            }),
+            sendSpotifyMessage('getTopTracks', {
+                limit: 50,
+                timeRange: 'long_term',
+            }),
+        ]);
+
+        fallbacks.forEach((result) => {
+            if (result.status !== 'fulfilled') return;
+            result.value.items.forEach((track) => {
+                const item = trackToItem(track);
+                if (item.id && !merged.has(item.id)) {
+                    merged.set(item.id, item);
+                }
+            });
+        });
+    } catch (error) {
+        logError(logger, 'Top tracks fallback failed', error);
+    }
+
+    return Array.from(merged.values()).slice(0, 50);
+};
+
+const loadSearchResults = async (
+    query: string,
+    types: SearchType[],
+    locale: string
+): Promise<SearchQueryData> => {
+    const result = (await sendSpotifyMessage('search', {
+        query,
+        types: types as ItemTypes[],
+        limit: SEARCH_LIMIT,
+    })) as SearchResults<
+        ['track', 'album', 'artist', 'playlist', 'show', 'episode', 'audiobook']
+    >;
+
+    return {
+        itemsByType: {
+            track:
+                result.tracks?.items.map((track) => trackToItem(track)) ?? [],
+            album:
+                result.albums?.items.map((album) => albumToItem(album)) ?? [],
+            artist:
+                result.artists?.items.map((artist) => artistToItem(artist)) ??
+                [],
+            playlist:
+                result.playlists?.items
+                    .filter((item): item is SimplifiedPlaylist => !!item)
+                    .map((playlist) => playlistToItem(playlist)) ?? [],
+            show: result.shows?.items.map((show) => showToItem(show)) ?? [],
+            episode:
+                result.episodes?.items.map((episode) =>
+                    episodeToItem(episode, locale)
+                ) ?? [],
+            audiobook:
+                result.audiobooks?.items.map((book) => audiobookToItem(book)) ??
+                [],
+        },
+        hasMoreByType: {
+            track: !!result.tracks?.next,
+            album: !!result.albums?.next,
+            artist: !!result.artists?.next,
+            playlist: !!result.playlists?.next,
+            show: !!result.shows?.next,
+            episode: !!result.episodes?.next,
+            audiobook: !!result.audiobooks?.next,
+        },
+        nextOffsets: {
+            track: result.tracks?.next ? SEARCH_LIMIT : null,
+            album: result.albums?.next ? SEARCH_LIMIT : null,
+            artist: result.artists?.next ? SEARCH_LIMIT : null,
+            playlist: result.playlists?.next ? SEARCH_LIMIT : null,
+            show: result.shows?.next ? SEARCH_LIMIT : null,
+            episode: result.episodes?.next ? SEARCH_LIMIT : null,
+            audiobook: result.audiobooks?.next ? SEARCH_LIMIT : null,
+        },
+    };
+};
+
+const loadSearchPage = async (
+    query: string,
+    type: SearchType,
+    offset: number,
+    locale: string
+) => {
+    const result = (await sendSpotifyMessage('search', {
+        query,
+        types: [type] as ItemTypes[],
+        limit: SEARCH_LIMIT,
+        offset,
+    })) as SearchResults<[ItemTypes]>;
+
+    switch (type) {
+        case 'track':
+            return {
+                items:
+                    result.tracks?.items.map((track) => trackToItem(track)) ??
+                    [],
+                hasMore: !!result.tracks?.next,
+            };
+        case 'album':
+            return {
+                items:
+                    result.albums?.items.map((album) => albumToItem(album)) ??
+                    [],
+                hasMore: !!result.albums?.next,
+            };
+        case 'artist':
+            return {
+                items:
+                    result.artists?.items.map((artist) =>
+                        artistToItem(artist)
+                    ) ?? [],
+                hasMore: !!result.artists?.next,
+            };
+        case 'playlist':
+            return {
+                items:
+                    result.playlists?.items
+                        .filter((item): item is SimplifiedPlaylist => !!item)
+                        .map((playlist) => playlistToItem(playlist)) ?? [],
+                hasMore: !!result.playlists?.next,
+            };
+        case 'show':
+            return {
+                items:
+                    result.shows?.items.map((show) => showToItem(show)) ?? [],
+                hasMore: !!result.shows?.next,
+            };
+        case 'episode':
+            return {
+                items:
+                    result.episodes?.items.map((episode) =>
+                        episodeToItem(episode, locale)
+                    ) ?? [],
+                hasMore: !!result.episodes?.next,
+            };
+        case 'audiobook':
+            return {
+                items:
+                    result.audiobooks?.items.map((book) =>
+                        audiobookToItem(book)
+                    ) ?? [],
+                hasMore: !!result.audiobooks?.next,
+            };
+    }
+};
+
 export function HomeView({ searchQuery, filters }: Props) {
     const [homeSections, setHomeSections] = useState<MediaSectionState[]>(() =>
         buildHomeSections()
@@ -230,13 +477,17 @@ export function HomeView({ searchQuery, filters }: Props) {
         () => buildSearchSections(DEFAULT_SEARCH_TYPES)
     );
     const [editing, setEditing] = useState(false);
-    const [homeLoading, setHomeLoading] = useState(false);
-    const [searchLoading, setSearchLoading] = useState(false);
-    const [homeRefreshKey, setHomeRefreshKey] = useState(0);
+    const [activeHomeSectionIds, setActiveHomeSectionIds] = useState<string[]>(
+        () =>
+            buildHomeSections()
+                .slice(0, INITIAL_HOME_SECTION_COUNT)
+                .map((section) => section.id)
+    );
     const [lastAddedId, setLastAddedId] = useState<string | null>(null);
     const { settings } = useSettings();
     const locale = resolveLocale(settings.locale);
 
+    const scrollContainerRef = useRef<HTMLDivElement | null>(null);
     const sectionRefs = useRef<Map<string, HTMLDivElement>>(new Map());
     const homeItemsRef = useRef<Record<string, MediaShelfItem[]>>({});
     const searchOffsetsRef = useRef<Record<SearchType, number | null>>({
@@ -258,16 +509,198 @@ export function HomeView({ searchQuery, filters }: Props) {
         () => buildSearchContext(searchQuery, filters),
         [filters, searchQuery]
     );
-
     const isSearching = searchContext.active;
-    const activeSections = isSearching ? searchSections : homeSections;
-    const isLoading = isSearching ? searchLoading : homeLoading;
+    const searchTypesKey = useMemo(
+        () => searchContext.types.join(','),
+        [searchContext.types]
+    );
+    const searchQueryKey = useMemo(
+        () =>
+            isSearching && searchContext.query
+                ? `search:${searchContext.query}:${searchTypesKey}:${locale}`
+                : null,
+        [isSearching, locale, searchContext.query, searchTypesKey]
+    );
+    const activeHomeSectionSet = useMemo(
+        () =>
+            new Set(
+                editing
+                    ? homeSections.map((section) => section.id)
+                    : activeHomeSectionIds
+            ),
+        [activeHomeSectionIds, editing, homeSections]
+    );
+
+    const recentState = useSpotifyRead<MediaShelfItem[]>({
+        key: 'home/recent',
+        staleMs: 2 * 60 * 1000,
+        cacheMs: 15 * 60 * 1000,
+        enabled: !isSearching && activeHomeSectionSet.has('recent'),
+        load: async () => {
+            const recentlyPlayed = await sendSpotifyMessage(
+                'getRecentlyPlayedTracks',
+                { limit: 20 }
+            );
+            return dedupeItems(
+                recentlyPlayed.items.map((entry) => trackToItem(entry.track))
+            );
+        },
+    });
+    const topTracksState = useSpotifyRead<MediaShelfItem[]>({
+        key: 'home/top-tracks',
+        staleMs: 6 * 60 * 60 * 1000,
+        cacheMs: 24 * 60 * 60 * 1000,
+        enabled: !isSearching && activeHomeSectionSet.has('top-tracks'),
+        load: loadTopTracksItems,
+    });
+    const topArtistsState = useSpotifyRead<MediaShelfItem[]>({
+        key: 'home/top-artists',
+        staleMs: 6 * 60 * 60 * 1000,
+        cacheMs: 24 * 60 * 60 * 1000,
+        enabled: !isSearching && activeHomeSectionSet.has('top-artists'),
+        load: loadTopArtistsItems,
+    });
+    const newReleasesState = useSpotifyRead<MediaShelfItem[]>({
+        key: 'home/new-releases',
+        staleMs: 6 * 60 * 60 * 1000,
+        cacheMs: 24 * 60 * 60 * 1000,
+        enabled: !isSearching && activeHomeSectionSet.has('new-releases'),
+        load: async () => {
+            const newReleases = await sendSpotifyMessage('getNewReleases', {
+                limit: 20,
+            });
+            return newReleases.albums.items.map((album) => albumToItem(album));
+        },
+    });
+    const playlistsState = useSpotifyRead<MediaShelfItem[]>({
+        key: 'home/user-playlists',
+        staleMs: 15 * 60 * 1000,
+        cacheMs: 60 * 60 * 1000,
+        enabled: !isSearching && activeHomeSectionSet.has('user-playlists'),
+        load: async () => {
+            const playlists = await sendSpotifyMessage('getUserPlaylists', {
+                limit: 20,
+            });
+            return playlists.items.map((playlist) => playlistToItem(playlist));
+        },
+    });
+    const savedTracksState = useSpotifyRead<MediaShelfItem[]>({
+        key: 'home/saved-tracks',
+        staleMs: 5 * 60 * 1000,
+        cacheMs: 30 * 60 * 1000,
+        enabled: !isSearching && activeHomeSectionSet.has('saved-tracks'),
+        load: async () => {
+            const saved = await sendSpotifyMessage('getSavedTracks', {
+                limit: 20,
+            });
+            return saved.items.map((entry) => trackToItem(entry.track));
+        },
+    });
+    const searchState = useSpotifyRead<SearchQueryData>({
+        key: searchQueryKey ?? 'search:idle',
+        staleMs: 45_000,
+        cacheMs: 10 * 60 * 1000,
+        enabled: Boolean(searchQueryKey && searchContext.query),
+        load: () =>
+            loadSearchResults(searchContext.query, searchContext.types, locale),
+    });
+    const draggableSections = isSearching ? searchSections : homeSections;
+    const homeSectionLoadingById = useMemo(
+        () => ({
+            recent:
+                recentState.status === 'loading' &&
+                (recentState.data?.length ?? 0) === 0,
+            'top-tracks':
+                topTracksState.status === 'loading' &&
+                (topTracksState.data?.length ?? 0) === 0,
+            'top-artists':
+                topArtistsState.status === 'loading' &&
+                (topArtistsState.data?.length ?? 0) === 0,
+            'new-releases':
+                newReleasesState.status === 'loading' &&
+                (newReleasesState.data?.length ?? 0) === 0,
+            'user-playlists':
+                playlistsState.status === 'loading' &&
+                (playlistsState.data?.length ?? 0) === 0,
+            'saved-tracks':
+                savedTracksState.status === 'loading' &&
+                (savedTracksState.data?.length ?? 0) === 0,
+        }),
+        [
+            newReleasesState.data?.length,
+            newReleasesState.status,
+            playlistsState.data?.length,
+            playlistsState.status,
+            recentState.data?.length,
+            recentState.status,
+            savedTracksState.data?.length,
+            savedTracksState.status,
+            topArtistsState.data?.length,
+            topArtistsState.status,
+            topTracksState.data?.length,
+            topTracksState.status,
+        ]
+    );
+    const searchLoading = isSearching && searchState.status === 'loading';
 
     useEffect(() => {
         void getFromStorage<StoredHomeSection[]>(HOME_LAYOUT_KEY, (saved) => {
             setHomeSections(mergeLayout(saved ?? undefined));
         });
     }, []);
+
+    useEffect(() => {
+        if (isSearching) return;
+
+        const orderedIds = homeSections.map((section) => section.id);
+        const seedIds = editing
+            ? orderedIds
+            : orderedIds.slice(0, INITIAL_HOME_SECTION_COUNT);
+
+        setActiveHomeSectionIds((previous) => {
+            const retained = previous.filter((id) => orderedIds.includes(id));
+            const next = Array.from(new Set([...retained, ...seedIds]));
+            return sameIds(previous, next) ? previous : next;
+        });
+    }, [editing, homeSections, isSearching]);
+
+    useEffect(() => {
+        if (isSearching || editing) return;
+        const orderedIds = homeSections.map((section) => section.id);
+        const lastActiveId = [...orderedIds]
+            .reverse()
+            .find((id) => activeHomeSectionSet.has(id));
+
+        if (!lastActiveId) return;
+
+        const currentIndex = orderedIds.indexOf(lastActiveId);
+        const nextId =
+            currentIndex >= 0 && currentIndex < orderedIds.length - 1
+                ? orderedIds[currentIndex + 1]
+                : undefined;
+
+        if (!nextId) return;
+
+        const root = scrollContainerRef.current;
+        const node = sectionRefs.current.get(lastActiveId);
+        if (!root || !node) return;
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (!entries.some((entry) => entry.isIntersecting)) return;
+                setActiveHomeSectionIds((previous) =>
+                    previous.includes(nextId) ? previous : [...previous, nextId]
+                );
+            },
+            {
+                root,
+                rootMargin: '0px 0px 240px 0px',
+            }
+        );
+
+        observer.observe(node);
+        return () => observer.disconnect();
+    }, [activeHomeSectionSet, editing, homeSections, isSearching]);
 
     const setActiveSections = useCallback(
         (updater: (prev: MediaSectionState[]) => MediaSectionState[]) => {
@@ -282,7 +715,6 @@ export function HomeView({ searchQuery, filters }: Props) {
             setSearchSections(buildSearchSections(searchContext.types));
         } else {
             setHomeSections(buildHomeSections());
-            setHomeRefreshKey((value) => value + 1);
         }
     }, [isSearching, searchContext.types]);
 
@@ -352,24 +784,18 @@ export function HomeView({ searchQuery, filters }: Props) {
     const onSectionDragEnd = useCallback(
         (result: DropResult) => {
             if (!result.destination) return;
-            const next = [...activeSections];
+            const next = [...draggableSections];
             const [moved] = next.splice(result.source.index, 1);
             next.splice(result.destination.index, 0, moved);
             setActiveSections(() => next);
         },
-        [activeSections, setActiveSections]
+        [draggableSections, setActiveSections]
     );
-
-    const resolveSearchType = useCallback((sectionId: string) => {
-        return (Object.keys(SEARCH_SECTION_BASE) as SearchType[]).find(
-            (key) => SEARCH_SECTION_BASE[key].id === sectionId
-        );
-    }, []);
 
     const loadMoreSearch = useCallback(
         async (sectionId: string) => {
             if (!isSearching || !searchContext.query) return;
-            const type = resolveSearchType(sectionId);
+            const type = findSearchTypeBySectionId(sectionId);
             if (!type) return;
             const offset = searchOffsetsRef.current[type];
             if (offset == null) return;
@@ -383,68 +809,21 @@ export function HomeView({ searchQuery, filters }: Props) {
             );
 
             try {
-                const result = (await sendSpotifyMessage('search', {
-                    query: searchContext.query,
-                    types: [type] as ItemTypes[],
-                    limit: SEARCH_LIMIT,
-                    offset,
-                })) as SearchResults<[ItemTypes]>;
+                const page = await readSpotify({
+                    key: `search:${searchContext.query}:${type}:${offset}:${locale}`,
+                    staleMs: 45_000,
+                    cacheMs: 10 * 60 * 1000,
+                    load: () =>
+                        loadSearchPage(
+                            searchContext.query,
+                            type,
+                            offset,
+                            locale
+                        ),
+                });
 
-                let items: MediaShelfItem[] = [];
-                let hasMore = false;
-
-                switch (type) {
-                    case 'track': {
-                        const page = result.tracks;
-                        items = page?.items.map(trackToItem) ?? [];
-                        hasMore = !!page?.next;
-                        break;
-                    }
-                    case 'album': {
-                        const page = result.albums;
-                        items = page?.items.map(albumToItem) ?? [];
-                        hasMore = !!page?.next;
-                        break;
-                    }
-                    case 'artist': {
-                        const page = result.artists;
-                        items = page?.items.map(artistToItem) ?? [];
-                        hasMore = !!page?.next;
-                        break;
-                    }
-                    case 'playlist': {
-                        const page = result.playlists;
-                        items =
-                            page?.items
-                                .filter(
-                                    (item): item is SimplifiedPlaylist => !!item
-                                )
-                                .map(playlistToItem) ?? [];
-                        hasMore = !!page?.next;
-                        break;
-                    }
-                    case 'show': {
-                        const page = result.shows;
-                        items = page?.items.map(showToItem) ?? [];
-                        hasMore = !!page?.next;
-                        break;
-                    }
-                    case 'episode': {
-                        const page = result.episodes;
-                        items =
-                            page?.items.map((episode) =>
-                                episodeToItem(episode, locale)
-                            ) ?? [];
-                        hasMore = !!page?.next;
-                        break;
-                    }
-                    case 'audiobook': {
-                        const page = result.audiobooks;
-                        items = page?.items.map(audiobookToItem) ?? [];
-                        hasMore = !!page?.next;
-                        break;
-                    }
-                }
+                const items = page.items;
+                const hasMore = page.hasMore;
                 searchOffsetsRef.current[type] = hasMore
                     ? offset + SEARCH_LIMIT
                     : null;
@@ -471,7 +850,7 @@ export function HomeView({ searchQuery, filters }: Props) {
                 );
             }
         },
-        [isSearching, resolveSearchType, searchContext.query]
+        [isSearching, locale, searchContext.query]
     );
 
     useEffect(() => {
@@ -488,318 +867,121 @@ export function HomeView({ searchQuery, filters }: Props) {
         return () => cancelAnimationFrame(raf);
     }, [lastAddedId]);
 
+    const homeItemsBySection = useMemo(
+        () => ({
+            recent: recentState.data ?? [],
+            'top-tracks': topTracksState.data ?? [],
+            'top-artists': topArtistsState.data ?? [],
+            'new-releases': newReleasesState.data ?? [],
+            'user-playlists': playlistsState.data ?? [],
+            'saved-tracks': savedTracksState.data ?? [],
+        }),
+        [
+            newReleasesState.data,
+            playlistsState.data,
+            recentState.data,
+            savedTracksState.data,
+            topArtistsState.data,
+            topTracksState.data,
+        ]
+    );
+    const resolvedHomeSections = useMemo(
+        () =>
+            homeSections.map((section) => {
+                const items = homeItemsBySection[section.id];
+                if (!items) return section;
+                if (
+                    section.items === items &&
+                    section.hasMore === false &&
+                    section.loadingMore === false
+                ) {
+                    return section;
+                }
+                return {
+                    ...section,
+                    items,
+                    hasMore: false,
+                    loadingMore: false,
+                };
+            }),
+        [homeItemsBySection, homeSections]
+    );
+
     useEffect(() => {
         if (isSearching) return;
-        let cancelled = false;
 
-        const load = async () => {
-            setHomeLoading(true);
-            const [
-                recentlyPlayed,
-                topTracks,
-                topArtists,
-                newReleases,
-                userPlaylists,
-                saved,
-            ] = await Promise.allSettled([
-                sendSpotifyMessage('getRecentlyPlayedTracks', {
-                    limit: 20,
-                }),
-                sendSpotifyMessage('getTopTracks', {
-                    limit: 20,
-                    timeRange: 'short_term',
-                }),
-                sendSpotifyMessage('getTopArtists', {
-                    limit: 50,
-                    timeRange: 'short_term',
-                }),
-                sendSpotifyMessage('getNewReleases', { limit: 20 }),
-                sendSpotifyMessage('getUserPlaylists', { limit: 20 }),
-                sendSpotifyMessage('getSavedTracks', { limit: 20 }),
-            ]);
-
-            if (cancelled) return;
-
-            let topArtistsItems =
-                topArtists.status === 'fulfilled'
-                    ? topArtists.value.items.map((artist) =>
-                          topArtistToItem(artist)
-                      )
-                    : [];
-            if (topArtistsItems.length < 12) {
-                try {
-                    const fallbacks = await Promise.allSettled([
-                        sendSpotifyMessage('getTopArtists', {
-                            limit: 50,
-                            timeRange: 'medium_term',
-                        }),
-                        sendSpotifyMessage('getTopArtists', {
-                            limit: 50,
-                            timeRange: 'long_term',
-                        }),
-                    ]);
-                    const merged = new Map<string, MediaShelfItem>();
-                    topArtistsItems.forEach((item) => {
-                        if (item.id) merged.set(item.id, item);
-                    });
-                    fallbacks.forEach((result) => {
-                        if (result.status !== 'fulfilled') return;
-                        result.value.items.forEach((artist) => {
-                            const item = topArtistToItem(artist);
-                            if (item.id && !merged.has(item.id)) {
-                                merged.set(item.id, item);
-                            }
-                        });
-                    });
-                    topArtistsItems = Array.from(merged.values()).slice(0, 50);
-                } catch (error) {
-                    logError(logger, 'Top artists fallback failed', error);
-                }
-            }
-
-            let topTracksItems: MediaShelfItem[] =
-                topTracks.status === 'fulfilled'
-                    ? topTracks.value.items.map((track) => trackToItem(track))
-                    : [];
-            if (topTracksItems.length < 12) {
-                try {
-                    const fallbacks = await Promise.allSettled([
-                        sendSpotifyMessage('getTopTracks', {
-                            limit: 50,
-                            timeRange: 'medium_term',
-                        }),
-                        sendSpotifyMessage('getTopTracks', {
-                            limit: 50,
-                            timeRange: 'long_term',
-                        }),
-                    ]);
-                    const merged = new Map<string, MediaShelfItem>();
-                    topTracksItems.forEach((item) => {
-                        if (item.id) merged.set(item.id, item);
-                    });
-                    fallbacks.forEach((result) => {
-                        if (result.status !== 'fulfilled') return;
-                        result.value.items.forEach((track) => {
-                            const item = trackToItem(track);
-                            if (item.id && !merged.has(item.id)) {
-                                merged.set(item.id, item);
-                            }
-                        });
-                    });
-                    topTracksItems = Array.from(merged.values()).slice(0, 50);
-                } catch (error) {
-                    logError(logger, 'Top tracks fallback failed', error);
-                }
-            }
-
-            const itemsBySection: Record<string, MediaShelfItem[]> = {
-                recent:
-                    recentlyPlayed.status === 'fulfilled'
-                        ? dedupeItems(
-                              recentlyPlayed.value.items.map((entry) =>
-                                  trackToItem(entry.track)
-                              )
-                          )
-                        : [],
-                'top-tracks': topTracksItems,
-                'top-artists': topArtistsItems,
-                'new-releases':
-                    newReleases.status === 'fulfilled'
-                        ? newReleases.value.albums.items.map((album) =>
-                              albumToItem(album)
-                          )
-                        : [],
-                'user-playlists':
-                    userPlaylists.status === 'fulfilled'
-                        ? userPlaylists.value.items.map((playlist) =>
-                              playlistToItem(playlist)
-                          )
-                        : [],
-                'saved-tracks':
-                    saved.status === 'fulfilled'
-                        ? saved.value.items.map((entry) =>
-                              trackToItem(entry.track)
-                          )
-                        : [],
-            };
-
-            homeItemsRef.current = itemsBySection;
-            setHomeSections((prev) =>
-                prev.map((section) => {
-                    const items = itemsBySection[section.id];
-                    if (!items) return section;
-                    return {
-                        ...section,
-                        items,
-                        hasMore: false,
-                        loadingMore: false,
-                    };
-                })
-            );
-            setHomeLoading(false);
-        };
-
-        void load();
-
-        return () => {
-            cancelled = true;
-            setHomeLoading(false);
-        };
-    }, [homeRefreshKey, isSearching]);
+        homeItemsRef.current = homeItemsBySection;
+    }, [homeItemsBySection, isSearching]);
 
     useEffect(() => {
         if (!isSearching) {
-            setSearchLoading(false);
             return;
         }
         if (!searchContext.query) {
-            setSearchLoading(false);
+            searchOffsetsRef.current = createSearchOffsets(0);
             return;
         }
-        let cancelled = false;
-
-        setSearchLoading(true);
         setSearchSections(buildSearchSections(searchContext.types));
-        searchOffsetsRef.current = {
-            track: 0,
-            album: 0,
-            artist: 0,
-            playlist: 0,
-            show: 0,
-            episode: 0,
-            audiobook: 0,
-        };
+        searchOffsetsRef.current = createSearchOffsets(0);
+    }, [isSearching, searchContext.query, searchTypesKey]);
 
-        const load = async () => {
-            try {
-                const result = (await sendSpotifyMessage('search', {
-                    query: searchContext.query,
-                    types: searchContext.types as ItemTypes[],
-                    limit: SEARCH_LIMIT,
-                })) as SearchResults<
-                    [
-                        'track',
-                        'album',
-                        'artist',
-                        'playlist',
-                        'show',
-                        'episode',
-                        'audiobook',
-                    ]
-                >;
+    useEffect(() => {
+        if (!isSearching || !searchState.data) return;
 
-                if (cancelled) return;
-
-                const itemsByType: Record<SearchType, MediaShelfItem[]> = {
-                    track:
-                        result.tracks?.items.map((track) =>
-                            trackToItem(track)
-                        ) ?? [],
-                    album:
-                        result.albums?.items.map((album) =>
-                            albumToItem(album)
-                        ) ?? [],
-                    artist:
-                        result.artists?.items.map((artist) =>
-                            artistToItem(artist)
-                        ) ?? [],
-                    playlist:
-                        result.playlists?.items
-                            .filter(
-                                (item): item is SimplifiedPlaylist => !!item
-                            )
-                            .map((playlist) => playlistToItem(playlist)) ?? [],
-                    show:
-                        result.shows?.items.map((show) => showToItem(show)) ??
-                        [],
-                    episode:
-                        result.episodes?.items.map((episode) =>
-                            episodeToItem(episode, locale)
-                        ) ?? [],
-                    audiobook:
-                        result.audiobooks?.items.map((book) =>
-                            audiobookToItem(book)
-                        ) ?? [],
+        searchOffsetsRef.current = searchState.data.nextOffsets;
+        setSearchSections((prev) =>
+            prev.map((section) => {
+                const type = findSearchTypeBySectionId(section.id);
+                if (!type) return section;
+                return {
+                    ...section,
+                    items: searchState.data.itemsByType[type],
+                    hasMore: searchState.data.hasMoreByType[type],
+                    loadingMore: false,
                 };
+            })
+        );
+    }, [isSearching, searchState.data]);
 
-                searchOffsetsRef.current = {
-                    track: result.tracks?.next ? SEARCH_LIMIT : null,
-                    album: result.albums?.next ? SEARCH_LIMIT : null,
-                    artist: result.artists?.next ? SEARCH_LIMIT : null,
-                    playlist: result.playlists?.next ? SEARCH_LIMIT : null,
-                    show: result.shows?.next ? SEARCH_LIMIT : null,
-                    episode: result.episodes?.next ? SEARCH_LIMIT : null,
-                    audiobook: result.audiobooks?.next ? SEARCH_LIMIT : null,
-                };
-
-                setSearchSections((prev) =>
-                    prev.map((section) => {
-                        const type = (
-                            Object.keys(SEARCH_SECTION_BASE) as SearchType[]
-                        ).find(
-                            (key) => SEARCH_SECTION_BASE[key].id === section.id
-                        );
-                        if (!type) return section;
-                        return {
-                            ...section,
-                            items: itemsByType[type],
-                            hasMore:
-                                type === 'track'
-                                    ? !!result.tracks?.next
-                                    : type === 'album'
-                                      ? !!result.albums?.next
-                                      : type === 'artist'
-                                        ? !!result.artists?.next
-                                        : type === 'playlist'
-                                          ? !!result.playlists?.next
-                                          : type === 'show'
-                                            ? !!result.shows?.next
-                                            : type === 'episode'
-                                              ? !!result.episodes?.next
-                                              : !!result.audiobooks?.next,
-                            loadingMore: false,
-                        };
-                    })
-                );
-                setSearchLoading(false);
-            } catch (error) {
-                if (!cancelled) {
-                    logError(logger, 'Search failed', error);
-                    setSearchLoading(false);
-                }
-            }
-        };
-
-        void load();
-
-        return () => {
-            cancelled = true;
-            setSearchLoading(false);
-        };
-    }, [isSearching, searchContext.query, searchContext.types]);
+    useEffect(() => {
+        if (!isSearching || !searchState.error) return;
+        logError(logger, 'Search failed', searchState.error);
+    }, [isSearching, searchState.error]);
 
     const isEditable = editing && !isSearching;
+    const activeSections = isSearching ? searchSections : resolvedHomeSections;
     const alwaysVisibleSections = useMemo(
         () => new Set(['user-playlists', 'saved-tracks']),
         []
     );
-    const visibleSections = useMemo(
-        () =>
-            isEditable || isLoading
-                ? activeSections
-                : activeSections.filter(
-                      (section) =>
-                          section.items.length > 0 ||
-                          alwaysVisibleSections.has(section.id)
-                  ),
-        [activeSections, alwaysVisibleSections, isEditable, isLoading]
-    );
+    const visibleSections = useMemo(() => {
+        if (isEditable) return activeSections;
+        if (!isSearching) {
+            return activeSections.filter((section) =>
+                activeHomeSectionSet.has(section.id)
+            );
+        }
+        return activeSections.filter(
+            (section) =>
+                section.items.length > 0 ||
+                alwaysVisibleSections.has(section.id) ||
+                (searchLoading && section.items.length === 0)
+        );
+    }, [
+        activeSections,
+        activeHomeSectionSet,
+        alwaysVisibleSections,
+        isEditable,
+        isSearching,
+        searchLoading,
+    ]);
 
     return (
         <Flex
             flexGrow="1"
             direction="column"
             className="no-overflow-anchor scrollbar-gutter-stable min-h-0 min-w-0 overflow-y-auto"
+            ref={scrollContainerRef}
         >
             <Flex
                 pl="3"
@@ -814,8 +996,7 @@ export function HomeView({ searchQuery, filters }: Props) {
                     direction="column"
                     className={clsx(
                         'relative min-w-0',
-                        editing &&
-                            'sticky top-0 z-20 bg-[var(--color-background)]'
+                        editing && 'bg-background sticky top-0 z-20'
                     )}
                     mx="-3"
                     px="3"
@@ -993,7 +1174,15 @@ export function HomeView({ searchQuery, filters }: Props) {
                                                 <MediaSection
                                                     section={section}
                                                     editing={isEditable}
-                                                    loading={isLoading}
+                                                    loading={
+                                                        isSearching
+                                                            ? searchLoading &&
+                                                              section.items
+                                                                  .length === 0
+                                                            : (homeSectionLoadingById[
+                                                                  section.id as keyof typeof homeSectionLoadingById
+                                                              ] ?? false)
+                                                    }
                                                     headerLoading={false}
                                                     dragging={
                                                         dragSnapshot.isDragging

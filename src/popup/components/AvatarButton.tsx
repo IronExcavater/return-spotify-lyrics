@@ -33,7 +33,6 @@ export function AvatarButton({
     const isEnabled = !disabled;
     const {
         className: avatarClassName,
-        imageClassName,
         radius: avatarRadius,
         src,
         ...avatarProps
@@ -107,10 +106,6 @@ export function AvatarButton({
                         '--avatar-ring-radius': ringRadius,
                     } as CSSProperties
                 }
-                imageClassName={clsx(
-                    'focus-visible:outline-none',
-                    imageClassName
-                )}
             >
                 {children}
             </Avatar>

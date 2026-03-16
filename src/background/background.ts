@@ -2,6 +2,7 @@ import { addOnMessage, Msg } from '../shared/messaging';
 import { lrcRpc, LrcRpcArgs, LrcRpcName, LrcRpcReturn } from './lrcRpc.ts';
 import { authenticate, clearSpotifySession } from './spotifyAuth.ts';
 import {
+    clearSpotifyRpcCaches,
     spotifyRpc,
     SpotifyRpcArgs,
     SpotifyRpcName,
@@ -25,6 +26,7 @@ addOnMessage(Msg.LOGIN_SPOTIFY, async () => {
 
 addOnMessage(Msg.LOGOUT_SPOTIFY, async () => {
     await clearSpotifySession();
+    clearSpotifyRpcCaches();
 });
 
 addOnMessage(

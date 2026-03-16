@@ -1,6 +1,7 @@
 import { ReactNode, useState, type Ref } from 'react';
 import { Cross2Icon, MagnifyingGlassIcon } from '@radix-ui/react-icons';
 import { IconButton, Kbd, TextField } from '@radix-ui/themes';
+import clsx from 'clsx';
 
 import { getPrimaryModifierLabel } from '../../shared/platform';
 
@@ -67,7 +68,10 @@ export function SearchBar({
             size={size}
             radius={radius}
             placeholder={placeholder}
-            className={className}
+            className={clsx(
+                'box-border w-full max-w-full min-w-0 overflow-hidden',
+                className
+            )}
             ref={inputRef}
             onFocusCapture={() => setIsFocused(true)}
             onBlurCapture={() => setIsFocused(false)}
@@ -87,7 +91,7 @@ export function SearchBar({
                 )}
             </TextField.Slot>
             <TextField.Slot side="right" pl="1">
-                <div className="relative h-6 w-6">
+                <div className="relative h-6 w-6 shrink-0">
                     {showShortcut && (
                         <div
                             className="pointer-events-none absolute inset-0 flex items-center justify-center transition-[opacity,transform] duration-200 ease-out"

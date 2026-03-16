@@ -1,5 +1,11 @@
 import type { ItemTypes, MaxInt, Market } from '@spotify/web-api-ts-sdk';
 import { getSpotifySdk } from './spotifyAuth.ts';
+import {
+    addSpotifyPlaylistTracks,
+    clearSpotifyPlaylistMembership,
+    getSpotifyPlaylistMembership,
+    removeSpotifyPlaylistTracks,
+} from './spotifyPlaylistMembership.ts';
 
 async function requireClient() {
     const client = await getSpotifySdk();
@@ -56,6 +62,26 @@ const withActiveDevice = async <T>(
             throw retryError;
         }
     }
+};
+
+export const clearSpotifyRpcCaches = () => {
+    clearSpotifyPlaylistMembership();
+};
+
+const saveSpotifyTracks = async (ids: string[]) => {
+    const client = await requireClient();
+    await client.makeRequest('PUT', 'me/tracks', { ids });
+};
+
+const removeSavedSpotifyTracks = async (ids: string[]) => {
+    const client = await requireClient();
+    await client.makeRequest('DELETE', 'me/tracks', { ids });
+};
+
+const hasSavedSpotifyTracks = async (ids: string[]) => {
+    const client = await requireClient();
+    const params = new URLSearchParams({ ids: ids.join(',') });
+    return client.makeRequest<boolean[]>('GET', `me/tracks/contains?${params}`);
 };
 
 export const spotifyRpc = {
@@ -158,18 +184,9 @@ export const spotifyRpc = {
         );
     },
 
-    saveTracks: async (ids: string[]) => {
-        const client = await requireClient();
-        return client.currentUser.tracks.saveTracks(ids);
-    },
-    unsaveTracks: async (ids: string[]) => {
-        const client = await requireClient();
-        return client.currentUser.tracks.removeSavedTracks(ids);
-    },
-    hasSavedTracks: async (ids: string[]) => {
-        const client = await requireClient();
-        return client.currentUser.tracks.hasSavedTracks(ids);
-    },
+    saveTracks: saveSpotifyTracks,
+    unsaveTracks: removeSavedSpotifyTracks,
+    hasSavedTracks: hasSavedSpotifyTracks,
     getRecentlyPlayedTracks: async ({
         limit = 20,
     }: {
@@ -354,6 +371,35 @@ export const spotifyRpc = {
             offset
         );
     },
+    getPlaylistMembershipIndex: async ({
+        id,
+        market,
+        snapshotId,
+    }: {
+        id: string;
+        market?: Market;
+        snapshotId?: string;
+    }) => {
+        return getSpotifyPlaylistMembership({ id, market, snapshotId });
+    },
+    addTracksToPlaylist: async ({
+        playlistId,
+        uris,
+        position,
+    }: {
+        playlistId: string;
+        uris: string[];
+        position?: number;
+    }) => addSpotifyPlaylistTracks({ playlistId, uris, position }),
+    removeTracksFromPlaylist: async ({
+        playlistId,
+        uris,
+        snapshotId,
+    }: {
+        playlistId: string;
+        uris: string[];
+        snapshotId?: string;
+    }) => removeSpotifyPlaylistTracks({ playlistId, uris, snapshotId }),
     getTrack: async ({ id }: { id: string }) => {
         const client = await requireClient();
         return client.tracks.get(id);

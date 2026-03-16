@@ -23,6 +23,7 @@ import { SearchBar } from '../components/SearchBar';
 import { TextButton } from '../components/TextButton';
 import { SpotifyConnectionMeta } from '../hooks/useAuth';
 import { useCachedImage } from '../hooks/useCachedImage';
+import { useOverlaySurface } from '../hooks/useOverlaySurface';
 import { useSettings } from '../hooks/useSettings';
 
 const relativeFormatter = new Intl.RelativeTimeFormat(undefined, {
@@ -107,6 +108,7 @@ export function ProfileView({ profile, onLogout, connection }: Props) {
     const [relativeNow, setRelativeNow] = useState(Date.now());
     const [localeSearch, setLocaleSearch] = useState('');
     const [localeOpen, setLocaleOpen] = useState(false);
+    const overlay = useOverlaySurface();
     const { settings, updateSettings } = useSettings();
     const resolvedLocale = resolveLocale(settings.locale);
     const absoluteFormatter = useMemo(
@@ -385,6 +387,7 @@ export function ProfileView({ profile, onLogout, connection }: Props) {
                                     sideOffset={6}
                                     className="w-65 p-0!"
                                     style={{ padding: 0 }}
+                                    {...overlay.boundaryProps}
                                 >
                                     <Flex
                                         direction="column"
