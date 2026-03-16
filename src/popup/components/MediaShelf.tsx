@@ -16,10 +16,10 @@ import {
 import { Flex, Text } from '@radix-ui/themes';
 import clsx from 'clsx';
 import { MdMusicNote } from 'react-icons/md';
-import type { MediaItem } from '../../shared/types';
+import type { MediaActionGroup, MediaItem } from '../../shared/types';
 import { useHistory } from '../hooks/useHistory';
 import { buildMediaActions } from '../hooks/useMediaActions';
-import { buildMediaRouteFromItem } from '../hooks/useMediaRoute';
+import { buildMediaNavigationFromItem } from '../hooks/useMediaRoute';
 import { useScrollFade } from '../hooks/useScrollFade';
 import { useShelfNavigation } from '../hooks/useShelfNavigation';
 import { MediaActionsMenu } from './MediaActionsMenu';
@@ -30,6 +30,7 @@ import { TextButton } from './TextButton';
 export interface MediaShelfItem extends MediaItem {
     icon?: ReactNode;
     loading?: boolean;
+    listKey?: string;
 }
 type TrackSubtitleMode = 'artist' | 'artist-album' | 'artists';
 interface Props {
@@ -49,10 +50,17 @@ interface Props {
     onLoadMore?: () => void;
     itemLoading?: boolean;
     className?: string;
-    onReorder?: (items: MediaShelfItem[]) => void;
+    onReorder?: (
+        items: MediaShelfItem[],
+        context?: { sourceIndex: number; destinationIndex: number }
+    ) => void;
     showImage?: boolean;
     cardSize?: 1 | 2 | 3;
     trackSubtitleMode?: TrackSubtitleMode;
+    getActions?: (
+        item: MediaShelfItem,
+        index: number
+    ) => MediaActionGroup | null;
 }
 const hashId = (value: string) => {
     let h = 0;
@@ -63,7 +71,7 @@ const hashId = (value: string) => {
     return h >>> 0;
 };
 const getItemKey = (item: MediaShelfItem, index: number) =>
-    item.id ?? `${item.title ?? 'item'}-${index}`;
+    item.listKey ?? item.id ?? `${item.title ?? 'item'}-${index}`;
 function getScrollParent(node: HTMLElement | null): HTMLElement | Window {
     let current: HTMLElement | null = node;
     while (current) {
@@ -102,6 +110,7 @@ export function MediaShelf({
     showImage = true,
     cardSize,
     trackSubtitleMode,
+    getActions,
 }: Props) {
     const flattened = useMemo(
         () =>
@@ -199,7 +208,10 @@ export function MediaShelf({
             const next = [...flattened];
             const [moved] = next.splice(result.source.index, 1);
             next.splice(result.destination.index, 0, moved);
-            onReorder(next);
+            onReorder(next, {
+                sourceIndex: result.source.index,
+                destinationIndex: result.destination.index,
+            });
         },
         [flattened, onReorder]
     );
@@ -257,7 +269,7 @@ export function MediaShelf({
         );
     };
     const renderItem = useCallback(
-        (item: MediaShelfItem, seed: number) => {
+        (item: MediaShelfItem, seed: number, index: number) => {
             const renderArtistLinks = (
                 artists: MediaShelfItem['artists'],
                 limit?: number
@@ -372,19 +384,20 @@ export function MediaShelf({
                 item.kind === 'track'
                     ? resolveTrackSubtitle(item, mode)
                     : (renderArtistLinks(item.artists) ?? item.subtitle);
-            const actions = buildMediaActions(item);
+            const actions =
+                getActions?.(item, index) ?? buildMediaActions(item);
             const hasActions =
                 actions.primary.length > 0 || actions.secondary.length > 0;
             const contextMenu =
                 hasActions || item.kind === 'track' ? (
                     <MediaActionsMenu actions={actions} item={item} />
                 ) : null;
-            const route = buildMediaRouteFromItem(item);
+            const navigation = buildMediaNavigationFromItem(item);
             const handleNavigate = () => {
-                if (!route) return;
-                routeHistory.goTo('/media', route);
+                if (!navigation) return;
+                routeHistory.goTo(navigation.path, navigation.state);
             };
-            const canActivate = !item.loading && Boolean(route);
+            const canActivate = !item.loading && Boolean(navigation);
             const content =
                 variant === 'tile' ? (
                     <MediaCard
@@ -421,6 +434,7 @@ export function MediaShelf({
         [
             cardSize,
             effectiveColumnWidth,
+            getActions,
             orientation,
             routeHistory,
             showImage,
@@ -435,18 +449,16 @@ export function MediaShelf({
                     key={`col-${colIndex}`}
                     direction="column"
                     gap="1"
-                    className={clsx(
-                        'min-w-0',
-                        variant === 'list' && 'flex-none'
-                    )}
+                    className="min-w-0"
                     style={
                         effectiveColumnWidth
                             ? {
-                                  flex: '0 0 auto',
+                                  flexGrow: 0,
+                                  flexShrink: 0,
                                   width: effectiveColumnWidth,
                                   flexBasis: effectiveColumnWidth,
                               }
-                            : { flex: '0 0 auto' }
+                            : { flexGrow: 0, flexShrink: 0 }
                     }
                 >
                     {col.map((item, idx) => {
@@ -454,39 +466,7 @@ export function MediaShelf({
                         const key = getItemKey(item, flatIndex);
                         const seed = hashId(item.id ?? '') ^ (flatIndex << 1);
                         const { content, canActivate, handleNavigate } =
-                            renderItem(item, seed);
-                        if (!draggable) {
-                            return (
-                                <div
-                                    key={key}
-                                    ref={(node) => {
-                                        focusRefs.current[flatIndex] = node;
-                                    }}
-                                    data-index={flatIndex}
-                                    role="button"
-                                    aria-disabled={!canActivate}
-                                    className="group rounded-2 focus-visible:ring-accent-9 focus-visible:ring-offset-background focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
-                                    tabIndex={
-                                        interactive && flatIndex === activeIndex
-                                            ? 0
-                                            : -1
-                                    }
-                                    onFocus={(event) =>
-                                        handleItemFocus(event, flatIndex)
-                                    }
-                                    onKeyDown={(event) =>
-                                        handleItemKeyDown(
-                                            event,
-                                            flatIndex,
-                                            canActivate,
-                                            handleNavigate
-                                        )
-                                    }
-                                >
-                                    {content}
-                                </div>
-                            );
-                        }
+                            renderItem(item, seed, flatIndex);
                         return (
                             <Draggable
                                 key={key}
@@ -503,6 +483,10 @@ export function MediaShelf({
                                         data-index={flatIndex}
                                         {...dragProvided.draggableProps}
                                         {...dragProvided.dragHandleProps}
+                                        style={{
+                                            ...dragProvided.draggableProps
+                                                .style,
+                                        }}
                                         role="button"
                                         aria-disabled={!canActivate}
                                         className="group rounded-2 focus-visible:ring-accent-9 focus-visible:ring-offset-background focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
@@ -537,35 +521,9 @@ export function MediaShelf({
             const seed = hashId(item.id ?? '') ^ (index << 1);
             const { content, canActivate, handleNavigate } = renderItem(
                 item,
-                seed
+                seed,
+                index
             );
-            if (!draggable) {
-                const key = getItemKey(item, index);
-                return (
-                    <div
-                        key={key}
-                        ref={(node) => {
-                            focusRefs.current[index] = node;
-                        }}
-                        data-index={index}
-                        role="button"
-                        aria-disabled={!canActivate}
-                        className="group rounded-2 focus-visible:ring-accent-9 focus-visible:ring-offset-background focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
-                        tabIndex={interactive && index === activeIndex ? 0 : -1}
-                        onFocus={(event) => handleItemFocus(event, index)}
-                        onKeyDown={(event) =>
-                            handleItemKeyDown(
-                                event,
-                                index,
-                                canActivate,
-                                handleNavigate
-                            )
-                        }
-                    >
-                        {content}
-                    </div>
-                );
-            }
             return (
                 <Draggable
                     key={getItemKey(item, index)}
@@ -582,6 +540,9 @@ export function MediaShelf({
                             data-index={index}
                             {...dragProvided.draggableProps}
                             {...dragProvided.dragHandleProps}
+                            style={{
+                                ...dragProvided.draggableProps.style,
+                            }}
                             role="button"
                             aria-disabled={!canActivate}
                             className="group rounded-2 focus-visible:ring-accent-9 focus-visible:ring-offset-background focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
@@ -651,7 +612,6 @@ export function MediaShelf({
             {renderFades()}
         </div>
     );
-    if (!draggable) return renderBody();
     return (
         <DragDropContext onDragEnd={handleDragEnd}>
             <Droppable

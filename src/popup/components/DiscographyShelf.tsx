@@ -44,6 +44,7 @@ export function DiscographyShelf({
 }: Props) {
     const resolvedLocale = resolveLocale(locale);
     const resolvedCardWidth = 220;
+    const skeletonLabel = '\u00A0';
     const ordered = useMemo(() => {
         const next = [...entries];
         next.sort((a, b) => {
@@ -59,7 +60,7 @@ export function DiscographyShelf({
         return Array.from({ length: 5 }, (_, index) => ({
             album: {
                 id: `loading-${index}`,
-                name: 'Loading',
+                name: skeletonLabel,
                 album_type: 'album',
                 total_tracks: 1,
                 images: [],
@@ -75,7 +76,7 @@ export function DiscographyShelf({
             tracks: [
                 {
                     id: `loading-track-${index}`,
-                    name: 'Loading',
+                    name: skeletonLabel,
                     duration_ms: 0,
                     artists: [],
                     available_markets: [],
@@ -91,7 +92,7 @@ export function DiscographyShelf({
                 } as SimplifiedTrack,
             ],
         }));
-    }, [loading, ordered.length]);
+    }, [loading, ordered.length, skeletonLabel]);
     const displayEntries =
         placeholderEntries.length > 0 ? placeholderEntries : ordered;
     const { scrollRef, fade } = useScrollFade('horizontal', [
@@ -185,15 +186,35 @@ export function DiscographyShelf({
                 </Flex>
             );
         });
+
+    const focusActiveShelfItem = () => {
+        const fallback = focusRefs.current.find((node) => Boolean(node));
+        const target = focusRefs.current[activeIndex] ?? fallback;
+        target?.focus();
+    };
     return (
         <Flex direction="column" gap="2">
-            <Flex align="center" justify="between" gap="2">
+            <Flex
+                align="center"
+                justify="between"
+                gap="2"
+                className="py-1 pr-1"
+            >
                 <Text size="3" weight="bold">
                     Discography
                 </Text>
                 <DropdownMenu.Root>
-                    <DropdownMenu.Trigger onKeyDown={handleMenuTriggerKeyDown}>
-                        <Button size="1" variant="ghost" color="gray">
+                    <DropdownMenu.Trigger
+                        onKeyDown={(event) => {
+                            handleMenuTriggerKeyDown(event);
+                            if (event.key !== 'ArrowDown') return;
+                            event.preventDefault();
+                            requestAnimationFrame(() => {
+                                focusActiveShelfItem();
+                            });
+                        }}
+                    >
+                        <Button size="0" variant="ghost" color="gray">
                             <Flex align="center">
                                 <Text size="1" color="gray">
                                     {sort === 'newest' ? 'Newest' : 'Oldest'}
@@ -219,7 +240,7 @@ export function DiscographyShelf({
             <Flex direction="column" className="relative">
                 <Flex
                     ref={scrollRef}
-                    className="no-overflow-anchor overflow-x-scroll overflow-y-hidden"
+                    className="no-overflow-anchor overflow-x-scroll overflow-y-hidden p-1 pt-0"
                     onFocusCapture={handleContainerFocusCapture}
                     onKeyDownCapture={handleContainerKeyDown}
                 >
@@ -244,7 +265,7 @@ export function DiscographyShelf({
                                             index === activeIndex ? 0 : -1
                                         }
                                         aria-disabled={!canActivate}
-                                        className="rounded-2 focus-visible:ring-accent-9 focus-visible:ring-offset-background focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
+                                        className="rounded-2 focus-visible:ring-accent-9 focus-visible:ring-offset-background shrink-0 focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
                                         style={
                                             entry.tracks.length > 1
                                                 ? { width: resolvedCardWidth }

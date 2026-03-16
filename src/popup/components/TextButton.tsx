@@ -14,6 +14,7 @@ interface Props extends Omit<TextProps, 'asChild'> {
     onClick?: (event: MouseEvent<HTMLElement>) => void;
     href?: string;
     interactive?: boolean;
+    forceHover?: boolean;
     accentColor?: string;
     disabled?: boolean;
     className?: string;
@@ -30,6 +31,7 @@ export const TextButton = forwardRef<
         onClick,
         href,
         interactive,
+        forceHover = false,
         accentColor = 'text-accent-11',
         disabled = false,
         className,
@@ -42,16 +44,18 @@ export const TextButton = forwardRef<
     const hasAction = Boolean(onClick || href);
     const isInteractive = (interactive ?? hasAction) && !disabled;
     const [isHovered, setIsHovered] = useState(false);
+    const isHighlighted = isHovered || forceHover;
 
     return (
         <Text
             {...textProps}
             as="span"
-            {...(isInteractive && isHovered
+            {...(isInteractive && isHighlighted
                 ? { 'data-accent-color': accentColor }
                 : {})}
             className={clsx(
                 className,
+                isInteractive && forceHover && 'text-accent-11',
                 isInteractive &&
                     'hover:text-accent-11 focus-visible:text-accent-11 cursor-pointer'
             )}

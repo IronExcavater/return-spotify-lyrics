@@ -1,5 +1,5 @@
 diff --git a/node_modules/@radix-ui/themes/components.css b/node_modules/@radix-ui/themes/components.css
-index 881348e..517e943 100644
+index 881348e..24b7a20 100644
 --- a/node_modules/@radix-ui/themes/components.css
 +++ b/node_modules/@radix-ui/themes/components.css
 @@ -1132,6 +1132,7 @@
@@ -304,8 +304,33 @@ index 881348e..517e943 100644
      }
      .rt-TextFieldRoot:where(.xl\:rt-r-size-1) :where(.rt-TextFieldInput) {
          padding-bottom: 0px;
+@@ -10876,7 +10962,7 @@
+ .rt-TooltipContent {
+     box-sizing: border-box;
+     padding: var(--space-1) var(--space-2);
+-    background-color: var(--gray-12);
++    background-color: var(--tooltip-bg);
+     border-radius: var(--radius-2);
+     transform-origin: var(--radix-tooltip-content-transform-origin);
+     animation-duration: 140ms;
+@@ -10897,13 +10983,13 @@
+     }
+ }
+ .rt-TooltipText {
+-    color: var(--gray-1);
++    color: var(--tooltip-fg);
+     -webkit-user-select: none;
+             user-select: none;
+     cursor: default;
+ }
+ .rt-TooltipArrow {
+-    fill: var(--gray-12);
++    fill: var(--tooltip-bg);
+ }
+ .radix-themes:where([data-is-root-theme='true']) {
+     position: relative;
 diff --git a/node_modules/@radix-ui/themes/dist/cjs/components/_internal/base-button.props.d.ts b/node_modules/@radix-ui/themes/dist/cjs/components/_internal/base-button.props.d.ts
-index 465e6f6..e6698a1 100644
+index 465e6f6..f82989b 100644
 --- a/node_modules/@radix-ui/themes/dist/cjs/components/_internal/base-button.props.d.ts
 +++ b/node_modules/@radix-ui/themes/dist/cjs/components/_internal/base-button.props.d.ts
 @@ -22,7 +22,7 @@ declare const baseButtonPropDefs: {
@@ -326,7 +351,7 @@ index 5a1a01b..d668ec3 100644
 +"use strict";var t=Object.defineProperty;var m=Object.getOwnPropertyDescriptor;var u=Object.getOwnPropertyNames;var c=Object.prototype.hasOwnProperty;var d=(e,o)=>{for(var r in o)t(e,r,{get:o[r],enumerable:!0})},D=(e,o,r,a)=>{if(o&&typeof o=="object"||typeof o=="function")for(let s of u(o))!c.call(e,s)&&s!==r&&t(e,s,{get:()=>o[s],enumerable:!(a=m(o,s))||a.enumerable});return e};var P=e=>D(t({},"__esModule",{value:!0}),e);var b={};d(b,{baseButtonPropDefs:()=>l});module.exports=P(b);var i=require("../../props/as-child.prop.js"),p=require("../../props/color.prop.js"),f=require("../../props/high-contrast.prop.js"),n=require("../../props/radius.prop.js");const v=["0","1","2","3","4","5","6","7","8","9"],y=["classic","solid","soft","surface","outline","ghost"],l={...i.asChildPropDef,size:{type:"enum",className:"rt-r-size",values:v,default:"2",responsive:!0},variant:{type:"enum",className:"rt-variant",values:y,default:"solid"},...p.accentColorPropDef,...f.highContrastPropDef,...n.radiusPropDef,loading:{type:"boolean",className:"rt-loading",default:!1}};
  //# sourceMappingURL=base-button.props.js.map
 diff --git a/node_modules/@radix-ui/themes/dist/cjs/components/avatar.d.ts b/node_modules/@radix-ui/themes/dist/cjs/components/avatar.d.ts
-index 9ab30f6..7e7c1f8 100644
+index 9ab30f6..307a4da 100644
 --- a/node_modules/@radix-ui/themes/dist/cjs/components/avatar.d.ts
 +++ b/node_modules/@radix-ui/themes/dist/cjs/components/avatar.d.ts
 @@ -10,6 +10,7 @@ declare const Avatar: React.ForwardRefExoticComponent<AvatarProps & React.RefAtt
@@ -375,7 +400,7 @@ index d3e97e2..9738a61 100644
 +"use strict";var p=Object.defineProperty;var f=Object.getOwnPropertyDescriptor;var m=Object.getOwnPropertyNames;var c=Object.prototype.hasOwnProperty;var a=(e,t)=>{for(var n in t)p(e,n,{get:t[n],enumerable:!0})},b=(e,t,n,s)=>{if(t&&typeof t=="object"||typeof t=="function")for(let o of m(t))!c.call(e,o)&&o!==n&&p(e,o,{get:()=>t[o],enumerable:!(s=f(t,o))||s.enumerable});return e};var d=e=>b(p({},"__esModule",{value:!0}),e);var l={};a(l,{mapButtonSizeToSpinnerSize:()=>u,mapCalloutSizeToTextSize:()=>i,mapResponsiveProp:()=>r});module.exports=d(l);function r(e,t){if(e!==void 0)return typeof e=="string"?t(e):Object.fromEntries(Object.entries(e).map(([n,s])=>[n,t(s)]))}function i(e){return e==="3"?"3":"2"}function u(e){switch(e){case"0":case"1":return"1";case"2":case"3":return"2";case"4":return"3"}}
  //# sourceMappingURL=map-prop-values.js.map
 diff --git a/node_modules/@radix-ui/themes/dist/esm/components/_internal/base-button.props.d.ts b/node_modules/@radix-ui/themes/dist/esm/components/_internal/base-button.props.d.ts
-index 465e6f6..e6698a1 100644
+index 465e6f6..f82989b 100644
 --- a/node_modules/@radix-ui/themes/dist/esm/components/_internal/base-button.props.d.ts
 +++ b/node_modules/@radix-ui/themes/dist/esm/components/_internal/base-button.props.d.ts
 @@ -22,7 +22,7 @@ declare const baseButtonPropDefs: {
@@ -396,7 +421,7 @@ index 26cf0c4..faa918b 100644
 +import{asChildPropDef as o}from"../../props/as-child.prop.js";import{accentColorPropDef as e}from"../../props/color.prop.js";import{highContrastPropDef as s}from"../../props/high-contrast.prop.js";import{radiusPropDef as r}from"../../props/radius.prop.js";const t=["0","1","2","3","4","5","6","7","8","9"],a=["classic","solid","soft","surface","outline","ghost"],i={...o,size:{type:"enum",className:"rt-r-size",values:t,default:"2",responsive:!0},variant:{type:"enum",className:"rt-variant",values:a,default:"solid"},...e,...s,...r,loading:{type:"boolean",className:"rt-loading",default:!1}};export{i as baseButtonPropDefs};
  //# sourceMappingURL=base-button.props.js.map
 diff --git a/node_modules/@radix-ui/themes/dist/esm/components/avatar.d.ts b/node_modules/@radix-ui/themes/dist/esm/components/avatar.d.ts
-index 46a0812..f37e354 100644
+index 46a0812..139aefe 100644
 --- a/node_modules/@radix-ui/themes/dist/esm/components/avatar.d.ts
 +++ b/node_modules/@radix-ui/themes/dist/esm/components/avatar.d.ts
 @@ -10,6 +10,7 @@ declare const Avatar: React.ForwardRefExoticComponent<Omit<AvatarProps, "ref"> &
@@ -491,7 +516,7 @@ index 3845423..88af8ab 100644
  
  export { avatarPropDefs };
 diff --git a/node_modules/@radix-ui/themes/src/components/avatar.tsx b/node_modules/@radix-ui/themes/src/components/avatar.tsx
-index 5545eeb..cad735f 100644
+index 5545eeb..106bd99 100644
 --- a/node_modules/@radix-ui/themes/src/components/avatar.tsx
 +++ b/node_modules/@radix-ui/themes/src/components/avatar.tsx
 @@ -15,7 +15,16 @@ import type { GetPropDefTypes } from '../props/prop-def.js';
@@ -528,7 +553,7 @@ index 5545eeb..cad735f 100644
      AvatarOwnProps {
    // TODO: See if we can automate making prop defs with `required: true` non nullable
    fallback: NonNullable<AvatarOwnProps['fallback']>;
-+  imageClassName?: string;
++  imageClassName?: AvatarOwnProps['imageClassName'];
  }
  
  const AvatarImpl = React.forwardRef<AvatarImplElement, AvatarImplProps>(
@@ -632,10 +657,28 @@ index dd0a014..385ac9d 100644
        return '1';
      case '2':
 diff --git a/node_modules/@radix-ui/themes/styles.css b/node_modules/@radix-ui/themes/styles.css
-index d1d826c..ac9fe8e 100644
+index d1d826c..83425ef 100644
 --- a/node_modules/@radix-ui/themes/styles.css
 +++ b/node_modules/@radix-ui/themes/styles.css
-@@ -6527,6 +6527,11 @@
+@@ -23,6 +23,8 @@
+   --gray-a10: #0000007c;
+   --gray-a11: #0000009b;
+   --gray-a12: #000000df;
++  --tooltip-bg: #202020;
++  --tooltip-fg: #fcfcfc;
+   --mauve-1: #fdfcfd;
+   --mauve-2: #faf9fb;
+   --mauve-3: #f2eff3;
+@@ -1643,6 +1645,8 @@
+   --gray-a10: #ffffff72;
+   --gray-a11: #ffffffaf;
+   --gray-a12: #ffffffed;
++  --tooltip-bg: #202020;
++  --tooltip-fg: #fcfcfc;
+   --mauve-1: #121113;
+   --mauve-2: #1a191b;
+   --mauve-3: #232225;
+@@ -6527,6 +6531,11 @@
    height: -moz-fit-content;
    height: fit-content;
  }
@@ -647,7 +690,7 @@ index d1d826c..ac9fe8e 100644
  .rt-BaseButton:where(.rt-r-size-1) {
    --base-button-classic-active-padding-top: 1px;
    --base-button-height: var(--space-5);
-@@ -6543,11 +6548,41 @@
+@@ -6543,11 +6552,41 @@
    border-radius: max(var(--radius-3), var(--radius-full));
  }
  .rt-BaseButton:where(.rt-r-size-4) {
@@ -692,7 +735,7 @@ index d1d826c..ac9fe8e 100644
    .rt-BaseButton:where(.xs\:rt-r-size-1) {
      --base-button-classic-active-padding-top: 1px;
      --base-button-height: var(--space-5);
-@@ -6570,6 +6605,11 @@
+@@ -6570,6 +6609,11 @@
    }
  }
  @media (min-width: 768px) {
@@ -704,7 +747,7 @@ index d1d826c..ac9fe8e 100644
    .rt-BaseButton:where(.sm\:rt-r-size-1) {
      --base-button-classic-active-padding-top: 1px;
      --base-button-height: var(--space-5);
-@@ -6592,6 +6632,11 @@
+@@ -6592,6 +6636,11 @@
    }
  }
  @media (min-width: 1024px) {
@@ -716,7 +759,7 @@ index d1d826c..ac9fe8e 100644
    .rt-BaseButton:where(.md\:rt-r-size-1) {
      --base-button-classic-active-padding-top: 1px;
      --base-button-height: var(--space-5);
-@@ -6614,6 +6659,11 @@
+@@ -6614,6 +6663,11 @@
    }
  }
  @media (min-width: 1280px) {
@@ -728,7 +771,7 @@ index d1d826c..ac9fe8e 100644
    .rt-BaseButton:where(.lg\:rt-r-size-1) {
      --base-button-classic-active-padding-top: 1px;
      --base-button-height: var(--space-5);
-@@ -6636,6 +6686,11 @@
+@@ -6636,6 +6690,11 @@
    }
  }
  @media (min-width: 1640px) {
@@ -740,7 +783,7 @@ index d1d826c..ac9fe8e 100644
    .rt-BaseButton:where(.xl\:rt-r-size-1) {
      --base-button-classic-active-padding-top: 1px;
      --base-button-height: var(--space-5);
-@@ -6932,6 +6987,24 @@
+@@ -6932,6 +6991,24 @@
    --margin-bottom-override: initial;
    --margin-left-override: initial;
  }
@@ -765,7 +808,7 @@ index d1d826c..ac9fe8e 100644
  .rt-Button:where(.rt-r-size-1) {
    gap: var(--space-1);
    font-size: var(--font-size-1);
-@@ -6993,6 +7066,21 @@
+@@ -6993,6 +7070,21 @@
    --button-ghost-padding-y: var(--space-2);
  }
  @media (min-width: 520px) {
@@ -787,7 +830,7 @@ index d1d826c..ac9fe8e 100644
    .rt-Button:where(.xs\:rt-r-size-1) {
      gap: var(--space-1);
      font-size: var(--font-size-1);
-@@ -7055,6 +7143,21 @@
+@@ -7055,6 +7147,21 @@
    }
  }
  @media (min-width: 768px) {
@@ -809,7 +852,7 @@ index d1d826c..ac9fe8e 100644
    .rt-Button:where(.sm\:rt-r-size-1) {
      gap: var(--space-1);
      font-size: var(--font-size-1);
-@@ -7117,6 +7220,21 @@
+@@ -7117,6 +7224,21 @@
    }
  }
  @media (min-width: 1024px) {
@@ -831,7 +874,7 @@ index d1d826c..ac9fe8e 100644
    .rt-Button:where(.md\:rt-r-size-1) {
      gap: var(--space-1);
      font-size: var(--font-size-1);
-@@ -7179,6 +7297,21 @@
+@@ -7179,6 +7301,21 @@
    }
  }
  @media (min-width: 1280px) {
@@ -853,7 +896,7 @@ index d1d826c..ac9fe8e 100644
    .rt-Button:where(.lg\:rt-r-size-1) {
      gap: var(--space-1);
      font-size: var(--font-size-1);
-@@ -7241,6 +7374,21 @@
+@@ -7241,6 +7378,21 @@
    }
  }
  @media (min-width: 1640px) {
@@ -875,7 +918,7 @@ index d1d826c..ac9fe8e 100644
    .rt-Button:where(.xl\:rt-r-size-1) {
      gap: var(--space-1);
      font-size: var(--font-size-1);
-@@ -10172,6 +10320,18 @@
+@@ -10172,6 +10324,18 @@
    --margin-bottom-override: initial;
    --margin-left-override: initial;
  }
@@ -894,7 +937,7 @@ index d1d826c..ac9fe8e 100644
  .rt-IconButton:where(.rt-variant-ghost):where(.rt-r-size-1) {
    --icon-button-ghost-padding: var(--space-1);
  }
-@@ -10182,7 +10342,22 @@
+@@ -10182,7 +10346,22 @@
    --icon-button-ghost-padding: var(--space-2);
  }
  .rt-IconButton:where(.rt-variant-ghost):where(.rt-r-size-4) {
@@ -918,3 +961,28 @@ index d1d826c..ac9fe8e 100644
  }
  @media (min-width: 520px) {
    .rt-IconButton:where(.rt-variant-ghost):where(.xs\:rt-r-size-1) {
+@@ -15549,7 +15728,7 @@
+ .rt-TooltipContent {
+   box-sizing: border-box;
+   padding: var(--space-1) var(--space-2);
+-  background-color: var(--gray-12);
++  background-color: var(--tooltip-bg);
+   border-radius: var(--radius-2);
+   transform-origin: var(--radix-tooltip-content-transform-origin);
+   animation-duration: 140ms;
+@@ -15570,13 +15749,13 @@
+   }
+ }
+ .rt-TooltipText {
+-  color: var(--gray-1);
++  color: var(--tooltip-fg);
+   -webkit-user-select: none;
+           user-select: none;
+   cursor: default;
+ }
+ .rt-TooltipArrow {
+-  fill: var(--gray-12);
++  fill: var(--tooltip-bg);
+ }
+ .radix-themes:where([data-is-root-theme='true']) {
+   position: relative;

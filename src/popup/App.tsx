@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { PersonIcon } from '@radix-ui/react-icons';
 import { Flex } from '@radix-ui/themes';
 import {
@@ -15,15 +15,29 @@ import { HomeBar } from './components/HomeBar';
 import { NavBar } from './components/NavBar';
 import { PlaybackBar } from './components/PlaybackBar';
 import { ProtectedLayout } from './components/ProtectedLayout';
+import { ReauthDialog } from './components/ReauthDialog';
 import { SettingsProvider } from './context/SettingsContext';
-import { useGlobalShortcut } from './hooks/useActions';
+import {
+    MEDIA_CACHE_KEYS,
+    type ProfileCacheEntry,
+} from './hooks/mediaCacheEntries';
+import { useAppShortcuts } from './hooks/useAppShortcuts';
 import { useAppState, BarKey } from './hooks/useAppState';
 import { useAuth } from './hooks/useAuth';
-import { useHistory } from './hooks/useHistory';
+import {
+    useHistory,
+    type HomeRouteState,
+    type RouteState,
+} from './hooks/useHistory';
 
-import type { HomeRouteState, RouteState } from './hooks/useHistory';
-import { usePlayer } from './hooks/usePlayer.ts';
+import { useMediaCacheEntry } from './hooks/useMediaCache';
+import type { MediaRouteState } from './hooks/useMediaRoute';
+import {
+    usePlayerShortcutControls,
+    usePlayerShortcutState,
+} from './hooks/usePlayer.ts';
 import { usePortalSlot } from './hooks/usePortalSlot';
+import { useReauthGate } from './hooks/useReauthGate.ts';
 import { Resizer } from './hooks/useResize.tsx';
 import { useSearch } from './hooks/useSearch';
 import { getSurfaceConfig, type Surface } from './surface';
@@ -31,10 +45,16 @@ import { HomeView } from './views/HomeView';
 import { LoginView } from './views/LoginView';
 import { LyricsView } from './views/LyricsView';
 import { MediaView } from './views/MediaView';
+import { PlaylistView } from './views/PlaylistView';
 import { ProfileView } from './views/ProfileView';
 import { QueueView } from './views/QueueView';
 
 const BAR_KEYS: readonly BarKey[] = ['home', 'playback'];
+
+const isHomeRouteState = (
+    state: RouteState | null | undefined
+): state is HomeRouteState =>
+    !!state && ('searchQuery' in state || 'searchFilters' in state);
 
 type AppProps = {
     surface?: Surface;
@@ -49,46 +69,45 @@ export default function App({ surface = 'popup' }: AppProps) {
     const heightBounds = { min: 300, max: 600 } as const;
 
     const { authed, profile, login, logout, connection } = useAuth();
+    const {
+        hasPlayback,
+        playbackKnown,
+        isPlaying,
+        canTogglePlay,
+        canSetVolume,
+    } = usePlayerShortcutState();
+    const controls = usePlayerShortcutControls();
+    const { needsReauth, missingScopes } = useReauthGate();
     const appState = useAppState({
         fallbackWidth: widthBounds.min,
         fallbackHeight: heightBounds.min,
         surface,
+        showBars: authed !== false,
+        hasPlayback,
+        playbackKnown,
     });
     const routeHistory = useHistory();
-    const { playback } = usePlayer();
+    const cachedProfile = useMediaCacheEntry<ProfileCacheEntry>(
+        MEDIA_CACHE_KEYS.profile
+    );
 
     const search = useSearch();
     const trackSearch = useMemo(() => createAnalyticsTracker('search'), []);
     const searchInputRef = useRef<HTMLInputElement | null>(null);
+    const canShowPlaybackBar = hasPlayback || !playbackKnown;
 
-    const profileImage = profile?.images?.[0]?.url;
-
-    const isHomeRouteState = (
-        state: RouteState | null | undefined
-    ): state is HomeRouteState =>
-        !!state && ('searchQuery' in state || 'searchFilters' in state);
+    const profileImage = profile?.images?.[0]?.url ?? cachedProfile?.imageUrl;
 
     const lastHomeStateRef = useRef<HomeRouteState | null>(null);
-
-    // Auth semantics
-    const mustLogin = authed === false && authed !== undefined;
-    const mustLogout = authed === true;
-
-    // Slots
-    const lastContentPathRef = useRef('/home');
-
-    useEffect(() => {
-        if (location.pathname !== '/profile')
-            lastContentPathRef.current = location.pathname;
-    }, [location.pathname]);
 
     useEffect(() => {
         if (location.pathname !== '/home') return;
         const state = location.state as RouteState | null;
-        const homeState = isHomeRouteState(state) ? state : undefined;
-        const nextQuery = homeState?.searchQuery ?? '';
-        const nextFilters = homeState?.searchFilters ?? [];
-        search.setSearchState({ query: nextQuery, filters: nextFilters });
+        if (!isHomeRouteState(state)) return;
+        search.setSearchState({
+            query: state.searchQuery ?? '',
+            filters: state.searchFilters ?? [],
+        });
     }, [location.pathname, location.state, search.setSearchState]);
 
     useEffect(() => {
@@ -96,7 +115,9 @@ export default function App({ surface = 'popup' }: AppProps) {
         lastHomeStateRef.current = {
             searchQuery: search.query,
             searchFilters:
-                search.filters.length > 0 ? search.filters : undefined,
+                search.filters && search.filters.length > 0
+                    ? search.filters
+                    : undefined,
         };
     }, [location.pathname, search.filters, search.query]);
 
@@ -105,7 +126,7 @@ export default function App({ surface = 'popup' }: AppProps) {
         routeHistory.rememberState({
             searchQuery: search.debouncedQuery,
             searchFilters:
-                search.debouncedFilters.length > 0
+                search.debouncedFilters && search.debouncedFilters.length > 0
                     ? search.debouncedFilters
                     : undefined,
         });
@@ -116,24 +137,38 @@ export default function App({ surface = 'popup' }: AppProps) {
         search.debouncedQuery,
     ]);
 
-    useGlobalShortcut(
-        (event) => {
-            if (!appState.showBars) return;
-            event.preventDefault();
-            if (appState.activeBar !== 'home') {
-                appState.setActiveBar('home');
-            }
-            requestAnimationFrame(() => {
-                searchInputRef.current?.focus();
-                searchInputRef.current?.select();
-            });
+    // Auth semantics
+    const mustLogin = authed === false && authed !== undefined;
+    const mustLogout = authed === true;
+    const mustReauth = authed === true && needsReauth;
+
+    const handleReauth = () => {
+        logout();
+        window.setTimeout(() => login(), 150);
+    };
+
+    // Slots
+    const lastContentPathRef = useRef('/home');
+
+    useEffect(() => {
+        if (location.pathname !== '/profile')
+            lastContentPathRef.current = location.pathname;
+    }, [location.pathname]);
+
+    useAppShortcuts({
+        showBars: appState.showBars,
+        activeBar: appState.activeBar,
+        setActiveBar: appState.setActiveBar,
+        searchInputRef,
+        isPlaying,
+        canTogglePlay,
+        canSetVolume,
+        playbackControls: {
+            play: controls.play,
+            pause: controls.pause,
+            toggleMute: controls.toggleMute,
         },
-        {
-            key: 'k',
-            metaOrCtrl: true,
-            enabled: appState.showBars,
-        }
-    );
+    });
 
     const profileSlot = useMemo(
         () => (
@@ -175,12 +210,12 @@ export default function App({ surface = 'popup' }: AppProps) {
         () => (
             <NavBar
                 active={appState.activeBar}
-                canShowPlayback={!!playback}
+                canShowPlayback={canShowPlaybackBar}
                 onShowHome={() => appState.setActiveBar('home')}
                 onShowPlayback={() => appState.setActiveBar('playback')}
             />
         ),
-        [appState.activeBar, appState.setActiveBar, playback]
+        [appState.activeBar, appState.setActiveBar, canShowPlaybackBar]
     );
 
     const profileFloating = usePortalSlot<BarKey>({
@@ -216,6 +251,18 @@ export default function App({ surface = 'popup' }: AppProps) {
         };
     }, [appState.activeBar, location.pathname]);
 
+    const handleOpenMediaFromPlayback = useCallback(
+        (route: MediaRouteState) => {
+            appState.setActiveBar('home');
+            requestAnimationFrame(() => {
+                routeHistory.goTo('/media', route, {
+                    samePathBehavior: 'replace',
+                });
+            });
+        },
+        [appState.setActiveBar, routeHistory.goTo]
+    );
+
     const appContent = (
         <SettingsProvider>
             <Flex direction="column" className="h-full">
@@ -228,6 +275,7 @@ export default function App({ surface = 'popup' }: AppProps) {
                                 navSlot={navFloating.anchors.playback}
                                 expanded={appState.playbackExpanded}
                                 onExpandedChange={appState.setPlaybackExpanded}
+                                onOpenMediaRoute={handleOpenMediaFromPlayback}
                             />
                         )}
 
@@ -375,6 +423,17 @@ export default function App({ surface = 'popup' }: AppProps) {
                             </ProtectedLayout>
                         }
                     />
+                    <Route
+                        path="/playlist"
+                        element={
+                            <ProtectedLayout
+                                when={mustLogin}
+                                redirectTo="/login"
+                            >
+                                <PlaylistView />
+                            </ProtectedLayout>
+                        }
+                    />
 
                     <Route
                         path="/login"
@@ -386,6 +445,13 @@ export default function App({ surface = 'popup' }: AppProps) {
                     />
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
+
+                <ReauthDialog
+                    open={mustReauth}
+                    reasons={needsReauth ? ['missing-scopes'] : []}
+                    missingScopes={missingScopes}
+                    onReconnect={handleReauth}
+                />
 
                 {profileFloating.portal}
                 {navFloating.portal}

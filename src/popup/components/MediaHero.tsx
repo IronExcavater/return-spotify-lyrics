@@ -11,6 +11,7 @@ import { MdMusicNote } from 'react-icons/md';
 
 import type { MediaItem, MediaActionGroup } from '../../shared/types';
 import { handleMenuTriggerKeyDown } from '../hooks/useActions';
+import { useHeroCollapse } from '../hooks/useHeroCollapse';
 import { AvatarButton } from './AvatarButton';
 import { BackgroundImage } from './BackgroundImage';
 import { Fade } from './Fade';
@@ -32,11 +33,14 @@ interface Props {
     hero: HeroData | null;
     loading: boolean;
     heroUrl?: string;
-    heroStickyRef: RefObject<HTMLDivElement>;
-    heroTextParts: Array<string | undefined>;
-    heroSubtitleNode: ReactNode;
-    heroTitle: string;
-    heroInfo: ReactNode;
+    scrollRef?: RefObject<HTMLElement | null>;
+    collapse?: boolean;
+    collapseKey?: string;
+    sticky?: boolean;
+    heroTextParts?: Array<string | undefined>;
+    heroSubtitleNode?: ReactNode;
+    heroTitle?: string;
+    heroInfo?: ReactNode;
     mergedHeroActions: MediaActionGroup | null;
     canTogglePlayback: boolean;
     onPlay: () => void;
@@ -48,12 +52,19 @@ const heroMaskStyle: CSSProperties = {
     WebkitMaskImage:
         'linear-gradient(180deg, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 92%, rgba(0,0,0,0.9) 94%, rgba(0,0,0,0) 100%)',
 };
+const HERO_TOP_PAD_MAX = 12;
+const HERO_TOP_PAD_MIN = 4;
+const HERO_BOTTOM_PAD_MAX = 18;
+const HERO_BOTTOM_PAD_MIN = 10;
 
 export function MediaHero({
     hero,
     loading,
     heroUrl,
-    heroStickyRef,
+    scrollRef,
+    collapse = true,
+    collapseKey,
+    sticky = true,
     heroTextParts,
     heroSubtitleNode,
     heroTitle,
@@ -62,17 +73,68 @@ export function MediaHero({
     canTogglePlayback,
     onPlay,
 }: Props) {
+    const collapseEnabled = Boolean(collapse && scrollRef);
+    const { heroRef, paddingTop, paddingBottom } = useHeroCollapse({
+        enabled: collapseEnabled,
+        scrollRef,
+        resetKey: collapseKey,
+        padding: {
+            topMax: HERO_TOP_PAD_MAX,
+            topMin: HERO_TOP_PAD_MIN,
+            bottomMax: HERO_BOTTOM_PAD_MAX,
+            bottomMin: HERO_BOTTOM_PAD_MIN,
+        },
+    });
     const heroImageRadius = hero?.item.kind === 'artist' ? 'full' : 'small';
     const hasHeroActions =
         mergedHeroActions &&
         (mergedHeroActions.primary.length > 0 ||
             mergedHeroActions.secondary.length > 0);
+    const skeletonLabel = '\u00A0';
+    const resolvedHeroTitle = heroTitle ?? hero?.title ?? '';
+    const resolvedHeroTitleLabel = loading ? skeletonLabel : resolvedHeroTitle;
+    const resolvedHeroSubtitle = hero?.subtitle;
+    const resolvedSubtitleNode =
+        heroSubtitleNode ??
+        (resolvedHeroSubtitle ? (
+            typeof resolvedHeroSubtitle === 'string' ||
+            typeof resolvedHeroSubtitle === 'number' ? (
+                <Text size="2" weight="medium" color="gray">
+                    {resolvedHeroSubtitle}
+                </Text>
+            ) : (
+                resolvedHeroSubtitle
+            )
+        ) : loading ? (
+            <Text size="2" weight="medium" color="gray">
+                {skeletonLabel}
+            </Text>
+        ) : null);
+    const resolvedHeroInfo =
+        heroInfo ?? hero?.info ?? (loading ? skeletonLabel : null);
+    const heroSubtitleText =
+        typeof resolvedHeroSubtitle === 'string'
+            ? resolvedHeroSubtitle
+            : undefined;
+    const heroInfoText =
+        typeof resolvedHeroInfo === 'string' ? resolvedHeroInfo : undefined;
+    const heroDurationText =
+        typeof hero?.duration === 'string' ? hero.duration : undefined;
+    const resolvedHeroTextParts = heroTextParts ?? [
+        resolvedHeroTitle || undefined,
+        heroSubtitleText,
+        heroInfoText,
+        heroDurationText,
+    ];
+    const hasSubtitle = Boolean(resolvedHeroSubtitle || heroSubtitleNode);
+    const hasInfo = Boolean(resolvedHeroInfo);
+    const hasDuration = Boolean(hero?.duration);
 
     return (
         <BackgroundImage
-            className="sticky top-0 z-10 w-full"
+            className={sticky ? 'sticky top-0 z-10 w-full' : 'w-full'}
             style={heroMaskStyle}
-            ref={heroStickyRef}
+            ref={heroRef}
             imageUrl={heroUrl}
             gradient={heroGradient}
             zoom={1.06}
@@ -84,13 +146,10 @@ export function MediaHero({
                 gap="2"
                 pl="3"
                 pr="1"
-                pb="3"
                 className="relative z-20 w-full"
                 style={{
-                    paddingTop: '12px',
-                    transform:
-                        'translateY(calc(-8px * var(--hero-collapse, 0)))',
-                    willChange: 'transform',
+                    paddingTop,
+                    paddingBottom,
                 }}
             >
                 <Skeleton loading={loading}>
@@ -132,7 +191,7 @@ export function MediaHero({
                 >
                     <SkeletonText
                         loading={loading}
-                        parts={loading ? ['loading'] : heroTextParts}
+                        parts={loading ? ['loading'] : resolvedHeroTextParts}
                         preset="media-row"
                         variant="title"
                         widthOptions={{
@@ -147,14 +206,14 @@ export function MediaHero({
                         <Fade enabled={!loading} grow>
                             <Marquee mode="bounce" grow>
                                 <Text size="5" weight="bold">
-                                    {heroTitle}
+                                    {resolvedHeroTitleLabel}
                                 </Text>
                             </Marquee>
                         </Fade>
                     </SkeletonText>
-                    {(hero?.subtitle ||
-                        hero?.info ||
-                        hero?.duration ||
+                    {(hasSubtitle ||
+                        hasInfo ||
+                        hasDuration ||
                         hasHeroActions ||
                         loading) && (
                         <Flex align="start" justify="between" gap="2" mr="1">
@@ -163,13 +222,13 @@ export function MediaHero({
                                 gap="1"
                                 className="min-w-0 flex-1"
                             >
-                                {(hero?.subtitle || loading) && (
+                                {(hasSubtitle || loading) && (
                                     <SkeletonText
                                         loading={loading}
                                         parts={
                                             loading
                                                 ? ['loading']
-                                                : heroTextParts
+                                                : resolvedHeroTextParts
                                         }
                                         preset="media-row"
                                         variant="subtitle"
@@ -184,18 +243,18 @@ export function MediaHero({
                                     >
                                         <Fade enabled={!loading} grow>
                                             <Marquee mode="left" grow>
-                                                {heroSubtitleNode}
+                                                {resolvedSubtitleNode}
                                             </Marquee>
                                         </Fade>
                                     </SkeletonText>
                                 )}
-                                {(hero?.info || loading) && (
+                                {(hasInfo || loading) && (
                                     <SkeletonText
                                         loading={loading}
                                         parts={
                                             loading
                                                 ? ['loading']
-                                                : heroTextParts
+                                                : resolvedHeroTextParts
                                         }
                                         preset="media-row"
                                         variant="subtitle"
@@ -211,7 +270,7 @@ export function MediaHero({
                                         <Fade enabled={!loading} grow>
                                             <Marquee mode="left" grow>
                                                 <Text size="1" color="gray">
-                                                    {heroInfo}
+                                                    {resolvedHeroInfo}
                                                 </Text>
                                             </Marquee>
                                         </Fade>
@@ -220,13 +279,13 @@ export function MediaHero({
                             </Flex>
 
                             <Flex align="end" direction="column" gap="1">
-                                {(hero?.duration || loading) && (
+                                {(hasDuration || loading) && (
                                     <SkeletonText
                                         loading={loading}
                                         parts={
                                             loading
                                                 ? ['loading']
-                                                : heroTextParts
+                                                : resolvedHeroTextParts
                                         }
                                         preset="media-row"
                                         variant="subtitle"
@@ -238,6 +297,12 @@ export function MediaHero({
                                             titleOffset: 11,
                                             subtitleOffset: 29,
                                         }}
+                                        fullWidth={false}
+                                        style={
+                                            loading
+                                                ? { minWidth: '3.5rem' }
+                                                : undefined
+                                        }
                                     >
                                         <Text size="1" color="gray">
                                             {hero?.duration ?? '0m'}

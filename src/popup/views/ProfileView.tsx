@@ -12,7 +12,6 @@ import {
     Flex,
     IconButton,
     Popover,
-    Skeleton,
     Switch,
     Text,
     Tooltip,
@@ -20,10 +19,14 @@ import {
 import { UserProfile } from '@spotify/web-api-ts-sdk';
 import { resolveLocale } from '../../shared/locale';
 import { SearchBar } from '../components/SearchBar';
+import { SkeletonText } from '../components/SkeletonText';
 import { TextButton } from '../components/TextButton';
+import {
+    MEDIA_CACHE_KEYS,
+    type ProfileCacheEntry,
+} from '../hooks/mediaCacheEntries';
 import { SpotifyConnectionMeta } from '../hooks/useAuth';
-import { useCachedImage } from '../hooks/useCachedImage';
-import { useOverlaySurface } from '../hooks/useOverlaySurface';
+import { useCachedImage, useMediaCacheEntry } from '../hooks/useMediaCache';
 import { useSettings } from '../hooks/useSettings';
 
 const relativeFormatter = new Intl.RelativeTimeFormat(undefined, {
@@ -104,11 +107,13 @@ interface Props {
 }
 
 export function ProfileView({ profile, onLogout, connection }: Props) {
-    const loading = !profile;
+    const cachedProfile = useMediaCacheEntry<ProfileCacheEntry>(
+        MEDIA_CACHE_KEYS.profile
+    );
+    const loading = !profile && !cachedProfile;
     const [relativeNow, setRelativeNow] = useState(Date.now());
     const [localeSearch, setLocaleSearch] = useState('');
     const [localeOpen, setLocaleOpen] = useState(false);
-    const overlay = useOverlaySurface();
     const { settings, updateSettings } = useSettings();
     const resolvedLocale = resolveLocale(settings.locale);
     const absoluteFormatter = useMemo(
@@ -136,10 +141,12 @@ export function ProfileView({ profile, onLogout, connection }: Props) {
         return () => window.clearInterval(interval);
     }, []);
 
-    const id = profile?.id ?? '0000000000000000000000000';
-    const name = profile?.display_name ?? 'John Does Nuts';
-    const image = useCachedImage(profile?.images?.[0]?.url);
-    const link = profile?.external_urls?.spotify;
+    const id = profile?.id ?? cachedProfile?.id;
+    const name = profile?.display_name ?? cachedProfile?.name;
+    const image = useCachedImage(
+        profile?.images?.[0]?.url ?? cachedProfile?.imageUrl
+    );
+    const link = profile?.external_urls?.spotify ?? cachedProfile?.externalUrl;
     const followers = profile?.followers?.total;
 
     const stats = useMemo(() => {
@@ -215,8 +222,10 @@ export function ProfileView({ profile, onLogout, connection }: Props) {
                     <Flex
                         gap="3"
                         align="center"
-                        onClick={() => window.open(link, '_blank')}
-                        className="group cursor-pointer"
+                        onClick={
+                            link ? () => window.open(link, '_blank') : undefined
+                        }
+                        className={link ? 'group cursor-pointer' : 'group'}
                     >
                         <Avatar
                             radius="full"
@@ -225,7 +234,13 @@ export function ProfileView({ profile, onLogout, connection }: Props) {
                             size="4"
                         />
                         <Flex direction="column" gap="1" align="start">
-                            <Skeleton loading={loading}>
+                            <SkeletonText
+                                loading={loading}
+                                parts={[name]}
+                                preset="media-row"
+                                variant="title"
+                                className="w-fit"
+                            >
                                 <TextButton
                                     size="4"
                                     weight="bold"
@@ -234,8 +249,14 @@ export function ProfileView({ profile, onLogout, connection }: Props) {
                                 >
                                     {name}
                                 </TextButton>
-                            </Skeleton>
-                            <Skeleton loading={loading}>
+                            </SkeletonText>
+                            <SkeletonText
+                                loading={loading}
+                                parts={[id]}
+                                preset="media-row"
+                                variant="subtitle"
+                                className="w-fit"
+                            >
                                 <TextButton
                                     size="2"
                                     color="gray"
@@ -244,7 +265,7 @@ export function ProfileView({ profile, onLogout, connection }: Props) {
                                 >
                                     @{id}
                                 </TextButton>
-                            </Skeleton>
+                            </SkeletonText>
                         </Flex>
                     </Flex>
                     <AlertDialog.Root>
@@ -387,7 +408,6 @@ export function ProfileView({ profile, onLogout, connection }: Props) {
                                     sideOffset={6}
                                     className="w-65 p-0!"
                                     style={{ padding: 0 }}
-                                    {...overlay.boundaryProps}
                                 >
                                     <Flex
                                         direction="column"

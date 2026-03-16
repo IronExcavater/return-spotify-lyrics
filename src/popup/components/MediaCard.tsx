@@ -1,4 +1,4 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useCallback, useState } from 'react';
 import { DotsHorizontalIcon } from '@radix-ui/react-icons';
 import { DropdownMenu, Flex, IconButton, Skeleton } from '@radix-ui/themes';
 import clsx from 'clsx';
@@ -39,9 +39,6 @@ export function MediaCard({
     seed = 0,
     cardSize = 2,
 }: Props) {
-    const [menuOpen, setMenuOpen] = useState(false);
-    const [menuHovered, setMenuHovered] = useState(false);
-    const [menuFocused, setMenuFocused] = useState(false);
     const radius = imageShape === 'round' ? 'full' : 'small';
     const sizeConfig: Record<
         1 | 2 | 3,
@@ -57,22 +54,27 @@ export function MediaCard({
     const subtitleContent = subtitleText?.trim() ? subtitleText : ' ';
     const skeletonParts = [title, subtitleText, imageUrl];
     const handleRowClick = loading ? undefined : onClick;
-    const showMenu = menuOpen || menuHovered || menuFocused;
+    const [isTitleProxyHovered, setIsTitleProxyHovered] = useState(false);
+
+    const updateTitleProxyHover = useCallback(
+        (target: EventTarget | null) => {
+            const element = target instanceof Element ? target : null;
+            const next =
+                Boolean(handleRowClick) &&
+                !element?.closest('[data-title-hover-stop="true"]');
+            setIsTitleProxyHovered((prev) => (prev === next ? prev : next));
+        },
+        [handleRowClick]
+    );
 
     return (
         <Flex
             direction="column"
             gap="1"
             onClick={handleRowClick}
-            onMouseEnter={() => setMenuHovered(true)}
-            onMouseLeave={() => setMenuHovered(false)}
-            onFocusCapture={() => setMenuFocused(true)}
-            onBlurCapture={(event) => {
-                if (event.currentTarget.contains(event.relatedTarget as Node)) {
-                    return;
-                }
-                setMenuFocused(false);
-            }}
+            onPointerEnter={(event) => updateTitleProxyHover(event.target)}
+            onPointerMove={(event) => updateTitleProxyHover(event.target)}
+            onPointerLeave={() => setIsTitleProxyHovered(false)}
             className={clsx(
                 'group',
                 handleRowClick && 'cursor-pointer',
@@ -94,14 +96,12 @@ export function MediaCard({
                     tabIndex={-1}
                 >
                     {contextMenu && (
-                        <DropdownMenu.Root
-                            open={menuOpen}
-                            onOpenChange={setMenuOpen}
-                        >
+                        <DropdownMenu.Root>
                             <DropdownMenu.Trigger
                                 onKeyDown={handleMenuTriggerKeyDown}
                             >
                                 <IconButton
+                                    data-title-hover-stop="true"
                                     variant="ghost"
                                     radius="full"
                                     size="0"
@@ -114,14 +114,8 @@ export function MediaCard({
                                         imageShape === 'round'
                                             ? 'm-2!'
                                             : 'm-1!',
-                                        'bg-panel-solid/10! ml-auto! self-start! backdrop-blur-[2px]! transition-opacity hover:bg-(--accent-11)/10! hover:backdrop-blur-xs!'
+                                        'bg-panel-solid/10! pointer-events-none ml-auto! self-start! opacity-0! backdrop-blur-[2px]! transition-opacity group-focus-within:pointer-events-auto group-focus-within:opacity-100! group-hover:pointer-events-auto group-hover:opacity-100! group-focus-visible:pointer-events-auto group-focus-visible:opacity-100! hover:bg-(--accent-11)/10! hover:backdrop-blur-xs! data-[state=open]:pointer-events-auto data-[state=open]:opacity-100!'
                                     )}
-                                    style={{
-                                        opacity: showMenu ? 1 : 0,
-                                        pointerEvents: showMenu
-                                            ? 'auto'
-                                            : 'none',
-                                    }}
                                 >
                                     <DotsHorizontalIcon />
                                 </IconButton>
@@ -145,6 +139,7 @@ export function MediaCard({
                                 size="1"
                                 weight="medium"
                                 interactive={Boolean(handleRowClick)}
+                                forceHover={isTitleProxyHovered}
                                 onClick={
                                     handleRowClick
                                         ? (event) => {
@@ -178,7 +173,10 @@ export function MediaCard({
                                     {subtitleContent}
                                 </TextButton>
                             ) : (
-                                <span className="inline-flex items-center">
+                                <span
+                                    data-title-hover-stop="true"
+                                    className="inline-flex items-center"
+                                >
                                     {subtitle}
                                 </span>
                             )}

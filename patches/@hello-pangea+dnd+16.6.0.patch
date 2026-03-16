@@ -1,0 +1,430 @@
+diff --git a/node_modules/@hello-pangea/dnd/dist/dnd.cjs.js b/node_modules/@hello-pangea/dnd/dist/dnd.cjs.js
+index f4bbae8..09ed68d 100644
+--- a/node_modules/@hello-pangea/dnd/dist/dnd.cjs.js
++++ b/node_modules/@hello-pangea/dnd/dist/dnd.cjs.js
+@@ -854,13 +854,15 @@ const getCrossAxisBorderBoxCenter = (axis, target, isMoving) => target[axis.cros
+ const goAfter = ({
+   axis,
+   moveRelativeTo,
+-  isMoving
+-}) => patch(axis.line, moveRelativeTo.marginBox[axis.end] + distanceFromStartToBorderBoxCenter(axis, isMoving), getCrossAxisBorderBoxCenter(axis, moveRelativeTo.marginBox, isMoving));
++  isMoving,
++  gap = 0
++}) => patch(axis.line, moveRelativeTo.marginBox[axis.end] + Math.max(0, gap) + distanceFromStartToBorderBoxCenter(axis, isMoving), getCrossAxisBorderBoxCenter(axis, moveRelativeTo.marginBox, isMoving));
+ const goBefore = ({
+   axis,
+   moveRelativeTo,
+-  isMoving
+-}) => patch(axis.line, moveRelativeTo.marginBox[axis.start] - distanceFromEndToBorderBoxCenter(axis, isMoving), getCrossAxisBorderBoxCenter(axis, moveRelativeTo.marginBox, isMoving));
++  isMoving,
++  gap = 0
++}) => patch(axis.line, moveRelativeTo.marginBox[axis.start] - Math.max(0, gap) - distanceFromEndToBorderBoxCenter(axis, isMoving), getCrossAxisBorderBoxCenter(axis, moveRelativeTo.marginBox, isMoving));
+ const goIntoStart = ({
+   axis,
+   moveInto,
+@@ -877,6 +879,7 @@ var whenReordering = (({
+   const insideDestination = getDraggablesInsideDroppable(droppable.descriptor.id, draggables);
+   const draggablePage = draggable.page;
+   const axis = droppable.axis;
++  const gap = Math.max(0, draggable.displaceBy[axis.line] - draggable.client.marginBox[axis.size]);
+   if (!insideDestination.length) {
+     return goIntoStart({
+       axis,
+@@ -895,14 +898,16 @@ var whenReordering = (({
+       return goBefore({
+         axis,
+         moveRelativeTo: closest.page,
+-        isMoving: draggablePage
++        isMoving: draggablePage,
++        gap
+       });
+     }
+     const withDisplacement = cssBoxModel.offset(closest.page, displacedBy.point);
+     return goBefore({
+       axis,
+       moveRelativeTo: withDisplacement,
+-      isMoving: draggablePage
++      isMoving: draggablePage,
++      gap
+     });
+   }
+   const last = insideDestination[insideDestination.length - 1];
+@@ -914,13 +919,15 @@ var whenReordering = (({
+     return goAfter({
+       axis,
+       moveRelativeTo: page,
+-      isMoving: draggablePage
++      isMoving: draggablePage,
++      gap
+     });
+   }
+   return goAfter({
+     axis,
+     moveRelativeTo: last.page,
+-    isMoving: draggablePage
++    isMoving: draggablePage,
++    gap
+   });
+ });
+ 
+@@ -1290,10 +1297,11 @@ const withMaxScroll = (frame, max) => ({
+   }
+ });
+ const addPlaceholder = (droppable, draggable, draggables) => {
++  const axis = droppable.axis;
+   const frame = droppable.frame;
+   !!isHomeOf(draggable, droppable) ? process.env.NODE_ENV !== "production" ? invariant(false, 'Should not add placeholder space to home list') : invariant(false) : void 0;
+   !!droppable.subject.withPlaceholder ? process.env.NODE_ENV !== "production" ? invariant(false, 'Cannot add placeholder size to a subject when it already has one') : invariant(false) : void 0;
+-  const placeholderSize = getDisplacedBy(droppable.axis, draggable.displaceBy).point;
++  const placeholderSize = patch(axis.line, draggable.client.marginBox[axis.size]);
+   const requiredGrowth = getRequiredGrowthForPlaceholder(droppable, placeholderSize, draggables);
+   const added = {
+     placeholderSize,
+@@ -6200,6 +6208,30 @@ function getStyle$1(mapped) {
+   return mapped.type === 'DRAGGING' ? getDraggingStyle(mapped) : getSecondaryStyle(mapped);
+ }
+ 
++function parseGapValue(value) {
++  if (!value) return 0;
++  const parsed = parseFloat(value);
++  return Number.isNaN(parsed) ? 0 : parsed;
++}
++function getParentGap(el) {
++  const parent = el.parentElement;
++  if (!parent) return {
++    rowGap: 0,
++    columnGap: 0
++  };
++  const styles = window.getComputedStyle(parent);
++  const display = styles.display ?? '';
++  if (!display.includes('flex') && !display.includes('grid')) {
++    return {
++      rowGap: 0,
++      columnGap: 0
++    };
++  }
++  return {
++    rowGap: parseGapValue(styles.rowGap),
++    columnGap: parseGapValue(styles.columnGap)
++  };
++}
+ function getDimension$1(descriptor, el, windowScroll = origin) {
+   const computedStyles = window.getComputedStyle(el);
+   const borderBox = el.getBoundingClientRect();
+@@ -6210,9 +6242,13 @@ function getDimension$1(descriptor, el, windowScroll = origin) {
+     tagName: el.tagName.toLowerCase(),
+     display: computedStyles.display
+   };
++  const {
++    rowGap,
++    columnGap
++  } = getParentGap(el);
+   const displaceBy = {
+-    x: client.marginBox.width,
+-    y: client.marginBox.height
++    x: client.marginBox.width + columnGap,
++    y: client.marginBox.height + rowGap
+   };
+   const dimension = {
+     descriptor,
+diff --git a/node_modules/@hello-pangea/dnd/dist/dnd.esm.js b/node_modules/@hello-pangea/dnd/dist/dnd.esm.js
+index 4b75da5..89645a9 100644
+--- a/node_modules/@hello-pangea/dnd/dist/dnd.esm.js
++++ b/node_modules/@hello-pangea/dnd/dist/dnd.esm.js
+@@ -852,13 +852,15 @@ const getCrossAxisBorderBoxCenter = (axis, target, isMoving) => target[axis.cros
+ const goAfter = ({
+   axis,
+   moveRelativeTo,
+-  isMoving
+-}) => patch(axis.line, moveRelativeTo.marginBox[axis.end] + distanceFromStartToBorderBoxCenter(axis, isMoving), getCrossAxisBorderBoxCenter(axis, moveRelativeTo.marginBox, isMoving));
++  isMoving,
++  gap = 0
++}) => patch(axis.line, moveRelativeTo.marginBox[axis.end] + Math.max(0, gap) + distanceFromStartToBorderBoxCenter(axis, isMoving), getCrossAxisBorderBoxCenter(axis, moveRelativeTo.marginBox, isMoving));
+ const goBefore = ({
+   axis,
+   moveRelativeTo,
+-  isMoving
+-}) => patch(axis.line, moveRelativeTo.marginBox[axis.start] - distanceFromEndToBorderBoxCenter(axis, isMoving), getCrossAxisBorderBoxCenter(axis, moveRelativeTo.marginBox, isMoving));
++  isMoving,
++  gap = 0
++}) => patch(axis.line, moveRelativeTo.marginBox[axis.start] - Math.max(0, gap) - distanceFromEndToBorderBoxCenter(axis, isMoving), getCrossAxisBorderBoxCenter(axis, moveRelativeTo.marginBox, isMoving));
+ const goIntoStart = ({
+   axis,
+   moveInto,
+@@ -875,6 +877,7 @@ var whenReordering = (({
+   const insideDestination = getDraggablesInsideDroppable(droppable.descriptor.id, draggables);
+   const draggablePage = draggable.page;
+   const axis = droppable.axis;
++  const gap = Math.max(0, draggable.displaceBy[axis.line] - draggable.client.marginBox[axis.size]);
+   if (!insideDestination.length) {
+     return goIntoStart({
+       axis,
+@@ -893,14 +896,16 @@ var whenReordering = (({
+       return goBefore({
+         axis,
+         moveRelativeTo: closest.page,
+-        isMoving: draggablePage
++        isMoving: draggablePage,
++        gap
+       });
+     }
+     const withDisplacement = offset(closest.page, displacedBy.point);
+     return goBefore({
+       axis,
+       moveRelativeTo: withDisplacement,
+-      isMoving: draggablePage
++      isMoving: draggablePage,
++      gap
+     });
+   }
+   const last = insideDestination[insideDestination.length - 1];
+@@ -912,13 +917,15 @@ var whenReordering = (({
+     return goAfter({
+       axis,
+       moveRelativeTo: page,
+-      isMoving: draggablePage
++      isMoving: draggablePage,
++      gap
+     });
+   }
+   return goAfter({
+     axis,
+     moveRelativeTo: last.page,
+-    isMoving: draggablePage
++    isMoving: draggablePage,
++    gap
+   });
+ });
+ 
+@@ -1288,10 +1295,11 @@ const withMaxScroll = (frame, max) => ({
+   }
+ });
+ const addPlaceholder = (droppable, draggable, draggables) => {
++  const axis = droppable.axis;
+   const frame = droppable.frame;
+   !!isHomeOf(draggable, droppable) ? process.env.NODE_ENV !== "production" ? invariant(false, 'Should not add placeholder space to home list') : invariant(false) : void 0;
+   !!droppable.subject.withPlaceholder ? process.env.NODE_ENV !== "production" ? invariant(false, 'Cannot add placeholder size to a subject when it already has one') : invariant(false) : void 0;
+-  const placeholderSize = getDisplacedBy(droppable.axis, draggable.displaceBy).point;
++  const placeholderSize = patch(axis.line, draggable.client.marginBox[axis.size]);
+   const requiredGrowth = getRequiredGrowthForPlaceholder(droppable, placeholderSize, draggables);
+   const added = {
+     placeholderSize,
+@@ -6198,6 +6206,30 @@ function getStyle$1(mapped) {
+   return mapped.type === 'DRAGGING' ? getDraggingStyle(mapped) : getSecondaryStyle(mapped);
+ }
+ 
++function parseGapValue(value) {
++  if (!value) return 0;
++  const parsed = parseFloat(value);
++  return Number.isNaN(parsed) ? 0 : parsed;
++}
++function getParentGap(el) {
++  const parent = el.parentElement;
++  if (!parent) return {
++    rowGap: 0,
++    columnGap: 0
++  };
++  const styles = window.getComputedStyle(parent);
++  const display = styles.display ?? '';
++  if (!display.includes('flex') && !display.includes('grid')) {
++    return {
++      rowGap: 0,
++      columnGap: 0
++    };
++  }
++  return {
++    rowGap: parseGapValue(styles.rowGap),
++    columnGap: parseGapValue(styles.columnGap)
++  };
++}
+ function getDimension$1(descriptor, el, windowScroll = origin) {
+   const computedStyles = window.getComputedStyle(el);
+   const borderBox = el.getBoundingClientRect();
+@@ -6208,9 +6240,13 @@ function getDimension$1(descriptor, el, windowScroll = origin) {
+     tagName: el.tagName.toLowerCase(),
+     display: computedStyles.display
+   };
++  const {
++    rowGap,
++    columnGap
++  } = getParentGap(el);
+   const displaceBy = {
+-    x: client.marginBox.width,
+-    y: client.marginBox.height
++    x: client.marginBox.width + columnGap,
++    y: client.marginBox.height + rowGap
+   };
+   const dimension = {
+     descriptor,
+diff --git a/node_modules/@hello-pangea/dnd/src/state/droppable/with-placeholder.ts b/node_modules/@hello-pangea/dnd/src/state/droppable/with-placeholder.ts
+index eac3a01..abd01fe 100644
+--- a/node_modules/@hello-pangea/dnd/src/state/droppable/with-placeholder.ts
++++ b/node_modules/@hello-pangea/dnd/src/state/droppable/with-placeholder.ts
+@@ -13,7 +13,6 @@ import getDraggablesInsideDroppable from '../get-draggables-inside-droppable';
+ import { add, patch } from '../position';
+ import getSubject from './util/get-subject';
+ import isHomeOf from './is-home-of';
+-import getDisplacedBy from '../get-displaced-by';
+ 
+ const getRequiredGrowthForPlaceholder = (
+   droppable: DroppableDimension,
+@@ -65,6 +64,7 @@ export const addPlaceholder = (
+   draggable: DraggableDimension,
+   draggables: DraggableDimensionMap,
+ ): DroppableDimension => {
++  const axis: Axis = droppable.axis;
+   const frame: Scrollable | null = droppable.frame;
+ 
+   invariant(
+@@ -77,10 +77,10 @@ export const addPlaceholder = (
+     'Cannot add placeholder size to a subject when it already has one',
+   );
+ 
+-  const placeholderSize: Position = getDisplacedBy(
+-    droppable.axis,
+-    draggable.displaceBy,
+-  ).point;
++  const placeholderSize: Position = patch(
++    axis.line,
++    draggable.client.marginBox[axis.size],
++  );
+ 
+   const requiredGrowth: Position | null = getRequiredGrowthForPlaceholder(
+     droppable,
+diff --git a/node_modules/@hello-pangea/dnd/src/state/get-center-from-impact/get-page-border-box-center/when-reordering.ts b/node_modules/@hello-pangea/dnd/src/state/get-center-from-impact/get-page-border-box-center/when-reordering.ts
+index 47dc2f6..e210c3a 100644
+--- a/node_modules/@hello-pangea/dnd/src/state/get-center-from-impact/get-page-border-box-center/when-reordering.ts
++++ b/node_modules/@hello-pangea/dnd/src/state/get-center-from-impact/get-page-border-box-center/when-reordering.ts
+@@ -38,6 +38,10 @@ export default ({
+ 
+   const draggablePage: BoxModel = draggable.page;
+   const axis: Axis = droppable.axis;
++  const gap = Math.max(
++    0,
++    draggable.displaceBy[axis.line] - draggable.client.marginBox[axis.size],
++  );
+ 
+   // this will only happen in a foreign list
+   if (!insideDestination.length) {
+@@ -63,6 +67,7 @@ export default ({
+         axis,
+         moveRelativeTo: closest.page,
+         isMoving: draggablePage,
++        gap,
+       });
+     }
+ 
+@@ -74,6 +79,7 @@ export default ({
+       axis,
+       moveRelativeTo: withDisplacement,
+       isMoving: draggablePage,
++      gap,
+     });
+   }
+ 
+@@ -100,6 +106,7 @@ export default ({
+       axis,
+       moveRelativeTo: page,
+       isMoving: draggablePage,
++      gap,
+     });
+   }
+ 
+@@ -108,5 +115,6 @@ export default ({
+     axis,
+     moveRelativeTo: last.page,
+     isMoving: draggablePage,
++    gap,
+   });
+ };
+diff --git a/node_modules/@hello-pangea/dnd/src/state/get-center-from-impact/move-relative-to.ts b/node_modules/@hello-pangea/dnd/src/state/get-center-from-impact/move-relative-to.ts
+index a2b24b2..d400d31 100644
+--- a/node_modules/@hello-pangea/dnd/src/state/get-center-from-impact/move-relative-to.ts
++++ b/node_modules/@hello-pangea/dnd/src/state/get-center-from-impact/move-relative-to.ts
+@@ -6,6 +6,7 @@ interface Args {
+   axis: Axis;
+   moveRelativeTo: BoxModel;
+   isMoving: BoxModel;
++  gap?: number;
+ }
+ 
+ const distanceFromStartToBorderBoxCenter = (
+@@ -28,20 +29,32 @@ const getCrossAxisBorderBoxCenter = (
+   isMoving.margin[axis.crossAxisStart] +
+   isMoving.borderBox[axis.crossAxisSize] / 2;
+ 
+-export const goAfter = ({ axis, moveRelativeTo, isMoving }: Args): Position =>
++export const goAfter = ({
++  axis,
++  moveRelativeTo,
++  isMoving,
++  gap = 0,
++}: Args): Position =>
+   patch(
+     axis.line,
+     // start measuring from the end of the target
+     moveRelativeTo.marginBox[axis.end] +
++      Math.max(0, gap) +
+       distanceFromStartToBorderBoxCenter(axis, isMoving),
+     getCrossAxisBorderBoxCenter(axis, moveRelativeTo.marginBox, isMoving),
+   );
+ 
+-export const goBefore = ({ axis, moveRelativeTo, isMoving }: Args): Position =>
++export const goBefore = ({
++  axis,
++  moveRelativeTo,
++  isMoving,
++  gap = 0,
++}: Args): Position =>
+   patch(
+     axis.line,
+     // start measuring from the start of the target
+     moveRelativeTo.marginBox[axis.start] -
++      Math.max(0, gap) -
+       distanceFromEndToBorderBoxCenter(axis, isMoving),
+     getCrossAxisBorderBoxCenter(axis, moveRelativeTo.marginBox, isMoving),
+   );
+diff --git a/node_modules/@hello-pangea/dnd/src/view/use-draggable-publisher/get-dimension.ts b/node_modules/@hello-pangea/dnd/src/view/use-draggable-publisher/get-dimension.ts
+index 29a7e4d..1febd58 100644
+--- a/node_modules/@hello-pangea/dnd/src/view/use-draggable-publisher/get-dimension.ts
++++ b/node_modules/@hello-pangea/dnd/src/view/use-draggable-publisher/get-dimension.ts
+@@ -7,6 +7,26 @@ import type {
+ } from '../../types';
+ import { origin } from '../../state/position';
+ 
++const parseGapValue = (value: string | null | undefined) => {
++  if (!value) return 0;
++  const parsed = parseFloat(value);
++  return Number.isNaN(parsed) ? 0 : parsed;
++};
++
++const getParentGap = (el: HTMLElement) => {
++  const parent = el.parentElement;
++  if (!parent) return { rowGap: 0, columnGap: 0 };
++  const styles = window.getComputedStyle(parent);
++  const display = styles.display ?? '';
++  if (!display.includes('flex') && !display.includes('grid')) {
++    return { rowGap: 0, columnGap: 0 };
++  }
++  return {
++    rowGap: parseGapValue(styles.rowGap),
++    columnGap: parseGapValue(styles.columnGap),
++  };
++};
++
+ export default function getDimension(
+   descriptor: DraggableDescriptor,
+   el: HTMLElement,
+@@ -22,9 +42,10 @@ export default function getDimension(
+     tagName: el.tagName.toLowerCase(),
+     display: computedStyles.display,
+   };
++  const { rowGap, columnGap } = getParentGap(el);
+   const displaceBy: Position = {
+-    x: client.marginBox.width,
+-    y: client.marginBox.height,
++    x: client.marginBox.width + columnGap,
++    y: client.marginBox.height + rowGap,
+   };
+ 
+   const dimension: DraggableDimension = {

@@ -1,0 +1,84 @@
+{
+    "barRulesBySurface": {
+        "popup": {
+            "home": {
+                "defaultRoute": "/home"
+            },
+            "playback": {
+                "defaultRoute": "/"
+            }
+        },
+        "sidepanel": {
+            "home": {
+                "defaultRoute": "/home"
+            },
+            "playback": {
+                "defaultRoute": "/home"
+            }
+        }
+    },
+    "routeRulesBySurface": {
+        "popup": {
+            "/": {
+                "allowedBars": ["home"],
+                "heightOverride": "auto"
+            },
+            "/home": {
+                "allowedBars": ["home"]
+            },
+            "/lyrics": {
+                "allowedBars": ["playback"],
+                "secondary": true
+            },
+            "/login": {
+                "widthOverride": 300,
+                "heightOverride": "auto"
+            },
+            "/profile": {
+                "heightOverride": "auto",
+                "secondary": true
+            },
+            "/media": {
+                "allowedBars": ["playback", "home"]
+            },
+            "/playlist": {
+                "allowedBars": ["playback", "home"]
+            },
+            "/queue": {
+                "allowedBars": ["playback"],
+                "secondary": true
+            }
+        },
+        "sidepanel": {
+            "/": {
+                "allowedBars": [],
+                "heightOverride": "auto"
+            },
+            "/home": {
+                "allowedBars": ["home", "playback"]
+            },
+            "/lyrics": {
+                "allowedBars": ["playback"],
+                "secondary": true
+            },
+            "/login": {
+                "widthOverride": 300,
+                "heightOverride": "auto"
+            },
+            "/profile": {
+                "heightOverride": "auto",
+                "secondary": true
+            },
+            "/media": {
+                "allowedBars": ["playback", "home"]
+            },
+            "/playlist": {
+                "allowedBars": ["playback", "home"]
+            },
+            "/queue": {
+                "allowedBars": ["playback"],
+                "secondary": true
+            }
+        }
+    }
+}

@@ -41,7 +41,7 @@ export function NavBar({
         <nav
             role="tablist"
             aria-orientation="vertical"
-            className="relative flex flex-col items-center gap-1 rounded-full border border-(--gray-a5) bg-(--gray-a2)/80 p-0.5"
+            className="border-grayA-5 relative flex flex-col items-center gap-1 rounded-full border bg-(--gray-a2)/80 p-0.5"
         >
             <SegmentedControl
                 items={items}

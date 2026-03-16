@@ -42,6 +42,12 @@ type AnyHandler = (
     msg: MessageMap[Msg]
 ) => ResponseMap[Msg] | Promise<ResponseMap[Msg]>;
 
+export const SPOTIFY_RPC_DISPATCH_EVENT = 'spotify-rpc-dispatch';
+export type SpotifyRpcDispatchEventDetail = {
+    op: SpotifyRpcName;
+    args?: unknown;
+};
+
 const registry: Partial<Record<Msg, AnyHandler>> = {};
 
 export function addOnMessage<K extends Msg>(type: K, handler: Handler<K>) {
@@ -93,15 +99,32 @@ export function sendMessage<K extends Msg>(
     });
 }
 
+const emitSpotifyRpcDispatch = <N extends SpotifyRpcName>(
+    op: N,
+    args?: SpotifyRpcArgs<N>
+) => {
+    if (typeof window === 'undefined') return;
+    window.dispatchEvent(
+        new CustomEvent<SpotifyRpcDispatchEventDetail>(
+            SPOTIFY_RPC_DISPATCH_EVENT,
+            {
+                detail: { op, args },
+            }
+        )
+    );
+};
+
 export const sendSpotifyMessage = <N extends SpotifyRpcName>(
     op: N,
     args?: SpotifyRpcArgs<N>
-) =>
-    sendMessage<Msg.API_SPOTIFY>({
+) => {
+    emitSpotifyRpcDispatch(op, args);
+    return sendMessage<Msg.API_SPOTIFY>({
         type: Msg.API_SPOTIFY,
         op,
         args,
     }) as Promise<SpotifyRpcReturn<N>>;
+};
 
 export const sendLyricsMessage = <N extends LrcRpcName>(
     op: N,

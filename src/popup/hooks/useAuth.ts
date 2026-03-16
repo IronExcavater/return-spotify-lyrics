@@ -11,6 +11,7 @@ import {
 } from '../../shared/logging';
 import { Msg, sendMessage, sendSpotifyMessage } from '../../shared/messaging';
 import { getFromStorage, setInStorage } from '../../shared/storage';
+import { updateCachedProfile } from './mediaCacheEntries';
 import { clearSpotifyReads } from './useSpotifyRead';
 
 const SPOTIFY_USER_KEY = 'spotifyUser';
@@ -46,6 +47,7 @@ export function useAuth() {
             void setInStorage<UserProfile>(SPOTIFY_USER_KEY, resp);
 
             if (resp) {
+                updateCachedProfile(resp);
                 const prev = connectionRef.current;
                 const sameUser = prev?.userId === resp.id;
                 if (!sameUser) {
@@ -120,7 +122,10 @@ export function useAuth() {
     // Initial auth sync
     useEffect(() => {
         void getFromStorage<UserProfile>(SPOTIFY_USER_KEY, (user) => {
-            if (user) setCachedUser(user);
+            if (user) {
+                setCachedUser(user);
+                updateCachedProfile(user);
+            }
             if (!sessionActiveRef.current && user) setUser(user);
         });
         void getFromStorage<SpotifyConnectionMeta>(
