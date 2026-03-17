@@ -652,10 +652,10 @@ function MediaSectionImpl({
     return (
         <div
             className={clsx(
-                'rounded-2 bg-background ring-offset-background relative ring-2 ring-transparent ring-offset-2 transition-all',
+                'group/section rounded-2 bg-background relative transition-all',
                 'focus-within:z-20',
-                editing && 'hover:ring-accent-8! hover:z-20',
-                editing && dragging && 'ring-accent-10! z-30',
+                editing && 'hover:z-20',
+                editing && dragging && 'z-30',
                 className
             )}
             data-dragging={dragging ? 'true' : 'false'}
@@ -1277,7 +1277,7 @@ function MediaSectionImpl({
                             )}
                         </Flex>
                     </div>
-                    {stickyHeader && headerFade && (
+                    {stickyHeader && headerFade && !dragging && (
                         <div
                             aria-hidden="true"
                             className="pointer-events-none absolute z-0"
@@ -1337,10 +1337,9 @@ function MediaSectionImpl({
                         </div>
                     )}
                 </div>
-                <div className="relative">
+                <div>
                     <div
                         className={clsx(
-                            'relative',
                             editing && 'pointer-events-none select-none'
                         )}
                     >
@@ -1392,6 +1391,14 @@ function MediaSectionImpl({
                     </div>
                 )}
             </Flex>
+            <div
+                aria-hidden="true"
+                className={clsx(
+                    'rounded-2 ring-offset-background pointer-events-none absolute inset-0 z-40 ring-2 ring-transparent ring-offset-2 transition-shadow',
+                    editing && 'group-hover/section:ring-accent-8!',
+                    dragging && 'ring-accent-10!'
+                )}
+            />
         </div>
     );
 }

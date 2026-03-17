@@ -234,14 +234,14 @@ export function MediaShelf({
                 <>
                     <div
                         className={clsx(
-                            'from-background via-background/60 pointer-events-none absolute top-0 -left-1 z-10 h-full w-2 bg-linear-to-r to-transparent transition-opacity',
+                            'from-background via-background/60 pointer-events-none absolute top-0 left-0 z-10 h-full w-2 bg-linear-to-r to-transparent transition-opacity',
                             fade.start ? 'opacity-100' : 'opacity-0'
                         )}
                         aria-hidden
                     />
                     <div
                         className={clsx(
-                            'from-background via-background/60 pointer-events-none absolute top-0 right-1 z-10 h-full w-2 bg-linear-to-l to-transparent transition-opacity',
+                            'from-background via-background/60 pointer-events-none absolute top-0 right-0 z-10 h-full w-2 bg-linear-to-l to-transparent transition-opacity',
                             fade.end ? 'opacity-100' : 'opacity-0'
                         )}
                         aria-hidden
@@ -567,7 +567,7 @@ export function MediaShelf({
         });
     };
     const renderBody = (dropProvided?: DroppableProvided) => (
-        <div className="relative">
+        <Flex className="relative">
             <Flex
                 direction={orientation === 'horizontal' ? 'row' : 'column'}
                 gap="1"
@@ -576,7 +576,7 @@ export function MediaShelf({
                 onFocusCapture={handleContainerFocusCapture}
                 onKeyDownCapture={handleContainerKeyDown}
                 className={clsx(
-                    'no-overflow-anchor relative -m-1 mb-1 w-full p-1 transition-[opacity,filter]',
+                    'no-overflow-anchor relative w-full p-1 transition-[opacity,filter]',
                     !interactive && 'pointer-events-none opacity-70',
                     orientation !== 'horizontal' && 'scrollbar-gutter-stable',
                     orientation === 'horizontal'
@@ -610,7 +610,7 @@ export function MediaShelf({
                 />
             </Flex>
             {renderFades()}
-        </div>
+        </Flex>
     );
     return (
         <DragDropContext onDragEnd={handleDragEnd}>
