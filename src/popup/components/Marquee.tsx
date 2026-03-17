@@ -1,6 +1,13 @@
-import { CSSProperties, ReactNode, useEffect, useRef, useState } from 'react';
+import {
+    type CSSProperties,
+    type ReactNode,
+    useEffect,
+    useRef,
+    useState,
+} from 'react';
 import clsx from 'clsx';
 
+import { useMirroredEvents } from '../hooks/useMirroredEvents';
 import { useSettings } from '../hooks/useSettings';
 
 interface Props {
@@ -39,6 +46,7 @@ export function Marquee({
     const { settings } = useSettings();
     const containerRef = useRef<HTMLDivElement>(null);
     const originalRef = useRef<HTMLDivElement>(null);
+    const cloneRef = useRef<HTMLDivElement>(null);
     const separatorRef = useRef<HTMLSpanElement>(null);
 
     const [distance, setDistance] = useState(0);
@@ -53,9 +61,6 @@ export function Marquee({
     }>({});
     const MIN_DURATION = 4;
     const lastContentRef = useRef<string>('');
-    const lastSizeRef = useRef<{ container: number; original: number } | null>(
-        null
-    );
 
     useEffect(() => {
         const compute = () => {
@@ -76,10 +81,6 @@ export function Marquee({
                     lastContentRef.current = content;
                     setAnimationKey((key) => key + 1);
                 }
-                lastSizeRef.current = {
-                    container: containerW,
-                    original: originalW,
-                };
                 return;
             }
 
@@ -101,11 +102,6 @@ export function Marquee({
                 lastContentRef.current = content;
                 setAnimationKey((key) => key + 1);
             }
-
-            lastSizeRef.current = {
-                container: containerW,
-                original: originalW,
-            };
         };
 
         compute();
@@ -194,6 +190,13 @@ export function Marquee({
     const resolvedSeparatorLineHeight =
         autoSeparatorStyle.lineHeight ?? 'normal';
 
+    useMirroredEvents({
+        sourceRef: originalRef,
+        mirrorRef: cloneRef,
+        enabled: showClone,
+        resetKey: animationKey,
+    });
+
     return (
         <div
             ref={containerRef}
@@ -258,6 +261,7 @@ export function Marquee({
                                 {'\u2022'}
                             </span>
                             <div
+                                ref={cloneRef}
                                 className="inline-flex shrink-0 items-center"
                                 aria-hidden="true"
                             >
