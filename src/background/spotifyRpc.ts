@@ -84,6 +84,37 @@ const hasSavedSpotifyTracks = async (ids: string[]) => {
     return client.makeRequest<boolean[]>('GET', `me/tracks/contains?${params}`);
 };
 
+const startPlaybackRequest = async (
+    client: Awaited<ReturnType<typeof requireClient>>,
+    deviceId: string | undefined,
+    {
+        contextUri,
+        uris,
+        offset,
+        positionMs,
+    }: {
+        contextUri?: string;
+        uris?: string[];
+        offset?: { position?: number };
+        positionMs?: number;
+    }
+) => {
+    const params = new URLSearchParams();
+    if (deviceId) params.set('device_id', deviceId);
+    const query = params.toString();
+
+    await client.makeRequest(
+        'PUT',
+        `me/player/play${query ? `?${query}` : ''}`,
+        {
+            context_uri: contextUri,
+            uris,
+            offset,
+            position_ms: positionMs,
+        }
+    );
+};
+
 export const spotifyRpc = {
     currentUser: async () => {
         const client = await requireClient();
@@ -174,13 +205,12 @@ export const spotifyRpc = {
     }) => {
         const client = await requireClient();
         return withActiveDevice(client, (deviceId) =>
-            client.player.startResumePlayback(
-                deviceId,
+            startPlaybackRequest(client, deviceId, {
                 contextUri,
                 uris,
                 offset,
-                positionMs
-            )
+                positionMs,
+            })
         );
     },
     syncQueue: async ({
@@ -201,15 +231,13 @@ export const spotifyRpc = {
                 : queueUris;
             if (uris.length === 0) return;
 
-            await client.player.startResumePlayback(
-                deviceId,
-                undefined,
+            await startPlaybackRequest(client, deviceId, {
                 uris,
-                undefined,
-                resolvedCurrentUri
+                offset: { position: 0 },
+                positionMs: resolvedCurrentUri
                     ? (playback?.progress_ms ?? undefined)
-                    : undefined
-            );
+                    : undefined,
+            });
 
             if (playback?.is_playing === false) {
                 await client.player.pausePlayback(deviceId);

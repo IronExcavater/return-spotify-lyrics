@@ -82,6 +82,8 @@ const isSameQueueItem = (left: MediaItem, right: MediaItem) => {
         return true;
     }
 
+    if (left.uri || right.uri || left.id || right.id) return false;
+
     return (
         left.kind === right.kind &&
         normalizeLabel(left.title) === normalizeLabel(right.title) &&
@@ -114,17 +116,11 @@ const normalizeUpcomingQueue = (
     current: MediaItem | null
 ): QueueEntry[] => {
     if (!current || queue.length === 0) return queue;
-    let leadingCurrentCount = 0;
-    while (
-        leadingCurrentCount < queue.length &&
-        isSameQueueItem(queue[leadingCurrentCount], current)
-    ) {
-        leadingCurrentCount += 1;
-    }
 
-    if (leadingCurrentCount === 0) return queue;
-    if (leadingCurrentCount === queue.length) return [];
-    return queue.slice(leadingCurrentCount);
+    // Spotify can echo the currently playing item at the head of the queue.
+    // Only strip that single echoed entry; repeated upcoming duplicates are real.
+    if (!isSameQueueItem(queue[0], current)) return queue;
+    return queue.slice(1);
 };
 
 const mergeQueueState = (prev: QueueState, next: QueueState): QueueState => {
