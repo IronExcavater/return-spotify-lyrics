@@ -55,7 +55,7 @@ export function MediaSectionHeader({
                     align="baseline"
                     justify="between"
                     gap="2"
-                    className="min-w-0"
+                    className="group min-w-0"
                 >
                     <Flex
                         direction="row"

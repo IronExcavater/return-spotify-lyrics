@@ -232,7 +232,7 @@ export function PlaybackBar({
                         <Flex
                             direction="column"
                             flexGrow="1"
-                            className="min-w-0"
+                            className="group min-w-0"
                         >
                             <Flex align="center" flexGrow="1">
                                 {/* Title */}

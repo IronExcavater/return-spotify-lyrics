@@ -225,8 +225,7 @@ export function Marquee({
                         mode === 'bounce' &&
                         'animate-marquee-bounce',
                     !shouldAnimate && 'marquee-reset',
-                    resolvedAnimateOnHover &&
-                        '[animation-play-state:paused] group-hover:[animation-play-state:running]'
+                    resolvedAnimateOnHover && 'marquee-play-on-hover'
                 )}
                 style={
                     {

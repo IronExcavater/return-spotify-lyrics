@@ -1,6 +1,6 @@
 {
     "name": "return-spotify-lyrics",
-    "version": "0.0.1",
+    "version": "0.4.0",
     "description": "A modern Spotify mini-player to unblock Spotify free restrictions",
     "type": "module",
     "private": "true",

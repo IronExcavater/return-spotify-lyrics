@@ -41,7 +41,7 @@ export function SearchListItem({
     onClick,
 }: SearchListItemProps) {
     const itemClassName = clsx(
-        'box-border w-full rounded-md p-1 px-2',
+        'group box-border w-full rounded-md p-1 px-2',
         highlight && 'transition-colors hover:bg-white/4',
         className
     );

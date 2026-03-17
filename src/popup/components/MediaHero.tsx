@@ -187,7 +187,7 @@ export function MediaHero({
                     direction="column"
                     gap="1"
                     flexGrow="1"
-                    className="min-w-0"
+                    className="group min-w-0"
                 >
                     <SkeletonText
                         loading={loading}

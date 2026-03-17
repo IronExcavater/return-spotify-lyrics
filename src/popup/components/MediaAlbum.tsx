@@ -124,7 +124,7 @@ export function MediaAlbum({
             direction="column"
             gap="1"
             p="1"
-            className="rounded-2 bg-panel-solid/5"
+            className="group rounded-2 bg-panel-solid/5"
         >
             {isSingleTrack ? (
                 <Flex direction="column" gap="1">

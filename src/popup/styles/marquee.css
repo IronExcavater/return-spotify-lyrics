@@ -52,3 +52,14 @@
     transform: translateX(0);
     transition: transform 0.3s ease-out;
 }
+
+.marquee-play-on-hover {
+    animation-play-state: paused;
+}
+
+.marquee-play-on-hover:hover,
+.marquee-play-on-hover:focus-within,
+.group:hover .marquee-play-on-hover,
+.group:focus-within .marquee-play-on-hover {
+    animation-play-state: running;
+}
