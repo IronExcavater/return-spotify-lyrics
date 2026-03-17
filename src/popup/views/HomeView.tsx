@@ -977,6 +977,9 @@ export function HomeView({ searchQuery, filters }: Props) {
                                                         <MediaSection
                                                             section={section}
                                                             editing={isEditable}
+                                                            stickyHeader={
+                                                                !isEditable
+                                                            }
                                                             loading={
                                                                 isSectionLoading
                                                             }

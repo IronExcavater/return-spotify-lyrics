@@ -468,6 +468,7 @@ function MediaSectionImpl({
         headerFadeBleedPx > 0
             ? `linear-gradient(to right, rgba(0,0,0,1) 0px, rgba(0,0,0,0) ${headerFadeBleedPx}px, rgba(0,0,0,0) calc(100% - ${headerFadeBleedPx}px), rgba(0,0,0,1) 100%)`
             : null;
+    const stickyHeaderEnabled = stickyHeader && !dragging;
 
     const placeholderItems = useMemo(() => {
         if (!isPending) return [];
@@ -585,8 +586,8 @@ function MediaSectionImpl({
         prevEditingRef.current = editing;
     }, [editing]);
 
-    useEffect(() => {
-        if (!editing || activeGroup === null) return;
+    useLayoutEffect(() => {
+        if (!editing) return;
         const update = () => {
             setGroupWidths((prev) => {
                 const next = { ...prev };
@@ -614,6 +615,445 @@ function MediaSectionImpl({
     useEffect(() => {
         if (!editing) setActiveGroup(null);
     }, [editing]);
+
+    const editControls = (
+        <div
+            className={clsx(
+                'absolute top-0 right-0 z-20 flex justify-end',
+                skipEditTransition
+                    ? 'transition-none'
+                    : 'transition-[opacity,transform]',
+                editing
+                    ? 'pointer-events-auto translate-y-0 opacity-100'
+                    : 'pointer-events-none -translate-y-1 opacity-0'
+            )}
+        >
+            <Flex
+                align="center"
+                direction="row"
+                wrap="nowrap"
+                gap="0.5"
+                p="1"
+                className={clsx(
+                    'bg-panel-solid/90 min-h-9 rounded-full shadow-sm backdrop-blur',
+                    skipEditTransition
+                        ? 'transition-none'
+                        : 'transition-[opacity,width,transform]',
+                    editing
+                        ? 'translate-y-0 opacity-100'
+                        : '-translate-y-1 opacity-0'
+                )}
+                onMouseDownCapture={(event: ReactMouseEvent) => {
+                    const target = event.target;
+                    if (target instanceof HTMLInputElement) return;
+                    const active = document.activeElement;
+                    if (active instanceof HTMLInputElement) active.blur();
+                }}
+            >
+                <ControlGroup
+                    id="type"
+                    label="Type"
+                    activeGroup={activeGroup}
+                    groupWidth={groupWidths.type}
+                    controlsRef={typeControlsRef}
+                    labelRef={typeLabelRef}
+                    onToggle={() => toggleGroup('type')}
+                    disableTransition={skipEditTransition}
+                    disabled={!editing}
+                >
+                    <Flex align="center" direction="row" gap="1">
+                        <SegmentedControl
+                            items={[
+                                {
+                                    key: 'v-list',
+                                    label: 'Vertical list',
+                                    icon: <RowsIcon />,
+                                },
+                                {
+                                    key: 'h-list',
+                                    label: 'Horizontal list',
+                                    icon: <ColumnsIcon />,
+                                },
+                                {
+                                    key: 'card',
+                                    label: 'Card',
+                                    icon: <GridIcon />,
+                                },
+                            ]}
+                            active={mode}
+                            orientation="horizontal"
+                            onSelect={(viewNext) =>
+                                onChange(section.id, {
+                                    view: viewNext === 'card' ? 'card' : 'list',
+                                    infinite:
+                                        viewNext === 'card'
+                                            ? 'columns'
+                                            : viewNext === 'h-list'
+                                              ? 'columns'
+                                              : null,
+                                    columns:
+                                        viewNext === 'v-list'
+                                            ? 1
+                                            : viewNext === 'card'
+                                              ? 0
+                                              : 0,
+                                    rows:
+                                        viewNext === 'v-list'
+                                            ? 0
+                                            : LIMITS_BY_MODE[viewNext].rows.min,
+                                })
+                            }
+                            disabled={!editing}
+                        />
+                    </Flex>
+                </ControlGroup>
+                <ControlSeparator />
+                <ControlGroup
+                    id="layout"
+                    label="Layout"
+                    activeGroup={activeGroup}
+                    groupWidth={groupWidths.layout}
+                    controlsRef={layoutControlsRef}
+                    labelRef={layoutLabelRef}
+                    onToggle={() => toggleGroup('layout')}
+                    disableTransition={skipEditTransition}
+                    disabled={!editing}
+                >
+                    <Flex align="center" direction="row" wrap="nowrap" gap="2">
+                        <StepperControl
+                            label="Rows"
+                            value={rowsDraft ?? displayRowsStr}
+                            placeholder={defaultRowsPlaceholder}
+                            onDecrement={() => {
+                                setRowsDraft(null);
+                                const next =
+                                    rowLimits.allowInfinite &&
+                                    layoutRows === rowLimits.min
+                                        ? 0
+                                        : clampCount(
+                                              (layoutRows || 0) - 1,
+                                              rowLimits
+                                          );
+                                onChange(section.id, {
+                                    rows: next,
+                                });
+                            }}
+                            onIncrement={() => {
+                                setRowsDraft(null);
+                                onChange(section.id, {
+                                    rows: clampCount(
+                                        layoutRows === 0 ? 1 : layoutRows + 1,
+                                        rowLimits
+                                    ),
+                                });
+                            }}
+                            onValueChange={(val) =>
+                                changeCount(
+                                    val,
+                                    (value) => clampCount(value, rowLimits),
+                                    setRowsDraft,
+                                    'rows'
+                                )
+                            }
+                            onValueBlur={() =>
+                                blurCount(
+                                    rowsDraft,
+                                    (value) => clampCount(value, rowLimits),
+                                    defaultRowsByMode,
+                                    setRowsDraft,
+                                    'rows'
+                                )
+                            }
+                            onValueFocus={() =>
+                                focusDraft(displayRowsStr, setRowsDraft)
+                            }
+                            disabled={!editing}
+                        />
+                        {mode !== 'v-list' && (
+                            <StepperControl
+                                label="Cols"
+                                value={colsDraft ?? displayColsStr}
+                                placeholder={defaultColsPlaceholder}
+                                onDecrement={() => {
+                                    setColsDraft(null);
+                                    const next =
+                                        colLimits.allowInfinite &&
+                                        layoutCols === colLimits.min
+                                            ? 0
+                                            : clampCount(
+                                                  (layoutCols || 0) - 1,
+                                                  colLimits
+                                              );
+                                    onChange(section.id, {
+                                        columns: next,
+                                    });
+                                }}
+                                onIncrement={() => {
+                                    setColsDraft(null);
+                                    onChange(section.id, {
+                                        columns: clampCount(
+                                            layoutCols === 0
+                                                ? 1
+                                                : layoutCols + 1,
+                                            colLimits
+                                        ),
+                                    });
+                                }}
+                                onValueChange={(val) =>
+                                    changeCount(
+                                        val,
+                                        (value) => clampCount(value, colLimits),
+                                        setColsDraft,
+                                        'columns'
+                                    )
+                                }
+                                onValueBlur={() =>
+                                    blurCount(
+                                        colsDraft,
+                                        (value) => clampCount(value, colLimits),
+                                        defaultColsByMode,
+                                        setColsDraft,
+                                        'columns'
+                                    )
+                                }
+                                onValueFocus={() =>
+                                    focusDraft(displayColsStr, setColsDraft)
+                                }
+                                disabled={!editing}
+                            />
+                        )}
+                    </Flex>
+                </ControlGroup>
+                {mode === 'h-list' && (
+                    <>
+                        <ControlSeparator />
+                        <ControlGroup
+                            id="width"
+                            label="Width"
+                            activeGroup={activeGroup}
+                            groupWidth={groupWidths.width}
+                            controlsRef={widthControlsRef}
+                            labelRef={widthLabelRef}
+                            onToggle={() => toggleGroup('width')}
+                            disableTransition={skipEditTransition}
+                            disabled={!editing}
+                        >
+                            <StepperControl
+                                label="Width"
+                                value={widthDraft ?? displayWidthStr}
+                                placeholder={String(defaultColumnWidth)}
+                                hideSteppers
+                                onDecrement={() => undefined}
+                                onIncrement={() => undefined}
+                                onValueChange={(val) => {
+                                    setWidthDraft(val);
+                                    const parsed = parseClamp(val);
+                                    if (parsed === null) return;
+                                    const next =
+                                        parsed === undefined
+                                            ? defaultColumnWidth
+                                            : clampColumnWidth(parsed);
+                                    onChange(section.id, {
+                                        columnWidth: next,
+                                    });
+                                }}
+                                onValueBlur={() => {
+                                    if (widthDraft === null) return;
+                                    const parsed = parseClamp(widthDraft);
+                                    const next =
+                                        parsed === null || parsed === undefined
+                                            ? defaultColumnWidth
+                                            : clampColumnWidth(parsed);
+                                    onChange(section.id, {
+                                        columnWidth: next,
+                                    });
+                                    setWidthDraft(null);
+                                }}
+                                onValueFocus={() =>
+                                    focusDraft(displayWidthStr, setWidthDraft)
+                                }
+                                suffix={
+                                    <Text
+                                        size="1"
+                                        color="gray"
+                                        className="px-px"
+                                    >
+                                        px
+                                    </Text>
+                                }
+                                disabled={!editing}
+                            />
+                        </ControlGroup>
+                    </>
+                )}
+                {mode === 'v-list' && (
+                    <>
+                        <ControlSeparator />
+                        <ControlGroup
+                            id="clamp"
+                            label="Clamp"
+                            activeGroup={activeGroup}
+                            groupWidth={groupWidths.clamp}
+                            controlsRef={clampControlsRef}
+                            labelRef={clampLabelRef}
+                            onToggle={() => toggleGroup('clamp')}
+                            disableTransition={skipEditTransition}
+                            disabled={!editing}
+                        >
+                            <StepperControl
+                                label="Clamp"
+                                value={clampDraft ?? displayClampStr}
+                                placeholder="∞"
+                                hideSteppers
+                                onDecrement={() => undefined}
+                                onIncrement={() => undefined}
+                                onValueChange={(val) => {
+                                    setClampDraft(val);
+                                    const parsed = parseClamp(val);
+                                    if (parsed === null) return;
+                                    const value =
+                                        parsed === undefined
+                                            ? undefined
+                                            : clampUnit === 'items'
+                                              ? clampClampRows(parsed)
+                                              : clampClampPx(parsed);
+                                    onChange(section.id, {
+                                        rowHeight: value,
+                                        clampUnit,
+                                    });
+                                }}
+                                onValueBlur={() => {
+                                    if (clampDraft === null) return;
+                                    const parsed = parseClamp(clampDraft);
+                                    const value =
+                                        parsed === undefined
+                                            ? undefined
+                                            : parsed === null
+                                              ? undefined
+                                              : clampUnit === 'items'
+                                                ? clampClampRows(parsed)
+                                                : clampClampPx(parsed);
+                                    onChange(section.id, {
+                                        rowHeight: value,
+                                        clampUnit,
+                                    });
+                                    setClampDraft(null);
+                                }}
+                                onValueFocus={() => {
+                                    setClampDraft(
+                                        displayClampStr === '∞'
+                                            ? ''
+                                            : displayClampStr
+                                    );
+                                }}
+                                suffix={
+                                    <DropdownMenu.Root modal={false}>
+                                        <DropdownMenu.Trigger
+                                            onKeyDown={handleMenuTriggerKeyDown}
+                                        >
+                                            <Button
+                                                size="0"
+                                                variant="ghost"
+                                                radius="small"
+                                                className="px-px!"
+                                                disabled={!editing}
+                                            >
+                                                {clampUnitLabel}
+                                            </Button>
+                                        </DropdownMenu.Trigger>
+                                        <DropdownMenu.Content
+                                            align="end"
+                                            size="1"
+                                        >
+                                            <DropdownMenu.Item
+                                                onSelect={() =>
+                                                    updateClampUnit('px')
+                                                }
+                                            >
+                                                pixels
+                                            </DropdownMenu.Item>
+                                            <DropdownMenu.Item
+                                                onSelect={() =>
+                                                    updateClampUnit('items')
+                                                }
+                                            >
+                                                rows
+                                            </DropdownMenu.Item>
+                                        </DropdownMenu.Content>
+                                    </DropdownMenu.Root>
+                                }
+                                disabled={!editing}
+                            />
+                        </ControlGroup>
+                    </>
+                )}
+                {mode === 'card' && (
+                    <>
+                        <ControlSeparator />
+                        <ControlGroup
+                            id="card"
+                            label="Card"
+                            activeGroup={activeGroup}
+                            groupWidth={groupWidths.card}
+                            controlsRef={cardControlsRef}
+                            labelRef={cardLabelRef}
+                            onToggle={() => toggleGroup('card')}
+                            disableTransition={skipEditTransition}
+                            disabled={!editing}
+                        >
+                            <StepperControl
+                                label="Size"
+                                value={cardSizeDraft ?? displayCardSizeStr}
+                                placeholder="2"
+                                onDecrement={() => {
+                                    setCardSizeDraft(null);
+                                    const next = Math.max(1, cardSize - 1) as
+                                        | 1
+                                        | 2
+                                        | 3;
+                                    onChange(section.id, {
+                                        cardSize: next,
+                                    });
+                                }}
+                                onIncrement={() => {
+                                    setCardSizeDraft(null);
+                                    const next = Math.min(3, cardSize + 1) as
+                                        | 1
+                                        | 2
+                                        | 3;
+                                    onChange(section.id, {
+                                        cardSize: next,
+                                    });
+                                }}
+                                onValueChange={changeCardSize}
+                                onValueBlur={() => blurCardSize(cardSizeDraft)}
+                                onValueFocus={() =>
+                                    focusDraft(
+                                        displayCardSizeStr,
+                                        setCardSizeDraft
+                                    )
+                                }
+                                disabled={!editing}
+                            />
+                        </ControlGroup>
+                    </>
+                )}
+                {onDelete && (
+                    <IconButton
+                        size="1"
+                        variant="ghost"
+                        radius="full"
+                        color="red"
+                        disabled={!editing}
+                        onClick={() => onDelete(section.id)}
+                        aria-label={`Remove ${title}`}
+                    >
+                        <Cross2Icon />
+                    </IconButton>
+                )}
+            </Flex>
+        </div>
+    );
 
     const content = renderContent ? (
         renderContent({ columnWidth, loading: isPending })
@@ -677,14 +1117,15 @@ function MediaSectionImpl({
                 </Flex>
             </div>
             <Flex direction="column" gap="1" className="relative">
+                {editControls}
                 <div
                     ref={headerRef}
                     className={clsx(
                         'relative overflow-visible',
-                        stickyHeader && 'sticky z-20'
+                        stickyHeaderEnabled && 'sticky z-20'
                     )}
                     style={
-                        stickyHeader
+                        stickyHeaderEnabled
                             ? {
                                   top: 'var(--sticky-top, 0px)',
                               }
@@ -767,517 +1208,7 @@ function MediaSectionImpl({
                             )}
                         </Flex>
                     </div>
-                    <div
-                        className={clsx(
-                            'pointer-events-none absolute -top-0.5 right-0 z-10 overflow-hidden will-change-[opacity,transform]',
-                            skipEditTransition
-                                ? 'transition-none'
-                                : 'transition-[opacity,transform]',
-                            editing ? 'opacity-100' : 'opacity-0'
-                        )}
-                    >
-                        <Flex
-                            align="center"
-                            direction="row"
-                            wrap="nowrap"
-                            gap="0.5"
-                            p="1"
-                            className={clsx(
-                                'bg-panel-solid/90 min-h-9 rounded-full shadow-sm backdrop-blur',
-                                skipEditTransition
-                                    ? 'transition-none'
-                                    : 'transition-[opacity,width]',
-                                editing
-                                    ? 'pointer-events-auto opacity-100'
-                                    : 'pointer-events-none opacity-0'
-                            )}
-                            onMouseDownCapture={(event: ReactMouseEvent) => {
-                                const target = event.target;
-                                if (target instanceof HTMLInputElement) return;
-                                const active = document.activeElement;
-                                if (active instanceof HTMLInputElement)
-                                    active.blur();
-                            }}
-                        >
-                            <ControlGroup
-                                id="type"
-                                label="Type"
-                                activeGroup={activeGroup}
-                                groupWidth={groupWidths.type}
-                                controlsRef={typeControlsRef}
-                                labelRef={typeLabelRef}
-                                onToggle={() => toggleGroup('type')}
-                                disableTransition={skipEditTransition}
-                                disabled={!editing}
-                            >
-                                <Flex align="center" direction="row" gap="1">
-                                    <SegmentedControl
-                                        items={[
-                                            {
-                                                key: 'v-list',
-                                                label: 'Vertical list',
-                                                icon: <RowsIcon />,
-                                            },
-                                            {
-                                                key: 'h-list',
-                                                label: 'Horizontal list',
-                                                icon: <ColumnsIcon />,
-                                            },
-                                            {
-                                                key: 'card',
-                                                label: 'Card',
-                                                icon: <GridIcon />,
-                                            },
-                                        ]}
-                                        active={mode}
-                                        orientation="horizontal"
-                                        onSelect={(viewNext) =>
-                                            onChange(section.id, {
-                                                view:
-                                                    viewNext === 'card'
-                                                        ? 'card'
-                                                        : 'list',
-                                                infinite:
-                                                    viewNext === 'card'
-                                                        ? 'columns'
-                                                        : viewNext === 'h-list'
-                                                          ? 'columns'
-                                                          : null,
-                                                columns:
-                                                    viewNext === 'v-list'
-                                                        ? 1
-                                                        : viewNext === 'card'
-                                                          ? 0
-                                                          : 0,
-                                                rows:
-                                                    viewNext === 'v-list'
-                                                        ? 0
-                                                        : LIMITS_BY_MODE[
-                                                              viewNext
-                                                          ].rows.min,
-                                            })
-                                        }
-                                        disabled={!editing}
-                                    />
-                                </Flex>
-                            </ControlGroup>
-                            <ControlSeparator />
-                            <ControlGroup
-                                id="layout"
-                                label="Layout"
-                                activeGroup={activeGroup}
-                                groupWidth={groupWidths.layout}
-                                controlsRef={layoutControlsRef}
-                                labelRef={layoutLabelRef}
-                                onToggle={() => toggleGroup('layout')}
-                                disableTransition={skipEditTransition}
-                                disabled={!editing}
-                            >
-                                <Flex
-                                    align="center"
-                                    direction="row"
-                                    wrap="nowrap"
-                                    gap="2"
-                                >
-                                    <StepperControl
-                                        label="Rows"
-                                        value={rowsDraft ?? displayRowsStr}
-                                        placeholder={defaultRowsPlaceholder}
-                                        onDecrement={() => {
-                                            setRowsDraft(null);
-                                            const next =
-                                                rowLimits.allowInfinite &&
-                                                layoutRows === rowLimits.min
-                                                    ? 0
-                                                    : clampCount(
-                                                          (layoutRows || 0) - 1,
-                                                          rowLimits
-                                                      );
-                                            onChange(section.id, {
-                                                rows: next,
-                                            });
-                                        }}
-                                        onIncrement={() => {
-                                            setRowsDraft(null);
-                                            onChange(section.id, {
-                                                rows: clampCount(
-                                                    layoutRows === 0
-                                                        ? 1
-                                                        : layoutRows + 1,
-                                                    rowLimits
-                                                ),
-                                            });
-                                        }}
-                                        onValueChange={(val) =>
-                                            changeCount(
-                                                val,
-                                                (value) =>
-                                                    clampCount(
-                                                        value,
-                                                        rowLimits
-                                                    ),
-                                                setRowsDraft,
-                                                'rows'
-                                            )
-                                        }
-                                        onValueBlur={() =>
-                                            blurCount(
-                                                rowsDraft,
-                                                (value) =>
-                                                    clampCount(
-                                                        value,
-                                                        rowLimits
-                                                    ),
-                                                defaultRowsByMode,
-                                                setRowsDraft,
-                                                'rows'
-                                            )
-                                        }
-                                        onValueFocus={() =>
-                                            focusDraft(
-                                                displayRowsStr,
-                                                setRowsDraft
-                                            )
-                                        }
-                                        disabled={!editing}
-                                    />
-                                    {mode !== 'v-list' && (
-                                        <StepperControl
-                                            label="Cols"
-                                            value={colsDraft ?? displayColsStr}
-                                            placeholder={defaultColsPlaceholder}
-                                            onDecrement={() => {
-                                                setColsDraft(null);
-                                                const next =
-                                                    colLimits.allowInfinite &&
-                                                    layoutCols === colLimits.min
-                                                        ? 0
-                                                        : clampCount(
-                                                              (layoutCols ||
-                                                                  0) - 1,
-                                                              colLimits
-                                                          );
-                                                onChange(section.id, {
-                                                    columns: next,
-                                                });
-                                            }}
-                                            onIncrement={() => {
-                                                setColsDraft(null);
-                                                onChange(section.id, {
-                                                    columns: clampCount(
-                                                        layoutCols === 0
-                                                            ? 1
-                                                            : layoutCols + 1,
-                                                        colLimits
-                                                    ),
-                                                });
-                                            }}
-                                            onValueChange={(val) =>
-                                                changeCount(
-                                                    val,
-                                                    (value) =>
-                                                        clampCount(
-                                                            value,
-                                                            colLimits
-                                                        ),
-                                                    setColsDraft,
-                                                    'columns'
-                                                )
-                                            }
-                                            onValueBlur={() =>
-                                                blurCount(
-                                                    colsDraft,
-                                                    (value) =>
-                                                        clampCount(
-                                                            value,
-                                                            colLimits
-                                                        ),
-                                                    defaultColsByMode,
-                                                    setColsDraft,
-                                                    'columns'
-                                                )
-                                            }
-                                            onValueFocus={() =>
-                                                focusDraft(
-                                                    displayColsStr,
-                                                    setColsDraft
-                                                )
-                                            }
-                                            disabled={!editing}
-                                        />
-                                    )}
-                                </Flex>
-                            </ControlGroup>
-                            {mode === 'h-list' && (
-                                <>
-                                    <ControlSeparator />
-                                    <ControlGroup
-                                        id="width"
-                                        label="Width"
-                                        activeGroup={activeGroup}
-                                        groupWidth={groupWidths.width}
-                                        controlsRef={widthControlsRef}
-                                        labelRef={widthLabelRef}
-                                        onToggle={() => toggleGroup('width')}
-                                        disableTransition={skipEditTransition}
-                                        disabled={!editing}
-                                    >
-                                        <StepperControl
-                                            label="Width"
-                                            value={
-                                                widthDraft ?? displayWidthStr
-                                            }
-                                            placeholder={String(
-                                                defaultColumnWidth
-                                            )}
-                                            hideSteppers
-                                            onDecrement={() => undefined}
-                                            onIncrement={() => undefined}
-                                            onValueChange={(val) => {
-                                                setWidthDraft(val);
-                                                const parsed = parseClamp(val);
-                                                if (parsed === null) return;
-                                                const next =
-                                                    parsed === undefined
-                                                        ? defaultColumnWidth
-                                                        : clampColumnWidth(
-                                                              parsed
-                                                          );
-                                                onChange(section.id, {
-                                                    columnWidth: next,
-                                                });
-                                            }}
-                                            onValueBlur={() => {
-                                                if (widthDraft === null) return;
-                                                const parsed =
-                                                    parseClamp(widthDraft);
-                                                const next =
-                                                    parsed === null ||
-                                                    parsed === undefined
-                                                        ? defaultColumnWidth
-                                                        : clampColumnWidth(
-                                                              parsed
-                                                          );
-                                                onChange(section.id, {
-                                                    columnWidth: next,
-                                                });
-                                                setWidthDraft(null);
-                                            }}
-                                            onValueFocus={() =>
-                                                focusDraft(
-                                                    displayWidthStr,
-                                                    setWidthDraft
-                                                )
-                                            }
-                                            suffix={
-                                                <Text
-                                                    size="1"
-                                                    color="gray"
-                                                    className="px-px"
-                                                >
-                                                    px
-                                                </Text>
-                                            }
-                                            disabled={!editing}
-                                        />
-                                    </ControlGroup>
-                                </>
-                            )}
-                            {mode === 'v-list' && (
-                                <>
-                                    <ControlSeparator />
-                                    <ControlGroup
-                                        id="clamp"
-                                        label="Clamp"
-                                        activeGroup={activeGroup}
-                                        groupWidth={groupWidths.clamp}
-                                        controlsRef={clampControlsRef}
-                                        labelRef={clampLabelRef}
-                                        onToggle={() => toggleGroup('clamp')}
-                                        disableTransition={skipEditTransition}
-                                        disabled={!editing}
-                                    >
-                                        <StepperControl
-                                            label="Clamp"
-                                            value={
-                                                clampDraft ?? displayClampStr
-                                            }
-                                            placeholder="∞"
-                                            hideSteppers
-                                            onDecrement={() => undefined}
-                                            onIncrement={() => undefined}
-                                            onValueChange={(val) => {
-                                                setClampDraft(val);
-                                                const parsed = parseClamp(val);
-                                                if (parsed === null) return;
-                                                const value =
-                                                    parsed === undefined
-                                                        ? undefined
-                                                        : clampUnit === 'items'
-                                                          ? clampClampRows(
-                                                                parsed
-                                                            )
-                                                          : clampClampPx(
-                                                                parsed
-                                                            );
-                                                onChange(section.id, {
-                                                    rowHeight: value,
-                                                    clampUnit,
-                                                });
-                                            }}
-                                            onValueBlur={() => {
-                                                if (clampDraft === null) return;
-                                                const parsed =
-                                                    parseClamp(clampDraft);
-                                                const value =
-                                                    parsed === undefined
-                                                        ? undefined
-                                                        : parsed === null
-                                                          ? undefined
-                                                          : clampUnit ===
-                                                              'items'
-                                                            ? clampClampRows(
-                                                                  parsed
-                                                              )
-                                                            : clampClampPx(
-                                                                  parsed
-                                                              );
-                                                onChange(section.id, {
-                                                    rowHeight: value,
-                                                    clampUnit,
-                                                });
-                                                setClampDraft(null);
-                                            }}
-                                            onValueFocus={() => {
-                                                setClampDraft(
-                                                    displayClampStr === '∞'
-                                                        ? ''
-                                                        : displayClampStr
-                                                );
-                                            }}
-                                            suffix={
-                                                <DropdownMenu.Root
-                                                    modal={false}
-                                                >
-                                                    <DropdownMenu.Trigger
-                                                        onKeyDown={
-                                                            handleMenuTriggerKeyDown
-                                                        }
-                                                    >
-                                                        <Button
-                                                            size="0"
-                                                            variant="ghost"
-                                                            radius="small"
-                                                            className="px-px!"
-                                                            disabled={!editing}
-                                                        >
-                                                            {clampUnitLabel}
-                                                        </Button>
-                                                    </DropdownMenu.Trigger>
-                                                    <DropdownMenu.Content
-                                                        align="end"
-                                                        size="1"
-                                                    >
-                                                        <DropdownMenu.Item
-                                                            onSelect={() =>
-                                                                updateClampUnit(
-                                                                    'px'
-                                                                )
-                                                            }
-                                                        >
-                                                            pixels
-                                                        </DropdownMenu.Item>
-                                                        <DropdownMenu.Item
-                                                            onSelect={() =>
-                                                                updateClampUnit(
-                                                                    'items'
-                                                                )
-                                                            }
-                                                        >
-                                                            rows
-                                                        </DropdownMenu.Item>
-                                                    </DropdownMenu.Content>
-                                                </DropdownMenu.Root>
-                                            }
-                                            disabled={!editing}
-                                        />
-                                    </ControlGroup>
-                                </>
-                            )}
-                            {mode === 'card' && (
-                                <>
-                                    <ControlSeparator />
-                                    <ControlGroup
-                                        id="card"
-                                        label="Card"
-                                        activeGroup={activeGroup}
-                                        groupWidth={groupWidths.card}
-                                        controlsRef={cardControlsRef}
-                                        labelRef={cardLabelRef}
-                                        onToggle={() => toggleGroup('card')}
-                                        disableTransition={skipEditTransition}
-                                        disabled={!editing}
-                                    >
-                                        <StepperControl
-                                            label="Size"
-                                            value={
-                                                cardSizeDraft ??
-                                                displayCardSizeStr
-                                            }
-                                            placeholder="2"
-                                            onDecrement={() => {
-                                                setCardSizeDraft(null);
-                                                const next = Math.max(
-                                                    1,
-                                                    cardSize - 1
-                                                ) as 1 | 2 | 3;
-                                                onChange(section.id, {
-                                                    cardSize: next,
-                                                });
-                                            }}
-                                            onIncrement={() => {
-                                                setCardSizeDraft(null);
-                                                const next = Math.min(
-                                                    3,
-                                                    cardSize + 1
-                                                ) as 1 | 2 | 3;
-                                                onChange(section.id, {
-                                                    cardSize: next,
-                                                });
-                                            }}
-                                            onValueChange={changeCardSize}
-                                            onValueBlur={() =>
-                                                blurCardSize(cardSizeDraft)
-                                            }
-                                            onValueFocus={() =>
-                                                focusDraft(
-                                                    displayCardSizeStr,
-                                                    setCardSizeDraft
-                                                )
-                                            }
-                                            disabled={!editing}
-                                        />
-                                    </ControlGroup>
-                                </>
-                            )}
-                            {onDelete && (
-                                <>
-                                    <IconButton
-                                        size="1"
-                                        variant="ghost"
-                                        radius="full"
-                                        color="red"
-                                        disabled={!editing}
-                                        onClick={() => onDelete(section.id)}
-                                        aria-label={`Remove ${title}`}
-                                    >
-                                        <Cross2Icon />
-                                    </IconButton>
-                                </>
-                            )}
-                        </Flex>
-                    </div>
-                    {stickyHeader && headerFade && !dragging && (
+                    {stickyHeaderEnabled && headerFade && (
                         <div
                             aria-hidden="true"
                             className="pointer-events-none absolute z-0"
