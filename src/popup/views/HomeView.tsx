@@ -919,7 +919,16 @@ export function HomeView({ searchQuery, filters }: Props) {
                 )}
 
                 <StickyLayout.Body>
-                    <DragDropContext onDragEnd={onSectionDragEnd}>
+                    <DragDropContext
+                        onDragEnd={onSectionDragEnd}
+                        autoScrollerOptions={{
+                            ignoreSizeLimits: true,
+                        }}
+                        zIndexOptions={{
+                            dragging: 0,
+                            dropAnimating: 0,
+                        }}
+                    >
                         <Droppable
                             droppableId="home-sections"
                             direction="vertical"

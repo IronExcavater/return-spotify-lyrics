@@ -1,5 +1,5 @@
 diff --git a/node_modules/@hello-pangea/dnd/dist/dnd.cjs.js b/node_modules/@hello-pangea/dnd/dist/dnd.cjs.js
-index f4bbae8..09ed68d 100644
+index f4bbae8..1ae3bac 100644
 --- a/node_modules/@hello-pangea/dnd/dist/dnd.cjs.js
 +++ b/node_modules/@hello-pangea/dnd/dist/dnd.cjs.js
 @@ -854,13 +854,15 @@ const getCrossAxisBorderBoxCenter = (axis, target, isMoving) => target[axis.cros
@@ -80,7 +80,151 @@ index f4bbae8..09ed68d 100644
    const requiredGrowth = getRequiredGrowthForPlaceholder(droppable, placeholderSize, draggables);
    const added = {
      placeholderSize,
-@@ -6200,6 +6208,30 @@ function getStyle$1(mapped) {
+@@ -3670,7 +3678,8 @@ const defaultAutoScrollerOptions = {
+     stopDampeningAt: 1200,
+     accelerateAt: 360
+   },
+-  disabled: false
++  disabled: false,
++  ignoreSizeLimits: false
+ };
+ 
+ var getDistanceThresholds = ((container, axis, getAutoScrollerOptions = () => defaultAutoScrollerOptions) => {
+@@ -3797,8 +3806,12 @@ var getScrollOnAxis = (({
+ var adjustForSizeLimits = (({
+   container,
+   subject,
+-  proposedScroll
++  proposedScroll,
++  ignoreSizeLimits
+ }) => {
++  if (ignoreSizeLimits) {
++    return proposedScroll;
++  }
+   const isTooBigVertically = subject.height > container.height;
+   const isTooBigHorizontally = subject.width > container.width;
+   if (!isTooBigHorizontally && !isTooBigVertically) {
+@@ -3822,6 +3835,7 @@ var getScroll$1 = (({
+   shouldUseTimeDampening,
+   getAutoScrollerOptions
+ }) => {
++  const autoScrollerOptions = getAutoScrollerOptions();
+   const distanceToEdges = {
+     top: center.y - container.top,
+     right: container.right - center.x,
+@@ -3834,7 +3848,7 @@ var getScroll$1 = (({
+     dragStartTime,
+     axis: vertical,
+     shouldUseTimeDampening,
+-    getAutoScrollerOptions
++    getAutoScrollerOptions: () => autoScrollerOptions
+   });
+   const x = getScrollOnAxis({
+     container,
+@@ -3842,7 +3856,7 @@ var getScroll$1 = (({
+     dragStartTime,
+     axis: horizontal,
+     shouldUseTimeDampening,
+-    getAutoScrollerOptions
++    getAutoScrollerOptions: () => autoScrollerOptions
+   });
+   const required = clean({
+     x,
+@@ -3854,7 +3868,8 @@ var getScroll$1 = (({
+   const limited = adjustForSizeLimits({
+     container,
+     subject,
+-    proposedScroll: required
++    proposedScroll: required,
++    ignoreSizeLimits: autoScrollerOptions.ignoreSizeLimits
+   });
+   if (!limited) {
+     return null;
+@@ -4013,9 +4028,19 @@ var scroll = (({
+   scrollDroppable,
+   getAutoScrollerOptions
+ }) => {
+-  const center = state.current.page.borderBoxCenter;
++  const autoScrollerOptions = getAutoScrollerOptions();
++  const center = autoScrollerOptions.ignoreSizeLimits ? state.current.page.selection : state.current.page.borderBoxCenter;
+   const draggable = state.dimensions.draggables[state.critical.draggable.id];
+-  const subject = draggable.page.marginBox;
++  const subject = autoScrollerOptions.ignoreSizeLimits ? {
++    top: center.y,
++    right: center.x,
++    bottom: center.y,
++    left: center.x,
++    width: 0,
++    height: 0,
++    x: center.x,
++    y: center.y
++  } : draggable.page.marginBox;
+   if (state.isWindowScrollAllowed) {
+     const viewport = state.viewport;
+     const change = getWindowScrollChange({
+@@ -4024,7 +4049,7 @@ var scroll = (({
+       subject,
+       center,
+       shouldUseTimeDampening,
+-      getAutoScrollerOptions
++      getAutoScrollerOptions: () => autoScrollerOptions
+     });
+     if (change) {
+       scrollWindow(change);
+@@ -4045,7 +4070,7 @@ var scroll = (({
+     subject,
+     center,
+     shouldUseTimeDampening,
+-    getAutoScrollerOptions
++    getAutoScrollerOptions: () => autoScrollerOptions
+   });
+   if (change) {
+     scrollDroppable(droppable.descriptor.id, change);
+@@ -6005,6 +6030,10 @@ function App(props) {
+   const getAutoScrollerOptions = useMemoOne.useCallback(() => {
+     return createAutoScrollerOptions(lastPropsRef.current);
+   }, [lastPropsRef]);
++  React.useEffect(() => {
++    setZIndexOptions(props.zIndexOptions);
++    return () => setZIndexOptions(undefined);
++  }, [props.zIndexOptions]);
+   const announce = useAnnouncer(contextId);
+   const dragHandleUsageInstructionsId = useHiddenTextElement({
+     contextId,
+@@ -6134,7 +6163,8 @@ function DragDropContext(props) {
+     onDragStart: props.onDragStart,
+     onDragUpdate: props.onDragUpdate,
+     onDragEnd: props.onDragEnd,
+-    autoScrollerOptions: props.autoScrollerOptions
++    autoScrollerOptions: props.autoScrollerOptions,
++    zIndexOptions: props.zIndexOptions
+   }, props.children));
+ }
+ 
+@@ -6142,6 +6172,13 @@ const zIndexOptions = {
+   dragging: 5000,
+   dropAnimating: 4500
+ };
++let currentZIndexOptions = zIndexOptions;
++const setZIndexOptions = next => {
++  currentZIndexOptions = {
++    ...zIndexOptions,
++    ...next
++  };
++};
+ const getDraggingTransition = (shouldAnimateDragMovement, dropping) => {
+   if (dropping) {
+     return transitions.drop(dropping.duration);
+@@ -6185,7 +6222,7 @@ function getDraggingStyle(dragging) {
+     transition: getDraggingTransition(shouldAnimate, dropping),
+     transform,
+     opacity: getDraggingOpacity(isCombining, isDropAnimating),
+-    zIndex: isDropAnimating ? zIndexOptions.dropAnimating : zIndexOptions.dragging,
++    zIndex: isDropAnimating ? currentZIndexOptions.dropAnimating : currentZIndexOptions.dragging,
+     pointerEvents: 'none'
+   };
+   return style;
+@@ -6200,6 +6237,30 @@ function getStyle$1(mapped) {
    return mapped.type === 'DRAGGING' ? getDraggingStyle(mapped) : getSecondaryStyle(mapped);
  }
  
@@ -111,7 +255,7 @@ index f4bbae8..09ed68d 100644
  function getDimension$1(descriptor, el, windowScroll = origin) {
    const computedStyles = window.getComputedStyle(el);
    const borderBox = el.getBoundingClientRect();
-@@ -6210,9 +6242,13 @@ function getDimension$1(descriptor, el, windowScroll = origin) {
+@@ -6210,9 +6271,13 @@ function getDimension$1(descriptor, el, windowScroll = origin) {
      tagName: el.tagName.toLowerCase(),
      display: computedStyles.display
    };
@@ -127,8 +271,35 @@ index f4bbae8..09ed68d 100644
    };
    const dimension = {
      descriptor,
+diff --git a/node_modules/@hello-pangea/dnd/dist/dnd.d.ts b/node_modules/@hello-pangea/dnd/dist/dnd.d.ts
+index 9096c3c..ffeff6b 100644
+--- a/node_modules/@hello-pangea/dnd/dist/dnd.d.ts
++++ b/node_modules/@hello-pangea/dnd/dist/dnd.d.ts
+@@ -141,6 +141,11 @@ interface AutoScrollerOptions {
+      * Whether or not autoscroll should be turned off entirely
+      */
+     disabled: boolean;
++    /**
++     * Use the pointer position for edge detection and ignore the dragged item's
++     * size limits when computing autoscroll.
++     */
++    ignoreSizeLimits: boolean;
+ }
+ type PartialAutoScrollerOptions = RecursivePartial<AutoScrollerOptions>;
+ 
+@@ -154,6 +159,10 @@ interface DragDropContextProps extends Responders {
+      * Customize auto scroller
+      */
+     autoScrollerOptions?: PartialAutoScrollerOptions;
++    /**
++     * Customize the drag layer z-index values.
++     */
++    zIndexOptions?: Partial<ZIndexOptions>;
+ }
+ declare function resetServerContext(): void;
+ declare function DragDropContext(props: DragDropContextProps): React.JSX.Element;
 diff --git a/node_modules/@hello-pangea/dnd/dist/dnd.esm.js b/node_modules/@hello-pangea/dnd/dist/dnd.esm.js
-index 4b75da5..89645a9 100644
+index 4b75da5..f03bd53 100644
 --- a/node_modules/@hello-pangea/dnd/dist/dnd.esm.js
 +++ b/node_modules/@hello-pangea/dnd/dist/dnd.esm.js
 @@ -852,13 +852,15 @@ const getCrossAxisBorderBoxCenter = (axis, target, isMoving) => target[axis.cros
@@ -209,7 +380,151 @@ index 4b75da5..89645a9 100644
    const requiredGrowth = getRequiredGrowthForPlaceholder(droppable, placeholderSize, draggables);
    const added = {
      placeholderSize,
-@@ -6198,6 +6206,30 @@ function getStyle$1(mapped) {
+@@ -3668,7 +3676,8 @@ const defaultAutoScrollerOptions = {
+     stopDampeningAt: 1200,
+     accelerateAt: 360
+   },
+-  disabled: false
++  disabled: false,
++  ignoreSizeLimits: false
+ };
+ 
+ var getDistanceThresholds = ((container, axis, getAutoScrollerOptions = () => defaultAutoScrollerOptions) => {
+@@ -3795,8 +3804,12 @@ var getScrollOnAxis = (({
+ var adjustForSizeLimits = (({
+   container,
+   subject,
+-  proposedScroll
++  proposedScroll,
++  ignoreSizeLimits
+ }) => {
++  if (ignoreSizeLimits) {
++    return proposedScroll;
++  }
+   const isTooBigVertically = subject.height > container.height;
+   const isTooBigHorizontally = subject.width > container.width;
+   if (!isTooBigHorizontally && !isTooBigVertically) {
+@@ -3820,6 +3833,7 @@ var getScroll$1 = (({
+   shouldUseTimeDampening,
+   getAutoScrollerOptions
+ }) => {
++  const autoScrollerOptions = getAutoScrollerOptions();
+   const distanceToEdges = {
+     top: center.y - container.top,
+     right: container.right - center.x,
+@@ -3832,7 +3846,7 @@ var getScroll$1 = (({
+     dragStartTime,
+     axis: vertical,
+     shouldUseTimeDampening,
+-    getAutoScrollerOptions
++    getAutoScrollerOptions: () => autoScrollerOptions
+   });
+   const x = getScrollOnAxis({
+     container,
+@@ -3840,7 +3854,7 @@ var getScroll$1 = (({
+     dragStartTime,
+     axis: horizontal,
+     shouldUseTimeDampening,
+-    getAutoScrollerOptions
++    getAutoScrollerOptions: () => autoScrollerOptions
+   });
+   const required = clean({
+     x,
+@@ -3852,7 +3866,8 @@ var getScroll$1 = (({
+   const limited = adjustForSizeLimits({
+     container,
+     subject,
+-    proposedScroll: required
++    proposedScroll: required,
++    ignoreSizeLimits: autoScrollerOptions.ignoreSizeLimits
+   });
+   if (!limited) {
+     return null;
+@@ -4011,9 +4026,19 @@ var scroll = (({
+   scrollDroppable,
+   getAutoScrollerOptions
+ }) => {
+-  const center = state.current.page.borderBoxCenter;
++  const autoScrollerOptions = getAutoScrollerOptions();
++  const center = autoScrollerOptions.ignoreSizeLimits ? state.current.page.selection : state.current.page.borderBoxCenter;
+   const draggable = state.dimensions.draggables[state.critical.draggable.id];
+-  const subject = draggable.page.marginBox;
++  const subject = autoScrollerOptions.ignoreSizeLimits ? {
++    top: center.y,
++    right: center.x,
++    bottom: center.y,
++    left: center.x,
++    width: 0,
++    height: 0,
++    x: center.x,
++    y: center.y
++  } : draggable.page.marginBox;
+   if (state.isWindowScrollAllowed) {
+     const viewport = state.viewport;
+     const change = getWindowScrollChange({
+@@ -4022,7 +4047,7 @@ var scroll = (({
+       subject,
+       center,
+       shouldUseTimeDampening,
+-      getAutoScrollerOptions
++      getAutoScrollerOptions: () => autoScrollerOptions
+     });
+     if (change) {
+       scrollWindow(change);
+@@ -4043,7 +4068,7 @@ var scroll = (({
+     subject,
+     center,
+     shouldUseTimeDampening,
+-    getAutoScrollerOptions
++    getAutoScrollerOptions: () => autoScrollerOptions
+   });
+   if (change) {
+     scrollDroppable(droppable.descriptor.id, change);
+@@ -6003,6 +6028,10 @@ function App(props) {
+   const getAutoScrollerOptions = useCallback(() => {
+     return createAutoScrollerOptions(lastPropsRef.current);
+   }, [lastPropsRef]);
++  useEffect(() => {
++    setZIndexOptions(props.zIndexOptions);
++    return () => setZIndexOptions(undefined);
++  }, [props.zIndexOptions]);
+   const announce = useAnnouncer(contextId);
+   const dragHandleUsageInstructionsId = useHiddenTextElement({
+     contextId,
+@@ -6132,7 +6161,8 @@ function DragDropContext(props) {
+     onDragStart: props.onDragStart,
+     onDragUpdate: props.onDragUpdate,
+     onDragEnd: props.onDragEnd,
+-    autoScrollerOptions: props.autoScrollerOptions
++    autoScrollerOptions: props.autoScrollerOptions,
++    zIndexOptions: props.zIndexOptions
+   }, props.children));
+ }
+ 
+@@ -6140,6 +6170,13 @@ const zIndexOptions = {
+   dragging: 5000,
+   dropAnimating: 4500
+ };
++let currentZIndexOptions = zIndexOptions;
++const setZIndexOptions = next => {
++  currentZIndexOptions = {
++    ...zIndexOptions,
++    ...next
++  };
++};
+ const getDraggingTransition = (shouldAnimateDragMovement, dropping) => {
+   if (dropping) {
+     return transitions.drop(dropping.duration);
+@@ -6183,7 +6220,7 @@ function getDraggingStyle(dragging) {
+     transition: getDraggingTransition(shouldAnimate, dropping),
+     transform,
+     opacity: getDraggingOpacity(isCombining, isDropAnimating),
+-    zIndex: isDropAnimating ? zIndexOptions.dropAnimating : zIndexOptions.dragging,
++    zIndex: isDropAnimating ? currentZIndexOptions.dropAnimating : currentZIndexOptions.dragging,
+     pointerEvents: 'none'
+   };
+   return style;
+@@ -6198,6 +6235,30 @@ function getStyle$1(mapped) {
    return mapped.type === 'DRAGGING' ? getDraggingStyle(mapped) : getSecondaryStyle(mapped);
  }
  
@@ -240,7 +555,7 @@ index 4b75da5..89645a9 100644
  function getDimension$1(descriptor, el, windowScroll = origin) {
    const computedStyles = window.getComputedStyle(el);
    const borderBox = el.getBoundingClientRect();
-@@ -6208,9 +6240,13 @@ function getDimension$1(descriptor, el, windowScroll = origin) {
+@@ -6208,9 +6269,13 @@ function getDimension$1(descriptor, el, windowScroll = origin) {
      tagName: el.tagName.toLowerCase(),
      display: computedStyles.display
    };
@@ -256,6 +571,145 @@ index 4b75da5..89645a9 100644
    };
    const dimension = {
      descriptor,
+diff --git a/node_modules/@hello-pangea/dnd/src/state/auto-scroller/fluid-scroller/auto-scroller-options-types.ts b/node_modules/@hello-pangea/dnd/src/state/auto-scroller/fluid-scroller/auto-scroller-options-types.ts
+index 3bcc806..ef6938d 100644
+--- a/node_modules/@hello-pangea/dnd/src/state/auto-scroller/fluid-scroller/auto-scroller-options-types.ts
++++ b/node_modules/@hello-pangea/dnd/src/state/auto-scroller/fluid-scroller/auto-scroller-options-types.ts
+@@ -45,6 +45,12 @@ export interface AutoScrollerOptions {
+    * Whether or not autoscroll should be turned off entirely
+    */
+   disabled: boolean;
++
++  /**
++   * Use the pointer position for edge detection and ignore the dragged item's
++   * size limits when computing autoscroll.
++   */
++  ignoreSizeLimits: boolean;
+ }
+ 
+ export type PartialAutoScrollerOptions = RecursivePartial<AutoScrollerOptions>;
+diff --git a/node_modules/@hello-pangea/dnd/src/state/auto-scroller/fluid-scroller/config.ts b/node_modules/@hello-pangea/dnd/src/state/auto-scroller/fluid-scroller/config.ts
+index 004a252..b5380c3 100644
+--- a/node_modules/@hello-pangea/dnd/src/state/auto-scroller/fluid-scroller/config.ts
++++ b/node_modules/@hello-pangea/dnd/src/state/auto-scroller/fluid-scroller/config.ts
+@@ -11,4 +11,5 @@ export const defaultAutoScrollerOptions: AutoScrollerOptions = {
+     accelerateAt: 360,
+   },
+   disabled: false,
++  ignoreSizeLimits: false,
+ };
+diff --git a/node_modules/@hello-pangea/dnd/src/state/auto-scroller/fluid-scroller/get-scroll/adjust-for-size-limits.ts b/node_modules/@hello-pangea/dnd/src/state/auto-scroller/fluid-scroller/get-scroll/adjust-for-size-limits.ts
+index ca5b51d..2156fe0 100644
+--- a/node_modules/@hello-pangea/dnd/src/state/auto-scroller/fluid-scroller/get-scroll/adjust-for-size-limits.ts
++++ b/node_modules/@hello-pangea/dnd/src/state/auto-scroller/fluid-scroller/get-scroll/adjust-for-size-limits.ts
+@@ -4,13 +4,19 @@ interface Args {
+   container: Rect;
+   subject: Rect;
+   proposedScroll: Position;
++  ignoreSizeLimits: boolean;
+ }
+ 
+ export default ({
+   container,
+   subject,
+   proposedScroll,
++  ignoreSizeLimits,
+ }: Args): Position | null => {
++  if (ignoreSizeLimits) {
++    return proposedScroll;
++  }
++
+   const isTooBigVertically: boolean = subject.height > container.height;
+   const isTooBigHorizontally: boolean = subject.width > container.width;
+ 
+diff --git a/node_modules/@hello-pangea/dnd/src/state/auto-scroller/fluid-scroller/get-scroll/index.ts b/node_modules/@hello-pangea/dnd/src/state/auto-scroller/fluid-scroller/get-scroll/index.ts
+index ace400a..d1ed529 100644
+--- a/node_modules/@hello-pangea/dnd/src/state/auto-scroller/fluid-scroller/get-scroll/index.ts
++++ b/node_modules/@hello-pangea/dnd/src/state/auto-scroller/fluid-scroller/get-scroll/index.ts
+@@ -25,6 +25,8 @@ export default ({
+   shouldUseTimeDampening,
+   getAutoScrollerOptions,
+ }: Args): Position | null => {
++  const autoScrollerOptions = getAutoScrollerOptions();
++
+   // get distance to each edge
+   const distanceToEdges: Spacing = {
+     top: center.y - container.top,
+@@ -47,7 +49,7 @@ export default ({
+     dragStartTime,
+     axis: vertical,
+     shouldUseTimeDampening,
+-    getAutoScrollerOptions,
++    getAutoScrollerOptions: () => autoScrollerOptions,
+   });
+   const x: number = getScrollOnAxis({
+     container,
+@@ -55,7 +57,7 @@ export default ({
+     dragStartTime,
+     axis: horizontal,
+     shouldUseTimeDampening,
+-    getAutoScrollerOptions,
++    getAutoScrollerOptions: () => autoScrollerOptions,
+   });
+ 
+   const required: Position = clean({ x, y });
+@@ -70,6 +72,7 @@ export default ({
+     container,
+     subject,
+     proposedScroll: required,
++    ignoreSizeLimits: autoScrollerOptions.ignoreSizeLimits,
+   });
+ 
+   if (!limited) {
+diff --git a/node_modules/@hello-pangea/dnd/src/state/auto-scroller/fluid-scroller/scroll.ts b/node_modules/@hello-pangea/dnd/src/state/auto-scroller/fluid-scroller/scroll.ts
+index 9509e1f..dbd1dbd 100644
+--- a/node_modules/@hello-pangea/dnd/src/state/auto-scroller/fluid-scroller/scroll.ts
++++ b/node_modules/@hello-pangea/dnd/src/state/auto-scroller/fluid-scroller/scroll.ts
+@@ -29,10 +29,24 @@ export default ({
+   scrollDroppable,
+   getAutoScrollerOptions,
+ }: Args): void => {
+-  const center: Position = state.current.page.borderBoxCenter;
++  const autoScrollerOptions = getAutoScrollerOptions();
++  const center: Position = autoScrollerOptions.ignoreSizeLimits
++    ? state.current.page.selection
++    : state.current.page.borderBoxCenter;
+   const draggable: DraggableDimension =
+     state.dimensions.draggables[state.critical.draggable.id];
+-  const subject: Rect = draggable.page.marginBox;
++  const subject: Rect = autoScrollerOptions.ignoreSizeLimits
++    ? {
++        top: center.y,
++        right: center.x,
++        bottom: center.y,
++        left: center.x,
++        width: 0,
++        height: 0,
++        x: center.x,
++        y: center.y,
++      }
++    : draggable.page.marginBox;
+   // 1. Can we scroll the viewport?
+   if (state.isWindowScrollAllowed) {
+     const viewport: Viewport = state.viewport;
+@@ -42,7 +56,7 @@ export default ({
+       subject,
+       center,
+       shouldUseTimeDampening,
+-      getAutoScrollerOptions,
++      getAutoScrollerOptions: () => autoScrollerOptions,
+     });
+ 
+     if (change) {
+@@ -67,7 +81,7 @@ export default ({
+     subject,
+     center,
+     shouldUseTimeDampening,
+-    getAutoScrollerOptions,
++    getAutoScrollerOptions: () => autoScrollerOptions,
+   });
+ 
+   if (change) {
 diff --git a/node_modules/@hello-pangea/dnd/src/state/droppable/with-placeholder.ts b/node_modules/@hello-pangea/dnd/src/state/droppable/with-placeholder.ts
 index eac3a01..abd01fe 100644
 --- a/node_modules/@hello-pangea/dnd/src/state/droppable/with-placeholder.ts
@@ -384,6 +838,105 @@ index a2b24b2..d400d31 100644
        distanceFromEndToBorderBoxCenter(axis, isMoving),
      getCrossAxisBorderBoxCenter(axis, moveRelativeTo.marginBox, isMoving),
    );
+diff --git a/node_modules/@hello-pangea/dnd/src/view/drag-drop-context/app.tsx b/node_modules/@hello-pangea/dnd/src/view/drag-drop-context/app.tsx
+index 617427b..efa66a9 100644
+--- a/node_modules/@hello-pangea/dnd/src/view/drag-drop-context/app.tsx
++++ b/node_modules/@hello-pangea/dnd/src/view/drag-drop-context/app.tsx
+@@ -55,6 +55,10 @@ import {
+   PartialAutoScrollerOptions,
+ } from '../../state/auto-scroller/fluid-scroller/auto-scroller-options-types';
+ import { defaultAutoScrollerOptions } from '../../state/auto-scroller/fluid-scroller/config';
++import {
++  setZIndexOptions,
++} from '../draggable/get-style';
++import type { ZIndexOptions } from '../draggable/draggable-types';
+ 
+ export interface Props extends Responders {
+   contextId: string;
+@@ -70,6 +74,7 @@ export interface Props extends Responders {
+   // options to exert more control over autoScroll
+   // eslint-disable-next-line react/no-unused-prop-types
+   autoScrollerOptions?: PartialAutoScrollerOptions;
++  zIndexOptions?: Partial<ZIndexOptions>;
+ }
+ 
+ const createResponders = (props: Props): Responders => ({
+@@ -135,6 +140,11 @@ export default function App(props: Props) {
+     return createAutoScrollerOptions(lastPropsRef.current);
+   }, [lastPropsRef]);
+ 
++  useEffect(() => {
++    setZIndexOptions(props.zIndexOptions);
++    return () => setZIndexOptions(undefined);
++  }, [props.zIndexOptions]);
++
+   const announce: Announce = useAnnouncer(contextId);
+ 
+   const dragHandleUsageInstructionsId: ElementId = useHiddenTextElement({
+diff --git a/node_modules/@hello-pangea/dnd/src/view/drag-drop-context/drag-drop-context.tsx b/node_modules/@hello-pangea/dnd/src/view/drag-drop-context/drag-drop-context.tsx
+index e1b7a18..df0db04 100644
+--- a/node_modules/@hello-pangea/dnd/src/view/drag-drop-context/drag-drop-context.tsx
++++ b/node_modules/@hello-pangea/dnd/src/view/drag-drop-context/drag-drop-context.tsx
+@@ -10,6 +10,7 @@ import useUniqueContextId, {
+ } from './use-unique-context-id';
+ import { resetDeprecatedUniqueId } from '../use-unique-id';
+ import { PartialAutoScrollerOptions } from '../../state/auto-scroller/fluid-scroller/auto-scroller-options-types';
++import type { ZIndexOptions } from '../draggable/draggable-types';
+ 
+ export interface DragDropContextProps extends Responders {
+   // We do not technically need any children for this component
+@@ -26,6 +27,10 @@ export interface DragDropContextProps extends Responders {
+    * Customize auto scroller
+    */
+   autoScrollerOptions?: PartialAutoScrollerOptions;
++  /**
++   * Customize the drag layer z-index values.
++   */
++  zIndexOptions?: Partial<ZIndexOptions>;
+ }
+ 
+ // Reset any context that gets persisted across server side renders
+@@ -66,6 +71,7 @@ export default function DragDropContext(props: DragDropContextProps) {
+           onDragUpdate={props.onDragUpdate}
+           onDragEnd={props.onDragEnd}
+           autoScrollerOptions={props.autoScrollerOptions}
++          zIndexOptions={props.zIndexOptions}
+         >
+           {props.children}
+         </App>
+diff --git a/node_modules/@hello-pangea/dnd/src/view/draggable/get-style.ts b/node_modules/@hello-pangea/dnd/src/view/draggable/get-style.ts
+index 5e0b1b7..f5b752d 100644
+--- a/node_modules/@hello-pangea/dnd/src/view/draggable/get-style.ts
++++ b/node_modules/@hello-pangea/dnd/src/view/draggable/get-style.ts
+@@ -17,6 +17,17 @@ export const zIndexOptions: ZIndexOptions = {
+   dropAnimating: 4500,
+ };
+ 
++let currentZIndexOptions: ZIndexOptions = zIndexOptions;
++
++export const setZIndexOptions = (
++  next?: Partial<ZIndexOptions> | null,
++): void => {
++  currentZIndexOptions = {
++    ...zIndexOptions,
++    ...next,
++  };
++};
++
+ const getDraggingTransition = (
+   shouldAnimateDragMovement: boolean,
+   dropping?: DropAnimation | null,
+@@ -83,8 +94,8 @@ function getDraggingStyle(dragging: DraggingMapProps): DraggingStyle {
+     opacity: getDraggingOpacity(isCombining, isDropAnimating),
+     // ## Layering
+     zIndex: isDropAnimating
+-      ? zIndexOptions.dropAnimating
+-      : zIndexOptions.dragging,
++      ? currentZIndexOptions.dropAnimating
++      : currentZIndexOptions.dragging,
+ 
+     // ## Blocking any pointer events on the dragging or dropping item
+     // global styles on cover while dragging
 diff --git a/node_modules/@hello-pangea/dnd/src/view/use-draggable-publisher/get-dimension.ts b/node_modules/@hello-pangea/dnd/src/view/use-draggable-publisher/get-dimension.ts
 index 29a7e4d..1febd58 100644
 --- a/node_modules/@hello-pangea/dnd/src/view/use-draggable-publisher/get-dimension.ts
