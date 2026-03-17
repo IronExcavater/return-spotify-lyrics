@@ -5,6 +5,7 @@ import type {
     MediaActionGroup,
     MediaItem,
 } from '../../shared/types';
+import { canManageTrackPlaylists } from '../data/trackPlaylists';
 import { updateCachedAssumedNowPlaying } from './mediaCacheEntries';
 
 const openExternal = (url: string) => {
@@ -50,6 +51,16 @@ const addPlaylistToQueue = async (playlistId: string) => {
         if (!page.next || page.items.length === 0) break;
         offset += page.items.length;
     }
+};
+
+export const TRACK_PLAYLISTS_ACTION_ID = 'choose-playlists';
+const TRACK_PLAYLISTS_ACTION_LABEL = 'Choose playlists';
+const openTrackPlaylists = () => undefined;
+const isEditableTarget = (target: EventTarget | null) => {
+    if (!(target instanceof HTMLElement)) return false;
+    if (target.isContentEditable) return true;
+    if (target.closest('[contenteditable="true"]')) return true;
+    return ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName);
 };
 
 export const buildMediaActions = (item: MediaItem): MediaActionGroup => {
@@ -118,21 +129,21 @@ export const buildMediaActions = (item: MediaItem): MediaActionGroup => {
         }
     }
 
+    if (canManageTrackPlaylists(item)) {
+        primary.push({
+            id: TRACK_PLAYLISTS_ACTION_ID,
+            label: TRACK_PLAYLISTS_ACTION_LABEL,
+            shortcut: 'P',
+            onSelect: openTrackPlaylists,
+        });
+    }
+
     if (item.externalUrl) {
         secondary.push({
             id: 'open-spotify',
             label: 'Open in Spotify',
             shortcut: 'O',
             onSelect: () => openExternal(item.externalUrl!),
-        });
-    }
-
-    if (item.artistUrl && item.artistUrl !== item.externalUrl) {
-        secondary.push({
-            id: 'open-artist',
-            label: 'Go to artist',
-            shortcut: 'A',
-            onSelect: () => openExternal(item.artistUrl!),
         });
     }
 
@@ -157,6 +168,7 @@ const shortcutMatches = (shortcut: string, event: KeyboardEvent) => {
 
 export const createMediaActionShortcutHandler =
     (actions: MediaAction[]) => (event: KeyboardEvent) => {
+        if (isEditableTarget(event.target)) return;
         const action = actions.find(
             (item) => item.shortcut && shortcutMatches(item.shortcut, event)
         );

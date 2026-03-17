@@ -398,8 +398,8 @@ export const spotifyRpc = {
         const client = await requireClient();
         return client.playlists.getPlaylistItems(
             id,
-            undefined,
             market,
+            undefined,
             limit,
             offset
         );

@@ -1,7 +1,6 @@
 import { ReactNode, type Ref } from 'react';
 import {
     Cross2Icon,
-    ChevronLeftIcon,
     HomeIcon,
     MagnifyingGlassIcon,
     PlusIcon,
@@ -11,6 +10,7 @@ import clsx from 'clsx';
 import type { FilterKind, SearchFilter, PillValue } from '../../shared/types';
 import { handleMenuTriggerKeyDown } from '../hooks/useActions';
 import { useScrollFade } from '../hooks/useScrollFade';
+import { BackButton } from './BackButton';
 import { Pill } from './Pill';
 import { SearchBar } from './SearchBar';
 
@@ -74,17 +74,7 @@ export function HomeBar({
             <Flex align="start" gap="2">
                 <Flex direction="column" gap="1" className="w-full">
                     <Flex align="center" gap="1" className="w-full">
-                        <IconButton
-                            size="1"
-                            variant="ghost"
-                            radius="full"
-                            disabled={!canGoBack}
-                            aria-label="Go back"
-                            onClick={onGoBack}
-                            className="mt-0.5 h-6 w-4! p-0!"
-                        >
-                            <ChevronLeftIcon />
-                        </IconButton>
+                        <BackButton disabled={!canGoBack} onClick={onGoBack} />
                         <SearchBar
                             value={searchQuery}
                             onChange={onSearchChange}

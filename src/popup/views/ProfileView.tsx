@@ -1,10 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import {
-    Cross2Icon,
-    ExitIcon,
-    MagnifyingGlassIcon,
-    PersonIcon,
-} from '@radix-ui/react-icons';
+import { ExitIcon, PersonIcon } from '@radix-ui/react-icons';
 import {
     AlertDialog,
     Avatar,
@@ -18,7 +13,11 @@ import {
 } from '@radix-ui/themes';
 import { UserProfile } from '@spotify/web-api-ts-sdk';
 import { resolveLocale } from '../../shared/locale';
-import { SearchBar } from '../components/SearchBar';
+import {
+    SearchList,
+    SearchListItem,
+    SearchListMessage,
+} from '../components/SearchList';
 import { SkeletonText } from '../components/SkeletonText';
 import { TextButton } from '../components/TextButton';
 import {
@@ -26,6 +25,7 @@ import {
     type ProfileCacheEntry,
 } from '../hooks/mediaCacheEntries';
 import { SpotifyConnectionMeta } from '../hooks/useAuth';
+import { useDropdownSurface } from '../hooks/useDropdownSurface';
 import { useCachedImage, useMediaCacheEntry } from '../hooks/useMediaCache';
 import { useSettings } from '../hooks/useSettings';
 
@@ -115,6 +115,10 @@ export function ProfileView({ profile, onLogout, connection }: Props) {
     const [localeSearch, setLocaleSearch] = useState('');
     const [localeOpen, setLocaleOpen] = useState(false);
     const { settings, updateSettings } = useSettings();
+    const localeDropdown = useDropdownSurface({
+        onRequestClose: () => setLocaleOpen(false),
+        onClosed: () => setLocaleSearch(''),
+    });
     const resolvedLocale = resolveLocale(settings.locale);
     const absoluteFormatter = useMemo(
         () =>
@@ -389,10 +393,7 @@ export function ProfileView({ profile, onLogout, connection }: Props) {
                             </Flex>
                             <Popover.Root
                                 open={localeOpen}
-                                onOpenChange={(open) => {
-                                    setLocaleOpen(open);
-                                    if (!open) setLocaleSearch('');
-                                }}
+                                onOpenChange={setLocaleOpen}
                             >
                                 <Popover.Trigger>
                                     <Button
@@ -406,68 +407,28 @@ export function ProfileView({ profile, onLogout, connection }: Props) {
                                 <Popover.Content
                                     align="end"
                                     sideOffset={6}
-                                    className="w-65 p-0!"
-                                    style={{ padding: 0 }}
+                                    className="search-list-surface"
+                                    {...localeDropdown.contentProps}
                                 >
-                                    <Flex
-                                        direction="column"
-                                        gap="1"
-                                        className="px-1 pt-1"
-                                    >
-                                        <SearchBar
-                                            value={localeSearch}
-                                            onChange={(value) =>
-                                                setLocaleSearch(value)
-                                            }
-                                            onClear={() => setLocaleSearch('')}
-                                            placeholder="Search locales"
-                                            size="1"
-                                            radius="full"
-                                            className="w-full min-w-0"
-                                            leftSlot={
-                                                <IconButton
-                                                    size="1"
-                                                    variant="ghost"
-                                                    aria-label="Search locales"
-                                                >
-                                                    <MagnifyingGlassIcon />
-                                                </IconButton>
-                                            }
-                                            rightSlot={
-                                                <IconButton
-                                                    size="1"
-                                                    variant="ghost"
-                                                    onClick={() =>
-                                                        setLocaleSearch('')
-                                                    }
-                                                    aria-label="Clear locale search"
-                                                >
-                                                    <Cross2Icon />
-                                                </IconButton>
-                                            }
-                                        />
-                                    </Flex>
-                                    <Flex
-                                        direction="column"
-                                        gap="1"
-                                        className="mt-1 max-h-55 overflow-y-auto px-1 pb-1"
-                                    >
-                                        {localeOptions.length === 0 && (
-                                            <Text
-                                                size="1"
-                                                color="gray"
-                                                className="px-2 py-1"
-                                            >
+                                    <SearchList
+                                        items={localeOptions}
+                                        query={localeSearch}
+                                        onQueryChange={setLocaleSearch}
+                                        onClearQuery={() => setLocaleSearch('')}
+                                        placeholder="Search locales"
+                                        searchAriaLabel="Search locales"
+                                        clearSearchAriaLabel="Clear locale search"
+                                        width="14rem"
+                                        maxListHeight="13.75rem"
+                                        emptyState={
+                                            <SearchListMessage>
                                                 No matches
-                                            </Text>
-                                        )}
-                                        {localeOptions.map((option) => (
-                                            <Button
-                                                key={option.locale}
-                                                size="1"
-                                                variant="ghost"
-                                                color="gray"
-                                                className="text-gray-12 w-full justify-between gap-2 px-2 py-1 text-left"
+                                            </SearchListMessage>
+                                        }
+                                        getKey={(option) => option.locale}
+                                        renderItem={(option) => (
+                                            <SearchListItem
+                                                className="justify-between"
                                                 onClick={() => {
                                                     updateSettings({
                                                         locale: option.locale,
@@ -475,29 +436,22 @@ export function ProfileView({ profile, onLogout, connection }: Props) {
                                                     setLocaleOpen(false);
                                                 }}
                                             >
-                                                <Flex
-                                                    align="center"
-                                                    justify="between"
-                                                    gap="2"
-                                                    className="w-full"
+                                                <Text
+                                                    size="1"
+                                                    className="min-w-0 truncate"
                                                 >
-                                                    <Text
-                                                        size="1"
-                                                        className="truncate"
-                                                    >
-                                                        {option.label}
-                                                    </Text>
-                                                    <Text
-                                                        size="1"
-                                                        color="gray"
-                                                        className="shrink-0 text-[11px]"
-                                                    >
-                                                        {option.locale}
-                                                    </Text>
-                                                </Flex>
-                                            </Button>
-                                        ))}
-                                    </Flex>
+                                                    {option.label}
+                                                </Text>
+                                                <Text
+                                                    size="1"
+                                                    color="gray"
+                                                    className="shrink-0 text-[11px]"
+                                                >
+                                                    {option.locale}
+                                                </Text>
+                                            </SearchListItem>
+                                        )}
+                                    />
                                 </Popover.Content>
                             </Popover.Root>
                         </Flex>

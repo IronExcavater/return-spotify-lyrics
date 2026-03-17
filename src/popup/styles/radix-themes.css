@@ -103,3 +103,11 @@
         drop-shadow(0 1px 0 var(--tooltip-border))
         drop-shadow(0 -1px 0 var(--tooltip-border));
 }
+
+.search-list-surface {
+    padding: 0 !important;
+}
+
+.search-list-surface :is(.rt-DropdownMenuViewport, .rt-BaseMenuViewport) {
+    padding: 0;
+}

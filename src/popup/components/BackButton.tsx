@@ -11,7 +11,7 @@ export function BackButton({ className, ...props }: Props) {
             variant="ghost"
             radius="full"
             aria-label="Go back"
-            className={clsx('h-6 w-6 shrink-0 p-0!', className)}
+            className={clsx('mt-0.5 h-6 w-4! shrink-0 p-0!', className)}
             {...props}
         >
             <ChevronLeftIcon />

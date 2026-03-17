@@ -438,7 +438,10 @@ export default function App({ surface = 'popup' }: AppProps) {
                     <Route
                         path="/login"
                         element={
-                            <ProtectedLayout when={mustLogout} redirectTo="/">
+                            <ProtectedLayout
+                                when={mustLogout}
+                                redirectTo="/home"
+                            >
                                 <LoginView onLogin={login} />
                             </ProtectedLayout>
                         }

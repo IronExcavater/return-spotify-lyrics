@@ -1,13 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import {
     CheckIcon,
-    Cross2Icon,
     HeartFilledIcon,
-    MagnifyingGlassIcon,
     PlusIcon,
     ReloadIcon,
 } from '@radix-ui/react-icons';
-import { Avatar, Flex, IconButton, Text } from '@radix-ui/themes';
+import { Avatar, Flex, IconButton, Skeleton, Text } from '@radix-ui/themes';
 
 import type { MediaItem } from '../../shared/types';
 import {
@@ -21,13 +19,32 @@ import {
     toggleTrackPlaylistMembership,
     type PlaylistCatalogEntry,
 } from '../data/trackPlaylists';
-import { BackButton } from './BackButton';
-import { SearchBar } from './SearchBar';
+import { Fade } from './Fade';
+import { Marquee } from './Marquee';
+import { SearchList, SearchListItem, SearchListMessage } from './SearchList';
+import { SkeletonText } from './SkeletonText';
 
 type Props = {
     item?: MediaItem | null;
-    onBack: () => void;
+    headerStart?: ReactNode;
 };
+
+type PlaylistRow = {
+    id: string;
+    name: string;
+    imageUrl?: string;
+    subtitle?: string;
+    editable: boolean;
+    contains: boolean | null;
+    loading: boolean;
+    pending: boolean;
+    isLiked: boolean;
+    playlist?: PlaylistCatalogEntry;
+};
+
+const PICKER_WIDTH = '18rem';
+const PICKER_MAX_LIST_HEIGHT =
+    'min(15rem, calc(var(--radix-dropdown-menu-content-available-height, 16rem) - 2.5rem))';
 
 function PlaylistIndicator({
     active,
@@ -91,9 +108,111 @@ function PlaylistIndicator({
     );
 }
 
-export function PlaylistPicker({ item, onBack }: Props) {
+function PlaylistRowItem({
+    row,
+    loading = false,
+    onToggle,
+}: {
+    row: PlaylistRow;
+    loading?: boolean;
+    onToggle?: (id: string, playlist?: PlaylistCatalogEntry) => void;
+}) {
+    const subtitle = row.isLiked ? undefined : row.subtitle;
+    const skeletonParts = [row.name, subtitle, row.imageUrl];
+
+    return (
+        <SearchListItem highlight={!loading}>
+            <Skeleton loading={loading}>
+                <Avatar
+                    src={row.imageUrl}
+                    fallback={
+                        row.isLiked ? (
+                            <HeartFilledIcon />
+                        ) : (
+                            <Text size="1" weight="bold">
+                                {row.name.charAt(0).toUpperCase()}
+                            </Text>
+                        )
+                    }
+                    radius="small"
+                    size="2"
+                    className="shrink-0"
+                />
+            </Skeleton>
+            <Flex
+                direction="column"
+                justify="center"
+                className="min-w-0 flex-1"
+            >
+                <Fade enabled={!loading} grow>
+                    <SkeletonText
+                        loading={loading}
+                        parts={skeletonParts}
+                        preset="media-row"
+                    >
+                        <Marquee mode="bounce" grow>
+                            <Text
+                                size="1"
+                                weight="medium"
+                                className="block min-w-0"
+                            >
+                                {row.name}
+                            </Text>
+                        </Marquee>
+                    </SkeletonText>
+                </Fade>
+                {subtitle && (
+                    <Fade enabled={!loading} grow>
+                        <SkeletonText
+                            loading={loading}
+                            parts={skeletonParts}
+                            preset="media-row"
+                            variant="subtitle"
+                        >
+                            <Marquee mode="left" grow>
+                                <Text
+                                    size="1"
+                                    color="gray"
+                                    className="block min-w-0"
+                                >
+                                    {subtitle}
+                                </Text>
+                            </Marquee>
+                        </SkeletonText>
+                    </Fade>
+                )}
+            </Flex>
+            {loading ? (
+                <Skeleton loading>
+                    <div className="h-7 w-7 rounded-full" />
+                </Skeleton>
+            ) : (
+                <PlaylistIndicator
+                    active={row.contains}
+                    loading={row.loading}
+                    pending={row.pending}
+                    disabled={row.pending || row.loading || !row.editable}
+                    onClick={() => onToggle?.(row.id, row.playlist)}
+                />
+            )}
+        </SearchListItem>
+    );
+}
+
+const LOADING_ROWS: PlaylistRow[] = Array.from({ length: 8 }, (_, index) => ({
+    id: `loading-${index}`,
+    name: `Playlist ${index + 1}`,
+    subtitle: 'Loading owner',
+    editable: false,
+    contains: null,
+    loading: true,
+    pending: false,
+    isLiked: false,
+}));
+
+export function PlaylistPicker({ item, headerStart }: Props) {
     const inputRef = useRef<HTMLInputElement | null>(null);
-    const target = useMemo(() => resolveTrackPlaylistTarget(item), [item]);
+    const target = resolveTrackPlaylistTarget(item);
     const targetTrackId = target?.trackId;
     const targetTrackUri = target?.trackUri;
     const [userId, setUserId] = useState<string | undefined>(undefined);
@@ -127,6 +246,13 @@ export function PlaylistPicker({ item, onBack }: Props) {
         }
 
         let cancelled = false;
+        setUserId(undefined);
+        setCatalog([]);
+        setMembership({});
+        setLoadingById({});
+        setPendingById({});
+        setError(null);
+        setLoading(true);
 
         const loadMenu = async () => {
             try {
@@ -140,8 +266,6 @@ export function PlaylistPicker({ item, onBack }: Props) {
                 setCatalog(initialData.catalog);
                 setMembership(initialData.membership);
                 setLoadingById(initialData.loadingById);
-                setLoading(true);
-                setError(null);
 
                 if (initialData.needsLikedRefresh) {
                     void ensureTrackLikedMembership({
@@ -225,8 +349,8 @@ export function PlaylistPicker({ item, onBack }: Props) {
         };
     }, [targetTrackId, targetTrackUri]);
 
-    const rows = useMemo(() => {
-        const likedRow = {
+    const rows = useMemo<PlaylistRow[]>(() => {
+        const likedRow: PlaylistRow = {
             id: LIKED_PLAYLIST_ID,
             name: 'Liked Songs',
             imageUrl: undefined,
@@ -239,18 +363,22 @@ export function PlaylistPicker({ item, onBack }: Props) {
             playlist: undefined,
         };
 
-        const playlistRows = catalog.map((playlist) => ({
-            id: playlist.id,
-            name: playlist.name,
-            imageUrl: playlist.imageUrl,
-            subtitle: playlist.ownerName,
-            editable: playlist.editable,
-            contains: membership[playlist.id] ?? null,
-            loading: loadingById[playlist.id] ?? false,
-            pending: pendingById[playlist.id] ?? false,
-            isLiked: false,
-            playlist,
-        }));
+        const playlistRows = catalog
+            .filter((playlist) => playlist.editable)
+            .map(
+                (playlist): PlaylistRow => ({
+                    id: playlist.id,
+                    name: playlist.name,
+                    imageUrl: playlist.imageUrl,
+                    subtitle: playlist.ownerName,
+                    editable: playlist.editable,
+                    contains: membership[playlist.id] ?? null,
+                    loading: loadingById[playlist.id] ?? false,
+                    pending: pendingById[playlist.id] ?? false,
+                    isLiked: false,
+                    playlist,
+                })
+            );
 
         const allRows = [likedRow, ...playlistRows];
         const trimmedQuery = query.trim().toLowerCase();
@@ -365,156 +493,42 @@ export function PlaylistPicker({ item, onBack }: Props) {
         }
     };
 
-    return (
-        <Flex
-            direction="column"
-            className="w-full max-w-full min-w-0 overflow-hidden"
-            style={{ maxWidth: '100%', boxSizing: 'border-box' }}
-        >
-            <Flex
-                align="center"
-                gap="1"
-                className="w-full max-w-full min-w-0 px-1 pt-1 pb-1"
-            >
-                <BackButton
-                    aria-label="Back to actions"
-                    className="shrink-0"
-                    onClick={(event) => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        onBack();
-                    }}
-                />
-                <div className="min-w-0 flex-1 basis-0 overflow-hidden px-px">
-                    <SearchBar
-                        value={query}
-                        onChange={setQuery}
-                        onClear={() => setQuery('')}
-                        placeholder="Search playlists"
-                        size="1"
-                        radius="full"
-                        className="w-full min-w-0"
-                        inputRef={inputRef}
-                        leftSlot={
-                            <IconButton
-                                size="1"
-                                variant="ghost"
-                                aria-label="Search playlists"
-                            >
-                                <MagnifyingGlassIcon />
-                            </IconButton>
-                        }
-                        rightSlot={
-                            <IconButton
-                                size="1"
-                                variant="ghost"
-                                onClick={() => setQuery('')}
-                                aria-label="Clear playlist search"
-                            >
-                                <Cross2Icon />
-                            </IconButton>
-                        }
-                    />
-                </div>
-            </Flex>
-            <Flex
-                direction="column"
-                gap="0"
-                className="mt-1 w-full max-w-full min-w-0 overflow-x-hidden overflow-y-auto px-1 pb-1"
-                style={{
-                    maxHeight:
-                        'min(15rem, calc(var(--radix-dropdown-menu-content-available-height, 16rem) - 2.5rem))',
-                }}
-            >
-                {error && (
-                    <Text
-                        size="1"
-                        color="gray"
-                        className="px-2 py-2 wrap-break-word"
-                    >
-                        {error}
-                    </Text>
-                )}
-                {loading && rows.length === 0 && (
-                    <Text size="1" color="gray" className="px-2 py-2">
-                        Loading playlists...
-                    </Text>
-                )}
-                {!loading && rows.length === 0 && (
-                    <Text size="1" color="gray" className="px-2 py-2">
-                        No matches
-                    </Text>
-                )}
-                {rows.map((row) => {
-                    const disabled =
-                        row.pending || row.loading || !row.editable;
-                    const subtitle = row.isLiked
-                        ? undefined
-                        : row.editable
-                          ? row.subtitle
-                          : 'Read only';
+    const showLoadingRows = loading && catalog.length === 0 && !error;
+    const visibleRows = showLoadingRows ? LOADING_ROWS : rows;
 
-                    return (
-                        <Flex
-                            key={row.id}
-                            align="center"
-                            gap="1"
-                            className="w-full max-w-full min-w-0 overflow-hidden rounded-sm px-2 py-1.5 transition-colors hover:bg-white/4"
-                            style={{
-                                minHeight: '2.5rem',
-                                boxSizing: 'border-box',
-                            }}
-                        >
-                            <Avatar
-                                src={row.imageUrl}
-                                fallback={
-                                    row.isLiked ? (
-                                        <HeartFilledIcon />
-                                    ) : (
-                                        <Text size="1" weight="bold">
-                                            {row.name.charAt(0).toUpperCase()}
-                                        </Text>
-                                    )
-                                }
-                                radius="small"
-                                size="2"
-                                className="shrink-0"
-                            />
-                            <Flex
-                                direction="column"
-                                justify="center"
-                                className="min-w-0 flex-1 overflow-hidden"
-                            >
-                                <Text
-                                    size="1"
-                                    weight="medium"
-                                    className="truncate"
-                                >
-                                    {row.name}
-                                </Text>
-                                {subtitle && (
-                                    <Text
-                                        size="1"
-                                        color="gray"
-                                        className="truncate"
-                                    >
-                                        {subtitle}
-                                    </Text>
-                                )}
-                            </Flex>
-                            <PlaylistIndicator
-                                active={row.contains}
-                                loading={row.loading}
-                                pending={row.pending}
-                                disabled={disabled}
-                                onClick={() => {
-                                    void handleToggle(row.id, row.playlist);
-                                }}
-                            />
-                        </Flex>
-                    );
-                })}
-            </Flex>
-        </Flex>
+    return (
+        <SearchList
+            items={visibleRows}
+            query={query}
+            onQueryChange={setQuery}
+            onClearQuery={() => setQuery('')}
+            placeholder="Search playlists"
+            searchAriaLabel="Search playlists"
+            clearSearchAriaLabel="Clear playlist search"
+            inputRef={inputRef}
+            leading={headerStart}
+            width={PICKER_WIDTH}
+            maxListHeight={PICKER_MAX_LIST_HEIGHT}
+            beforeItems={
+                error ? (
+                    <SearchListMessage className="wrap-break-word">
+                        {error}
+                    </SearchListMessage>
+                ) : null
+            }
+            emptyState={
+                !loading ? (
+                    <SearchListMessage>No matches</SearchListMessage>
+                ) : null
+            }
+            getKey={(row) => row.id}
+            renderItem={(row) => (
+                <PlaylistRowItem
+                    row={row}
+                    loading={showLoadingRows}
+                    onToggle={(id, playlist) => void handleToggle(id, playlist)}
+                />
+            )}
+        />
     );
 }

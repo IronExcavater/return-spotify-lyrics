@@ -5,16 +5,20 @@ import type {
     MediaActionGroup,
     MediaItem,
 } from '../../shared/types';
-import { canManageTrackPlaylists } from '../data/trackPlaylists';
+import { useDropdownSurface } from '../hooks/useDropdownSurface';
 import {
     createMediaActionShortcutHandler,
-    flattenMediaActions,
+    TRACK_PLAYLISTS_ACTION_ID,
 } from '../hooks/useMediaActions';
-import { useOverlaySurface } from '../hooks/useOverlaySurface';
+import { BackButton } from './BackButton';
 import { PlaylistPicker } from './PlaylistPicker';
 
 type Align = 'start' | 'center' | 'end';
 type Size = '1' | '2';
+type MenuView = 'actions' | 'playlists';
+type PreventDefaultEvent = {
+    preventDefault: () => void;
+};
 
 type Props = {
     actions?: MediaActionGroup | null;
@@ -29,102 +33,85 @@ export function MediaActionsMenu({
     align = 'end',
     size = '1',
 }: Props) {
-    const [view, setView] = useState<'actions' | 'playlists'>('actions');
-    const canManagePlaylists = canManageTrackPlaylists(item);
     const itemKey = item?.id ?? item?.uri ?? item?.title ?? '';
+    const [view, setView] = useState<MenuView>('actions');
+    const primaryActions = actions?.primary ?? [];
+    const secondaryActions = actions?.secondary ?? [];
+    const allActions = [...primaryActions, ...secondaryActions];
+    const hasPlaylistAction = allActions.some(
+        (action) => action.id === TRACK_PLAYLISTS_ACTION_ID
+    );
+    const showSecondarySeparator =
+        secondaryActions.length > 0 && primaryActions.length > 0;
 
     useEffect(() => {
         setView('actions');
-    }, [itemKey, canManagePlaylists]);
+    }, [itemKey, hasPlaylistAction]);
 
-    const resetView = () => {
-        setView('actions');
-    };
-    const overlay = useOverlaySurface({ onClose: resetView });
+    const { contentProps } = useDropdownSurface({
+        onClosed: () => setView('actions'),
+        resetKey: `${itemKey}:${view}`,
+    });
 
-    const managePlaylistsAction: MediaAction | null = canManagePlaylists
-        ? {
-              id: 'manage-playlists',
-              label: 'Manage playlists',
-              shortcut: 'P',
-              onSelect: () => setView('playlists'),
-          }
-        : null;
-    const mergedActions: MediaActionGroup | null =
-        actions || managePlaylistsAction
-            ? {
-                  primary: [
-                      ...(actions?.primary ?? []),
-                      ...(managePlaylistsAction ? [managePlaylistsAction] : []),
-                  ],
-                  secondary: actions?.secondary ?? [],
-              }
-            : null;
-
-    if (!mergedActions) return null;
-    const allActions = flattenMediaActions(mergedActions);
-    if (allActions.length === 0) return null;
-    const handleShortcutKeyDown = createMediaActionShortcutHandler(allActions);
-    const handleSelect =
-        (action: (typeof allActions)[number]) => (event: Event) => {
-            if (action.id === 'manage-playlists') {
-                event.preventDefault();
-            }
-            event.stopPropagation();
-            action.onSelect();
-        };
-
-    if (view === 'playlists' && canManagePlaylists) {
-        return (
-            <DropdownMenu.Content
-                align={align}
-                size={size}
-                className="min-w-0 overflow-hidden p-0!"
-                style={{
-                    padding: 0,
-                    boxSizing: 'border-box',
-                    width: '19rem',
-                    maxWidth:
-                        'min(calc(100vw - 0.75rem), var(--radix-dropdown-menu-content-available-width, 19rem))',
-                }}
-                {...overlay.boundaryProps}
-                {...overlay.dismissProps}
-            >
-                <PlaylistPicker item={item} onBack={() => setView('actions')} />
-            </DropdownMenu.Content>
-        );
+    if (allActions.length === 0) {
+        return null;
     }
+
+    const handleActionSelect = (
+        action: MediaAction,
+        event?: PreventDefaultEvent
+    ) => {
+        if (action.id === TRACK_PLAYLISTS_ACTION_ID) {
+            event?.preventDefault();
+            setView('playlists');
+            return;
+        }
+        action.onSelect();
+    };
+
+    const handleShortcutKeyDown = createMediaActionShortcutHandler(
+        allActions.map((action) => ({
+            ...action,
+            onSelect: () => handleActionSelect(action),
+        }))
+    );
+
+    const renderActionItem = (action: MediaAction) => (
+        <DropdownMenu.Item
+            key={action.id}
+            shortcut={action.shortcut}
+            onSelect={(event) => handleActionSelect(action, event)}
+        >
+            {action.label}
+        </DropdownMenu.Item>
+    );
 
     return (
         <DropdownMenu.Content
             align={align}
             size={size}
-            onKeyDown={(event) => handleShortcutKeyDown(event.nativeEvent)}
-            {...overlay.boundaryProps}
-            {...overlay.dismissProps}
+            className={view === 'playlists' ? 'search-list-surface' : undefined}
+            onKeyDown={
+                view === 'actions'
+                    ? (event) => handleShortcutKeyDown(event.nativeEvent)
+                    : undefined
+            }
+            {...contentProps}
         >
-            {mergedActions.primary.map((action) => (
-                <DropdownMenu.Item
-                    key={action.id}
-                    shortcut={action.shortcut}
-                    onSelect={handleSelect(action)}
-                >
-                    {action.label}
-                </DropdownMenu.Item>
-            ))}
-            {mergedActions.primary.length > 0 &&
-                mergedActions.secondary.length > 0 && (
-                    <DropdownMenu.Separator />
-                )}
-            {mergedActions.secondary.map((action) => (
-                <DropdownMenu.Item
-                    key={action.id}
-                    shortcut={action.shortcut}
-                    onSelect={handleSelect(action)}
-                >
-                    {action.label}
-                </DropdownMenu.Item>
-            ))}
+            {view === 'playlists' ? (
+                <PlaylistPicker
+                    item={item}
+                    headerStart={
+                        <BackButton onClick={() => setView('actions')} />
+                    }
+                />
+            ) : (
+                <>
+                    {primaryActions.map(renderActionItem)}
+                    {showSecondarySeparator && <DropdownMenu.Separator />}
+                    {secondaryActions.map(renderActionItem)}
+                </>
+            )}
         </DropdownMenu.Content>
     );
 }

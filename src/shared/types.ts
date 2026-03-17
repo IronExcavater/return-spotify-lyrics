@@ -26,7 +26,6 @@ export type MediaItem = {
     imageUrl?: string;
     uri?: string;
     externalUrl?: string;
-    artistUrl?: string;
     kind?: MediaKind;
     parentKind?: MediaKind;
     parentId?: string;

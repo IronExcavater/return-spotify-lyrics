@@ -55,7 +55,6 @@ export const trackToItem = (track: Track): MediaItem => ({
     imageUrl: getImageUrl(track.album?.images),
     uri: track.uri,
     externalUrl: track.external_urls?.spotify,
-    artistUrl: track.artists?.[0]?.external_urls?.spotify,
     kind: 'track',
     parentKind: track.album?.id ? 'album' : undefined,
     parentId: track.album?.id,
@@ -74,7 +73,6 @@ export const albumToItem = (album: SimplifiedAlbum | Album): MediaItem => ({
     imageUrl: getImageUrl(album.images),
     uri: album.uri,
     externalUrl: album.external_urls?.spotify,
-    artistUrl: album.artists?.[0]?.external_urls?.spotify,
     kind: 'album',
 });
 
@@ -196,7 +194,6 @@ export const albumTrackToItem = (
     imageUrl: getImageUrl(album.images),
     uri: track.uri,
     externalUrl: track.external_urls?.spotify,
-    artistUrl: track.artists?.[0]?.external_urls?.spotify,
     kind: 'track',
     parentKind: 'album',
     parentId: album.id,
