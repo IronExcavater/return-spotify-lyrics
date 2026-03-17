@@ -285,21 +285,19 @@ export function useAppState({
         setActiveBarState('home');
     }, [activeBar, hasPlayback, hydrated, playbackKnown, showBars]);
 
-    // Restore bar-specific route when switching bars and enforce bar route rules.
+    // Only restore a bar-specific route when the current route is not allowed
+    // in the newly active bar.
     useEffect(() => {
         if (!hydrated) return;
 
         const nextRoute = routeForBar(activeBar, appState.lastRouteByBar);
-        const barChanged =
-            previousBarRef.current !== null &&
-            previousBarRef.current !== activeBar;
-        previousBarRef.current = activeBar;
-
         const routeAllowed =
             currentRoute != null &&
             isRouteAllowed(currentRoute, activeBar, routeRules);
 
-        if ((barChanged || !routeAllowed) && currentRoute !== nextRoute) {
+        previousBarRef.current = activeBar;
+
+        if (!routeAllowed && currentRoute !== nextRoute) {
             navigate(nextRoute, { replace: true });
         }
     }, [

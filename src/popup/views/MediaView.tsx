@@ -754,7 +754,7 @@ export function MediaView() {
             className="no-overflow-anchor scrollbar-gutter-stable flex min-h-0 flex-col overflow-y-auto"
             scrollRef={scrollRef}
         >
-            <StickyLayout.Sticky order={0} className="z-30" heightOffset={8}>
+            <StickyLayout.Sticky order={0} className="z-10" heightOffset={8}>
                 <MediaHero
                     hero={hero}
                     loading={isLoadingView}
@@ -769,6 +769,7 @@ export function MediaView() {
             </StickyLayout.Sticky>
 
             <StickyLayout.Body>
+                <div className="bg-background absolute -top-2 z-10 h-2 w-full shrink-0" />
                 <Flex pl="3" direction="column">
                     {activeKind === 'album' && (
                         <>

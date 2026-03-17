@@ -39,7 +39,7 @@ export function MediaSectionHeader({
             ref={headerRef}
             className={clsx(
                 'relative overflow-visible',
-                stickyHeaderEnabled && 'sticky z-20'
+                stickyHeaderEnabled && 'sticky z-10'
             )}
             style={
                 stickyHeaderEnabled

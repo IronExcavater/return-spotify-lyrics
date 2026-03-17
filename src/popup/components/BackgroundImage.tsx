@@ -6,6 +6,7 @@ type Props = FlexProps & {
     imageUrl?: string;
     gradient?: string;
     zoom?: number;
+    position?: string;
     showGradient?: boolean;
     dim?: number;
     blur?: number;
@@ -17,6 +18,7 @@ export const BackgroundImage = forwardRef<HTMLDivElement, Props>(
             imageUrl,
             gradient,
             zoom = 1.06,
+            position = 'center',
             showGradient = false,
             dim = 0.28,
             blur = 1,
@@ -42,7 +44,7 @@ export const BackgroundImage = forwardRef<HTMLDivElement, Props>(
             ? {
                   backgroundImage,
                   backgroundSize,
-                  backgroundPosition: 'center',
+                  backgroundPosition: position,
                   backgroundRepeat: 'no-repeat',
               }
             : undefined;

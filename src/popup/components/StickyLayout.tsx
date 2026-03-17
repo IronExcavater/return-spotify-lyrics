@@ -191,6 +191,7 @@ type StickyProps = {
     zIndex?: number;
     scope?: 'auto' | 'root';
     heightOffset?: number;
+    disabled?: boolean;
 } & Omit<HTMLAttributes<HTMLDivElement>, 'className' | 'style' | 'children'>;
 
 function Sticky({
@@ -201,6 +202,7 @@ function Sticky({
     zIndex = 30,
     scope = 'auto',
     heightOffset = 0,
+    disabled = false,
     ...rest
 }: StickyProps) {
     const id = useId();
@@ -212,11 +214,13 @@ function Sticky({
     const ref = useRef<HTMLDivElement | null>(null);
 
     useLayoutEffect(() => {
+        if (disabled) return;
         register(id, order);
         return () => unregister(id);
-    }, [id, order, register, unregister]);
+    }, [disabled, id, order, register, unregister]);
 
     useLayoutEffect(() => {
+        if (disabled) return;
         const node = ref.current;
         if (!node) return;
         const measureNode =
@@ -235,16 +239,19 @@ function Sticky({
             observer.observe(node);
         }
         return () => observer.disconnect();
-    }, [heightOffset, id, updateHeight]);
+    }, [disabled, heightOffset, id, updateHeight]);
 
-    const offset = baseOffset + getOffset(id);
+    const offset = disabled ? 0 : baseOffset + getOffset(id);
 
     return (
         <div
             {...rest}
             ref={ref}
-            className={clsx('sticky', className)}
-            style={{ top: offset, zIndex, ...style }}
+            className={clsx(!disabled && 'sticky', className)}
+            style={{
+                ...(disabled ? null : { top: offset, zIndex }),
+                ...style,
+            }}
         >
             {children}
         </div>

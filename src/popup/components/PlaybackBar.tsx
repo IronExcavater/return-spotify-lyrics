@@ -176,6 +176,7 @@ export function PlaybackBar({
             imageUrl={heroImage}
             gradient="linear-gradient(120deg, rgba(5,7,14,0.9), rgba(9,12,22,0.7))"
             zoom={1.06}
+            position="center top"
             blur={2}
         >
             <Flex
@@ -394,8 +395,8 @@ export function PlaybackBar({
                     <button
                         type="button"
                         className={clsx(
-                            'bg-panel-solid/30 absolute -bottom-2 left-1/2 flex h-2.5 w-20 -translate-x-1/2 items-center justify-center rounded-t-md border border-b-0 border-white/10 text-white/55 backdrop-blur transition-colors',
-                            'hover:bg-panel-solid/45 hover:border-white/20 hover:text-white/85',
+                            'absolute -bottom-2 left-1/2 flex h-2.5 w-20 -translate-x-1/2 items-center justify-center rounded-t-md border border-b-0 border-white/10 text-white/55 transition-colors',
+                            'hover:border-white/20 hover:text-white/85',
                             'focus-visible:ring-1 focus-visible:ring-white/40 focus-visible:outline-none'
                         )}
                         onClick={() => onExpandedChange(!expanded)}

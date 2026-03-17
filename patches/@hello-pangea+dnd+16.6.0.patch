@@ -1,5 +1,5 @@
 diff --git a/node_modules/@hello-pangea/dnd/dist/dnd.cjs.js b/node_modules/@hello-pangea/dnd/dist/dnd.cjs.js
-index f4bbae8..1ae3bac 100644
+index f4bbae8..62882b7 100644
 --- a/node_modules/@hello-pangea/dnd/dist/dnd.cjs.js
 +++ b/node_modules/@hello-pangea/dnd/dist/dnd.cjs.js
 @@ -854,13 +854,15 @@ const getCrossAxisBorderBoxCenter = (axis, target, isMoving) => target[axis.cros
@@ -80,17 +80,18 @@ index f4bbae8..1ae3bac 100644
    const requiredGrowth = getRequiredGrowthForPlaceholder(droppable, placeholderSize, draggables);
    const added = {
      placeholderSize,
-@@ -3670,7 +3678,8 @@ const defaultAutoScrollerOptions = {
+@@ -3670,7 +3678,9 @@ const defaultAutoScrollerOptions = {
      stopDampeningAt: 1200,
      accelerateAt: 360
    },
 -  disabled: false
 +  disabled: false,
-+  ignoreSizeLimits: false
++  ignoreSizeLimits: false,
++  disableSecondaryAxisScroll: false
  };
  
  var getDistanceThresholds = ((container, axis, getAutoScrollerOptions = () => defaultAutoScrollerOptions) => {
-@@ -3797,8 +3806,12 @@ var getScrollOnAxis = (({
+@@ -3797,8 +3807,12 @@ var getScrollOnAxis = (({
  var adjustForSizeLimits = (({
    container,
    subject,
@@ -104,7 +105,7 @@ index f4bbae8..1ae3bac 100644
    const isTooBigVertically = subject.height > container.height;
    const isTooBigHorizontally = subject.width > container.width;
    if (!isTooBigHorizontally && !isTooBigVertically) {
-@@ -3822,6 +3835,7 @@ var getScroll$1 = (({
+@@ -3822,6 +3836,7 @@ var getScroll$1 = (({
    shouldUseTimeDampening,
    getAutoScrollerOptions
  }) => {
@@ -112,7 +113,7 @@ index f4bbae8..1ae3bac 100644
    const distanceToEdges = {
      top: center.y - container.top,
      right: container.right - center.x,
-@@ -3834,7 +3848,7 @@ var getScroll$1 = (({
+@@ -3834,7 +3849,7 @@ var getScroll$1 = (({
      dragStartTime,
      axis: vertical,
      shouldUseTimeDampening,
@@ -121,7 +122,7 @@ index f4bbae8..1ae3bac 100644
    });
    const x = getScrollOnAxis({
      container,
-@@ -3842,7 +3856,7 @@ var getScroll$1 = (({
+@@ -3842,7 +3857,7 @@ var getScroll$1 = (({
      dragStartTime,
      axis: horizontal,
      shouldUseTimeDampening,
@@ -130,7 +131,7 @@ index f4bbae8..1ae3bac 100644
    });
    const required = clean({
      x,
-@@ -3854,7 +3868,8 @@ var getScroll$1 = (({
+@@ -3854,7 +3869,8 @@ var getScroll$1 = (({
    const limited = adjustForSizeLimits({
      container,
      subject,
@@ -140,7 +141,7 @@ index f4bbae8..1ae3bac 100644
    });
    if (!limited) {
      return null;
-@@ -4013,9 +4028,19 @@ var scroll = (({
+@@ -4013,40 +4029,64 @@ var scroll = (({
    scrollDroppable,
    getAutoScrollerOptions
  }) => {
@@ -159,28 +160,66 @@ index f4bbae8..1ae3bac 100644
 +    x: center.x,
 +    y: center.y
 +  } : draggable.page.marginBox;
++  const activeDroppable = getBestScrollableDroppable({
++    center,
++    destination: whatIsDraggedOver(state.impact),
++    droppables: state.dimensions.droppables
++  });
++  const primaryAxis = (activeDroppable == null ? void 0 : activeDroppable.axis) || (state.dimensions.droppables[state.critical.droppable.id] == null ? void 0 : state.dimensions.droppables[state.critical.droppable.id].axis);
++  const constrainToPrimaryAxis = change => {
++    if (!change || !primaryAxis || !autoScrollerOptions.disableSecondaryAxisScroll) {
++      return change;
++    }
++    return primaryAxis.direction === 'vertical' ? {
++      x: 0,
++      y: change.y
++    } : {
++      x: change.x,
++      y: 0
++    };
++  };
    if (state.isWindowScrollAllowed) {
      const viewport = state.viewport;
-     const change = getWindowScrollChange({
-@@ -4024,7 +4049,7 @@ var scroll = (({
+-    const change = getWindowScrollChange({
++    const change = constrainToPrimaryAxis(getWindowScrollChange({
+       dragStartTime,
+       viewport,
        subject,
        center,
        shouldUseTimeDampening,
 -      getAutoScrollerOptions
+-    });
 +      getAutoScrollerOptions: () => autoScrollerOptions
-     });
++    }));
      if (change) {
        scrollWindow(change);
-@@ -4045,7 +4070,7 @@ var scroll = (({
+       return;
+     }
+   }
+-  const droppable = getBestScrollableDroppable({
+-    center,
+-    destination: whatIsDraggedOver(state.impact),
+-    droppables: state.dimensions.droppables
+-  });
++  const droppable = activeDroppable;
+   if (!droppable) {
+     return;
+   }
+-  const change = getDroppableScrollChange({
++  const change = constrainToPrimaryAxis(getDroppableScrollChange({
+     dragStartTime,
+     droppable,
      subject,
      center,
      shouldUseTimeDampening,
 -    getAutoScrollerOptions
+-  });
 +    getAutoScrollerOptions: () => autoScrollerOptions
-   });
++  }));
    if (change) {
      scrollDroppable(droppable.descriptor.id, change);
-@@ -6005,6 +6030,10 @@ function App(props) {
+   }
+@@ -6005,6 +6045,14 @@ function App(props) {
    const getAutoScrollerOptions = useMemoOne.useCallback(() => {
      return createAutoScrollerOptions(lastPropsRef.current);
    }, [lastPropsRef]);
@@ -188,34 +227,66 @@ index f4bbae8..1ae3bac 100644
 +    setZIndexOptions(props.zIndexOptions);
 +    return () => setZIndexOptions(undefined);
 +  }, [props.zIndexOptions]);
++  React.useEffect(() => {
++    setLockSecondaryAxisMovement(props.lockSecondaryAxisMovement);
++    return () => setLockSecondaryAxisMovement(false);
++  }, [props.lockSecondaryAxisMovement]);
    const announce = useAnnouncer(contextId);
    const dragHandleUsageInstructionsId = useHiddenTextElement({
      contextId,
-@@ -6134,7 +6163,8 @@ function DragDropContext(props) {
+@@ -6134,7 +6182,9 @@ function DragDropContext(props) {
      onDragStart: props.onDragStart,
      onDragUpdate: props.onDragUpdate,
      onDragEnd: props.onDragEnd,
 -    autoScrollerOptions: props.autoScrollerOptions
 +    autoScrollerOptions: props.autoScrollerOptions,
-+    zIndexOptions: props.zIndexOptions
++    zIndexOptions: props.zIndexOptions,
++    lockSecondaryAxisMovement: props.lockSecondaryAxisMovement
    }, props.children));
  }
  
-@@ -6142,6 +6172,13 @@ const zIndexOptions = {
+@@ -6142,6 +6192,17 @@ const zIndexOptions = {
    dragging: 5000,
    dropAnimating: 4500
  };
 +let currentZIndexOptions = zIndexOptions;
++let lockSecondaryAxisMovement = false;
 +const setZIndexOptions = next => {
 +  currentZIndexOptions = {
 +    ...zIndexOptions,
 +    ...next
 +  };
 +};
++const setLockSecondaryAxisMovement = next => {
++  lockSecondaryAxisMovement = Boolean(next);
++};
  const getDraggingTransition = (shouldAnimateDragMovement, dropping) => {
    if (dropping) {
      return transitions.drop(dropping.duration);
-@@ -6185,7 +6222,7 @@ function getDraggingStyle(dragging) {
+@@ -6168,13 +6229,21 @@ function getDraggingStyle(dragging) {
+   const box = dimension.client;
+   const {
+     offset,
++    axis,
+     combineWith,
+     dropping
+   } = dragging;
+   const isCombining = Boolean(combineWith);
+   const shouldAnimate = getShouldDraggingAnimate(dragging);
+   const isDropAnimating = Boolean(dropping);
+-  const transform = isDropAnimating ? transforms.drop(offset, isCombining) : transforms.moveTo(offset);
++  const constrainedOffset = lockSecondaryAxisMovement ? axis.direction === 'vertical' ? {
++    x: 0,
++    y: offset.y
++  } : {
++    x: offset.x,
++    y: 0
++  } : offset;
++  const transform = isDropAnimating ? transforms.drop(constrainedOffset, isCombining) : transforms.moveTo(constrainedOffset);
+   const style = {
+     position: 'fixed',
+     top: box.marginBox.top,
+@@ -6185,7 +6254,7 @@ function getDraggingStyle(dragging) {
      transition: getDraggingTransition(shouldAnimate, dropping),
      transform,
      opacity: getDraggingOpacity(isCombining, isDropAnimating),
@@ -224,7 +295,7 @@ index f4bbae8..1ae3bac 100644
      pointerEvents: 'none'
    };
    return style;
-@@ -6200,6 +6237,30 @@ function getStyle$1(mapped) {
+@@ -6200,6 +6269,30 @@ function getStyle$1(mapped) {
    return mapped.type === 'DRAGGING' ? getDraggingStyle(mapped) : getSecondaryStyle(mapped);
  }
  
@@ -255,7 +326,7 @@ index f4bbae8..1ae3bac 100644
  function getDimension$1(descriptor, el, windowScroll = origin) {
    const computedStyles = window.getComputedStyle(el);
    const borderBox = el.getBoundingClientRect();
-@@ -6210,9 +6271,13 @@ function getDimension$1(descriptor, el, windowScroll = origin) {
+@@ -6210,9 +6303,13 @@ function getDimension$1(descriptor, el, windowScroll = origin) {
      tagName: el.tagName.toLowerCase(),
      display: computedStyles.display
    };
@@ -271,11 +342,57 @@ index f4bbae8..1ae3bac 100644
    };
    const dimension = {
      descriptor,
+@@ -6448,7 +6545,7 @@ function getDraggableSelector() {
+     combineWith,
+     combineTargetFor: null
+   }));
+-  const getMemoizedProps = memoizeOne((offset, mode, dimension, isClone, draggingOver = null, combineWith = null, forceShouldAnimate = null) => ({
++  const getMemoizedProps = memoizeOne((offset, axis, mode, dimension, isClone, draggingOver = null, combineWith = null, forceShouldAnimate = null) => ({
+     mapped: {
+       type: 'DRAGGING',
+       dropping: null,
+@@ -6456,6 +6553,7 @@ function getDraggableSelector() {
+       combineWith,
+       mode,
+       offset,
++      axis,
+       dimension,
+       forceShouldAnimate,
+       snapshot: getMemoizedSnapshot(mode, isClone, draggingOver, combineWith, null)
+@@ -6468,10 +6566,11 @@ function getDraggableSelector() {
+       }
+       const offset = state.current.client.offset;
+       const dimension = state.dimensions.draggables[ownProps.draggableId];
++      const axis = state.dimensions.droppables[dimension.descriptor.droppableId].axis;
+       const draggingOver = whatIsDraggedOver(state.impact);
+       const combineWith = getCombineWithFromImpact(state.impact);
+       const forceShouldAnimate = state.forceShouldAnimate;
+-      return getMemoizedProps(memoizedOffset(offset.x, offset.y), state.movementMode, dimension, ownProps.isClone, draggingOver, combineWith, forceShouldAnimate);
++      return getMemoizedProps(memoizedOffset(offset.x, offset.y), axis, state.movementMode, dimension, ownProps.isClone, draggingOver, combineWith, forceShouldAnimate);
+     }
+     if (state.phase === 'DROP_ANIMATING') {
+       const completed = state.completed;
+@@ -6480,6 +6579,7 @@ function getDraggableSelector() {
+       }
+       const isClone = ownProps.isClone;
+       const dimension = state.dimensions.draggables[ownProps.draggableId];
++      const axis = state.dimensions.droppables[dimension.descriptor.droppableId].axis;
+       const result = completed.result;
+       const mode = result.mode;
+       const draggingOver = whatIsDraggedOverFromResult(result);
+@@ -6496,6 +6596,7 @@ function getDraggableSelector() {
+         mapped: {
+           type: 'DRAGGING',
+           offset: state.newHomeClientOffset,
++          axis,
+           dimension,
+           dropping,
+           draggingOver,
 diff --git a/node_modules/@hello-pangea/dnd/dist/dnd.d.ts b/node_modules/@hello-pangea/dnd/dist/dnd.d.ts
-index 9096c3c..ffeff6b 100644
+index 9096c3c..e282f2f 100644
 --- a/node_modules/@hello-pangea/dnd/dist/dnd.d.ts
 +++ b/node_modules/@hello-pangea/dnd/dist/dnd.d.ts
-@@ -141,6 +141,11 @@ interface AutoScrollerOptions {
+@@ -141,6 +141,15 @@ interface AutoScrollerOptions {
       * Whether or not autoscroll should be turned off entirely
       */
      disabled: boolean;
@@ -284,10 +401,14 @@ index 9096c3c..ffeff6b 100644
 +     * size limits when computing autoscroll.
 +     */
 +    ignoreSizeLimits: boolean;
++    /**
++     * Prevent auto scroller from producing horizontal scroll deltas.
++     */
++    disableSecondaryAxisScroll: boolean;
  }
  type PartialAutoScrollerOptions = RecursivePartial<AutoScrollerOptions>;
  
-@@ -154,6 +159,10 @@ interface DragDropContextProps extends Responders {
+@@ -154,6 +163,14 @@ interface DragDropContextProps extends Responders {
       * Customize auto scroller
       */
      autoScrollerOptions?: PartialAutoScrollerOptions;
@@ -295,11 +416,15 @@ index 9096c3c..ffeff6b 100644
 +     * Customize the drag layer z-index values.
 +     */
 +    zIndexOptions?: Partial<ZIndexOptions>;
++    /**
++     * Prevent the dragged item from moving on the secondary axis.
++     */
++    lockSecondaryAxisMovement?: boolean;
  }
  declare function resetServerContext(): void;
  declare function DragDropContext(props: DragDropContextProps): React.JSX.Element;
 diff --git a/node_modules/@hello-pangea/dnd/dist/dnd.esm.js b/node_modules/@hello-pangea/dnd/dist/dnd.esm.js
-index 4b75da5..f03bd53 100644
+index 4b75da5..ade5d98 100644
 --- a/node_modules/@hello-pangea/dnd/dist/dnd.esm.js
 +++ b/node_modules/@hello-pangea/dnd/dist/dnd.esm.js
 @@ -852,13 +852,15 @@ const getCrossAxisBorderBoxCenter = (axis, target, isMoving) => target[axis.cros
@@ -380,17 +505,18 @@ index 4b75da5..f03bd53 100644
    const requiredGrowth = getRequiredGrowthForPlaceholder(droppable, placeholderSize, draggables);
    const added = {
      placeholderSize,
-@@ -3668,7 +3676,8 @@ const defaultAutoScrollerOptions = {
+@@ -3668,7 +3676,9 @@ const defaultAutoScrollerOptions = {
      stopDampeningAt: 1200,
      accelerateAt: 360
    },
 -  disabled: false
 +  disabled: false,
-+  ignoreSizeLimits: false
++  ignoreSizeLimits: false,
++  disableSecondaryAxisScroll: false
  };
  
  var getDistanceThresholds = ((container, axis, getAutoScrollerOptions = () => defaultAutoScrollerOptions) => {
-@@ -3795,8 +3804,12 @@ var getScrollOnAxis = (({
+@@ -3795,8 +3805,12 @@ var getScrollOnAxis = (({
  var adjustForSizeLimits = (({
    container,
    subject,
@@ -404,7 +530,7 @@ index 4b75da5..f03bd53 100644
    const isTooBigVertically = subject.height > container.height;
    const isTooBigHorizontally = subject.width > container.width;
    if (!isTooBigHorizontally && !isTooBigVertically) {
-@@ -3820,6 +3833,7 @@ var getScroll$1 = (({
+@@ -3820,6 +3834,7 @@ var getScroll$1 = (({
    shouldUseTimeDampening,
    getAutoScrollerOptions
  }) => {
@@ -412,7 +538,7 @@ index 4b75da5..f03bd53 100644
    const distanceToEdges = {
      top: center.y - container.top,
      right: container.right - center.x,
-@@ -3832,7 +3846,7 @@ var getScroll$1 = (({
+@@ -3832,7 +3847,7 @@ var getScroll$1 = (({
      dragStartTime,
      axis: vertical,
      shouldUseTimeDampening,
@@ -421,7 +547,7 @@ index 4b75da5..f03bd53 100644
    });
    const x = getScrollOnAxis({
      container,
-@@ -3840,7 +3854,7 @@ var getScroll$1 = (({
+@@ -3840,7 +3855,7 @@ var getScroll$1 = (({
      dragStartTime,
      axis: horizontal,
      shouldUseTimeDampening,
@@ -430,7 +556,7 @@ index 4b75da5..f03bd53 100644
    });
    const required = clean({
      x,
-@@ -3852,7 +3866,8 @@ var getScroll$1 = (({
+@@ -3852,7 +3867,8 @@ var getScroll$1 = (({
    const limited = adjustForSizeLimits({
      container,
      subject,
@@ -440,7 +566,7 @@ index 4b75da5..f03bd53 100644
    });
    if (!limited) {
      return null;
-@@ -4011,9 +4026,19 @@ var scroll = (({
+@@ -4011,40 +4027,64 @@ var scroll = (({
    scrollDroppable,
    getAutoScrollerOptions
  }) => {
@@ -459,28 +585,66 @@ index 4b75da5..f03bd53 100644
 +    x: center.x,
 +    y: center.y
 +  } : draggable.page.marginBox;
++  const activeDroppable = getBestScrollableDroppable({
++    center,
++    destination: whatIsDraggedOver(state.impact),
++    droppables: state.dimensions.droppables
++  });
++  const primaryAxis = (activeDroppable == null ? void 0 : activeDroppable.axis) || (state.dimensions.droppables[state.critical.droppable.id] == null ? void 0 : state.dimensions.droppables[state.critical.droppable.id].axis);
++  const constrainToPrimaryAxis = change => {
++    if (!change || !primaryAxis || !autoScrollerOptions.disableSecondaryAxisScroll) {
++      return change;
++    }
++    return primaryAxis.direction === 'vertical' ? {
++      x: 0,
++      y: change.y
++    } : {
++      x: change.x,
++      y: 0
++    };
++  };
    if (state.isWindowScrollAllowed) {
      const viewport = state.viewport;
-     const change = getWindowScrollChange({
-@@ -4022,7 +4047,7 @@ var scroll = (({
+-    const change = getWindowScrollChange({
++    const change = constrainToPrimaryAxis(getWindowScrollChange({
+       dragStartTime,
+       viewport,
        subject,
        center,
        shouldUseTimeDampening,
 -      getAutoScrollerOptions
+-    });
 +      getAutoScrollerOptions: () => autoScrollerOptions
-     });
++    }));
      if (change) {
        scrollWindow(change);
-@@ -4043,7 +4068,7 @@ var scroll = (({
+       return;
+     }
+   }
+-  const droppable = getBestScrollableDroppable({
+-    center,
+-    destination: whatIsDraggedOver(state.impact),
+-    droppables: state.dimensions.droppables
+-  });
++  const droppable = activeDroppable;
+   if (!droppable) {
+     return;
+   }
+-  const change = getDroppableScrollChange({
++  const change = constrainToPrimaryAxis(getDroppableScrollChange({
+     dragStartTime,
+     droppable,
      subject,
      center,
      shouldUseTimeDampening,
 -    getAutoScrollerOptions
+-  });
 +    getAutoScrollerOptions: () => autoScrollerOptions
-   });
++  }));
    if (change) {
      scrollDroppable(droppable.descriptor.id, change);
-@@ -6003,6 +6028,10 @@ function App(props) {
+   }
+@@ -6003,6 +6043,14 @@ function App(props) {
    const getAutoScrollerOptions = useCallback(() => {
      return createAutoScrollerOptions(lastPropsRef.current);
    }, [lastPropsRef]);
@@ -488,34 +652,66 @@ index 4b75da5..f03bd53 100644
 +    setZIndexOptions(props.zIndexOptions);
 +    return () => setZIndexOptions(undefined);
 +  }, [props.zIndexOptions]);
++  useEffect(() => {
++    setLockSecondaryAxisMovement(props.lockSecondaryAxisMovement);
++    return () => setLockSecondaryAxisMovement(false);
++  }, [props.lockSecondaryAxisMovement]);
    const announce = useAnnouncer(contextId);
    const dragHandleUsageInstructionsId = useHiddenTextElement({
      contextId,
-@@ -6132,7 +6161,8 @@ function DragDropContext(props) {
+@@ -6132,7 +6180,9 @@ function DragDropContext(props) {
      onDragStart: props.onDragStart,
      onDragUpdate: props.onDragUpdate,
      onDragEnd: props.onDragEnd,
 -    autoScrollerOptions: props.autoScrollerOptions
 +    autoScrollerOptions: props.autoScrollerOptions,
-+    zIndexOptions: props.zIndexOptions
++    zIndexOptions: props.zIndexOptions,
++    lockSecondaryAxisMovement: props.lockSecondaryAxisMovement
    }, props.children));
  }
  
-@@ -6140,6 +6170,13 @@ const zIndexOptions = {
+@@ -6140,6 +6190,17 @@ const zIndexOptions = {
    dragging: 5000,
    dropAnimating: 4500
  };
 +let currentZIndexOptions = zIndexOptions;
++let lockSecondaryAxisMovement = false;
 +const setZIndexOptions = next => {
 +  currentZIndexOptions = {
 +    ...zIndexOptions,
 +    ...next
 +  };
 +};
++const setLockSecondaryAxisMovement = next => {
++  lockSecondaryAxisMovement = Boolean(next);
++};
  const getDraggingTransition = (shouldAnimateDragMovement, dropping) => {
    if (dropping) {
      return transitions.drop(dropping.duration);
-@@ -6183,7 +6220,7 @@ function getDraggingStyle(dragging) {
+@@ -6166,13 +6227,21 @@ function getDraggingStyle(dragging) {
+   const box = dimension.client;
+   const {
+     offset,
++    axis,
+     combineWith,
+     dropping
+   } = dragging;
+   const isCombining = Boolean(combineWith);
+   const shouldAnimate = getShouldDraggingAnimate(dragging);
+   const isDropAnimating = Boolean(dropping);
+-  const transform = isDropAnimating ? transforms.drop(offset, isCombining) : transforms.moveTo(offset);
++  const constrainedOffset = lockSecondaryAxisMovement ? axis.direction === 'vertical' ? {
++    x: 0,
++    y: offset.y
++  } : {
++    x: offset.x,
++    y: 0
++  } : offset;
++  const transform = isDropAnimating ? transforms.drop(constrainedOffset, isCombining) : transforms.moveTo(constrainedOffset);
+   const style = {
+     position: 'fixed',
+     top: box.marginBox.top,
+@@ -6183,7 +6252,7 @@ function getDraggingStyle(dragging) {
      transition: getDraggingTransition(shouldAnimate, dropping),
      transform,
      opacity: getDraggingOpacity(isCombining, isDropAnimating),
@@ -524,7 +720,7 @@ index 4b75da5..f03bd53 100644
      pointerEvents: 'none'
    };
    return style;
-@@ -6198,6 +6235,30 @@ function getStyle$1(mapped) {
+@@ -6198,6 +6267,30 @@ function getStyle$1(mapped) {
    return mapped.type === 'DRAGGING' ? getDraggingStyle(mapped) : getSecondaryStyle(mapped);
  }
  
@@ -555,7 +751,7 @@ index 4b75da5..f03bd53 100644
  function getDimension$1(descriptor, el, windowScroll = origin) {
    const computedStyles = window.getComputedStyle(el);
    const borderBox = el.getBoundingClientRect();
-@@ -6208,9 +6269,13 @@ function getDimension$1(descriptor, el, windowScroll = origin) {
+@@ -6208,9 +6301,13 @@ function getDimension$1(descriptor, el, windowScroll = origin) {
      tagName: el.tagName.toLowerCase(),
      display: computedStyles.display
    };
@@ -571,11 +767,57 @@ index 4b75da5..f03bd53 100644
    };
    const dimension = {
      descriptor,
+@@ -6446,7 +6543,7 @@ function getDraggableSelector() {
+     combineWith,
+     combineTargetFor: null
+   }));
+-  const getMemoizedProps = memoizeOne((offset, mode, dimension, isClone, draggingOver = null, combineWith = null, forceShouldAnimate = null) => ({
++  const getMemoizedProps = memoizeOne((offset, axis, mode, dimension, isClone, draggingOver = null, combineWith = null, forceShouldAnimate = null) => ({
+     mapped: {
+       type: 'DRAGGING',
+       dropping: null,
+@@ -6454,6 +6551,7 @@ function getDraggableSelector() {
+       combineWith,
+       mode,
+       offset,
++      axis,
+       dimension,
+       forceShouldAnimate,
+       snapshot: getMemoizedSnapshot(mode, isClone, draggingOver, combineWith, null)
+@@ -6466,10 +6564,11 @@ function getDraggableSelector() {
+       }
+       const offset = state.current.client.offset;
+       const dimension = state.dimensions.draggables[ownProps.draggableId];
++      const axis = state.dimensions.droppables[dimension.descriptor.droppableId].axis;
+       const draggingOver = whatIsDraggedOver(state.impact);
+       const combineWith = getCombineWithFromImpact(state.impact);
+       const forceShouldAnimate = state.forceShouldAnimate;
+-      return getMemoizedProps(memoizedOffset(offset.x, offset.y), state.movementMode, dimension, ownProps.isClone, draggingOver, combineWith, forceShouldAnimate);
++      return getMemoizedProps(memoizedOffset(offset.x, offset.y), axis, state.movementMode, dimension, ownProps.isClone, draggingOver, combineWith, forceShouldAnimate);
+     }
+     if (state.phase === 'DROP_ANIMATING') {
+       const completed = state.completed;
+@@ -6478,6 +6577,7 @@ function getDraggableSelector() {
+       }
+       const isClone = ownProps.isClone;
+       const dimension = state.dimensions.draggables[ownProps.draggableId];
++      const axis = state.dimensions.droppables[dimension.descriptor.droppableId].axis;
+       const result = completed.result;
+       const mode = result.mode;
+       const draggingOver = whatIsDraggedOverFromResult(result);
+@@ -6494,6 +6594,7 @@ function getDraggableSelector() {
+         mapped: {
+           type: 'DRAGGING',
+           offset: state.newHomeClientOffset,
++          axis,
+           dimension,
+           dropping,
+           draggingOver,
 diff --git a/node_modules/@hello-pangea/dnd/src/state/auto-scroller/fluid-scroller/auto-scroller-options-types.ts b/node_modules/@hello-pangea/dnd/src/state/auto-scroller/fluid-scroller/auto-scroller-options-types.ts
-index 3bcc806..ef6938d 100644
+index 3bcc806..107c881 100644
 --- a/node_modules/@hello-pangea/dnd/src/state/auto-scroller/fluid-scroller/auto-scroller-options-types.ts
 +++ b/node_modules/@hello-pangea/dnd/src/state/auto-scroller/fluid-scroller/auto-scroller-options-types.ts
-@@ -45,6 +45,12 @@ export interface AutoScrollerOptions {
+@@ -45,6 +45,17 @@ export interface AutoScrollerOptions {
     * Whether or not autoscroll should be turned off entirely
     */
    disabled: boolean;
@@ -585,18 +827,24 @@ index 3bcc806..ef6938d 100644
 +   * size limits when computing autoscroll.
 +   */
 +  ignoreSizeLimits: boolean;
++
++  /**
++   * Prevent auto scroller from producing scroll deltas on the secondary axis.
++   */
++  disableSecondaryAxisScroll: boolean;
  }
  
  export type PartialAutoScrollerOptions = RecursivePartial<AutoScrollerOptions>;
 diff --git a/node_modules/@hello-pangea/dnd/src/state/auto-scroller/fluid-scroller/config.ts b/node_modules/@hello-pangea/dnd/src/state/auto-scroller/fluid-scroller/config.ts
-index 004a252..b5380c3 100644
+index 004a252..bac8bc5 100644
 --- a/node_modules/@hello-pangea/dnd/src/state/auto-scroller/fluid-scroller/config.ts
 +++ b/node_modules/@hello-pangea/dnd/src/state/auto-scroller/fluid-scroller/config.ts
-@@ -11,4 +11,5 @@ export const defaultAutoScrollerOptions: AutoScrollerOptions = {
+@@ -11,4 +11,6 @@ export const defaultAutoScrollerOptions: AutoScrollerOptions = {
      accelerateAt: 360,
    },
    disabled: false,
 +  ignoreSizeLimits: false,
++  disableSecondaryAxisScroll: false,
  };
 diff --git a/node_modules/@hello-pangea/dnd/src/state/auto-scroller/fluid-scroller/get-scroll/adjust-for-size-limits.ts b/node_modules/@hello-pangea/dnd/src/state/auto-scroller/fluid-scroller/get-scroll/adjust-for-size-limits.ts
 index ca5b51d..2156fe0 100644
@@ -662,10 +910,38 @@ index ace400a..d1ed529 100644
  
    if (!limited) {
 diff --git a/node_modules/@hello-pangea/dnd/src/state/auto-scroller/fluid-scroller/scroll.ts b/node_modules/@hello-pangea/dnd/src/state/auto-scroller/fluid-scroller/scroll.ts
-index 9509e1f..dbd1dbd 100644
+index 9509e1f..8a98ce8 100644
 --- a/node_modules/@hello-pangea/dnd/src/state/auto-scroller/fluid-scroller/scroll.ts
 +++ b/node_modules/@hello-pangea/dnd/src/state/auto-scroller/fluid-scroller/scroll.ts
-@@ -29,10 +29,24 @@ export default ({
+@@ -1,5 +1,6 @@
+ import type { Position, Rect } from 'css-box-model';
+ import type {
++  Axis,
+   DraggingState,
+   DroppableId,
+   DraggableDimension,
+@@ -21,6 +22,20 @@ interface Args {
+   getAutoScrollerOptions: () => AutoScrollerOptions;
+ }
+ 
++const constrainToPrimaryAxis = (
++  change: Position | null,
++  axis: Axis | undefined,
++  autoScrollerOptions: AutoScrollerOptions,
++): Position | null => {
++  if (!change || !axis || !autoScrollerOptions.disableSecondaryAxisScroll) {
++    return change;
++  }
++
++  return axis.direction === 'vertical'
++    ? { x: 0, y: change.y }
++    : { x: change.x, y: 0 };
++};
++
+ export default ({
+   state,
+   dragStartTime,
+@@ -29,21 +44,47 @@ export default ({
    scrollDroppable,
    getAutoScrollerOptions,
  }: Args): void => {
@@ -689,27 +965,78 @@ index 9509e1f..dbd1dbd 100644
 +        y: center.y,
 +      }
 +    : draggable.page.marginBox;
++  const activeDroppable: DroppableDimension | null = getBestScrollableDroppable({
++    center,
++    destination: whatIsDraggedOver(state.impact),
++    droppables: state.dimensions.droppables,
++  });
++  const primaryAxis: Axis | undefined =
++    activeDroppable?.axis ??
++    state.dimensions.droppables[state.critical.droppable.id]?.axis;
    // 1. Can we scroll the viewport?
    if (state.isWindowScrollAllowed) {
      const viewport: Viewport = state.viewport;
-@@ -42,7 +56,7 @@ export default ({
-       subject,
-       center,
-       shouldUseTimeDampening,
+-    const change: Position | null = getWindowScrollChange({
+-      dragStartTime,
+-      viewport,
+-      subject,
+-      center,
+-      shouldUseTimeDampening,
 -      getAutoScrollerOptions,
-+      getAutoScrollerOptions: () => autoScrollerOptions,
-     });
+-    });
++    const change: Position | null = constrainToPrimaryAxis(
++      getWindowScrollChange({
++        dragStartTime,
++        viewport,
++        subject,
++        center,
++        shouldUseTimeDampening,
++        getAutoScrollerOptions: () => autoScrollerOptions,
++      }),
++      primaryAxis,
++      autoScrollerOptions,
++    );
  
      if (change) {
-@@ -67,7 +81,7 @@ export default ({
-     subject,
-     center,
-     shouldUseTimeDampening,
+       scrollWindow(change);
+@@ -51,24 +92,24 @@ export default ({
+     }
+   }
+ 
+-  const droppable: DroppableDimension | null = getBestScrollableDroppable({
+-    center,
+-    destination: whatIsDraggedOver(state.impact),
+-    droppables: state.dimensions.droppables,
+-  });
++  const droppable: DroppableDimension | null = activeDroppable;
+ 
+   if (!droppable) {
+     return;
+   }
+ 
+-  const change: Position | null = getDroppableScrollChange({
+-    dragStartTime,
+-    droppable,
+-    subject,
+-    center,
+-    shouldUseTimeDampening,
 -    getAutoScrollerOptions,
-+    getAutoScrollerOptions: () => autoScrollerOptions,
-   });
+-  });
++  const change: Position | null = constrainToPrimaryAxis(
++    getDroppableScrollChange({
++      dragStartTime,
++      droppable,
++      subject,
++      center,
++      shouldUseTimeDampening,
++      getAutoScrollerOptions: () => autoScrollerOptions,
++    }),
++    droppable.axis,
++    autoScrollerOptions,
++  );
  
    if (change) {
+     scrollDroppable(droppable.descriptor.id, change);
 diff --git a/node_modules/@hello-pangea/dnd/src/state/droppable/with-placeholder.ts b/node_modules/@hello-pangea/dnd/src/state/droppable/with-placeholder.ts
 index eac3a01..abd01fe 100644
 --- a/node_modules/@hello-pangea/dnd/src/state/droppable/with-placeholder.ts
@@ -839,29 +1166,31 @@ index a2b24b2..d400d31 100644
      getCrossAxisBorderBoxCenter(axis, moveRelativeTo.marginBox, isMoving),
    );
 diff --git a/node_modules/@hello-pangea/dnd/src/view/drag-drop-context/app.tsx b/node_modules/@hello-pangea/dnd/src/view/drag-drop-context/app.tsx
-index 617427b..efa66a9 100644
+index 617427b..a3b9fdf 100644
 --- a/node_modules/@hello-pangea/dnd/src/view/drag-drop-context/app.tsx
 +++ b/node_modules/@hello-pangea/dnd/src/view/drag-drop-context/app.tsx
-@@ -55,6 +55,10 @@ import {
+@@ -55,6 +55,11 @@ import {
    PartialAutoScrollerOptions,
  } from '../../state/auto-scroller/fluid-scroller/auto-scroller-options-types';
  import { defaultAutoScrollerOptions } from '../../state/auto-scroller/fluid-scroller/config';
 +import {
 +  setZIndexOptions,
++  setLockSecondaryAxisMovement,
 +} from '../draggable/get-style';
 +import type { ZIndexOptions } from '../draggable/draggable-types';
  
  export interface Props extends Responders {
    contextId: string;
-@@ -70,6 +74,7 @@ export interface Props extends Responders {
+@@ -70,6 +75,8 @@ export interface Props extends Responders {
    // options to exert more control over autoScroll
    // eslint-disable-next-line react/no-unused-prop-types
    autoScrollerOptions?: PartialAutoScrollerOptions;
 +  zIndexOptions?: Partial<ZIndexOptions>;
++  lockSecondaryAxisMovement?: boolean;
  }
  
  const createResponders = (props: Props): Responders => ({
-@@ -135,6 +140,11 @@ export default function App(props: Props) {
+@@ -135,6 +142,15 @@ export default function App(props: Props) {
      return createAutoScrollerOptions(lastPropsRef.current);
    }, [lastPropsRef]);
  
@@ -869,12 +1198,16 @@ index 617427b..efa66a9 100644
 +    setZIndexOptions(props.zIndexOptions);
 +    return () => setZIndexOptions(undefined);
 +  }, [props.zIndexOptions]);
++  useEffect(() => {
++    setLockSecondaryAxisMovement(props.lockSecondaryAxisMovement);
++    return () => setLockSecondaryAxisMovement(false);
++  }, [props.lockSecondaryAxisMovement]);
 +
    const announce: Announce = useAnnouncer(contextId);
  
    const dragHandleUsageInstructionsId: ElementId = useHiddenTextElement({
 diff --git a/node_modules/@hello-pangea/dnd/src/view/drag-drop-context/drag-drop-context.tsx b/node_modules/@hello-pangea/dnd/src/view/drag-drop-context/drag-drop-context.tsx
-index e1b7a18..df0db04 100644
+index e1b7a18..5087b95 100644
 --- a/node_modules/@hello-pangea/dnd/src/view/drag-drop-context/drag-drop-context.tsx
 +++ b/node_modules/@hello-pangea/dnd/src/view/drag-drop-context/drag-drop-context.tsx
 @@ -10,6 +10,7 @@ import useUniqueContextId, {
@@ -885,7 +1218,7 @@ index e1b7a18..df0db04 100644
  
  export interface DragDropContextProps extends Responders {
    // We do not technically need any children for this component
-@@ -26,6 +27,10 @@ export interface DragDropContextProps extends Responders {
+@@ -26,6 +27,14 @@ export interface DragDropContextProps extends Responders {
     * Customize auto scroller
     */
    autoScrollerOptions?: PartialAutoScrollerOptions;
@@ -893,26 +1226,114 @@ index e1b7a18..df0db04 100644
 +   * Customize the drag layer z-index values.
 +   */
 +  zIndexOptions?: Partial<ZIndexOptions>;
++  /**
++   * Prevent the dragged item from moving on the secondary axis.
++   */
++  lockSecondaryAxisMovement?: boolean;
  }
  
  // Reset any context that gets persisted across server side renders
-@@ -66,6 +71,7 @@ export default function DragDropContext(props: DragDropContextProps) {
+@@ -66,6 +75,8 @@ export default function DragDropContext(props: DragDropContextProps) {
            onDragUpdate={props.onDragUpdate}
            onDragEnd={props.onDragEnd}
            autoScrollerOptions={props.autoScrollerOptions}
 +          zIndexOptions={props.zIndexOptions}
++          lockSecondaryAxisMovement={props.lockSecondaryAxisMovement}
          >
            {props.children}
          </App>
+diff --git a/node_modules/@hello-pangea/dnd/src/view/draggable/connected-draggable.ts b/node_modules/@hello-pangea/dnd/src/view/draggable/connected-draggable.ts
+index e763bd7..02eefd7 100644
+--- a/node_modules/@hello-pangea/dnd/src/view/draggable/connected-draggable.ts
++++ b/node_modules/@hello-pangea/dnd/src/view/draggable/connected-draggable.ts
+@@ -13,6 +13,7 @@ import type {
+   DraggableId,
+   DroppableId,
+   DraggableDimension,
++  Axis,
+   Displacement,
+   CompletedDrag,
+   DragImpact,
+@@ -77,6 +78,7 @@ function getDraggableSelector(): TrySelect {
+   const getMemoizedProps = memoizeOne(
+     (
+       offset: Position,
++      axis: Axis,
+       mode: MovementMode,
+       dimension: DraggableDimension,
+       isClone: boolean,
+@@ -93,6 +95,7 @@ function getDraggableSelector(): TrySelect {
+         combineWith,
+         mode,
+         offset,
++        axis,
+         dimension,
+         forceShouldAnimate,
+         snapshot: getMemoizedSnapshot(
+@@ -120,6 +123,8 @@ function getDraggableSelector(): TrySelect {
+       const offset: Position = state.current.client.offset;
+       const dimension: DraggableDimension =
+         state.dimensions.draggables[ownProps.draggableId];
++      const axis: Axis =
++        state.dimensions.droppables[dimension.descriptor.droppableId].axis;
+       // const shouldAnimateDragMovement: boolean = state.shouldAnimate;
+       const draggingOver: DroppableId | null = whatIsDraggedOver(state.impact);
+       const combineWith: DraggableId | null = getCombineWithFromImpact(
+@@ -129,6 +134,7 @@ function getDraggableSelector(): TrySelect {
+ 
+       return getMemoizedProps(
+         memoizedOffset(offset.x, offset.y),
++        axis,
+         state.movementMode,
+         dimension,
+         ownProps.isClone,
+@@ -148,6 +154,8 @@ function getDraggableSelector(): TrySelect {
+       const isClone: boolean = ownProps.isClone;
+       const dimension: DraggableDimension =
+         state.dimensions.draggables[ownProps.draggableId];
++      const axis: Axis =
++        state.dimensions.droppables[dimension.descriptor.droppableId].axis;
+       const result: DropResult = completed.result;
+       const mode: MovementMode = result.mode;
+       // these need to be pulled from the result as they can be different to the final impact
+@@ -169,6 +177,7 @@ function getDraggableSelector(): TrySelect {
+         mapped: {
+           type: 'DRAGGING',
+           offset: state.newHomeClientOffset,
++          axis,
+           dimension,
+           dropping,
+           draggingOver,
+diff --git a/node_modules/@hello-pangea/dnd/src/view/draggable/draggable-types.ts b/node_modules/@hello-pangea/dnd/src/view/draggable/draggable-types.ts
+index 1f2d1b0..727a8c1 100644
+--- a/node_modules/@hello-pangea/dnd/src/view/draggable/draggable-types.ts
++++ b/node_modules/@hello-pangea/dnd/src/view/draggable/draggable-types.ts
+@@ -5,6 +5,7 @@ import type {
+   TransitionEventHandler,
+ } from 'react';
+ import type {
++  Axis,
+   DraggableId,
+   DroppableId,
+   DraggableDimension,
+@@ -124,6 +125,7 @@ export interface DispatchProps {
+ export interface DraggingMapProps {
+   type: 'DRAGGING';
+   offset: Position;
++  axis: Axis;
+   mode: MovementMode;
+   dropping: DropAnimation | null;
+   draggingOver: DraggableId | null;
 diff --git a/node_modules/@hello-pangea/dnd/src/view/draggable/get-style.ts b/node_modules/@hello-pangea/dnd/src/view/draggable/get-style.ts
-index 5e0b1b7..f5b752d 100644
+index 5e0b1b7..dfe7fa9 100644
 --- a/node_modules/@hello-pangea/dnd/src/view/draggable/get-style.ts
 +++ b/node_modules/@hello-pangea/dnd/src/view/draggable/get-style.ts
-@@ -17,6 +17,17 @@ export const zIndexOptions: ZIndexOptions = {
+@@ -17,6 +17,22 @@ export const zIndexOptions: ZIndexOptions = {
    dropAnimating: 4500,
  };
  
 +let currentZIndexOptions: ZIndexOptions = zIndexOptions;
++let lockSecondaryAxisMovement = false;
 +
 +export const setZIndexOptions = (
 +  next?: Partial<ZIndexOptions> | null,
@@ -923,10 +1344,39 @@ index 5e0b1b7..f5b752d 100644
 +  };
 +};
 +
++export const setLockSecondaryAxisMovement = (next?: boolean | null): void => {
++  lockSecondaryAxisMovement = Boolean(next);
++};
++
  const getDraggingTransition = (
    shouldAnimateDragMovement: boolean,
    dropping?: DropAnimation | null,
-@@ -83,8 +94,8 @@ function getDraggingStyle(dragging: DraggingMapProps): DraggingStyle {
+@@ -52,16 +68,21 @@ const getShouldDraggingAnimate = (dragging: DraggingMapProps): boolean => {
+ function getDraggingStyle(dragging: DraggingMapProps): DraggingStyle {
+   const dimension: DraggableDimension = dragging.dimension;
+   const box: BoxModel = dimension.client;
+-  const { offset, combineWith, dropping } = dragging;
++  const { offset, combineWith, dropping, axis } = dragging;
+ 
+   const isCombining = Boolean(combineWith);
+ 
+   const shouldAnimate: boolean = getShouldDraggingAnimate(dragging);
+   const isDropAnimating = Boolean(dropping);
++  const constrainedOffset = lockSecondaryAxisMovement
++    ? axis.direction === 'vertical'
++      ? { x: 0, y: offset.y }
++      : { x: offset.x, y: 0 }
++    : offset;
+ 
+   const transform: string | undefined = isDropAnimating
+-    ? transforms.drop(offset, isCombining)
+-    : transforms.moveTo(offset);
++    ? transforms.drop(constrainedOffset, isCombining)
++    : transforms.moveTo(constrainedOffset);
+ 
+   const style: DraggingStyle = {
+     // ## Placement
+@@ -83,8 +104,8 @@ function getDraggingStyle(dragging: DraggingMapProps): DraggingStyle {
      opacity: getDraggingOpacity(isCombining, isDropAnimating),
      // ## Layering
      zIndex: isDropAnimating

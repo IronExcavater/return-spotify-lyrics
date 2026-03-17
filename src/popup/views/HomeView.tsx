@@ -767,8 +767,10 @@ export function HomeView({ searchQuery, filters }: Props) {
             justify="between"
             direction="column"
             className={clsx('relative min-w-0', isEditable && 'bg-background')}
-            mx="-3"
-            px="3"
+            ml="-3"
+            mr="-1"
+            pl="3"
+            pr="1"
             py="1"
             mb={isEditable ? '4' : undefined}
         >
@@ -897,37 +899,37 @@ export function HomeView({ searchQuery, filters }: Props) {
     );
 
     return (
-        <StickyLayout.Root className="no-overflow-anchor scrollbar-gutter-stable flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
-            <Flex
-                pl="3"
-                pr="1"
-                py="2"
-                direction="column"
-                gap="1"
-                className="min-w-0"
+        <StickyLayout.Root className="no-overflow-anchor scrollbar-gutter-stable relative flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
+            <div className="bg-background z-30 h-2 shrink-0" />
+            <StickyLayout.Sticky
+                order={0}
+                className="z-30 pr-1 pl-3"
+                heightOffset={15}
+                disabled={!isEditable}
             >
-                {isEditable ? (
-                    <StickyLayout.Sticky
-                        order={0}
-                        className="z-20"
-                        heightOffset={15}
-                    >
-                        {headerContent}
-                    </StickyLayout.Sticky>
-                ) : (
-                    headerContent
-                )}
+                {headerContent}
+            </StickyLayout.Sticky>
 
-                <StickyLayout.Body>
+            <StickyLayout.Body>
+                <Flex
+                    pl="3"
+                    pr="1"
+                    pb="2"
+                    direction="column"
+                    gap="1"
+                    className="min-w-0"
+                >
                     <DragDropContext
                         onDragEnd={onSectionDragEnd}
                         autoScrollerOptions={{
                             ignoreSizeLimits: true,
+                            disableSecondaryAxisScroll: true,
                         }}
                         zIndexOptions={{
-                            dragging: 0,
-                            dropAnimating: 0,
+                            dragging: 20,
+                            dropAnimating: 20,
                         }}
+                        lockSecondaryAxisMovement
                     >
                         <Droppable
                             droppableId="home-sections"
@@ -1029,8 +1031,8 @@ export function HomeView({ searchQuery, filters }: Props) {
                             )}
                         </Droppable>
                     </DragDropContext>
-                </StickyLayout.Body>
-            </Flex>
+                </Flex>
+            </StickyLayout.Body>
         </StickyLayout.Root>
     );
 }

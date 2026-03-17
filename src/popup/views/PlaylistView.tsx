@@ -434,7 +434,7 @@ export function PlaylistView() {
     const reorderEnabled = canEdit && reorderMode && !loading;
     const tracksHeaderRight = canEdit ? (
         <Flex align="center" gap="2">
-            <Text size="2" color="gray">
+            <Text size="1" color="gray">
                 Reorder
             </Text>
             <Switch
@@ -507,7 +507,7 @@ export function PlaylistView() {
             className="no-overflow-anchor scrollbar-gutter-stable flex min-h-0 flex-col overflow-y-auto"
             scrollRef={scrollRef}
         >
-            <StickyLayout.Sticky order={0} className="z-30" heightOffset={8}>
+            <StickyLayout.Sticky order={0} className="z-10" heightOffset={8}>
                 <MediaHero
                     hero={hero}
                     loading={loading}
@@ -532,6 +532,7 @@ export function PlaylistView() {
             </StickyLayout.Sticky>
 
             <StickyLayout.Body>
+                <div className="bg-background absolute -top-2 z-10 h-2 w-full shrink-0" />
                 <Flex pl="3" direction="column" gap="3">
                     {data?.playlist.description?.trim().length ? (
                         <Flex direction="column" gap="1" pt="2">

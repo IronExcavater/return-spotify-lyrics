@@ -96,7 +96,7 @@ export function SearchBar({
                         {showShortcut && (
                             <div
                                 className={clsx(
-                                    'pointer-events-none absolute inset-0 flex scale-[0.6] items-center justify-center opacity-0 transition-[opacity,transform] duration-200 ease-out',
+                                    'pointer-events-none absolute inset-0 flex scale-[0.6] items-center justify-end pr-0.5 opacity-0 transition-[opacity,transform] duration-200 ease-out',
                                     !hasValue &&
                                         'group-focus-within:scale-100 group-focus-within:opacity-100 group-hover:scale-100 group-hover:opacity-100'
                                 )}

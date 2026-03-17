@@ -268,7 +268,7 @@ export default function App({ surface = 'popup' }: AppProps) {
             <Flex direction="column" className="h-full">
                 {/* Top bar */}
                 {appState.showBars && (
-                    <Flex className="border-grayA-6 bg-panel-solid border-b-2">
+                    <Flex className="border-grayA-6 bg-panel-solid relative z-30 shrink-0 border-b-2">
                         {appState.activeBar === 'playback' && (
                             <PlaybackBar
                                 profileSlot={profileFloating.anchors.playback}

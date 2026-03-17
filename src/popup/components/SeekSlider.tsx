@@ -135,7 +135,7 @@ export function SeekSlider({ className, disabled = false }: Props) {
             >
                 {previewRatio != null && previewTimeLabel && (
                     <div
-                        className="border-grayA-6 bg-panel-solid/95 text-gray-12 pointer-events-none absolute -top-6 z-20 -translate-x-1/2 rounded-md border px-2 py-0.5 font-mono text-[10px] shadow-sm backdrop-blur-xs"
+                        className="border-grayA-6 bg-panel-solid/95 text-gray-12 pointer-events-none absolute -top-6 z-10 -translate-x-1/2 rounded-md border px-2 py-0.5 font-mono text-[10px] shadow-sm backdrop-blur-xs"
                         style={{ left: `${previewRatio * 100}%` }}
                     >
                         {previewTimeLabel}
@@ -153,7 +153,7 @@ export function SeekSlider({ className, disabled = false }: Props) {
                 >
                     {previewRatio != null && (
                         <div
-                            className="pointer-events-none absolute inset-y-0 z-20 w-px -translate-x-1/2 bg-white/70"
+                            className="pointer-events-none absolute inset-y-0 z-10 w-px -translate-x-1/2 bg-white/70"
                             style={{ left: `${previewRatio * 100}%` }}
                         />
                     )}

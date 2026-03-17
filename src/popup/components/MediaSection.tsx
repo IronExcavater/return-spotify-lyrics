@@ -134,10 +134,8 @@ function MediaSectionImpl({
         <div
             ref={headerLayout.sectionRef}
             className={clsx(
-                'group/section rounded-2 bg-background relative transition-all',
-                'focus-within:z-20',
-                editing && 'hover:z-20',
-                editing && dragging && 'z-30',
+                'group/section rounded-2 bg-background relative isolate transition-all',
+                editing && dragging && 'z-20',
                 className
             )}
             data-dragging={dragging ? 'true' : 'false'}
@@ -157,7 +155,7 @@ function MediaSectionImpl({
                     </div>
                 </Flex>
             </div>
-            <Flex direction="column" gap="1" className="relative">
+            <Flex direction="column" gap="1" className="relative z-0">
                 <MediaSectionEditControls
                     editor={editor}
                     editing={editing}
@@ -179,7 +177,7 @@ function MediaSectionImpl({
                     headerFadeEdgeMask={headerLayout.headerFadeEdgeMask}
                     headerRef={headerLayout.headerRef}
                 />
-                <div>
+                <div className="relative z-0">
                     <div
                         className={clsx(
                             editing && 'pointer-events-none select-none'
@@ -221,7 +219,7 @@ function MediaSectionImpl({
                     </div>
                 </div>
                 {!loading && section.loadingMore && (
-                    <div className="pointer-events-none absolute right-2 bottom-2 z-20">
+                    <div className="pointer-events-none absolute right-2 bottom-2 z-10">
                         <Flex
                             align="center"
                             gap="1"
@@ -236,7 +234,7 @@ function MediaSectionImpl({
             <div
                 aria-hidden="true"
                 className={clsx(
-                    'rounded-2 ring-offset-background pointer-events-none absolute inset-0 z-40 ring-2 ring-transparent ring-offset-2 transition-shadow',
+                    'rounded-2 ring-offset-background pointer-events-none absolute inset-0 z-0 ring-2 ring-transparent ring-offset-2 transition-shadow',
                     editing && 'group-hover/section:ring-accent-8!',
                     dragging && 'ring-accent-10!'
                 )}

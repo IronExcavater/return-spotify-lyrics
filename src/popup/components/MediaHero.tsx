@@ -146,7 +146,7 @@ export function MediaHero({
                 gap="2"
                 pl="3"
                 pr="1"
-                className="relative z-20 w-full"
+                className="relative z-10 w-full"
                 style={{
                     paddingTop,
                     paddingBottom,
