@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     Button,
-    Dialog,
     Flex,
     Switch,
     Text,
-    TextField,
     TextArea,
+    TextField,
 } from '@radix-ui/themes';
 import type {
     Episode,
@@ -25,12 +24,14 @@ import { createLogger, logError } from '../../shared/logging';
 import { episodeToItem, playlistToItem, trackToItem } from '../../shared/media';
 import { sendSpotifyMessage } from '../../shared/messaging';
 import type { MediaItem, MediaActionGroup } from '../../shared/types';
+import { FullPageDialog } from '../components/FullPageDialog';
 import { MediaHero, type HeroData } from '../components/MediaHero';
 import {
     MediaSection,
     type MediaSectionState,
 } from '../components/MediaSection';
 import { MediaShelf, type MediaShelfItem } from '../components/MediaShelf';
+import { PlaylistDedupeDialog } from '../components/PlaylistDedupeDialog';
 import { SkeletonText } from '../components/SkeletonText';
 import { StickyLayout } from '../components/StickyLayout';
 import { useAuth } from '../hooks/useAuth';
@@ -40,6 +41,10 @@ import type { MediaRouteState } from '../hooks/useMediaRoute';
 import { playlistRouteStore, useRouteState } from '../hooks/useRouteState';
 import { useSettings } from '../hooks/useSettings';
 import { sumDurationMs } from '../utils/mediaLookup';
+import {
+    analyzePlaylistDuplicates,
+    type PlaylistDedupableItem,
+} from '../utils/playlistDuplicates';
 
 const logger = createLogger('playlist');
 const PLAYLIST_PAGE_SIZE = 50;
@@ -55,13 +60,15 @@ const emptyPlaylistPage = (offset = 0): Page<PlaylistedTrack<Track>> => ({
 
 type PlaylistViewState = {
     playlist: Playlist<Track>;
-    items: MediaShelfItem[];
+    items: PlaylistTrackItem[];
     totalDurationMs: number;
     itemsOffset: number;
     itemsHasMore: boolean;
     itemsLoadingMore: boolean;
     snapshotId?: string;
 };
+
+type PlaylistTrackItem = PlaylistDedupableItem;
 
 type PlaylistDetailsDraft = {
     name: string;
@@ -81,7 +88,7 @@ const mapPlaylistItems = (
     entries: Array<PlaylistedTrack> = [],
     locale: string,
     offset: number
-) => {
+): PlaylistTrackItem[] => {
     const safeEntries = Array.isArray(entries) ? entries : [];
     return safeEntries.map((entry, index) => {
         const track = entry.track;
@@ -97,11 +104,20 @@ const mapPlaylistItems = (
                 subtitle: 'Track removed',
                 listKey: `missing-${offset + index}`,
                 kind: 'track' as const,
+                playlistIndex: offset + index,
+                addedAt: entry.added_at ?? undefined,
             };
         }
         return {
             ...item,
             listKey: createPlaylistItemKey(entry, offset + index),
+            playlistIndex: offset + index,
+            playlistTrackId:
+                track && track.type === 'track'
+                    ? (track as Track).id
+                    : undefined,
+            playlistTrackUri: track?.uri ?? undefined,
+            addedAt: entry.added_at ?? undefined,
         };
     });
 };
@@ -134,9 +150,11 @@ export function PlaylistView() {
     );
     const [saving, setSaving] = useState(false);
     const [editOpen, setEditOpen] = useState(false);
+    const [dedupeOpen, setDedupeOpen] = useState(false);
+    const [dedupeLoading, setDedupeLoading] = useState(false);
+    const [dedupeRemoving, setDedupeRemoving] = useState(false);
     const [detailsDraft, setDetailsDraft] =
         useState<PlaylistDetailsDraft | null>(null);
-    const [reorderMode, setReorderMode] = useState(false);
 
     const loadPlaylist = useCallback(
         async (playlistId: string, nextMarket: Market) => {
@@ -247,6 +265,61 @@ export function PlaylistView() {
         }
     }, [market, settings.locale, state?.id]);
 
+    const ensureAllPlaylistItemsLoaded = useCallback(async () => {
+        if (!data || !state?.id || !data.itemsHasMore) return data?.items ?? [];
+
+        let offset = data.itemsOffset;
+        let nextItems = [...data.items];
+        let totalDurationMs = data.totalDurationMs;
+        let hasMore: boolean = data.itemsHasMore;
+
+        setData((prev) => (prev ? { ...prev, itemsLoadingMore: true } : prev));
+
+        try {
+            while (hasMore) {
+                const page = await sendSpotifyMessage('getPlaylistItems', {
+                    id: state.id,
+                    market,
+                    limit: PLAYLIST_PAGE_SIZE,
+                    offset,
+                });
+                const pageItems = page.items ?? [];
+                const tracks = pageItems
+                    .map((entry) => entry.track)
+                    .filter(Boolean) as Array<Track | Episode>;
+                totalDurationMs += sumDurationMs(tracks);
+                nextItems = [
+                    ...nextItems,
+                    ...mapPlaylistItems(pageItems, settings.locale, offset),
+                ];
+                offset += pageItems.length;
+                hasMore = offset < (page.total ?? offset);
+                if (pageItems.length === 0) break;
+            }
+
+            setData((prev) =>
+                prev
+                    ? {
+                          ...prev,
+                          items: nextItems,
+                          totalDurationMs,
+                          itemsOffset: offset,
+                          itemsHasMore: hasMore,
+                          itemsLoadingMore: false,
+                      }
+                    : prev
+            );
+
+            return nextItems;
+        } catch (error) {
+            logError(logger, 'Failed to load full playlist for dedupe', error);
+            setData((prev) =>
+                prev ? { ...prev, itemsLoadingMore: false } : prev
+            );
+            return data.items;
+        }
+    }, [data, market, settings.locale, state?.id]);
+
     const hero = useMemo<HeroData | null>(() => {
         if (!data) return null;
         const duration = formatDurationLong(data.totalDurationMs);
@@ -272,13 +345,15 @@ export function PlaylistView() {
             : false;
     const canEdit = isOwner || Boolean(data?.playlist.collaborative);
 
-    useEffect(() => {
-        if (!canEdit && reorderMode) setReorderMode(false);
-    }, [canEdit, reorderMode]);
-
     const heroActions: MediaActionGroup | null = hero
         ? buildMediaActions(hero.item)
         : null;
+    const canOpenDedupe =
+        canEdit &&
+        !loading &&
+        !dedupeLoading &&
+        !dedupeRemoving &&
+        (data?.items.length ?? 0) > 0;
     const editAction = canEdit
         ? {
               id: 'edit-playlist',
@@ -290,12 +365,23 @@ export function PlaylistView() {
               },
           }
         : null;
+    const dedupeAction = canOpenDedupe
+        ? {
+              id: 'find-playlist-duplicates',
+              label: 'Find duplicates',
+              onSelect: () => {
+                  void openDedupeDialog();
+              },
+          }
+        : null;
     const mergedHeroActions = heroActions
         ? {
               primary: heroActions.primary,
-              secondary: editAction
-                  ? [...heroActions.secondary, editAction]
-                  : heroActions.secondary,
+              secondary: [
+                  ...heroActions.secondary,
+                  ...(editAction ? [editAction] : []),
+                  ...(dedupeAction ? [dedupeAction] : []),
+              ],
           }
         : null;
     const playNowAction = heroActions?.primary.find(
@@ -355,7 +441,9 @@ export function PlaylistView() {
             context?: { sourceIndex: number; destinationIndex: number }
         ) => {
             const previousItems = data?.items ?? [];
-            setData((prev) => (prev ? { ...prev, items: next } : prev));
+            setData((prev) =>
+                prev ? { ...prev, items: next as PlaylistTrackItem[] } : prev
+            );
             if (!context || !data || !canEdit) return;
             const { sourceIndex, destinationIndex } = context;
             const insertBefore =
@@ -409,6 +497,68 @@ export function PlaylistView() {
         [data, loadPlaylist, market, state?.id]
     );
 
+    const dedupeAnalysis = useMemo(
+        () => analyzePlaylistDuplicates(data?.items ?? []),
+        [data?.items]
+    );
+
+    const openDedupeDialog = useCallback(async () => {
+        if (!data || !canEdit) return;
+        setDedupeOpen(true);
+        setDedupeLoading(true);
+        try {
+            await ensureAllPlaylistItemsLoaded();
+        } finally {
+            setDedupeLoading(false);
+        }
+    }, [canEdit, data, ensureAllPlaylistItemsLoaded]);
+
+    const handleRemoveDuplicates = useCallback(
+        async (items: PlaylistDedupableItem[]) => {
+            if (!data || items.length === 0) return;
+
+            const tracksByUri = new Map<string, number[]>();
+            items.forEach((item) => {
+                const uri = item.playlistTrackUri ?? item.uri;
+                if (!uri) return;
+                const positions = tracksByUri.get(uri) ?? [];
+                positions.push(item.playlistIndex);
+                tracksByUri.set(uri, positions);
+            });
+
+            if (tracksByUri.size === 0) return;
+
+            setDedupeRemoving(true);
+            try {
+                await sendSpotifyMessage('removePlaylistItemsByPosition', {
+                    id: data.playlist.id,
+                    snapshotId: data.snapshotId,
+                    tracks: Array.from(tracksByUri.entries()).map(
+                        ([uri, positions]) => ({
+                            uri,
+                            positions: positions.sort(
+                                (left, right) => left - right
+                            ),
+                        })
+                    ),
+                });
+                if (state?.id) {
+                    await loadPlaylist(state.id, market);
+                }
+                setDedupeOpen(false);
+            } catch (error) {
+                logError(
+                    logger,
+                    'Failed to remove duplicate playlist items',
+                    error
+                );
+            } finally {
+                setDedupeRemoving(false);
+            }
+        },
+        [data, loadPlaylist, market, state?.id]
+    );
+
     const getItemActions = useCallback(
         (item: MediaShelfItem) => {
             const base = buildMediaActions(item);
@@ -431,20 +581,7 @@ export function PlaylistView() {
         [canEdit, handleRemoveItem]
     );
 
-    const reorderEnabled = canEdit && reorderMode && !loading;
-    const tracksHeaderRight = canEdit ? (
-        <Flex align="center" gap="2">
-            <Text size="1" color="gray">
-                Reorder
-            </Text>
-            <Switch
-                checked={reorderMode}
-                size="1"
-                disabled={loading}
-                onCheckedChange={setReorderMode}
-            />
-        </Flex>
-    ) : null;
+    const reorderEnabled = canEdit && !loading;
     const tracksSection = {
         id: 'playlist-tracks',
         title: 'Tracks',
@@ -548,7 +685,6 @@ export function PlaylistView() {
                         loading={loading}
                         section={tracksSection}
                         onChange={() => undefined}
-                        headerRight={tracksHeaderRight}
                         renderContent={() => (
                             <MediaShelf
                                 items={tracksSection.items}
@@ -561,125 +697,139 @@ export function PlaylistView() {
                                 hasMore={tracksSection.hasMore}
                                 loadingMore={tracksSection.loadingMore}
                                 onLoadMore={loadMoreItems}
-                                onReorder={
-                                    reorderEnabled ? handleReorder : undefined
-                                }
+                                onReorder={handleReorder}
                                 getActions={getItemActions}
+                                getRowProps={(item) => {
+                                    const playlistItem =
+                                        item as PlaylistTrackItem;
+                                    return {
+                                        showPosition: true,
+                                        position: playlistItem.playlistIndex,
+                                    };
+                                }}
                             />
                         )}
                     />
                 </Flex>
             </StickyLayout.Body>
 
-            <Dialog.Root open={editOpen} onOpenChange={setEditOpen}>
-                <Dialog.Content size="2" maxWidth="420px">
-                    <Dialog.Title>Edit playlist</Dialog.Title>
-                    <Dialog.Description size="2" color="gray" mb="3">
-                        Update title, description, and visibility settings.
-                    </Dialog.Description>
-                    {detailsDraft && (
-                        <Flex direction="column" gap="3">
-                            <Flex direction="column" gap="1">
-                                <Text size="1" color="gray">
-                                    Title
-                                </Text>
-                                <TextField.Root
-                                    value={detailsDraft.name}
+            <FullPageDialog
+                open={editOpen}
+                onOpenChange={setEditOpen}
+                title="Edit playlist"
+                description="Update the title, description, and visibility settings."
+            >
+                {detailsDraft && (
+                    <Flex direction="column" gap="3">
+                        <Flex direction="column" gap="1">
+                            <Text size="1" color="gray">
+                                Title
+                            </Text>
+                            <TextField.Root
+                                value={detailsDraft.name}
+                                disabled={saving}
+                                onChange={(event) =>
+                                    setDetailsDraft((prev) =>
+                                        prev
+                                            ? {
+                                                  ...prev,
+                                                  name: event.target.value,
+                                              }
+                                            : prev
+                                    )
+                                }
+                            />
+                        </Flex>
+                        <Flex direction="column" gap="1">
+                            <Text size="1" color="gray">
+                                Description
+                            </Text>
+                            <TextArea
+                                value={detailsDraft.description}
+                                disabled={saving}
+                                resize="vertical"
+                                rows={6}
+                                onChange={(event) =>
+                                    setDetailsDraft((prev) =>
+                                        prev
+                                            ? {
+                                                  ...prev,
+                                                  description:
+                                                      event.target.value,
+                                              }
+                                            : prev
+                                    )
+                                }
+                            />
+                        </Flex>
+                        <Flex gap="4" wrap="wrap">
+                            <Flex align="center" gap="2">
+                                <Switch
+                                    checked={detailsDraft.isPublic ?? false}
                                     disabled={saving}
-                                    onChange={(event) =>
+                                    onCheckedChange={(value) =>
                                         setDetailsDraft((prev) =>
                                             prev
                                                 ? {
                                                       ...prev,
-                                                      name: event.target.value,
+                                                      isPublic: value,
                                                   }
                                                 : prev
                                         )
                                     }
                                 />
+                                <Text size="2">Public</Text>
                             </Flex>
-                            <Flex direction="column" gap="1">
-                                <Text size="1" color="gray">
-                                    Description
-                                </Text>
-                                <TextArea
-                                    value={detailsDraft.description}
+                            <Flex align="center" gap="2">
+                                <Switch
+                                    checked={detailsDraft.isCollaborative}
                                     disabled={saving}
-                                    resize="vertical"
-                                    onChange={(event) =>
+                                    onCheckedChange={(value) =>
                                         setDetailsDraft((prev) =>
                                             prev
                                                 ? {
                                                       ...prev,
-                                                      description:
-                                                          event.target.value,
+                                                      isCollaborative: value,
                                                   }
                                                 : prev
                                         )
                                     }
                                 />
-                            </Flex>
-                            <Flex gap="4" wrap="wrap">
-                                <Flex align="center" gap="2">
-                                    <Switch
-                                        checked={detailsDraft.isPublic ?? false}
-                                        disabled={saving}
-                                        onCheckedChange={(value) =>
-                                            setDetailsDraft((prev) =>
-                                                prev
-                                                    ? {
-                                                          ...prev,
-                                                          isPublic: value,
-                                                      }
-                                                    : prev
-                                            )
-                                        }
-                                    />
-                                    <Text size="2">Public</Text>
-                                </Flex>
-                                <Flex align="center" gap="2">
-                                    <Switch
-                                        checked={detailsDraft.isCollaborative}
-                                        disabled={saving}
-                                        onCheckedChange={(value) =>
-                                            setDetailsDraft((prev) =>
-                                                prev
-                                                    ? {
-                                                          ...prev,
-                                                          isCollaborative:
-                                                              value,
-                                                      }
-                                                    : prev
-                                            )
-                                        }
-                                    />
-                                    <Text size="2">Collaborative</Text>
-                                </Flex>
-                            </Flex>
-                            <Flex justify="end" gap="2">
-                                <Dialog.Close>
-                                    <Button
-                                        size="1"
-                                        variant="soft"
-                                        disabled={saving}
-                                        onClick={resetDetailsDraft}
-                                    >
-                                        Cancel
-                                    </Button>
-                                </Dialog.Close>
-                                <Button
-                                    size="1"
-                                    variant="solid"
-                                    disabled={saving}
-                                    onClick={handleSaveDetails}
-                                >
-                                    {saving ? 'Saving…' : 'Save changes'}
-                                </Button>
+                                <Text size="2">Collaborative</Text>
                             </Flex>
                         </Flex>
-                    )}
-                </Dialog.Content>
-            </Dialog.Root>
+                        <Flex justify="end" gap="2">
+                            <Button
+                                size="1"
+                                variant="soft"
+                                disabled={saving}
+                                onClick={() => {
+                                    resetDetailsDraft();
+                                    setEditOpen(false);
+                                }}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                size="1"
+                                variant="solid"
+                                disabled={saving}
+                                onClick={handleSaveDetails}
+                            >
+                                {saving ? 'Saving...' : 'Save changes'}
+                            </Button>
+                        </Flex>
+                    </Flex>
+                )}
+            </FullPageDialog>
+            <PlaylistDedupeDialog
+                open={dedupeOpen}
+                onOpenChange={setDedupeOpen}
+                analysis={dedupeAnalysis}
+                loading={dedupeLoading}
+                removing={dedupeRemoving}
+                onConfirm={handleRemoveDuplicates}
+            />
         </StickyLayout.Root>
     );
 }

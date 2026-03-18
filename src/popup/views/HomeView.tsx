@@ -921,15 +921,14 @@ export function HomeView({ searchQuery, filters }: Props) {
                 >
                     <DragDropContext
                         onDragEnd={onSectionDragEnd}
-                        autoScrollerOptions={{
-                            ignoreSizeLimits: true,
-                            disableSecondaryAxisScroll: true,
-                        }}
+                        ignoreSizeLimits
+                        disableSecondaryAxisScroll
                         zIndexOptions={{
                             dragging: 20,
                             dropAnimating: 20,
                         }}
                         lockSecondaryAxisMovement
+                        clampToVisibleBounds
                     >
                         <Droppable
                             droppableId="home-sections"

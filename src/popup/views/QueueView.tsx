@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Flex, Switch, Text } from '@radix-ui/themes';
+import { Button, Flex, Text } from '@radix-ui/themes';
 import type { Episode, Track } from '@spotify/web-api-ts-sdk';
 
 import { resolveLocale } from '../../shared/locale';
@@ -159,7 +159,6 @@ export function QueueView() {
     const cachedNowPlaying = useMediaCacheEntry<NowPlayingCacheEntry>(
         MEDIA_CACHE_KEYS.nowPlaying
     );
-    const [reorderMode, setReorderMode] = useState(false);
     const [syncingQueue, setSyncingQueue] = useState(false);
     const syncingQueueRef = useRef(false);
     const queueStateRef = useRef<QueueState | null>(null);
@@ -197,7 +196,7 @@ export function QueueView() {
         setData,
     } = useLazyPolling<QueueState>({
         load: loadQueue,
-        enabled: !reorderMode && !syncingQueue,
+        enabled: !syncingQueue,
         intervalMs: POLL_MS,
         initialData: cachedQueueState,
         merge: mergeQueueState,
@@ -248,11 +247,10 @@ export function QueueView() {
 
             try {
                 const currentUri = queueStateRef.current?.current?.uri ?? null;
-                const upcomingUris = nextQueue
-                    .map((item) => item.uri)
-                    .filter((uri): uri is string => Boolean(uri));
                 await sendSpotifyMessage('syncQueue', {
-                    upcomingUris,
+                    upcomingUris: nextQueue
+                        .map((item) => item.uri)
+                        .filter((uri): uri is string => Boolean(uri)),
                     currentUri: currentUri ?? undefined,
                 });
                 await refresh();
@@ -325,23 +323,22 @@ export function QueueView() {
         [setData, syncQueueToSpotify]
     );
 
-    const reorderEnabled =
-        reorderMode && !upcomingLoading && !syncingQueue && upcoming.length > 1;
+    const handleClearQueue = useCallback(() => {
+        if (syncingQueueRef.current) return;
+        setData((prev) => (prev ? { ...prev, queue: [] } : prev));
+        void syncQueueToSpotify([]);
+    }, [setData, syncQueueToSpotify]);
+
     const queueHeaderRight = (
-        <Flex align="center" gap="2">
-            <Text size="1" color="gray">
-                Reorder
-            </Text>
-            <Switch
-                size="1"
-                checked={reorderMode}
-                disabled={
-                    upcomingLoading || syncingQueue || upcoming.length < 2
-                }
-                onCheckedChange={setReorderMode}
-                aria-label="Toggle queue reorder mode"
-            />
-        </Flex>
+        <Button
+            size="1"
+            variant="soft"
+            color="gray"
+            disabled={upcomingLoading || syncingQueue || upcoming.length === 0}
+            onClick={handleClearQueue}
+        >
+            Clear queue
+        </Button>
     );
 
     return (
@@ -436,14 +433,10 @@ export function QueueView() {
                                     variant="list"
                                     orientation="vertical"
                                     itemsPerColumn={6}
-                                    draggable={reorderEnabled}
+                                    draggable={!sectionLoading && !syncingQueue}
                                     interactive={!sectionLoading}
                                     itemLoading={sectionLoading}
-                                    onReorder={
-                                        reorderEnabled
-                                            ? handleReorder
-                                            : undefined
-                                    }
+                                    onReorder={handleReorder}
                                     getActions={getQueueItemActions}
                                 />
                             );

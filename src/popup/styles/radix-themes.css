@@ -28,6 +28,11 @@
     cursor: pointer;
 }
 
+.rt-CheckboxRoot:not(:disabled),
+.rt-BaseCheckboxRoot:not(:disabled) {
+    cursor: pointer;
+}
+
 .rt-AvatarRoot {
     position: relative;
     user-select: none;

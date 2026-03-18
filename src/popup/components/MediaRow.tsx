@@ -1,11 +1,12 @@
-import {
-    useCallback,
-    useState,
-    type CSSProperties,
-    type ReactNode,
-} from 'react';
+import { useState, type CSSProperties, type ReactNode } from 'react';
 import { DotsHorizontalIcon } from '@radix-ui/react-icons';
-import { DropdownMenu, Flex, IconButton, Skeleton } from '@radix-ui/themes';
+import {
+    Checkbox,
+    DropdownMenu,
+    Flex,
+    IconButton,
+    Skeleton,
+} from '@radix-ui/themes';
 import clsx from 'clsx';
 
 import { handleMenuTriggerKeyDown } from '../hooks/useActions';
@@ -26,9 +27,16 @@ export interface MediaRowProps {
     onClick?: () => void;
     loading?: boolean;
     contextMenu?: ReactNode;
+    contextMenuDisabled?: boolean;
     className?: string;
     style?: CSSProperties;
     seed?: number;
+    showPosition?: boolean;
+    position?: number;
+    selection?: {
+        checked: boolean;
+        onCheckedChange: (checked: boolean) => void;
+    };
 }
 
 export function MediaRow({
@@ -42,42 +50,121 @@ export function MediaRow({
     onClick,
     loading = false,
     contextMenu,
+    contextMenuDisabled = false,
     className,
     style,
     seed = 0,
+    showPosition = false,
+    position,
+    selection,
 }: MediaRowProps) {
     const radius = imageShape === 'round' ? 'full' : 'small';
     const subtitleText = typeof subtitle === 'string' ? subtitle : undefined;
     const skeletonParts = [title, subtitleText, imageUrl];
     const handleRowClick = loading ? undefined : onClick;
-    const [isTitleProxyHovered, setIsTitleProxyHovered] = useState(false);
-
-    const updateTitleProxyHover = useCallback(
-        (target: EventTarget | null) => {
-            const element = target instanceof Element ? target : null;
-            const next =
-                Boolean(handleRowClick) &&
-                !element?.closest('[data-title-hover-stop="true"]');
-            setIsTitleProxyHovered((prev) => (prev === next ? prev : next));
-        },
-        [handleRowClick]
+    const [isRowHovered, setIsRowHovered] = useState(false);
+    const showSelection = Boolean(
+        selection && (selection.checked || isRowHovered)
     );
+    const positionLabel = Number.isFinite(position)
+        ? `#${Number(position) + 1}`
+        : '#';
 
     return (
         <Flex
             align="center"
             gap="1"
             onClick={handleRowClick}
-            onPointerEnter={(event) => updateTitleProxyHover(event.target)}
-            onPointerMove={(event) => updateTitleProxyHover(event.target)}
-            onPointerLeave={() => setIsTitleProxyHovered(false)}
+            onPointerEnter={() => setIsRowHovered(true)}
+            onPointerLeave={() => setIsRowHovered(false)}
             className={clsx(
-                'group w-full min-w-0',
+                'group rounded-2 bg-background w-full min-w-0',
                 handleRowClick && 'cursor-pointer',
                 className
             )}
             style={style}
         >
+            {(showPosition || selection) && (
+                <Flex align="center" justify="center" className="w-11 shrink-0">
+                    {selection ? (
+                        <Flex
+                            direction="column"
+                            align="center"
+                            justify="center"
+                            className="h-8 w-11"
+                        >
+                            <div
+                                className={clsx(
+                                    'grid w-7 overflow-hidden transition-[grid-template-rows,opacity]',
+                                    showSelection
+                                        ? 'grid-rows-[1fr] opacity-100'
+                                        : 'grid-rows-[0fr] opacity-0'
+                                )}
+                            >
+                                <div className="overflow-hidden pb-0.5">
+                                    <span className="block w-7 pr-0.5 text-center text-[10px] leading-none font-medium text-[--gray-10] tabular-nums">
+                                        {positionLabel}
+                                    </span>
+                                </div>
+                            </div>
+                            <div
+                                className={clsx(
+                                    'grid h-4 w-7 place-items-center transition-[transform] duration-200',
+                                    showSelection
+                                        ? 'translate-y-0'
+                                        : '-translate-y-1.5'
+                                )}
+                            >
+                                <span
+                                    className={clsx(
+                                        'col-start-1 row-start-1 block w-7 pr-0.5 text-center text-[10px] leading-none font-medium text-[--gray-10] tabular-nums transition-[opacity,transform] duration-200',
+                                        showSelection
+                                            ? 'translate-y-0.5 scale-95 opacity-0'
+                                            : 'translate-y-0 scale-100 opacity-100'
+                                    )}
+                                >
+                                    {positionLabel}
+                                </span>
+                                <div
+                                    className={clsx(
+                                        'col-start-1 row-start-1 flex h-4 w-4 items-center justify-center transition-[opacity,transform] duration-200',
+                                        showSelection
+                                            ? 'pointer-events-auto translate-y-0 scale-100 opacity-100'
+                                            : 'pointer-events-none translate-y-0.5 scale-90 opacity-0'
+                                    )}
+                                >
+                                    <Checkbox
+                                        checked={selection.checked}
+                                        color="green"
+                                        size="1"
+                                        onClick={(event) =>
+                                            event.stopPropagation()
+                                        }
+                                        onPointerDown={(event) =>
+                                            event.stopPropagation()
+                                        }
+                                        onCheckedChange={(checked) =>
+                                            selection.onCheckedChange(
+                                                checked === true
+                                            )
+                                        }
+                                    />
+                                </div>
+                            </div>
+                        </Flex>
+                    ) : (
+                        <div
+                            className={clsx(
+                                'flex h-8 w-11 items-center justify-center'
+                            )}
+                        >
+                            <span className="block w-7 pr-0.5 text-center text-[10px] leading-none font-medium text-[--gray-10] tabular-nums">
+                                {positionLabel}
+                            </span>
+                        </div>
+                    )}
+                </Flex>
+            )}
             {showImage && (
                 <Skeleton loading={loading}>
                     <AvatarButton
@@ -106,7 +193,7 @@ export function MediaRow({
                                 size="2"
                                 weight="medium"
                                 interactive={Boolean(handleRowClick)}
-                                forceHover={isTitleProxyHovered}
+                                forceHover={isRowHovered}
                                 onClick={
                                     handleRowClick
                                         ? (event) => {
@@ -163,7 +250,7 @@ export function MediaRow({
             {contextMenu && (
                 <DropdownMenu.Root>
                     <DropdownMenu.Trigger
-                        disabled={loading}
+                        disabled={loading || contextMenuDisabled}
                         onKeyDown={handleMenuTriggerKeyDown}
                     >
                         <IconButton
@@ -172,8 +259,19 @@ export function MediaRow({
                             radius="full"
                             size="1"
                             color="gray"
-                            onClick={(event) => event.stopPropagation()}
-                            onPointerDown={(event) => event.stopPropagation()}
+                            onClick={
+                                contextMenuDisabled
+                                    ? undefined
+                                    : (event) => event.stopPropagation()
+                            }
+                            onPointerDown={
+                                contextMenuDisabled
+                                    ? undefined
+                                    : (event) => event.stopPropagation()
+                            }
+                            className={clsx(
+                                contextMenuDisabled && 'pointer-events-none'
+                            )}
                         >
                             <DotsHorizontalIcon />
                         </IconButton>

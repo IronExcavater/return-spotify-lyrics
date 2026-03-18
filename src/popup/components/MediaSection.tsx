@@ -140,6 +140,10 @@ function MediaSectionImpl({
             )}
             data-dragging={dragging ? 'true' : 'false'}
         >
+            <div
+                aria-hidden="true"
+                className="bg-background pointer-events-none absolute -inset-1 -z-10 rounded-[calc(var(--radius-3)+4px)]"
+            />
             <div className="pointer-events-none absolute -z-10 opacity-0">
                 <Flex
                     ref={editor.measureStackRef}
@@ -155,7 +159,7 @@ function MediaSectionImpl({
                     </div>
                 </Flex>
             </div>
-            <Flex direction="column" gap="1" className="relative z-0">
+            <Flex direction="column" className="relative z-0">
                 <MediaSectionEditControls
                     editor={editor}
                     editing={editing}
@@ -234,9 +238,12 @@ function MediaSectionImpl({
             <div
                 aria-hidden="true"
                 className={clsx(
-                    'rounded-2 ring-offset-background pointer-events-none absolute inset-0 z-0 ring-2 ring-transparent ring-offset-2 transition-shadow',
-                    editing && 'group-hover/section:ring-accent-8!',
-                    dragging && 'ring-accent-10!'
+                    'pointer-events-none absolute inset-0 z-0 after:absolute after:-inset-1 after:rounded-[calc(var(--radius-3)+4px)] after:border-2 after:border-transparent after:opacity-0 after:transition-all',
+                    editing &&
+                        'group-hover/section:after:border-accent-8! group-hover/section:after:opacity-100',
+                    editing &&
+                        dragging &&
+                        'after:border-accent-10! after:opacity-100'
                 )}
             />
         </div>

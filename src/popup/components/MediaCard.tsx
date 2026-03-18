@@ -19,6 +19,7 @@ interface Props {
     onClick?: () => void;
     loading?: boolean;
     contextMenu?: ReactNode;
+    contextMenuDisabled?: boolean;
     className?: string;
     width?: number | string;
     seed?: number;
@@ -34,6 +35,7 @@ export function MediaCard({
     onClick,
     loading = false,
     contextMenu,
+    contextMenuDisabled = false,
     className,
     width,
     seed = 0,
@@ -76,7 +78,7 @@ export function MediaCard({
             onPointerMove={(event) => updateTitleProxyHover(event.target)}
             onPointerLeave={() => setIsTitleProxyHovered(false)}
             className={clsx(
-                'group',
+                'group rounded-2 bg-background',
                 handleRowClick && 'cursor-pointer',
                 className
             )}
@@ -98,6 +100,7 @@ export function MediaCard({
                     {contextMenu && (
                         <DropdownMenu.Root>
                             <DropdownMenu.Trigger
+                                disabled={loading || contextMenuDisabled}
                                 onKeyDown={handleMenuTriggerKeyDown}
                             >
                                 <IconButton
@@ -106,15 +109,23 @@ export function MediaCard({
                                     radius="full"
                                     size="0"
                                     color="gray"
-                                    onClick={(event) => event.stopPropagation()}
-                                    onPointerDown={(event) =>
-                                        event.stopPropagation()
+                                    onClick={
+                                        contextMenuDisabled
+                                            ? undefined
+                                            : (event) => event.stopPropagation()
+                                    }
+                                    onPointerDown={
+                                        contextMenuDisabled
+                                            ? undefined
+                                            : (event) => event.stopPropagation()
                                     }
                                     className={clsx(
                                         imageShape === 'round'
                                             ? 'm-2!'
                                             : 'm-1!',
-                                        'bg-panel-solid/10! pointer-events-none ml-auto! self-start! opacity-0! backdrop-blur-[2px]! transition-opacity group-focus-within:pointer-events-auto group-focus-within:opacity-100! group-hover:pointer-events-auto group-hover:opacity-100! group-focus-visible:pointer-events-auto group-focus-visible:opacity-100! hover:bg-(--accent-11)/10! hover:backdrop-blur-xs! data-[state=open]:pointer-events-auto data-[state=open]:opacity-100!'
+                                        contextMenuDisabled
+                                            ? 'bg-panel-solid/10! pointer-events-none ml-auto! self-start! opacity-0! backdrop-blur-[2px]! transition-opacity group-focus-within:opacity-100! group-hover:opacity-100! group-focus-visible:opacity-100! data-[state=open]:opacity-100!'
+                                            : 'bg-panel-solid/10! pointer-events-none ml-auto! self-start! opacity-0! backdrop-blur-[2px]! transition-opacity group-focus-within:pointer-events-auto group-focus-within:opacity-100! group-hover:pointer-events-auto group-hover:opacity-100! group-focus-visible:pointer-events-auto group-focus-visible:opacity-100! hover:bg-(--accent-11)/10! hover:backdrop-blur-xs! data-[state=open]:pointer-events-auto data-[state=open]:opacity-100!'
                                     )}
                                 >
                                     <DotsHorizontalIcon />

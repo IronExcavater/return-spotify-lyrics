@@ -102,16 +102,18 @@ const startPlaybackRequest = async (
     const params = new URLSearchParams();
     if (deviceId) params.set('device_id', deviceId);
     const query = params.toString();
+    const usingCustomUris = Array.isArray(uris) && uris.length > 0;
+    const body = {
+        ...(contextUri ? { context_uri: contextUri } : {}),
+        ...(usingCustomUris ? { uris } : {}),
+        ...(!usingCustomUris && offset ? { offset } : {}),
+        ...(positionMs != null ? { position_ms: positionMs } : {}),
+    };
 
     await client.makeRequest(
         'PUT',
         `me/player/play${query ? `?${query}` : ''}`,
-        {
-            context_uri: contextUri,
-            uris,
-            offset,
-            position_ms: positionMs,
-        }
+        body
     );
 };
 
@@ -233,15 +235,12 @@ export const spotifyRpc = {
 
             await startPlaybackRequest(client, deviceId, {
                 uris,
-                offset: { position: 0 },
-                positionMs: resolvedCurrentUri
-                    ? (playback?.progress_ms ?? undefined)
-                    : undefined,
+                positionMs:
+                    resolvedCurrentUri &&
+                    playback?.item?.uri === resolvedCurrentUri
+                        ? (playback.progress_ms ?? undefined)
+                        : undefined,
             });
-
-            if (playback?.is_playing === false) {
-                await client.player.pausePlayback(deviceId);
-            }
         });
     },
 
@@ -516,6 +515,21 @@ export const spotifyRpc = {
         return client.playlists.removeItemsFromPlaylist(id, {
             snapshot_id: snapshotId,
             tracks: uris.map((uri) => ({ uri })),
+        });
+    },
+    removePlaylistItemsByPosition: async ({
+        id,
+        tracks,
+        snapshotId,
+    }: {
+        id: string;
+        tracks: Array<{ uri: string; positions: number[] }>;
+        snapshotId?: string;
+    }) => {
+        const client = await requireClient();
+        return client.playlists.removeItemsFromPlaylist(id, {
+            snapshot_id: snapshotId,
+            tracks,
         });
     },
     getTrack: async ({ id }: { id: string }) => {

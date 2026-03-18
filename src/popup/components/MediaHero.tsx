@@ -145,7 +145,6 @@ export function MediaHero({
                 align="center"
                 gap="2"
                 pl="3"
-                pr="1"
                 className="relative z-10 w-full"
                 style={{
                     paddingTop,
@@ -216,7 +215,7 @@ export function MediaHero({
                         hasDuration ||
                         hasHeroActions ||
                         loading) && (
-                        <Flex align="start" justify="between" gap="2" mr="1">
+                        <Flex align="start" justify="between" gap="2">
                             <Flex
                                 direction="column"
                                 gap="1"

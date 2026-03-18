@@ -24,7 +24,7 @@ import { useScrollFade } from '../hooks/useScrollFade';
 import { useShelfNavigation } from '../hooks/useShelfNavigation';
 import { MediaActionsMenu } from './MediaActionsMenu';
 import { MediaCard } from './MediaCard';
-import { MediaRow } from './MediaRow';
+import { MediaRow, type MediaRowProps } from './MediaRow';
 import { TextButton } from './TextButton';
 
 export interface MediaShelfItem extends MediaItem {
@@ -61,6 +61,15 @@ interface Props {
         item: MediaShelfItem,
         index: number
     ) => MediaActionGroup | null;
+    getRowProps?: (
+        item: MediaShelfItem,
+        index: number
+    ) => Partial<
+        Pick<
+            MediaRowProps,
+            'showPosition' | 'position' | 'selection' | 'className'
+        >
+    >;
 }
 const hashId = (value: string) => {
     let h = 0;
@@ -111,6 +120,7 @@ export function MediaShelf({
     cardSize,
     trackSubtitleMode,
     getActions,
+    getRowProps,
 }: Props) {
     const flattened = useMemo(
         () =>
@@ -204,7 +214,8 @@ export function MediaShelf({
     ]);
     const handleDragEnd = useCallback(
         (result: DropResult) => {
-            if (!result.destination || !onReorder) return;
+            if (!result.destination) return;
+            if (!onReorder) return;
             const next = [...flattened];
             const [moved] = next.splice(result.source.index, 1);
             next.splice(result.destination.index, 0, moved);
@@ -386,6 +397,7 @@ export function MediaShelf({
                     : (renderArtistLinks(item.artists) ?? item.subtitle);
             const actions =
                 getActions?.(item, index) ?? buildMediaActions(item);
+            const rowProps = getRowProps?.(item, index);
             const hasActions =
                 actions.primary.length > 0 || actions.secondary.length > 0;
             const contextMenu =
@@ -406,6 +418,7 @@ export function MediaShelf({
                         imageUrl={item.imageUrl}
                         icon={item.icon ?? <MdMusicNote />}
                         contextMenu={contextMenu}
+                        contextMenuDisabled={false}
                         seed={seed}
                         loading={item.loading}
                         cardSize={cardSize}
@@ -419,9 +432,14 @@ export function MediaShelf({
                         imageUrl={item.imageUrl}
                         showImage={showImage}
                         contextMenu={contextMenu}
+                        contextMenuDisabled={false}
                         seed={seed}
                         loading={item.loading}
                         onClick={canActivate ? handleNavigate : undefined}
+                        showPosition={rowProps?.showPosition}
+                        position={rowProps?.position}
+                        selection={rowProps?.selection}
+                        className={rowProps?.className}
                         style={
                             orientation === 'horizontal' && effectiveColumnWidth
                                 ? { minWidth: effectiveColumnWidth }
@@ -435,6 +453,7 @@ export function MediaShelf({
             cardSize,
             effectiveColumnWidth,
             getActions,
+            getRowProps,
             orientation,
             routeHistory,
             showImage,
@@ -473,6 +492,7 @@ export function MediaShelf({
                                 draggableId={key}
                                 index={flatIndex}
                                 isDragDisabled={!draggable}
+                                disableInteractiveElementBlocking
                             >
                                 {(dragProvided) => (
                                     <div
@@ -489,7 +509,11 @@ export function MediaShelf({
                                         }}
                                         role="button"
                                         aria-disabled={!canActivate}
-                                        className="group rounded-2 focus-visible:ring-accent-9 focus-visible:ring-offset-background focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
+                                        className={clsx(
+                                            'group rounded-2 bg-background focus-visible:ring-accent-9 focus-visible:ring-offset-background focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none',
+                                            draggable &&
+                                                'cursor-grab active:cursor-grabbing'
+                                        )}
                                         tabIndex={
                                             interactive &&
                                             flatIndex === activeIndex
@@ -525,49 +549,59 @@ export function MediaShelf({
                 index
             );
             return (
-                <Draggable
-                    key={getItemKey(item, index)}
-                    draggableId={getItemKey(item, index)}
-                    index={index}
-                    isDragDisabled={!draggable}
-                >
-                    {(dragProvided) => (
-                        <div
-                            ref={(node) => {
-                                dragProvided.innerRef(node);
-                                focusRefs.current[index] = node;
-                            }}
-                            data-index={index}
-                            {...dragProvided.draggableProps}
-                            {...dragProvided.dragHandleProps}
-                            style={{
-                                ...dragProvided.draggableProps.style,
-                            }}
-                            role="button"
-                            aria-disabled={!canActivate}
-                            className="group rounded-2 focus-visible:ring-accent-9 focus-visible:ring-offset-background focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
-                            tabIndex={
-                                interactive && index === activeIndex ? 0 : -1
-                            }
-                            onFocus={(event) => handleItemFocus(event, index)}
-                            onKeyDown={(event) =>
-                                handleItemKeyDown(
-                                    event,
-                                    index,
-                                    canActivate,
-                                    handleNavigate
-                                )
-                            }
-                        >
-                            {content}
-                        </div>
-                    )}
-                </Draggable>
+                <Fragment key={getItemKey(item, index)}>
+                    <Draggable
+                        draggableId={getItemKey(item, index)}
+                        index={index}
+                        isDragDisabled={!draggable}
+                        disableInteractiveElementBlocking
+                    >
+                        {(dragProvided) => (
+                            <div
+                                ref={(node) => {
+                                    dragProvided.innerRef(node);
+                                    focusRefs.current[index] = node;
+                                }}
+                                data-index={index}
+                                {...dragProvided.draggableProps}
+                                {...dragProvided.dragHandleProps}
+                                style={{
+                                    ...dragProvided.draggableProps.style,
+                                }}
+                                role="button"
+                                aria-disabled={!canActivate}
+                                className={clsx(
+                                    'group rounded-2 bg-background focus-visible:ring-accent-9 focus-visible:ring-offset-background focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none',
+                                    draggable &&
+                                        'cursor-grab active:cursor-grabbing'
+                                )}
+                                tabIndex={
+                                    interactive && index === activeIndex
+                                        ? 0
+                                        : -1
+                                }
+                                onFocus={(event) =>
+                                    handleItemFocus(event, index)
+                                }
+                                onKeyDown={(event) =>
+                                    handleItemKeyDown(
+                                        event,
+                                        index,
+                                        canActivate,
+                                        handleNavigate
+                                    )
+                                }
+                            >
+                                {content}
+                            </div>
+                        )}
+                    </Draggable>
+                </Fragment>
             );
         });
     };
     const renderBody = (dropProvided?: DroppableProvided) => (
-        <Flex className="relative">
+        <Flex className="relative -mx-1">
             <Flex
                 direction={orientation === 'horizontal' ? 'row' : 'column'}
                 gap="1"
@@ -615,10 +649,9 @@ export function MediaShelf({
     return (
         <DragDropContext
             onDragEnd={handleDragEnd}
-            autoScrollerOptions={{
-                disableSecondaryAxisScroll: true,
-            }}
+            disableSecondaryAxisScroll
             lockSecondaryAxisMovement
+            clampToVisibleBounds
         >
             <Droppable
                 droppableId={droppableId}
