@@ -4,10 +4,10 @@ import { DropdownMenu, Flex, IconButton, Skeleton } from '@radix-ui/themes';
 import clsx from 'clsx';
 
 import { handleMenuTriggerKeyDown } from '../hooks/useActions';
+import { useInteractiveTargetGuard } from '../hooks/useInteractiveTargetGuard';
 import { AvatarButton } from './AvatarButton';
 import { Fade } from './Fade';
 import { Marquee } from './Marquee';
-import { isMediaInteractiveTarget } from './mediaClickGuard';
 import { SkeletonText } from './SkeletonText';
 import { TextButton } from './TextButton';
 
@@ -57,18 +57,19 @@ export function MediaCard({
     const subtitleContent = subtitleText?.trim() ? subtitleText : ' ';
     const handleRowClick = loading ? undefined : onClick;
     const [isTitleProxyHovered, setIsTitleProxyHovered] = useState(false);
+    const { isInteractiveTarget } = useInteractiveTargetGuard();
 
     const updateTitleProxyHover = useCallback(
         (target: EventTarget | null) => {
             const next =
-                Boolean(handleRowClick) && !isMediaInteractiveTarget(target);
+                Boolean(handleRowClick) && !isInteractiveTarget(target);
             setIsTitleProxyHovered((prev) => (prev === next ? prev : next));
         },
-        [handleRowClick]
+        [handleRowClick, isInteractiveTarget]
     );
     const handleContainerClick = (event: MouseEvent<HTMLDivElement>) => {
         if (!handleRowClick) return;
-        if (isMediaInteractiveTarget(event.target)) return;
+        if (isInteractiveTarget(event.target)) return;
         handleRowClick();
     };
 

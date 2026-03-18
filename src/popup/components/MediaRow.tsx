@@ -15,10 +15,10 @@ import {
 import clsx from 'clsx';
 
 import { handleMenuTriggerKeyDown } from '../hooks/useActions';
+import { useInteractiveTargetGuard } from '../hooks/useInteractiveTargetGuard';
 import { AvatarButton } from './AvatarButton';
 import { Fade } from './Fade';
 import { Marquee } from './Marquee';
-import { isMediaInteractiveTarget } from './mediaClickGuard';
 import { SkeletonText } from './SkeletonText';
 import { TextButton } from './TextButton';
 
@@ -134,6 +134,7 @@ export function MediaRow({
     const handleRowClick = loading ? undefined : onClick;
     const [isRowHovered, setIsRowHovered] = useState(false);
     const [isTitleProxyHovered, setIsTitleProxyHovered] = useState(false);
+    const { isInteractiveTarget } = useInteractiveTargetGuard();
     const showSelection = Boolean(
         selection && (selection.checked || isRowHovered)
     );
@@ -142,12 +143,11 @@ export function MediaRow({
         : '';
     const handleContainerClick = (event: MouseEvent<HTMLDivElement>) => {
         if (!handleRowClick) return;
-        if (isMediaInteractiveTarget(event.target)) return;
+        if (isInteractiveTarget(event.target)) return;
         handleRowClick();
     };
     const updateTitleProxyHover = (target: EventTarget | null) => {
-        const next =
-            Boolean(handleRowClick) && !isMediaInteractiveTarget(target);
+        const next = Boolean(handleRowClick) && !isInteractiveTarget(target);
         setIsTitleProxyHovered((previous) =>
             previous === next ? previous : next
         );

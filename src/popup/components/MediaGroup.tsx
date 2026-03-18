@@ -3,6 +3,7 @@ import { ChevronDownIcon } from '@radix-ui/react-icons';
 import { Checkbox, Flex, Skeleton, Text } from '@radix-ui/themes';
 import clsx from 'clsx';
 
+import { useInteractiveTargetGuard } from '../hooks/useInteractiveTargetGuard';
 import { SkeletonText } from './SkeletonText';
 
 export type MediaGroupProps = {
@@ -22,27 +23,13 @@ export type MediaGroupProps = {
 
 const GROUP_BODY_ATTR = 'data-media-group-body';
 const GROUP_IGNORE_TOGGLE_ATTR = 'data-media-group-ignore-toggle';
-const GROUP_INTERACTIVE_SELECTOR = [
+const GROUP_INTERACTIVE_SELECTORS = [
     `[${GROUP_IGNORE_TOGGLE_ATTR}="true"]`,
-    'button',
-    'a[href]',
-    'input',
-    'select',
-    'textarea',
     '[role="button"]',
     '[role="link"]',
     '[role="checkbox"]',
-    '[role="menuitem"]',
-    '[role="option"]',
-    '[contenteditable="true"]',
-].join(', ');
-
-const shouldIgnoreGroupToggle = (target: EventTarget | null) => {
-    const element = target instanceof Element ? target : null;
-    if (!element) return false;
-    if (element.closest(`[${GROUP_BODY_ATTR}="true"]`)) return true;
-    return Boolean(element.closest(GROUP_INTERACTIVE_SELECTOR));
-};
+];
+const GROUP_IGNORE_WITHIN_SELECTORS = [`[${GROUP_BODY_ATTR}="true"]`];
 
 export function MediaGroup({
     title,
@@ -56,9 +43,13 @@ export function MediaGroup({
     seed = 0,
 }: MediaGroupProps) {
     const showSubtitle = loading || Boolean(subtitle);
+    const { isInteractiveTarget } = useInteractiveTargetGuard({
+        additionalSelectors: GROUP_INTERACTIVE_SELECTORS,
+        ignoreWithinSelectors: GROUP_IGNORE_WITHIN_SELECTORS,
+    });
     const handleToggleClick = (event: MouseEvent<HTMLDivElement>) => {
         if (!onToggleCollapsed) return;
-        if (shouldIgnoreGroupToggle(event.target)) return;
+        if (isInteractiveTarget(event.target)) return;
         onToggleCollapsed();
     };
 
