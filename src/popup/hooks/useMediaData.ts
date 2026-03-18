@@ -50,6 +50,7 @@ import type { MediaRouteState } from './useMediaRoute';
 
 const logger = createLogger('media');
 const SHOW_EPISODE_PAGE_SIZE = 30;
+const ARTIST_DISCOGRAPHY_PAGE_SIZE = 20;
 
 const suppressNotFound = (error: Error) => /\b404\b/.test(error.message);
 const logOptionalError = createOptionalRequestLogger(logger);
@@ -95,6 +96,9 @@ export type MediaDataState =
           artist: Artist;
           topTracks: MediaItem[];
           discography: DiscographyEntry[];
+          discographyOffset: number;
+          discographyHasMore: boolean;
+          discographyLoadingMore: boolean;
           relatedArtists: MediaItem[];
           recommended: MediaItem[];
           relatedArtistsLoading: boolean;
@@ -212,6 +216,29 @@ const buildDiscographyEntries = async (
 
     return entries.filter(Boolean) as DiscographyEntry[];
 };
+
+const dedupeAlbums = <T extends SimplifiedAlbum | Album>(albums: T[]) =>
+    Array.from(
+        new Map(
+            albums
+                .filter((album): album is T & { id: string } =>
+                    Boolean(album.id)
+                )
+                .map((album) => [album.id, album])
+        ).values()
+    );
+
+const mergeDiscographyEntries = (
+    current: DiscographyEntry[],
+    next: DiscographyEntry[]
+) =>
+    Array.from(
+        new Map(
+            [...current, ...next]
+                .filter((entry) => Boolean(entry.album.id))
+                .map((entry) => [entry.album.id!, entry])
+        ).values()
+    );
 
 const rankRelatedArtists = (
     artists: Artist[],
@@ -476,6 +503,9 @@ const loadArtistData = async ({
         artist,
         topTracks: topTracks.tracks.map(trackToItem),
         discography: [],
+        discographyOffset: 0,
+        discographyHasMore: false,
+        discographyLoadingMore: false,
         relatedArtists: fansAlsoLike,
         recommended: [],
         relatedArtistsLoading: fansAlsoLike.length === 0,
@@ -555,11 +585,17 @@ const loadArtistData = async ({
 
         const discographySeed =
             albumsPage?.items?.filter((item) => item.id) ?? [];
-        if (!discographySeed.length) return;
-
-        const discographyAlbums = Array.from(
-            new Map(discographySeed.map((item) => [item.id!, item])).values()
-        ).slice(0, 10);
+        const discographyAlbums = dedupeAlbums(discographySeed);
+        const nextOffset = albumsPage?.offset + albumsPage?.items.length;
+        const hasMore = nextOffset < (albumsPage?.total ?? nextOffset);
+        if (!discographyAlbums.length) {
+            patchByKind(isStale, setData, 'artist', (prev) => ({
+                ...prev,
+                discographyOffset: nextOffset ?? 0,
+                discographyHasMore: hasMore,
+            }));
+            return;
+        }
 
         const discography = await buildDiscographyEntries(
             discographyAlbums,
@@ -570,6 +606,9 @@ const loadArtistData = async ({
         patchByKind(isStale, setData, 'artist', (prev) => ({
             ...prev,
             discography,
+            discographyOffset: nextOffset ?? discographyAlbums.length,
+            discographyHasMore: hasMore,
+            discographyLoadingMore: false,
         }));
     })();
 
@@ -915,9 +954,67 @@ export function useMediaData({
         }
     }, [locale, market, state?.id]);
 
+    const loadMoreDiscography = useCallback(async () => {
+        let offset: number | null = null;
+
+        setData((prev) => {
+            if (!prev || prev.kind !== 'artist') return prev;
+            if (prev.discographyLoadingMore || !prev.discographyHasMore) {
+                return prev;
+            }
+            offset = prev.discographyOffset;
+            return { ...prev, discographyLoadingMore: true };
+        });
+
+        if (offset == null || !state?.id) return;
+
+        try {
+            const page = await sendSpotifyMessage('getArtistAlbums', {
+                id: state.id,
+                market,
+                limit: ARTIST_DISCOGRAPHY_PAGE_SIZE,
+                offset,
+            });
+
+            const albums = dedupeAlbums(page.items ?? []);
+            const discography = await buildDiscographyEntries(
+                albums,
+                market,
+                discographyTrackCount
+            );
+            const nextOffset = offset + (page.items?.length ?? 0);
+            const hasMore = nextOffset < (page.total ?? nextOffset);
+
+            setData((prev) => {
+                if (!prev || prev.kind !== 'artist') return prev;
+                if (prev.discographyOffset !== offset) {
+                    return { ...prev, discographyLoadingMore: false };
+                }
+
+                return {
+                    ...prev,
+                    discography: mergeDiscographyEntries(
+                        prev.discography,
+                        discography
+                    ),
+                    discographyOffset: nextOffset,
+                    discographyHasMore: hasMore,
+                    discographyLoadingMore: false,
+                };
+            });
+        } catch (error) {
+            logError(logger, 'Failed to load more discography', error);
+            setData((prev) => {
+                if (!prev || prev.kind !== 'artist') return prev;
+                return { ...prev, discographyLoadingMore: false };
+            });
+        }
+    }, [discographyTrackCount, market, state?.id]);
+
     return {
         data,
         loading,
+        loadMoreDiscography,
         loadMoreEpisodes,
     };
 }

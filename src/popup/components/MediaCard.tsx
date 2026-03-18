@@ -1,4 +1,4 @@
-import { ReactNode, useCallback, useState } from 'react';
+import { ReactNode, useCallback, useState, type MouseEvent } from 'react';
 import { DotsHorizontalIcon } from '@radix-ui/react-icons';
 import { DropdownMenu, Flex, IconButton, Skeleton } from '@radix-ui/themes';
 import clsx from 'clsx';
@@ -7,6 +7,7 @@ import { handleMenuTriggerKeyDown } from '../hooks/useActions';
 import { AvatarButton } from './AvatarButton';
 import { Fade } from './Fade';
 import { Marquee } from './Marquee';
+import { isMediaInteractiveTarget } from './mediaClickGuard';
 import { SkeletonText } from './SkeletonText';
 import { TextButton } from './TextButton';
 
@@ -54,26 +55,28 @@ export function MediaCard({
     const resolvedWidth = width ?? resolvedSize.width;
     const subtitleText = typeof subtitle === 'string' ? subtitle : undefined;
     const subtitleContent = subtitleText?.trim() ? subtitleText : ' ';
-    const skeletonParts = [title, subtitleText, imageUrl];
     const handleRowClick = loading ? undefined : onClick;
     const [isTitleProxyHovered, setIsTitleProxyHovered] = useState(false);
 
     const updateTitleProxyHover = useCallback(
         (target: EventTarget | null) => {
-            const element = target instanceof Element ? target : null;
             const next =
-                Boolean(handleRowClick) &&
-                !element?.closest('[data-title-hover-stop="true"]');
+                Boolean(handleRowClick) && !isMediaInteractiveTarget(target);
             setIsTitleProxyHovered((prev) => (prev === next ? prev : next));
         },
         [handleRowClick]
     );
+    const handleContainerClick = (event: MouseEvent<HTMLDivElement>) => {
+        if (!handleRowClick) return;
+        if (isMediaInteractiveTarget(event.target)) return;
+        handleRowClick();
+    };
 
     return (
         <Flex
             direction="column"
             gap="1"
-            onClick={handleRowClick}
+            onClick={handleContainerClick}
             onPointerEnter={(event) => updateTitleProxyHover(event.target)}
             onPointerMove={(event) => updateTitleProxyHover(event.target)}
             onPointerLeave={() => setIsTitleProxyHovered(false)}
@@ -140,7 +143,6 @@ export function MediaCard({
                 <Fade enabled={!loading} grow>
                     <SkeletonText
                         loading={loading}
-                        parts={skeletonParts}
                         seed={seed}
                         preset="media-card"
                         className="transition-all"
@@ -153,8 +155,7 @@ export function MediaCard({
                                 forceHover={isTitleProxyHovered}
                                 onClick={
                                     handleRowClick
-                                        ? (event) => {
-                                              event.stopPropagation();
+                                        ? () => {
                                               handleRowClick();
                                           }
                                         : undefined
@@ -168,7 +169,6 @@ export function MediaCard({
                 <Fade enabled={!loading} grow>
                     <SkeletonText
                         loading={loading}
-                        parts={skeletonParts}
                         seed={seed}
                         preset="media-card"
                         variant="subtitle"
@@ -176,11 +176,7 @@ export function MediaCard({
                     >
                         <Marquee mode="left" grow>
                             {subtitleText != null ? (
-                                <TextButton
-                                    size="1"
-                                    color="gray"
-                                    interactive={false}
-                                >
+                                <TextButton size="1" color="gray">
                                     {subtitleContent}
                                 </TextButton>
                             ) : (

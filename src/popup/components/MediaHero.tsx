@@ -37,12 +37,12 @@ interface Props {
     collapse?: boolean;
     collapseKey?: string;
     sticky?: boolean;
-    heroTextParts?: Array<string | undefined>;
     heroSubtitleNode?: ReactNode;
     heroTitle?: string;
     heroInfo?: ReactNode;
     mergedHeroActions: MediaActionGroup | null;
     canTogglePlayback: boolean;
+    resetScroll?: boolean;
     onPlay: () => void;
 }
 
@@ -65,12 +65,12 @@ export function MediaHero({
     collapse = true,
     collapseKey,
     sticky = true,
-    heroTextParts,
     heroSubtitleNode,
     heroTitle,
     heroInfo,
     mergedHeroActions,
     canTogglePlayback,
+    resetScroll = true,
     onPlay,
 }: Props) {
     const collapseEnabled = Boolean(collapse && scrollRef);
@@ -78,6 +78,7 @@ export function MediaHero({
         enabled: collapseEnabled,
         scrollRef,
         resetKey: collapseKey,
+        resetScroll,
         padding: {
             topMax: HERO_TOP_PAD_MAX,
             topMin: HERO_TOP_PAD_MIN,
@@ -112,20 +113,6 @@ export function MediaHero({
         ) : null);
     const resolvedHeroInfo =
         heroInfo ?? hero?.info ?? (loading ? skeletonLabel : null);
-    const heroSubtitleText =
-        typeof resolvedHeroSubtitle === 'string'
-            ? resolvedHeroSubtitle
-            : undefined;
-    const heroInfoText =
-        typeof resolvedHeroInfo === 'string' ? resolvedHeroInfo : undefined;
-    const heroDurationText =
-        typeof hero?.duration === 'string' ? hero.duration : undefined;
-    const resolvedHeroTextParts = heroTextParts ?? [
-        resolvedHeroTitle || undefined,
-        heroSubtitleText,
-        heroInfoText,
-        heroDurationText,
-    ];
     const hasSubtitle = Boolean(resolvedHeroSubtitle || heroSubtitleNode);
     const hasInfo = Boolean(resolvedHeroInfo);
     const hasDuration = Boolean(hero?.duration);
@@ -145,6 +132,7 @@ export function MediaHero({
                 align="center"
                 gap="2"
                 pl="3"
+                pr="1"
                 className="relative z-10 w-full"
                 style={{
                     paddingTop,
@@ -190,7 +178,6 @@ export function MediaHero({
                 >
                     <SkeletonText
                         loading={loading}
-                        parts={loading ? ['loading'] : resolvedHeroTextParts}
                         preset="media-row"
                         variant="title"
                         widthOptions={{
@@ -224,11 +211,6 @@ export function MediaHero({
                                 {(hasSubtitle || loading) && (
                                     <SkeletonText
                                         loading={loading}
-                                        parts={
-                                            loading
-                                                ? ['loading']
-                                                : resolvedHeroTextParts
-                                        }
                                         preset="media-row"
                                         variant="subtitle"
                                         widthOptions={{
@@ -250,11 +232,6 @@ export function MediaHero({
                                 {(hasInfo || loading) && (
                                     <SkeletonText
                                         loading={loading}
-                                        parts={
-                                            loading
-                                                ? ['loading']
-                                                : resolvedHeroTextParts
-                                        }
                                         preset="media-row"
                                         variant="subtitle"
                                         widthOptions={{
@@ -281,11 +258,6 @@ export function MediaHero({
                                 {(hasDuration || loading) && (
                                     <SkeletonText
                                         loading={loading}
-                                        parts={
-                                            loading
-                                                ? ['loading']
-                                                : resolvedHeroTextParts
-                                        }
                                         preset="media-row"
                                         variant="subtitle"
                                         widthOptions={{

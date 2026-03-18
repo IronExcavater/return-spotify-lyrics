@@ -21,7 +21,7 @@ import clsx from 'clsx';
 import { resolveLocale } from '../../shared/locale';
 import { createLogger, logError } from '../../shared/logging';
 import {
-    albumToItem,
+    albumTrackToItem,
     playlistToItem,
     topArtistToItem,
     trackToItem,
@@ -492,8 +492,33 @@ export function HomeView({ searchQuery, filters }: Props) {
                             'getNewReleases',
                             { limit: 20 }
                         );
-                        items = newReleases.albums.items.map((album) =>
-                            albumToItem(album)
+                        const albums = newReleases.albums.items
+                            .filter((album) => Boolean(album.id))
+                            .slice(0, 8);
+                        const albumTrackPages = await Promise.allSettled(
+                            albums.map((album) =>
+                                sendSpotifyMessage('getAlbumTracks', {
+                                    id: album.id!,
+                                    limit: Math.min(
+                                        3,
+                                        Math.max(1, album.total_tracks ?? 1)
+                                    ) as 1 | 2 | 3,
+                                })
+                            )
+                        );
+                        items = dedupeItems(
+                            albumTrackPages
+                                .flatMap((result, index) =>
+                                    result.status === 'fulfilled'
+                                        ? result.value.items.map((track) =>
+                                              albumTrackToItem(
+                                                  track,
+                                                  albums[index]
+                                              )
+                                          )
+                                        : []
+                                )
+                                .slice(0, 20)
                         );
                         break;
                     }
@@ -778,7 +803,6 @@ export function HomeView({ searchQuery, filters }: Props) {
                 {!editing && (
                     <SkeletonText
                         loading={headingLoading}
-                        parts={[heading.title, heading.subtitle]}
                         preset="media-row"
                         variant="title"
                         fullWidth={false}
@@ -884,7 +908,6 @@ export function HomeView({ searchQuery, filters }: Props) {
             {!isEditable && (
                 <SkeletonText
                     loading={headingLoading}
-                    parts={[heading.subtitle, heading.title]}
                     preset="media-row"
                     variant="subtitle"
                     fullWidth={false}

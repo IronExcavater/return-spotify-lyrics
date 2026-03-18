@@ -118,8 +118,6 @@ function PlaylistRowItem({
     onToggle?: (id: string, playlist?: PlaylistCatalogEntry) => void;
 }) {
     const subtitle = row.isLiked ? undefined : row.subtitle;
-    const skeletonParts = [row.name, subtitle, row.imageUrl];
-
     return (
         <SearchListItem highlight={!loading}>
             <Skeleton loading={loading}>
@@ -145,11 +143,7 @@ function PlaylistRowItem({
                 className="min-w-0 flex-1"
             >
                 <Fade enabled={!loading} grow>
-                    <SkeletonText
-                        loading={loading}
-                        parts={skeletonParts}
-                        preset="media-row"
-                    >
+                    <SkeletonText loading={loading} preset="media-row">
                         <Marquee mode="bounce" grow>
                             <Text
                                 size="1"
@@ -165,7 +159,6 @@ function PlaylistRowItem({
                     <Fade enabled={!loading} grow>
                         <SkeletonText
                             loading={loading}
-                            parts={skeletonParts}
                             preset="media-row"
                             variant="subtitle"
                         >
@@ -302,10 +295,27 @@ export function PlaylistPicker({ item, headerStart }: Props) {
                         initialData.userId
                     );
                     if (cancelled) return;
+                    const initialCatalogById = new Map(
+                        initialData.catalog.map((playlist) => [
+                            playlist.id,
+                            playlist,
+                        ])
+                    );
                     setCatalog(nextCatalog);
                     setMembership((previous) => {
                         const nextMembership = { ...previous };
                         nextCatalog.forEach((playlist) => {
+                            const previousPlaylist = initialCatalogById.get(
+                                playlist.id
+                            );
+                            if (
+                                !previousPlaylist ||
+                                previousPlaylist.snapshotId !==
+                                    playlist.snapshotId
+                            ) {
+                                nextMembership[playlist.id] = null;
+                                return;
+                            }
                             nextMembership[playlist.id] ??= null;
                         });
                         return nextMembership;
@@ -313,7 +323,14 @@ export function PlaylistPicker({ item, headerStart }: Props) {
                     setLoadingById((previous) => {
                         const nextLoadingById = { ...previous };
                         nextCatalog.forEach((playlist) => {
-                            nextLoadingById[playlist.id] ??= true;
+                            const previousPlaylist = initialCatalogById.get(
+                                playlist.id
+                            );
+                            nextLoadingById[playlist.id] =
+                                previousPlaylist?.snapshotId ===
+                                playlist.snapshotId
+                                    ? (nextLoadingById[playlist.id] ?? true)
+                                    : true;
                         });
                         return nextLoadingById;
                     });
@@ -414,6 +431,7 @@ export function PlaylistPicker({ item, headerStart }: Props) {
                     const index = await ensureTrackPlaylistIndex({
                         playlist,
                         userId,
+                        trackId: targetTrackId,
                     });
                     if (cancelled) return;
                     setMembership((previous) => ({

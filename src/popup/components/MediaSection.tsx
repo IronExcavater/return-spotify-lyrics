@@ -52,14 +52,14 @@ function renderSectionContent(
     if (renderContent) {
         return renderContent({
             columnWidth: editor.columnWidth,
-            loading: editor.isPending,
+            loading: editor.showLoadingState,
         });
     }
 
     return (
         <MediaShelf
             droppableId={`media-shelf-${section.id}`}
-            items={editor.shelfItems as MediaShelfItem[]}
+            items={section.items as MediaShelfItem[]}
             variant={editor.variant === 'tile' ? 'tile' : 'list'}
             orientation={editor.orientation}
             itemsPerColumn={editor.itemsPerColumn}
@@ -69,11 +69,12 @@ function renderSectionContent(
             fixedHeight={editor.fixedHeight}
             cardSize={section.cardSize}
             trackSubtitleMode={section.trackSubtitleMode}
-            hasMore={editor.isPending ? false : section.hasMore}
-            loadingMore={editor.isPending ? false : section.loadingMore}
+            totalCount={section.totalCount}
+            hasMore={editor.showLoadingState ? false : section.hasMore}
+            loadingMore={editor.showLoadingState ? false : section.loadingMore}
             showImage={section.showImage}
             onLoadMore={
-                editor.isPending || !onLoadMore
+                editor.showLoadingState || !onLoadMore
                     ? undefined
                     : () => onLoadMore(section.id)
             }
@@ -84,7 +85,7 @@ function renderSectionContent(
             }
             interactive={!editing}
             draggable={false}
-            itemLoading={editor.isPending}
+            itemLoading={editor.showLoadingState}
         />
     );
 }
@@ -171,7 +172,7 @@ function MediaSectionImpl({
                 <MediaSectionHeader
                     title={section.title}
                     subtitle={section.subtitle}
-                    loading={loading}
+                    loading={editor.showLoadingState}
                     headerLoading={headerLoading}
                     onTitleClick={onTitleClick}
                     headerRight={headerRight}
@@ -222,7 +223,7 @@ function MediaSectionImpl({
                         </div>
                     </div>
                 </div>
-                {!loading && section.loadingMore && (
+                {!editor.showLoadingState && section.loadingMore && (
                     <div className="pointer-events-none absolute right-2 bottom-2 z-10">
                         <Flex
                             align="center"

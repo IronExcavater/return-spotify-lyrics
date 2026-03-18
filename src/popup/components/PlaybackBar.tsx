@@ -176,7 +176,7 @@ export function PlaybackBar({
             imageUrl={heroImage}
             gradient="linear-gradient(120deg, rgba(5,7,14,0.9), rgba(9,12,22,0.7))"
             zoom={1.06}
-            position="center top"
+            position="center 24%"
             blur={2}
         >
             <Flex
@@ -241,7 +241,6 @@ export function PlaybackBar({
                                     <Marquee mode="bounce" grow>
                                         <SkeletonText
                                             loading={loading}
-                                            parts={[titleLabel]}
                                             preset="media-row"
                                             variant="title"
                                             className="w-fit"
@@ -270,7 +269,6 @@ export function PlaybackBar({
                                     <Marquee mode="right" grow>
                                         <SkeletonText
                                             loading={loading}
-                                            parts={[subtitleLabel, titleLabel]}
                                             preset="media-row"
                                             variant="subtitle"
                                             className="w-fit"

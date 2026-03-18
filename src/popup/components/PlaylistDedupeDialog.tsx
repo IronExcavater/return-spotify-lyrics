@@ -57,25 +57,6 @@ function DuplicateTrackRow({
     );
 }
 
-function LoadingGroup({ rows = 3 }: { rows?: number }) {
-    return (
-        <div className="rounded-3 bg-background p-1">
-            <Flex direction="column" gap="1">
-                {Array.from({ length: rows }, (_, index) => (
-                    <MediaRow
-                        key={`loading-group-row-${index}`}
-                        loading
-                        title="Loading"
-                        subtitle="Loading"
-                        showPosition
-                        className="px-1.5 py-1"
-                    />
-                ))}
-            </Flex>
-        </div>
-    );
-}
-
 function EmptyState({ trackCount }: { trackCount: number }) {
     return (
         <div className="rounded-3 bg-background p-1">
@@ -208,6 +189,7 @@ export function PlaylistDedupeDialog({
     const showHeader = loading || analysis;
     const showEmptyActions = analysis && !loading && totalGroupCount === 0;
     const showFooterActions = analysis && !loading && totalGroupCount > 0;
+    const showLoadingActions = loading && !analysis;
 
     return (
         <FullPageDialog
@@ -227,12 +209,15 @@ export function PlaylistDedupeDialog({
                             wrap="wrap"
                         >
                             <Text size="2" weight="medium">
-                                {totalGroupCount} duplicate groups
+                                {loading
+                                    ? 'Analyzing duplicates'
+                                    : `${totalGroupCount} duplicate groups`}
                             </Text>
                             <Flex gap="1">
                                 <Button
                                     size="1"
                                     variant="soft"
+                                    disabled={loading || !analysis}
                                     onClick={
                                         analysis ? selectSuggested : undefined
                                     }
@@ -242,6 +227,7 @@ export function PlaylistDedupeDialog({
                                 <Button
                                     size="1"
                                     variant="ghost"
+                                    disabled={loading || !analysis}
                                     onClick={
                                         analysis ? clearSelection : undefined
                                     }
@@ -256,10 +242,23 @@ export function PlaylistDedupeDialog({
                 <MediaGroupShelf
                     groups={shelfGroups}
                     loading={loading}
-                    loadingCount={3}
-                    renderLoadingGroup={() => <LoadingGroup />}
+                    loadingCount={4}
+                    loadingRowsPerGroup={4}
                     emptyState={<EmptyState trackCount={totalTrackCount} />}
                 />
+
+                {showLoadingActions && (
+                    <Flex justify="end" gap="2">
+                        <Dialog.Close>
+                            <Button size="1" variant="soft">
+                                Close
+                            </Button>
+                        </Dialog.Close>
+                        <Button size="1" color="red" disabled>
+                            Remove selected
+                        </Button>
+                    </Flex>
+                )}
 
                 {showEmptyActions && (
                     <Flex justify="end">

@@ -228,19 +228,25 @@ export const spotifyRpc = {
             const resolvedCurrentUri =
                 playback?.item?.uri ?? currentUri ?? null;
             const queueUris = upcomingUris.filter((uri) => Boolean(uri));
-            const uris = resolvedCurrentUri
-                ? [resolvedCurrentUri, ...queueUris]
-                : queueUris;
-            if (uris.length === 0) return;
+            const startUri = resolvedCurrentUri ?? queueUris[0] ?? null;
+            if (!startUri) return;
 
             await startPlaybackRequest(client, deviceId, {
-                uris,
+                uris: [startUri],
                 positionMs:
                     resolvedCurrentUri &&
                     playback?.item?.uri === resolvedCurrentUri
                         ? (playback.progress_ms ?? undefined)
                         : undefined,
             });
+
+            const remainingQueue = resolvedCurrentUri
+                ? queueUris
+                : queueUris.slice(1);
+
+            for (const uri of remainingQueue) {
+                await client.player.addItemToPlaybackQueue(uri, deviceId);
+            }
         });
     },
 

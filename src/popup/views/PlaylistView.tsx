@@ -21,9 +21,9 @@ import { safeRequest } from '../../shared/async';
 import { formatDurationLong } from '../../shared/date';
 import { resolveMarket } from '../../shared/locale';
 import { createLogger, logError } from '../../shared/logging';
-import { episodeToItem, playlistToItem, trackToItem } from '../../shared/media';
+import { playlistToItem } from '../../shared/media';
 import { sendSpotifyMessage } from '../../shared/messaging';
-import type { MediaItem, MediaActionGroup } from '../../shared/types';
+import type { MediaActionGroup } from '../../shared/types';
 import { FullPageDialog } from '../components/FullPageDialog';
 import { MediaHero, type HeroData } from '../components/MediaHero';
 import {
@@ -34,6 +34,15 @@ import { MediaShelf, type MediaShelfItem } from '../components/MediaShelf';
 import { PlaylistDedupeDialog } from '../components/PlaylistDedupeDialog';
 import { SkeletonText } from '../components/SkeletonText';
 import { StickyLayout } from '../components/StickyLayout';
+import {
+    ensurePlaylistContentStateLoaded,
+    getCachedPlaylistContentState,
+    loadPlaylistContentState,
+    mapPlaylistContentItems,
+    PLAYLIST_PAGE_SIZE,
+    storePlaylistContentState,
+    type PlaylistContentState,
+} from '../data/trackPlaylists';
 import { useAuth } from '../hooks/useAuth';
 import { useHistory } from '../hooks/useHistory';
 import { buildMediaActions } from '../hooks/useMediaActions';
@@ -47,7 +56,6 @@ import {
 } from '../utils/playlistDuplicates';
 
 const logger = createLogger('playlist');
-const PLAYLIST_PAGE_SIZE = 50;
 const emptyPlaylistPage = (offset = 0): Page<PlaylistedTrack<Track>> => ({
     href: '',
     items: [],
@@ -58,15 +66,7 @@ const emptyPlaylistPage = (offset = 0): Page<PlaylistedTrack<Track>> => ({
     total: 0,
 });
 
-type PlaylistViewState = {
-    playlist: Playlist<Track>;
-    items: PlaylistTrackItem[];
-    totalDurationMs: number;
-    itemsOffset: number;
-    itemsHasMore: boolean;
-    itemsLoadingMore: boolean;
-    snapshotId?: string;
-};
+type PlaylistViewState = PlaylistContentState;
 
 type PlaylistTrackItem = PlaylistDedupableItem;
 
@@ -77,50 +77,17 @@ type PlaylistDetailsDraft = {
     isCollaborative: boolean;
 };
 
-const createPlaylistItemKey = (entry: PlaylistedTrack, index: number) => {
-    const base =
-        entry.track?.uri ?? entry.track?.id ?? entry.track?.name ?? 'track';
-    const added = entry.added_at ?? 'unknown';
-    return `${base}:${added}:${index}`;
-};
-
-const mapPlaylistItems = (
-    entries: Array<PlaylistedTrack> = [],
-    locale: string,
-    offset: number
-): PlaylistTrackItem[] => {
-    const safeEntries = Array.isArray(entries) ? entries : [];
-    return safeEntries.map((entry, index) => {
-        const track = entry.track;
-        const item: MediaItem | null = track
-            ? track.type === 'episode'
-                ? episodeToItem(track as Episode, locale)
-                : trackToItem(track as Track)
-            : null;
-        if (!item) {
-            return {
-                id: `missing-${offset + index}`,
-                title: 'Unavailable',
-                subtitle: 'Track removed',
-                listKey: `missing-${offset + index}`,
-                kind: 'track' as const,
-                playlistIndex: offset + index,
-                addedAt: entry.added_at ?? undefined,
-            };
-        }
-        return {
-            ...item,
-            listKey: createPlaylistItemKey(entry, offset + index),
-            playlistIndex: offset + index,
-            playlistTrackId:
-                track && track.type === 'track'
-                    ? (track as Track).id
-                    : undefined,
-            playlistTrackUri: track?.uri ?? undefined,
-            addedAt: entry.added_at ?? undefined,
-        };
-    });
-};
+const toPlaylistDetailsDraft = (
+    playlist: Pick<
+        Playlist<Track>,
+        'name' | 'description' | 'public' | 'collaborative'
+    >
+): PlaylistDetailsDraft => ({
+    name: playlist.name ?? '',
+    description: playlist.description ?? '',
+    isPublic: playlist.public === null ? null : Boolean(playlist.public),
+    isCollaborative: Boolean(playlist.collaborative),
+});
 
 export function PlaylistView() {
     const location = useLocation();
@@ -135,92 +102,78 @@ export function PlaylistView() {
         routeHistory,
         routePath: '/playlist',
     });
-
     const [data, setData] = useState<PlaylistViewState | null>(null);
     const [loading, setLoading] = useState(true);
-    const skeletonLabel = '\u00A0';
-    const skeletonTracks = useMemo(
-        () =>
-            Array.from({ length: 10 }, (_, index) => ({
-                id: `skeleton-${index}`,
-                title: skeletonLabel,
-                subtitle: skeletonLabel,
-            })),
-        [skeletonLabel]
-    );
     const [saving, setSaving] = useState(false);
     const [editOpen, setEditOpen] = useState(false);
     const [dedupeOpen, setDedupeOpen] = useState(false);
     const [dedupeLoading, setDedupeLoading] = useState(false);
     const [dedupeRemoving, setDedupeRemoving] = useState(false);
+    const [dedupeItems, setDedupeItems] = useState<PlaylistTrackItem[] | null>(
+        null
+    );
     const [detailsDraft, setDetailsDraft] =
         useState<PlaylistDetailsDraft | null>(null);
+    const applyPlaylistState = useCallback((nextData: PlaylistViewState) => {
+        setData(nextData);
+        setDetailsDraft(toPlaylistDetailsDraft(nextData.playlist));
+    }, []);
 
     const loadPlaylist = useCallback(
         async (playlistId: string, nextMarket: Market) => {
             setLoading(true);
             try {
-                const playlist = await sendSpotifyMessage('getPlaylist', {
-                    id: playlistId,
+                const nextData = await loadPlaylistContentState({
+                    playlistId,
                     market: nextMarket,
+                    locale: settings.locale,
                 });
-                const pageItems = Array.isArray(playlist.tracks?.items)
-                    ? playlist.tracks.items
-                    : [];
-                const tracks = pageItems
-                    .map((entry) => entry.track)
-                    .filter(Boolean) as Array<Track | Episode>;
-                const totalDurationMs = sumDurationMs(tracks);
-                const items = mapPlaylistItems(pageItems, settings.locale, 0);
-                const nextOffset = pageItems.length;
-                const totalItems = playlist.tracks?.total ?? nextOffset;
-                const hasMore = nextOffset < totalItems;
-                setData({
-                    playlist,
-                    items,
-                    totalDurationMs,
-                    itemsOffset: nextOffset,
-                    itemsHasMore: hasMore,
-                    itemsLoadingMore: false,
-                    snapshotId: playlist.snapshot_id,
-                });
-                setDetailsDraft({
-                    name: playlist.name ?? '',
-                    description: playlist.description ?? '',
-                    isPublic:
-                        playlist.public === null
-                            ? null
-                            : Boolean(playlist.public),
-                    isCollaborative: Boolean(playlist.collaborative),
-                });
+                applyPlaylistState(nextData);
             } catch (error) {
                 logError(logger, 'Failed to load playlist', error);
-                setData(null);
             } finally {
                 setLoading(false);
             }
         },
-        [settings.locale]
+        [applyPlaylistState, settings.locale]
     );
 
     useEffect(() => {
         if (!state?.id || state.kind !== 'playlist') {
             setData(null);
+            setDetailsDraft(null);
+            setDedupeItems(null);
             setLoading(false);
             return;
         }
+        let cancelled = false;
+        setDedupeItems(null);
+        setLoading(true);
+        void getCachedPlaylistContentState(state.id).then((cached) => {
+            if (cancelled || !cached.entry) return;
+            applyPlaylistState(cached.entry);
+        });
         void loadPlaylist(state.id, market);
-    }, [loadPlaylist, market, state?.id, state?.kind]);
+        return () => {
+            cancelled = true;
+        };
+    }, [applyPlaylistState, loadPlaylist, market, state?.id, state?.kind]);
+
+    const showInitialLoading = loading && !data;
 
     const loadMoreItems = useCallback(async () => {
         let offset: number | null = null;
+        let snapshotId: string | undefined;
+        let currentData: PlaylistViewState | null = null;
         setData((prev) => {
             if (!prev || prev.itemsLoadingMore || !prev.itemsHasMore)
                 return prev;
+            currentData = prev;
             offset = prev.itemsOffset;
+            snapshotId = prev.snapshotId;
             return { ...prev, itemsLoadingMore: true };
         });
-        if (offset == null || !state?.id) return;
+        if (offset == null || !state?.id || !currentData) return;
         try {
             const page = await safeRequest(
                 () =>
@@ -242,21 +195,28 @@ export function PlaylistView() {
             const tracks = pageItems
                 .map((entry) => entry.track)
                 .filter(Boolean) as Array<Track | Episode>;
-            const addedDuration = sumDurationMs(tracks);
-            const mapped = mapPlaylistItems(pageItems, settings.locale, offset);
-            setData((prev) => {
-                if (!prev || prev.itemsOffset !== offset) return prev;
-                const nextOffset = offset + pageItems.length;
-                const hasMore = nextOffset < (page?.total ?? nextOffset);
-                return {
-                    ...prev,
-                    items: [...prev.items, ...mapped],
-                    totalDurationMs: prev.totalDurationMs + addedDuration,
-                    itemsOffset: nextOffset,
-                    itemsHasMore: hasMore,
-                    itemsLoadingMore: false,
-                };
+            const nextOffset = offset + pageItems.length;
+            const hasMore = nextOffset < (page?.total ?? nextOffset);
+            const nextData = await storePlaylistContentState({
+                playlist: currentData.playlist,
+                items: [
+                    ...currentData.items,
+                    ...mapPlaylistContentItems(
+                        pageItems,
+                        settings.locale,
+                        offset
+                    ),
+                ],
+                totalDurationMs:
+                    currentData.totalDurationMs + sumDurationMs(tracks),
+                itemsOffset: nextOffset,
+                itemsHasMore: hasMore,
+                itemsLoadingMore: false,
+                snapshotId: snapshotId ?? currentData.snapshotId,
             });
+            setData((prev) =>
+                prev && prev.itemsOffset === offset ? nextData : prev
+            );
         } catch (error) {
             logError(logger, 'Failed to load more playlist items', error);
             setData((prev) =>
@@ -265,60 +225,26 @@ export function PlaylistView() {
         }
     }, [market, settings.locale, state?.id]);
 
-    const ensureAllPlaylistItemsLoaded = useCallback(async () => {
-        if (!data || !state?.id || !data.itemsHasMore) return data?.items ?? [];
-
-        let offset = data.itemsOffset;
-        let nextItems = [...data.items];
-        let totalDurationMs = data.totalDurationMs;
-        let hasMore: boolean = data.itemsHasMore;
-
-        setData((prev) => (prev ? { ...prev, itemsLoadingMore: true } : prev));
-
-        try {
-            while (hasMore) {
-                const page = await sendSpotifyMessage('getPlaylistItems', {
-                    id: state.id,
-                    market,
-                    limit: PLAYLIST_PAGE_SIZE,
-                    offset,
-                });
-                const pageItems = page.items ?? [];
-                const tracks = pageItems
-                    .map((entry) => entry.track)
-                    .filter(Boolean) as Array<Track | Episode>;
-                totalDurationMs += sumDurationMs(tracks);
-                nextItems = [
-                    ...nextItems,
-                    ...mapPlaylistItems(pageItems, settings.locale, offset),
-                ];
-                offset += pageItems.length;
-                hasMore = offset < (page.total ?? offset);
-                if (pageItems.length === 0) break;
-            }
-
-            setData((prev) =>
-                prev
-                    ? {
-                          ...prev,
-                          items: nextItems,
-                          totalDurationMs,
-                          itemsOffset: offset,
-                          itemsHasMore: hasMore,
-                          itemsLoadingMore: false,
-                      }
-                    : prev
-            );
-
-            return nextItems;
-        } catch (error) {
-            logError(logger, 'Failed to load full playlist for dedupe', error);
-            setData((prev) =>
-                prev ? { ...prev, itemsLoadingMore: false } : prev
-            );
-            return data.items;
-        }
-    }, [data, market, settings.locale, state?.id]);
+    useEffect(() => {
+        if (!data || data.itemsLoadingMore) return;
+        void storePlaylistContentState({
+            playlist: data.playlist,
+            items: data.items,
+            totalDurationMs: data.totalDurationMs,
+            itemsOffset: data.itemsOffset,
+            itemsHasMore: data.itemsHasMore,
+            itemsLoadingMore: false,
+            snapshotId: data.snapshotId,
+        });
+    }, [
+        data?.items,
+        data?.itemsHasMore,
+        data?.itemsLoadingMore,
+        data?.itemsOffset,
+        data?.playlist,
+        data?.snapshotId,
+        data?.totalDurationMs,
+    ]);
 
     const hero = useMemo<HeroData | null>(() => {
         if (!data) return null;
@@ -350,7 +276,7 @@ export function PlaylistView() {
         : null;
     const canOpenDedupe =
         canEdit &&
-        !loading &&
+        !showInitialLoading &&
         !dedupeLoading &&
         !dedupeRemoving &&
         (data?.items.length ?? 0) > 0;
@@ -498,20 +424,30 @@ export function PlaylistView() {
     );
 
     const dedupeAnalysis = useMemo(
-        () => analyzePlaylistDuplicates(data?.items ?? []),
-        [data?.items]
+        () => analyzePlaylistDuplicates(dedupeItems ?? data?.items ?? []),
+        [data?.items, dedupeItems]
     );
 
     const openDedupeDialog = useCallback(async () => {
-        if (!data || !canEdit) return;
+        if (!data || !canEdit || !state?.id) return;
         setDedupeOpen(true);
         setDedupeLoading(true);
+        setDedupeItems(data.itemsHasMore ? null : data.items);
         try {
-            await ensureAllPlaylistItemsLoaded();
+            const complete = await ensurePlaylistContentStateLoaded({
+                playlistId: state.id,
+                market,
+                locale: settings.locale,
+                base: data,
+            });
+            setDedupeItems(complete.items);
+        } catch (error) {
+            logError(logger, 'Failed to prepare playlist dedupe', error);
+            setDedupeItems(data.items);
         } finally {
             setDedupeLoading(false);
         }
-    }, [canEdit, data, ensureAllPlaylistItemsLoaded]);
+    }, [canEdit, data, market, settings.locale, state?.id]);
 
     const handleRemoveDuplicates = useCallback(
         async (items: PlaylistDedupableItem[]) => {
@@ -545,6 +481,7 @@ export function PlaylistView() {
                 if (state?.id) {
                     await loadPlaylist(state.id, market);
                 }
+                setDedupeItems(null);
                 setDedupeOpen(false);
             } catch (error) {
                 logError(
@@ -581,41 +518,33 @@ export function PlaylistView() {
         [canEdit, handleRemoveItem]
     );
 
-    const reorderEnabled = canEdit && !loading;
+    const reorderEnabled = canEdit && !showInitialLoading;
+    const trimmedDescription = data?.playlist.description?.trim() ?? '';
+    const trackItems = data?.items ?? [];
+    const trackTotalCount = data?.playlist.tracks.total;
+    const trackHasMore = data?.itemsHasMore;
+    const trackLoadingMore = data?.itemsLoadingMore;
     const tracksSection = {
         id: 'playlist-tracks',
         title: 'Tracks',
         view: 'list',
         infinite: 'rows',
         rows: 0,
-        items: loading ? skeletonTracks : (data?.items ?? []),
-        hasMore: loading ? false : data?.itemsHasMore,
-        loadingMore: loading ? false : data?.itemsLoadingMore,
+        items: trackItems,
+        totalCount: trackTotalCount,
+        hasMore: trackHasMore,
+        loadingMore: trackLoadingMore,
     } satisfies MediaSectionState;
 
     if (!state) {
         if (restoring) {
             return (
                 <Flex p="3" direction="column" gap="2">
-                    <SkeletonText
-                        loading
-                        parts={[skeletonLabel]}
-                        preset="media-row"
-                        variant="title"
-                    >
-                        <Text size="5" weight="bold">
-                            {skeletonLabel}
-                        </Text>
+                    <SkeletonText loading variant="title">
+                        <Text size="5" weight="bold" />
                     </SkeletonText>
-                    <SkeletonText
-                        loading
-                        parts={[skeletonLabel]}
-                        preset="media-row"
-                        variant="subtitle"
-                    >
-                        <Text size="2" color="gray">
-                            {skeletonLabel}
-                        </Text>
+                    <SkeletonText loading variant="subtitle">
+                        <Text size="2" color="gray" />
                     </SkeletonText>
                 </Flex>
             );
@@ -647,10 +576,11 @@ export function PlaylistView() {
             <StickyLayout.Sticky order={0} className="z-10" heightOffset={8}>
                 <MediaHero
                     hero={hero}
-                    loading={loading}
+                    loading={showInitialLoading}
                     heroUrl={hero?.heroUrl}
                     scrollRef={scrollRef}
                     collapseKey={viewKey}
+                    resetScroll={false}
                     mergedHeroActions={mergedHeroActions}
                     canTogglePlayback={canTogglePlayback}
                     sticky={false}
@@ -670,32 +600,57 @@ export function PlaylistView() {
 
             <StickyLayout.Body>
                 <div className="bg-background absolute -top-2 z-10 h-2 w-full shrink-0" />
-                <Flex pl="3" direction="column" gap="3">
-                    {data?.playlist.description?.trim().length ? (
+                <Flex pl="3" pr="1" direction="column" gap="3">
+                    {(showInitialLoading || trimmedDescription.length > 0) && (
                         <Flex direction="column" gap="1" pt="2">
                             <Text size="1" color="gray">
                                 Description
                             </Text>
-                            <Text size="2">{data.playlist.description}</Text>
+                            {showInitialLoading ? (
+                                <Flex
+                                    direction="column"
+                                    gap="1"
+                                    className="max-w-120"
+                                >
+                                    <SkeletonText
+                                        loading
+                                        variant="subtitle"
+                                        fullWidth={false}
+                                    >
+                                        <Text size="2" />
+                                    </SkeletonText>
+                                    <SkeletonText
+                                        loading
+                                        variant="subtitle"
+                                        fullWidth={false}
+                                        seed={1}
+                                    >
+                                        <Text size="2" />
+                                    </SkeletonText>
+                                </Flex>
+                            ) : (
+                                <Text size="2">{trimmedDescription}</Text>
+                            )}
                         </Flex>
-                    ) : null}
+                    )}
 
                     <MediaSection
                         editing={false}
-                        loading={loading}
+                        loading={showInitialLoading}
                         section={tracksSection}
                         onChange={() => undefined}
-                        renderContent={() => (
+                        renderContent={({ loading: sectionLoading }) => (
                             <MediaShelf
-                                items={tracksSection.items}
+                                items={trackItems}
                                 variant="list"
                                 orientation="vertical"
                                 itemsPerColumn={6}
                                 draggable={reorderEnabled}
-                                interactive={!loading}
-                                itemLoading={loading}
-                                hasMore={tracksSection.hasMore}
-                                loadingMore={tracksSection.loadingMore}
+                                interactive={!sectionLoading}
+                                itemLoading={sectionLoading}
+                                totalCount={trackTotalCount}
+                                hasMore={trackHasMore}
+                                loadingMore={trackLoadingMore}
                                 onLoadMore={loadMoreItems}
                                 onReorder={handleReorder}
                                 getActions={getItemActions}

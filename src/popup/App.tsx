@@ -17,6 +17,7 @@ import { PlaybackBar } from './components/PlaybackBar';
 import { ProtectedLayout } from './components/ProtectedLayout';
 import { ReauthDialog } from './components/ReauthDialog';
 import { SettingsProvider } from './context/SettingsContext';
+import { primeTrackPlaylistCatalogCache } from './data/trackPlaylists';
 import {
     MEDIA_CACHE_KEYS,
     type ProfileCacheEntry,
@@ -136,6 +137,11 @@ export default function App({ surface = 'popup' }: AppProps) {
         search.debouncedFilters,
         search.debouncedQuery,
     ]);
+
+    useEffect(() => {
+        if (authed !== true) return;
+        void primeTrackPlaylistCatalogCache(connection?.userId ?? profile?.id);
+    }, [authed, connection?.userId, profile?.id]);
 
     // Auth semantics
     const mustLogin = authed === false && authed !== undefined;

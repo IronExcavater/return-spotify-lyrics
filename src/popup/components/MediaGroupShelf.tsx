@@ -4,6 +4,7 @@ import clsx from 'clsx';
 
 import { useScrollFade } from '../hooks/useScrollFade';
 import { MediaGroup, MediaGroupProps } from './MediaGroup';
+import { MediaRow } from './MediaRow';
 
 export type MediaGroupShelfGroup = MediaGroupProps & {
     id: string;
@@ -13,17 +14,17 @@ type Props = {
     groups: MediaGroupShelfGroup[];
     loading?: boolean;
     loadingCount?: number;
+    loadingRowsPerGroup?: number;
     emptyState?: ReactNode;
-    renderLoadingGroup?: (index: number) => ReactNode;
     className?: string;
 };
 
 export function MediaGroupShelf({
     groups,
     loading = false,
-    loadingCount = 3,
+    loadingCount = 2,
+    loadingRowsPerGroup = 3,
     emptyState,
-    renderLoadingGroup,
     className,
 }: Props) {
     const { scrollRef, fade } = useScrollFade('vertical', [
@@ -44,9 +45,33 @@ export function MediaGroupShelf({
             >
                 {loading &&
                     Array.from({ length: loadingCount }, (_, index) => (
-                        <div key={`media-group-loading-${index}`}>
-                            {renderLoadingGroup?.(index)}
-                        </div>
+                        <MediaGroup
+                            key={`media-group-loading-${index}`}
+                            loading
+                            title="Loading"
+                            subtitle={`${loadingRowsPerGroup} tracks`}
+                            selection={{
+                                checked: false,
+                                onCheckedChange: () => undefined,
+                            }}
+                        >
+                            <Flex direction="column" gap="1">
+                                {Array.from(
+                                    { length: loadingRowsPerGroup },
+                                    (_, rowIndex) => (
+                                        <MediaRow
+                                            key={`media-group-loading-row-${index}-${rowIndex}`}
+                                            loading
+                                            title="Loading"
+                                            subtitle="Loading"
+                                            showPosition
+                                            position={rowIndex}
+                                            className="px-1.5 py-1"
+                                        />
+                                    )
+                                )}
+                            </Flex>
+                        </MediaGroup>
                     ))}
                 {!loading && groups.length === 0 && emptyState}
                 {!loading &&

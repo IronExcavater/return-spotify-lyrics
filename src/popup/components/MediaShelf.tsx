@@ -1,15 +1,18 @@
 import {
+    type CSSProperties,
     Fragment,
     ReactNode,
     useCallback,
     useEffect,
     useMemo,
     useRef,
+    useState,
 } from 'react';
 import {
     DragDropContext,
     Draggable,
     Droppable,
+    type DraggableProvided,
     type DroppableProvided,
     type DropResult,
 } from '@hello-pangea/dnd';
@@ -45,6 +48,7 @@ interface Props {
     columnWidth?: number;
     maxVisible?: number;
     fixedHeight?: number;
+    totalCount?: number;
     hasMore?: boolean;
     loadingMore?: boolean;
     onLoadMore?: () => void;
@@ -81,6 +85,50 @@ const hashId = (value: string) => {
 };
 const getItemKey = (item: MediaShelfItem, index: number) =>
     item.listKey ?? item.id ?? `${item.title ?? 'item'}-${index}`;
+const LOADING_LABEL = '\u00A0';
+const MAX_LOADING_ITEMS = 48;
+const DEFAULT_VERTICAL_LOADING_COUNT = 14;
+const DEFAULT_HORIZONTAL_LOADING_COLUMNS = {
+    list: 4,
+    tile: 6,
+} as const;
+
+const getLoadingPlaceholderCount = ({
+    itemCount,
+    totalCount,
+    orientation,
+    variant,
+    itemsPerColumn,
+    maxVisible,
+}: {
+    itemCount: number;
+    totalCount?: number;
+    orientation: 'vertical' | 'horizontal';
+    variant: 'list' | 'tile';
+    itemsPerColumn: number;
+    maxVisible?: number;
+}) => {
+    if (itemCount > 0) return itemCount;
+    if (typeof totalCount === 'number' && totalCount > 0) {
+        return Math.min(totalCount, MAX_LOADING_ITEMS);
+    }
+    if (orientation === 'horizontal') {
+        const columns =
+            maxVisible ?? DEFAULT_HORIZONTAL_LOADING_COLUMNS[variant];
+        return Math.max(
+            6,
+            Math.min(columns * Math.max(1, itemsPerColumn), MAX_LOADING_ITEMS)
+        );
+    }
+    return Math.max(
+        6,
+        Math.min(
+            maxVisible ?? DEFAULT_VERTICAL_LOADING_COUNT,
+            MAX_LOADING_ITEMS
+        )
+    );
+};
+
 function getScrollParent(node: HTMLElement | null): HTMLElement | Window {
     let current: HTMLElement | null = node;
     while (current) {
@@ -110,6 +158,7 @@ export function MediaShelf({
     columnWidth,
     maxVisible,
     fixedHeight,
+    totalCount,
     hasMore = false,
     loadingMore = false,
     onLoadMore,
@@ -122,13 +171,46 @@ export function MediaShelf({
     getActions,
     getRowProps,
 }: Props) {
-    const flattened = useMemo(
-        () =>
-            items.map((item) =>
-                itemLoading ? { ...item, loading: true } : item
-            ),
-        [items, itemLoading]
+    const createLoadingItem = useCallback(
+        (index: number): MediaShelfItem => ({
+            id: `loading-${index}`,
+            listKey: `loading-${index}`,
+            title: LOADING_LABEL,
+            subtitle: LOADING_LABEL,
+            kind: variant === 'tile' ? 'album' : 'track',
+            loading: true,
+        }),
+        [variant]
     );
+    const loadingPlaceholderCount = useMemo(
+        () =>
+            getLoadingPlaceholderCount({
+                itemCount: items.length,
+                totalCount,
+                orientation,
+                variant,
+                itemsPerColumn,
+                maxVisible,
+            }),
+        [
+            items.length,
+            itemsPerColumn,
+            maxVisible,
+            orientation,
+            totalCount,
+            variant,
+        ]
+    );
+    const flattened = useMemo(() => {
+        if (items.length === 0 && itemLoading) {
+            return Array.from({ length: loadingPlaceholderCount }, (_, index) =>
+                createLoadingItem(index)
+            );
+        }
+        return items.map((item) =>
+            itemLoading ? { ...item, loading: true } : item
+        );
+    }, [createLoadingItem, itemLoading, items, loadingPlaceholderCount]);
     const visibleItems = useMemo(() => {
         if (maxVisible == null) return flattened;
         const capacity =
@@ -137,9 +219,11 @@ export function MediaShelf({
                 : maxVisible;
         return flattened.slice(0, capacity);
     }, [flattened, maxVisible, orientation, itemsPerColumn]);
+    const [reservedItemHeight, setReservedItemHeight] = useState(52);
     const { scrollRef, fade } = useScrollFade(orientation, [
         items.length,
         visibleItems.length,
+        totalCount,
     ]);
     const routeHistory = useHistory();
     const columns = useMemo(() => {
@@ -173,6 +257,7 @@ export function MediaShelf({
     const lastItemsRef = useRef<{
         firstId: string | null;
         length: number;
+        loading: boolean;
     } | null>(null);
 
     const capacity = useMemo(() => {
@@ -182,9 +267,224 @@ export function MediaShelf({
             : maxVisible;
     }, [maxVisible, orientation, itemsPerColumn]);
     const reachedLimit = visibleItems.length >= capacity;
+    const canVirtualizeList =
+        orientation === 'vertical' && variant === 'list' && maxVisible == null;
+    const renderableItemCount = canVirtualizeList
+        ? Math.max(visibleItems.length, totalCount ?? visibleItems.length)
+        : visibleItems.length;
+    const shouldVirtualize = canVirtualizeList && renderableItemCount > 48;
+    const isVirtualDroppable = shouldVirtualize && draggable;
+    const offscreenItemStyle: CSSProperties | undefined =
+        !shouldVirtualize &&
+        orientation === 'vertical' &&
+        variant === 'list' &&
+        !draggable
+            ? {
+                  contentVisibility: 'auto',
+                  containIntrinsicSize: `${reservedItemHeight}px`,
+              }
+            : undefined;
+    const [virtualRange, setVirtualRange] = useState(() => ({
+        start: 0,
+        end: renderableItemCount,
+    }));
+    const getRenderableItem = useCallback(
+        (index: number) => {
+            const item = visibleItems[index] ?? createLoadingItem(index);
+            return {
+                item,
+                index,
+                loaded: index < visibleItems.length,
+            };
+        },
+        [createLoadingItem, visibleItems]
+    );
+    const renderedVerticalItems = useMemo(
+        () =>
+            shouldVirtualize
+                ? Array.from(
+                      {
+                          length: Math.max(
+                              0,
+                              virtualRange.end - virtualRange.start
+                          ),
+                      },
+                      (_, offset) =>
+                          getRenderableItem(virtualRange.start + offset)
+                  )
+                : Array.from({ length: renderableItemCount }, (_, index) =>
+                      getRenderableItem(index)
+                  ),
+        [
+            getRenderableItem,
+            renderableItemCount,
+            shouldVirtualize,
+            virtualRange.end,
+            virtualRange.start,
+        ]
+    );
+    const topVirtualSpaceHeight = shouldVirtualize
+        ? virtualRange.start * reservedItemHeight
+        : 0;
+    const bottomVirtualSpaceHeight = shouldVirtualize
+        ? Math.max(0, renderableItemCount - virtualRange.end) *
+          reservedItemHeight
+        : 0;
 
     useEffect(() => {
-        if (!onLoadMore || !hasMore || loadingMore || reachedLimit) return;
+        if (!canVirtualizeList) return;
+        const node = scrollRef.current;
+        if (!node) return;
+        const sample = node.querySelector<HTMLElement>(
+            '[data-media-shelf-item]'
+        );
+        if (!sample) return;
+        const nextHeight = Math.ceil(sample.getBoundingClientRect().height);
+        if (!nextHeight) return;
+        setReservedItemHeight((previous) =>
+            previous === nextHeight ? previous : nextHeight
+        );
+    }, [
+        canVirtualizeList,
+        renderableItemCount,
+        shouldVirtualize,
+        visibleItems.length,
+    ]);
+
+    useEffect(() => {
+        if (!shouldVirtualize) {
+            setVirtualRange({ start: 0, end: renderableItemCount });
+            return;
+        }
+
+        const node = scrollRef.current;
+        if (!node) return;
+
+        const root = getScrollParent(node);
+        const scrollTarget = root instanceof Window ? window : root;
+        const overscanPx = reservedItemHeight * 8;
+
+        const updateRange = () => {
+            const listRect = node.getBoundingClientRect();
+            const rootRect =
+                root instanceof Window
+                    ? {
+                          top: 0,
+                          bottom: window.innerHeight,
+                      }
+                    : root.getBoundingClientRect();
+            const visibleTop = Math.max(
+                0,
+                Math.min(listRect.height, rootRect.top - listRect.top)
+            );
+            const visibleBottom = Math.max(
+                0,
+                Math.min(listRect.height, rootRect.bottom - listRect.top)
+            );
+            const nextStart = Math.max(
+                0,
+                Math.floor((visibleTop - overscanPx) / reservedItemHeight)
+            );
+            const nextEnd = Math.min(
+                renderableItemCount,
+                Math.max(
+                    nextStart + 1,
+                    Math.ceil((visibleBottom + overscanPx) / reservedItemHeight)
+                )
+            );
+            setVirtualRange((previous) =>
+                previous.start === nextStart && previous.end === nextEnd
+                    ? previous
+                    : { start: nextStart, end: nextEnd }
+            );
+        };
+        const resizeObserver = new ResizeObserver(updateRange);
+
+        updateRange();
+        scrollTarget.addEventListener('scroll', updateRange, { passive: true });
+        window.addEventListener('resize', updateRange);
+        resizeObserver.observe(node);
+        if (!(root instanceof Window)) resizeObserver.observe(root);
+
+        return () => {
+            scrollTarget.removeEventListener('scroll', updateRange);
+            window.removeEventListener('resize', updateRange);
+            resizeObserver.disconnect();
+        };
+    }, [renderableItemCount, reservedItemHeight, shouldVirtualize]);
+
+    useEffect(() => {
+        if (!shouldVirtualize) return;
+        const scope = scrollRef.current;
+        const activeElement = document.activeElement;
+        const shelfHasFocus =
+            scope &&
+            activeElement instanceof Node &&
+            scope.contains(activeElement);
+        if (!shelfHasFocus) return;
+        if (
+            activeIndex >= virtualRange.start &&
+            activeIndex < virtualRange.end
+        ) {
+            focusRefs.current[activeIndex]?.focus();
+            return;
+        }
+        const overscanCount = 8;
+        const nextStart = Math.max(0, activeIndex - overscanCount);
+        const nextEnd = Math.min(
+            renderableItemCount,
+            Math.max(nextStart + 1, activeIndex + overscanCount + 1)
+        );
+        setVirtualRange((previous) =>
+            previous.start === nextStart && previous.end === nextEnd
+                ? previous
+                : { start: nextStart, end: nextEnd }
+        );
+    }, [
+        activeIndex,
+        focusRefs,
+        scrollRef,
+        shouldVirtualize,
+        virtualRange.end,
+        virtualRange.start,
+        renderableItemCount,
+    ]);
+
+    useEffect(() => {
+        if (
+            !shouldVirtualize ||
+            !onLoadMore ||
+            !hasMore ||
+            loadingMore ||
+            reachedLimit
+        ) {
+            return;
+        }
+        const preloadCount = 12;
+        if (
+            virtualRange.end >= Math.max(1, visibleItems.length - preloadCount)
+        ) {
+            onLoadMore();
+        }
+    }, [
+        hasMore,
+        loadingMore,
+        onLoadMore,
+        reachedLimit,
+        shouldVirtualize,
+        virtualRange.end,
+        visibleItems.length,
+    ]);
+    useEffect(() => {
+        if (
+            shouldVirtualize ||
+            !onLoadMore ||
+            !hasMore ||
+            loadingMore ||
+            reachedLimit
+        ) {
+            return;
+        }
         const rootEl = getScrollParent(scrollRef.current);
         const observer = new IntersectionObserver(
             (entries) => {
@@ -209,8 +509,8 @@ export function MediaShelf({
         orientation,
         itemsPerColumn,
         maxVisible,
-        visibleItems.length,
         reachedLimit,
+        shouldVirtualize,
     ]);
     const handleDragEnd = useCallback(
         (result: DropResult) => {
@@ -229,16 +529,22 @@ export function MediaShelf({
     useEffect(() => {
         const node = scrollRef.current;
         if (!node) return;
-        const firstId = items[0]?.id ?? null;
+        const firstId = visibleItems[0]?.id ?? null;
+        const loading = Boolean(visibleItems[0]?.loading);
         const prev = lastItemsRef.current;
-        lastItemsRef.current = { firstId, length: items.length };
+        lastItemsRef.current = {
+            firstId,
+            length: visibleItems.length,
+            loading,
+        };
         if (!prev) return;
+        if (prev.loading || loading) return;
         const replaced = prev.firstId !== firstId;
-        const shrunk = items.length < prev.length;
+        const shrunk = visibleItems.length < prev.length;
         if (!replaced && !shrunk) return;
         if (orientation === 'horizontal') node.scrollLeft = 0;
         else node.scrollTop = 0;
-    }, [items, orientation]);
+    }, [orientation, visibleItems]);
     const renderFades = () => {
         if (orientation === 'horizontal') {
             return (
@@ -398,6 +704,8 @@ export function MediaShelf({
             const actions =
                 getActions?.(item, index) ?? buildMediaActions(item);
             const rowProps = getRowProps?.(item, index);
+            const resolvedPosition =
+                rowProps?.position ?? (item.loading ? index : undefined);
             const hasActions =
                 actions.primary.length > 0 || actions.secondary.length > 0;
             const contextMenu =
@@ -437,7 +745,7 @@ export function MediaShelf({
                         loading={item.loading}
                         onClick={canActivate ? handleNavigate : undefined}
                         showPosition={rowProps?.showPosition}
-                        position={rowProps?.position}
+                        position={resolvedPosition}
                         selection={rowProps?.selection}
                         className={rowProps?.className}
                         style={
@@ -459,6 +767,103 @@ export function MediaShelf({
             showImage,
             trackSubtitleMode,
             variant,
+        ]
+    );
+    const renderItemShell = useCallback(
+        ({
+            item,
+            index,
+            loaded,
+            dragProvided,
+            isClone = false,
+        }: {
+            item: MediaShelfItem;
+            index: number;
+            loaded: boolean;
+            dragProvided?: DraggableProvided;
+            isClone?: boolean;
+        }) => {
+            const seed = hashId(item.id ?? '') ^ (index << 1);
+            const { content, canActivate, handleNavigate } = renderItem(
+                item,
+                seed,
+                index
+            );
+            const draggableProps = dragProvided?.draggableProps;
+            const dragHandleProps = dragProvided?.dragHandleProps ?? undefined;
+            const cloneWidth = isClone
+                ? (focusRefs.current[index]?.getBoundingClientRect().width ??
+                  scrollRef.current?.getBoundingClientRect().width)
+                : undefined;
+
+            return (
+                <div
+                    key={getItemKey(item, index)}
+                    ref={(node) => {
+                        if (dragProvided) dragProvided.innerRef(node);
+                        if (isClone) return;
+                        focusRefs.current[index] = node;
+                    }}
+                    data-index={index}
+                    {...draggableProps}
+                    {...dragHandleProps}
+                    style={{
+                        ...(cloneWidth
+                            ? {
+                                  width: cloneWidth,
+                                  maxWidth: cloneWidth,
+                                  boxSizing: 'border-box',
+                              }
+                            : undefined),
+                        ...draggableProps?.style,
+                        ...(!dragProvided ? offscreenItemStyle : undefined),
+                    }}
+                    role="button"
+                    aria-disabled={!canActivate}
+                    data-media-shelf-item="true"
+                    className={clsx(
+                        'group rounded-2 bg-background focus-visible:ring-accent-9 focus-visible:ring-offset-background focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none',
+                        dragProvided &&
+                            loaded &&
+                            'cursor-grab active:cursor-grabbing'
+                    )}
+                    tabIndex={
+                        !isClone &&
+                        interactive &&
+                        loaded &&
+                        index === activeIndex
+                            ? 0
+                            : -1
+                    }
+                    onFocus={
+                        !isClone && loaded
+                            ? (event) => handleItemFocus(event, index)
+                            : undefined
+                    }
+                    onKeyDown={
+                        !isClone && loaded
+                            ? (event) =>
+                                  handleItemKeyDown(
+                                      event,
+                                      index,
+                                      canActivate,
+                                      handleNavigate
+                                  )
+                            : undefined
+                    }
+                >
+                    {content}
+                </div>
+            );
+        },
+        [
+            activeIndex,
+            focusRefs,
+            handleItemFocus,
+            handleItemKeyDown,
+            interactive,
+            offscreenItemStyle,
+            renderItem,
         ]
     );
     const renderItems = () => {
@@ -483,9 +888,6 @@ export function MediaShelf({
                     {col.map((item, idx) => {
                         const flatIndex = colIndex * itemsPerColumn + idx;
                         const key = getItemKey(item, flatIndex);
-                        const seed = hashId(item.id ?? '') ^ (flatIndex << 1);
-                        const { content, canActivate, handleNavigate } =
-                            renderItem(item, seed, flatIndex);
                         return (
                             <Draggable
                                 key={key}
@@ -494,112 +896,119 @@ export function MediaShelf({
                                 isDragDisabled={!draggable}
                                 disableInteractiveElementBlocking
                             >
-                                {(dragProvided) => (
-                                    <div
-                                        ref={(node) => {
-                                            dragProvided.innerRef(node);
-                                            focusRefs.current[flatIndex] = node;
-                                        }}
-                                        data-index={flatIndex}
-                                        {...dragProvided.draggableProps}
-                                        {...dragProvided.dragHandleProps}
-                                        style={{
-                                            ...dragProvided.draggableProps
-                                                .style,
-                                        }}
-                                        role="button"
-                                        aria-disabled={!canActivate}
-                                        className={clsx(
-                                            'group rounded-2 bg-background focus-visible:ring-accent-9 focus-visible:ring-offset-background focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none',
-                                            draggable &&
-                                                'cursor-grab active:cursor-grabbing'
-                                        )}
-                                        tabIndex={
-                                            interactive &&
-                                            flatIndex === activeIndex
-                                                ? 0
-                                                : -1
-                                        }
-                                        onFocus={(event) =>
-                                            handleItemFocus(event, flatIndex)
-                                        }
-                                        onKeyDown={(event) =>
-                                            handleItemKeyDown(
-                                                event,
-                                                flatIndex,
-                                                canActivate,
-                                                handleNavigate
-                                            )
-                                        }
-                                    >
-                                        {content}
-                                    </div>
-                                )}
+                                {(dragProvided) =>
+                                    renderItemShell({
+                                        item,
+                                        index: flatIndex,
+                                        loaded: true,
+                                        dragProvided,
+                                    })
+                                }
                             </Draggable>
                         );
                     })}
                 </Flex>
             ));
         }
-        return visibleItems.map((item, index) => {
-            const seed = hashId(item.id ?? '') ^ (index << 1);
-            const { content, canActivate, handleNavigate } = renderItem(
-                item,
-                seed,
-                index
-            );
-            return (
-                <Fragment key={getItemKey(item, index)}>
+
+        if (shouldVirtualize) {
+            return renderedVerticalItems.map(({ item, index, loaded }) => {
+                if (!loaded || !draggable) {
+                    return renderItemShell({
+                        item,
+                        index,
+                        loaded,
+                    });
+                }
+
+                return (
                     <Draggable
+                        key={getItemKey(item, index)}
                         draggableId={getItemKey(item, index)}
                         index={index}
-                        isDragDisabled={!draggable}
                         disableInteractiveElementBlocking
                     >
-                        {(dragProvided) => (
-                            <div
-                                ref={(node) => {
-                                    dragProvided.innerRef(node);
-                                    focusRefs.current[index] = node;
-                                }}
-                                data-index={index}
-                                {...dragProvided.draggableProps}
-                                {...dragProvided.dragHandleProps}
-                                style={{
-                                    ...dragProvided.draggableProps.style,
-                                }}
-                                role="button"
-                                aria-disabled={!canActivate}
-                                className={clsx(
-                                    'group rounded-2 bg-background focus-visible:ring-accent-9 focus-visible:ring-offset-background focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none',
-                                    draggable &&
-                                        'cursor-grab active:cursor-grabbing'
-                                )}
-                                tabIndex={
-                                    interactive && index === activeIndex
-                                        ? 0
-                                        : -1
-                                }
-                                onFocus={(event) =>
-                                    handleItemFocus(event, index)
-                                }
-                                onKeyDown={(event) =>
-                                    handleItemKeyDown(
-                                        event,
-                                        index,
-                                        canActivate,
-                                        handleNavigate
-                                    )
-                                }
-                            >
-                                {content}
-                            </div>
-                        )}
+                        {(dragProvided) =>
+                            renderItemShell({
+                                item,
+                                index,
+                                loaded,
+                                dragProvided,
+                            })
+                        }
                     </Draggable>
-                </Fragment>
+                );
+            });
+        }
+
+        const loadedItems = renderedVerticalItems
+            .filter(({ loaded }) => loaded)
+            .map(({ item, index }) =>
+                draggable ? (
+                    <Draggable
+                        key={getItemKey(item, index)}
+                        draggableId={getItemKey(item, index)}
+                        index={index}
+                        isDragDisabled={false}
+                        disableInteractiveElementBlocking
+                    >
+                        {(dragProvided) =>
+                            renderItemShell({
+                                item,
+                                index,
+                                loaded: true,
+                                dragProvided,
+                            })
+                        }
+                    </Draggable>
+                ) : (
+                    renderItemShell({
+                        item,
+                        index,
+                        loaded: true,
+                    })
+                )
             );
-        });
+        const loadingItems = renderedVerticalItems
+            .filter(({ loaded }) => !loaded)
+            .map(({ item, index }) =>
+                renderItemShell({
+                    item,
+                    index,
+                    loaded: false,
+                })
+            );
+
+        return (
+            <>
+                {loadedItems}
+                <div
+                    ref={sentinelRef}
+                    aria-hidden
+                    className="h-px w-full flex-none"
+                />
+                {loadingItems}
+            </>
+        );
     };
+    const renderVirtualClone = useCallback(
+        (
+            dragProvided: DraggableProvided,
+            _snapshot: unknown,
+            rubric: { source: { index: number } }
+        ) => {
+            const item = visibleItems[rubric.source.index];
+            if (!item) return null;
+            return renderItemShell({
+                item,
+                index: rubric.source.index,
+                loaded: true,
+                dragProvided,
+                isClone: true,
+            });
+        },
+        [renderItemShell, visibleItems]
+    );
     const renderBody = (dropProvided?: DroppableProvided) => (
         <Flex className="relative -mx-1">
             <Flex
@@ -632,16 +1041,29 @@ export function MediaShelf({
                     scrollRef.current = node;
                 }}
             >
-                {renderItems()} {dropProvided?.placeholder}
-                <div
-                    ref={sentinelRef}
-                    aria-hidden
-                    className={clsx(
-                        orientation === 'horizontal'
-                            ? 'h-full w-px flex-none'
-                            : 'h-px w-full flex-none'
-                    )}
-                />
+                {shouldVirtualize && topVirtualSpaceHeight > 0 && (
+                    <div
+                        aria-hidden
+                        className="w-full flex-none"
+                        style={{ height: topVirtualSpaceHeight }}
+                    />
+                )}
+                {renderItems()}
+                {!isVirtualDroppable && dropProvided?.placeholder}
+                {shouldVirtualize && bottomVirtualSpaceHeight > 0 && (
+                    <div
+                        aria-hidden
+                        className="w-full flex-none"
+                        style={{ height: bottomVirtualSpaceHeight }}
+                    />
+                )}
+                {orientation === 'horizontal' && (
+                    <div
+                        ref={sentinelRef}
+                        aria-hidden
+                        className="h-full w-px flex-none"
+                    />
+                )}
             </Flex>
             {renderFades()}
         </Flex>
@@ -656,9 +1078,11 @@ export function MediaShelf({
             <Droppable
                 droppableId={droppableId}
                 isDropDisabled={!draggable}
+                mode={isVirtualDroppable ? 'virtual' : 'standard'}
                 direction={
                     orientation === 'horizontal' ? 'horizontal' : 'vertical'
                 }
+                renderClone={isVirtualDroppable ? renderVirtualClone : null}
             >
                 {(dropProvided) => renderBody(dropProvided)}
             </Droppable>

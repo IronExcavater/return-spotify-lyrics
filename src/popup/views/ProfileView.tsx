@@ -240,7 +240,6 @@ export function ProfileView({ profile, onLogout, connection }: Props) {
                         <Flex direction="column" gap="1" align="start">
                             <SkeletonText
                                 loading={loading}
-                                parts={[name]}
                                 preset="media-row"
                                 variant="title"
                                 className="w-fit"
@@ -256,7 +255,6 @@ export function ProfileView({ profile, onLogout, connection }: Props) {
                             </SkeletonText>
                             <SkeletonText
                                 loading={loading}
-                                parts={[id]}
                                 preset="media-row"
                                 variant="subtitle"
                                 className="w-fit"

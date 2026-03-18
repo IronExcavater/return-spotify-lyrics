@@ -1,9 +1,14 @@
 import { isValidElement, type CSSProperties, type ReactNode } from 'react';
 import { Flex, Skeleton, type SkeletonProps } from '@radix-ui/themes';
 
-import { skeletonTextWidths } from '../../shared/math';
-
-type WidthOptions = Parameters<typeof skeletonTextWidths>[3];
+type WidthOptions = {
+    titleMin?: number;
+    titleRange?: number;
+    subtitleMin?: number;
+    subtitleRange?: number;
+    titleOffset?: number;
+    subtitleOffset?: number;
+};
 type Preset = 'media-card' | 'media-row';
 
 const PRESETS: Record<Preset, { salts: number[]; options: WidthOptions }> = {
@@ -33,7 +38,6 @@ const PRESETS: Record<Preset, { salts: number[]; options: WidthOptions }> = {
 
 interface Props extends Omit<SkeletonProps, 'children'> {
     children: ReactNode;
-    parts: Array<string | undefined>;
     seed?: number;
     preset?: Preset;
     salts?: number[];
@@ -45,6 +49,10 @@ interface Props extends Omit<SkeletonProps, 'children'> {
 }
 
 const TEXT_SIZE_TOKENS = new Set(['1', '2', '3', '4', '5', '6', '7', '8', '9']);
+const randomFromSeed = (seed: number) => {
+    const value = Math.sin(seed * 12.9898) * 43758.5453;
+    return value - Math.floor(value);
+};
 
 const normalizeTextSize = (value: unknown): string | undefined => {
     if (typeof value === 'number') {
@@ -73,7 +81,6 @@ const findTextSize = (node: ReactNode): string | undefined => {
 
 export function SkeletonText({
     children,
-    parts,
     seed = 0,
     preset = 'media-row',
     salts,
@@ -87,18 +94,28 @@ export function SkeletonText({
     const presetConfig = PRESETS[preset];
     const resolvedSalts = salts ?? presetConfig.salts;
     const resolvedOptions = widthOptions ?? presetConfig.options;
-    const { titleWidth, subtitleWidth } = skeletonTextWidths(
-        parts,
-        seed,
-        resolvedSalts,
-        resolvedOptions
-    );
-    const width = variant === 'title' ? titleWidth : subtitleWidth;
+    const min =
+        variant === 'title'
+            ? (resolvedOptions.titleMin ?? presetConfig.options.titleMin)
+            : (resolvedOptions.subtitleMin ?? presetConfig.options.subtitleMin);
+    const range =
+        variant === 'title'
+            ? (resolvedOptions.titleRange ?? presetConfig.options.titleRange)
+            : (resolvedOptions.subtitleRange ??
+              presetConfig.options.subtitleRange);
+    const offset =
+        variant === 'title'
+            ? (resolvedOptions.titleOffset ?? presetConfig.options.titleOffset)
+            : (resolvedOptions.subtitleOffset ??
+              presetConfig.options.subtitleOffset);
+    const widthSeed =
+        seed +
+        offset +
+        resolvedSalts.reduce((sum, salt, index) => sum + salt * (index + 1), 0);
+    const width = Math.round(min + randomFromSeed(widthSeed) * range);
     const textSizeToken = findTextSize(children);
     const widthStyle =
-        skeletonProps.loading !== false && fullWidth
-            ? { width: `${width}%` }
-            : undefined;
+        skeletonProps.loading !== false ? { width: `${width}%` } : undefined;
     const heightStyle =
         skeletonProps.loading !== false && textSizeToken
             ? {

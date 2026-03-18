@@ -92,7 +92,6 @@ export function MediaAlbum({
                 <Flex className="min-w-0 grow">
                     <SkeletonText
                         loading={loading}
-                        parts={[item.title, duration]}
                         seed={seed}
                         preset="media-row"
                         className="w-full"
@@ -105,7 +104,6 @@ export function MediaAlbum({
                 <Flex className="shrink-0">
                     <SkeletonText
                         loading={loading}
-                        parts={[duration, item.title]}
                         seed={seed}
                         preset="media-row"
                         variant="subtitle"
@@ -133,7 +131,6 @@ export function MediaAlbum({
                             <Fade enabled={!loading} grow>
                                 <SkeletonText
                                     loading={loading}
-                                    parts={[album.name, subtitle]}
                                     seed={seed}
                                     preset="media-row"
                                 >
@@ -200,7 +197,6 @@ export function MediaAlbum({
                                 <Fade enabled={!loading} grow>
                                     <SkeletonText
                                         loading={loading}
-                                        parts={[subtitle]}
                                         seed={seed}
                                         preset="media-row"
                                         variant="subtitle"
@@ -226,7 +222,6 @@ export function MediaAlbum({
                                 return (
                                     <SkeletonText
                                         loading={loading}
-                                        parts={[durationLabel, subtitle]}
                                         seed={seed}
                                         preset="media-row"
                                         fullWidth={false}

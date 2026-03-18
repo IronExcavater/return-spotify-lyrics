@@ -5,6 +5,7 @@ export type PlaylistDedupableItem = MediaShelfItem & {
     playlistTrackId?: string;
     playlistTrackUri?: string;
     addedAt?: string;
+    durationMs?: number;
 };
 
 export type PlaylistDuplicateEntry = {

@@ -65,7 +65,6 @@ export function MediaSectionHeader({
                     >
                         <SkeletonText
                             loading={loading && headerLoading}
-                            parts={[title]}
                             preset="media-row"
                             variant="title"
                             className="min-w-0"
@@ -92,7 +91,6 @@ export function MediaSectionHeader({
                         {subtitle && (
                             <SkeletonText
                                 loading={loading && headerLoading}
-                                parts={[subtitle]}
                                 preset="media-row"
                                 variant="subtitle"
                                 className="min-w-0"

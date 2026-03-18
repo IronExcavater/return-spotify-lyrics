@@ -162,7 +162,6 @@ export function QueueView() {
     const [syncingQueue, setSyncingQueue] = useState(false);
     const syncingQueueRef = useRef(false);
     const queueStateRef = useRef<QueueState | null>(null);
-    const skeletonLabel = '\u00A0';
     const cachedNowPlayingItem = useMemo(
         () =>
             cachedNowPlaying?.item
@@ -213,26 +212,6 @@ export function QueueView() {
             signature: queueStateSignature(queueState),
         });
     }, [queueState]);
-
-    const skeletonRows = useMemo(
-        () =>
-            Array.from({ length: 6 }, (_, index) => ({
-                id: `skeleton-${index}`,
-                title: skeletonLabel,
-                subtitle: skeletonLabel,
-            })),
-        [skeletonLabel]
-    );
-    const nowPlayingSkeletonRows = useMemo(
-        () => [
-            {
-                id: 'skeleton-now-playing',
-                title: skeletonLabel,
-                subtitle: skeletonLabel,
-            },
-        ],
-        [skeletonLabel]
-    );
 
     const upcoming = queueState?.queue ?? [];
     const nowPlaying = queueState?.current ?? cachedNowPlayingItem;
@@ -364,11 +343,7 @@ export function QueueView() {
                                 view: 'list',
                                 infinite: 'rows',
                                 rows: 0,
-                                items: nowPlayingLoading
-                                    ? nowPlayingSkeletonRows
-                                    : nowPlaying
-                                      ? [nowPlaying]
-                                      : [],
+                                items: nowPlaying ? [nowPlaying] : [],
                             } satisfies MediaSectionState
                         }
                         onChange={() => undefined}
@@ -382,13 +357,7 @@ export function QueueView() {
                             }
                             return (
                                 <MediaShelf
-                                    items={
-                                        sectionLoading
-                                            ? nowPlayingSkeletonRows
-                                            : nowPlaying
-                                              ? [nowPlaying]
-                                              : []
-                                    }
+                                    items={nowPlaying ? [nowPlaying] : []}
                                     variant="list"
                                     orientation="vertical"
                                     itemsPerColumn={1}
@@ -411,9 +380,7 @@ export function QueueView() {
                                 view: 'list',
                                 infinite: 'rows',
                                 rows: 0,
-                                items: upcomingLoading
-                                    ? skeletonRows
-                                    : upcoming,
+                                items: upcoming,
                             } satisfies MediaSectionState
                         }
                         onChange={() => undefined}
@@ -427,9 +394,7 @@ export function QueueView() {
                             }
                             return (
                                 <MediaShelf
-                                    items={
-                                        sectionLoading ? skeletonRows : upcoming
-                                    }
+                                    items={upcoming}
                                     variant="list"
                                     orientation="vertical"
                                     itemsPerColumn={6}

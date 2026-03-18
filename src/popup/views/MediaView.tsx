@@ -50,7 +50,6 @@ const CONTEXT_KIND_LABEL: Partial<Record<MediaItem['parentKind'], string>> = {
     show: 'show',
     audiobook: 'audiobook',
 };
-
 type HeroRoutes = {
     goToArtist: (id: string) => void;
     goToShow: (id: string) => void;
@@ -231,23 +230,14 @@ export function MediaView() {
         'newest'
     );
     const discographyTrackCount = 5;
-    const { data, loading, loadMoreEpisodes } = useMediaData({
-        state,
-        market,
-        locale: settings.locale,
-        goTo,
-        discographyTrackCount,
-    });
-    const skeletonLabel = '\u00A0';
-    const skeletonRows = useMemo(
-        () =>
-            Array.from({ length: 6 }, (_, index) => ({
-                id: `skeleton-${index}`,
-                title: skeletonLabel,
-                subtitle: skeletonLabel,
-            })),
-        [skeletonLabel]
-    );
+    const { data, loading, loadMoreDiscography, loadMoreEpisodes } =
+        useMediaData({
+            state,
+            market,
+            locale: settings.locale,
+            goTo,
+            discographyTrackCount,
+        });
 
     const isResolvingRoute =
         state?.kind === 'track' || state?.kind === 'episode';
@@ -354,6 +344,7 @@ export function MediaView() {
             <MediaSection
                 editing={false}
                 loading={isLoadingView}
+                headerLoading={false}
                 onTitleClick={handleAlbumTitleClick}
                 section={
                     {
@@ -361,9 +352,7 @@ export function MediaView() {
                         title: albumData?.album.name ?? 'Album',
                         view: 'list',
                         trackSubtitleMode: 'artists',
-                        items: isLoadingView
-                            ? skeletonRows
-                            : (albumData?.tracks ?? []),
+                        items: albumData?.tracks ?? [],
                     } satisfies MediaSectionState
                 }
                 onChange={noopSectionChange}
@@ -378,7 +367,6 @@ export function MediaView() {
         isLoadingView,
         noopSectionChange,
         shouldShowAlbumSection,
-        skeletonRows,
     ]);
 
     const artistUris = useMemo(
@@ -558,9 +546,9 @@ export function MediaView() {
                 title: 'Popular',
                 view: 'list',
                 trackSubtitleMode: 'artist-album',
-                items: albumPopularLoading ? skeletonRows : popularAlbumTracks,
+                items: popularAlbumTracks,
             }) satisfies MediaSectionState,
-        [albumPopularLoading, popularAlbumTracks, skeletonRows]
+        [popularAlbumTracks]
     );
     const albumRecommendedSection = useMemo(
         () =>
@@ -571,11 +559,9 @@ export function MediaView() {
                 infinite: 'rows',
                 rows: 0,
                 trackSubtitleMode: 'artist-album',
-                items: albumRecommendedLoading
-                    ? skeletonRows
-                    : (albumData?.recommended ?? []),
+                items: albumData?.recommended ?? [],
             }) satisfies MediaSectionState,
-        [albumData?.recommended, albumRecommendedLoading, skeletonRows]
+        [albumData?.recommended]
     );
     const showEpisodesSection = useMemo(
         () =>
@@ -588,9 +574,7 @@ export function MediaView() {
                 view: 'list',
                 infinite: 'rows',
                 rows: 0,
-                items: isLoadingView
-                    ? skeletonRows
-                    : (showData?.episodes ?? []),
+                items: showData?.episodes ?? [],
                 hasMore: isLoadingView ? false : showData?.episodesHasMore,
                 loadingMore: isLoadingView
                     ? false
@@ -603,7 +587,6 @@ export function MediaView() {
             showData?.episodesLoadingMore,
             showData?.releaseYear,
             showData?.show.name,
-            skeletonRows,
         ]
     );
     const showRecommendedSection = useMemo(
@@ -614,11 +597,9 @@ export function MediaView() {
                 view: 'list',
                 infinite: 'rows',
                 rows: 0,
-                items: showRecommendedLoading
-                    ? skeletonRows
-                    : (showData?.recommended ?? []),
+                items: showData?.recommended ?? [],
             }) satisfies MediaSectionState,
-        [showData?.recommended, showRecommendedLoading, skeletonRows]
+        [showData?.recommended]
     );
     const artistPopularSection = useMemo(
         () =>
@@ -627,11 +608,9 @@ export function MediaView() {
                 title: 'Popular',
                 view: 'list',
                 trackSubtitleMode: 'artist-album',
-                items: isLoadingView
-                    ? skeletonRows
-                    : (artistData?.topTracks ?? []),
+                items: artistData?.topTracks ?? [],
             }) satisfies MediaSectionState,
-        [artistData?.topTracks, isLoadingView, skeletonRows]
+        [artistData?.topTracks]
     );
     const artistRelatedSection = useMemo(
         () =>
@@ -641,17 +620,9 @@ export function MediaView() {
                 view: 'card',
                 cardSize: 3,
                 rows: 1,
-                items:
-                    isLoadingView || artistData?.relatedArtistsLoading
-                        ? skeletonRows
-                        : (artistData?.relatedArtists ?? []),
+                items: artistData?.relatedArtists ?? [],
             }) satisfies MediaSectionState,
-        [
-            artistData?.relatedArtists,
-            artistData?.relatedArtistsLoading,
-            isLoadingView,
-            skeletonRows,
-        ]
+        [artistData?.relatedArtists]
     );
     const artistRecommendedSection = useMemo(
         () =>
@@ -662,11 +633,9 @@ export function MediaView() {
                 infinite: 'rows',
                 rows: 0,
                 trackSubtitleMode: 'artist-album',
-                items: artistRecommendedLoading
-                    ? skeletonRows
-                    : (artistData?.recommended ?? []),
+                items: artistData?.recommended ?? [],
             }) satisfies MediaSectionState,
-        [artistData?.recommended, artistRecommendedLoading, skeletonRows]
+        [artistData?.recommended]
     );
     const handleOpenDiscographyAlbum = useCallback(
         (album: { id?: string | null }) => {
@@ -707,25 +676,11 @@ export function MediaView() {
         if (restoring) {
             return (
                 <Flex p="3" direction="column" gap="2">
-                    <SkeletonText
-                        loading
-                        parts={[skeletonLabel]}
-                        preset="media-row"
-                        variant="title"
-                    >
-                        <Text size="5" weight="bold">
-                            {skeletonLabel}
-                        </Text>
+                    <SkeletonText loading variant="title">
+                        <Text size="5" weight="bold" />
                     </SkeletonText>
-                    <SkeletonText
-                        loading
-                        parts={[skeletonLabel]}
-                        preset="media-row"
-                        variant="subtitle"
-                    >
-                        <Text size="2" color="gray">
-                            {skeletonLabel}
-                        </Text>
+                    <SkeletonText loading variant="subtitle">
+                        <Text size="2" color="gray" />
                     </SkeletonText>
                 </Flex>
             );
@@ -770,7 +725,7 @@ export function MediaView() {
 
             <StickyLayout.Body>
                 <div className="bg-background absolute -top-2 z-10 h-2 w-full shrink-0" />
-                <Flex pl="3" direction="column">
+                <Flex pl="3" pr="1" direction="column">
                     {activeKind === 'album' && (
                         <>
                             {albumTracksSection}
@@ -779,6 +734,7 @@ export function MediaView() {
                                 <MediaSection
                                     editing={false}
                                     loading={albumPopularLoading}
+                                    headerLoading={false}
                                     section={albumPopularSection}
                                     onChange={noopSectionChange}
                                 />
@@ -788,6 +744,7 @@ export function MediaView() {
                                 <MediaSection
                                     editing={false}
                                     loading={albumRecommendedLoading}
+                                    headerLoading={false}
                                     section={albumRecommendedSection}
                                     onChange={noopSectionChange}
                                 />
@@ -800,6 +757,7 @@ export function MediaView() {
                             <MediaSection
                                 editing={false}
                                 loading={isLoadingView}
+                                headerLoading={false}
                                 section={showEpisodesSection}
                                 onChange={noopSectionChange}
                                 onLoadMore={loadMoreEpisodes}
@@ -809,6 +767,7 @@ export function MediaView() {
                                 <MediaSection
                                     editing={false}
                                     loading={showRecommendedLoading}
+                                    headerLoading={false}
                                     section={showRecommendedSection}
                                     onChange={noopSectionChange}
                                 />
@@ -823,6 +782,7 @@ export function MediaView() {
                                 <MediaSection
                                     editing={false}
                                     loading={isLoadingView}
+                                    headerLoading={false}
                                     section={artistPopularSection}
                                     onChange={noopSectionChange}
                                 />
@@ -833,6 +793,7 @@ export function MediaView() {
                                     isLoadingView ||
                                         artistData?.relatedArtistsLoading
                                 )}
+                                headerLoading={false}
                                 section={artistRelatedSection}
                                 onChange={noopSectionChange}
                             />
@@ -841,6 +802,7 @@ export function MediaView() {
                                 <MediaSection
                                     editing={false}
                                     loading={artistRecommendedLoading}
+                                    headerLoading={false}
                                     section={artistRecommendedSection}
                                     onChange={noopSectionChange}
                                 />
@@ -854,6 +816,11 @@ export function MediaView() {
                                     trackCount={discographyTrackCount}
                                     locale={settings.locale}
                                     loading={isLoadingView}
+                                    hasMore={artistData?.discographyHasMore}
+                                    loadingMore={
+                                        artistData?.discographyLoadingMore
+                                    }
+                                    onLoadMore={loadMoreDiscography}
                                     onAlbumClick={handleOpenDiscographyAlbum}
                                     onTrackClick={handleOpenDiscographyTrack}
                                 />

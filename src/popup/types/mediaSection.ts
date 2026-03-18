@@ -13,6 +13,7 @@ export type MediaSectionState = {
     clampUnit?: 'px' | 'items';
     cardSize?: 1 | 2 | 3;
     items: MediaShelfItem[];
+    totalCount?: number;
     hasMore?: boolean;
     loadingMore?: boolean;
     wideColumns?: boolean;

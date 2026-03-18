@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { CaretSortIcon } from '@radix-ui/react-icons';
 import { Button, DropdownMenu, Flex, Text, Tooltip } from '@radix-ui/themes';
 import type { SimplifiedAlbum, SimplifiedTrack } from '@spotify/web-api-ts-sdk';
@@ -23,6 +23,9 @@ type Props = {
     onAlbumClick: (album: SimplifiedAlbum) => void;
     onTrackClick: (track: SimplifiedTrack, album: SimplifiedAlbum) => void;
     loading?: boolean;
+    hasMore?: boolean;
+    loadingMore?: boolean;
+    onLoadMore?: () => void;
 };
 
 const parseReleaseDate = (album: SimplifiedAlbum) => {
@@ -32,6 +35,10 @@ const parseReleaseDate = (album: SimplifiedAlbum) => {
     if (!Number.isNaN(date.getTime())) return date.getTime();
     return Number.NaN;
 };
+
+const isPlaceholderEntry = (entry: DiscographyEntry, label: string) =>
+    entry.album.name === label && !entry.album.uri;
+
 export function DiscographyShelf({
     entries,
     sort,
@@ -41,6 +48,9 @@ export function DiscographyShelf({
     onAlbumClick,
     onTrackClick,
     loading = false,
+    hasMore = false,
+    loadingMore = false,
+    onLoadMore,
 }: Props) {
     const resolvedLocale = resolveLocale(locale);
     const resolvedCardWidth = 220;
@@ -55,11 +65,10 @@ export function DiscographyShelf({
         });
         return next;
     }, [entries, sort]);
-    const placeholderEntries = useMemo(() => {
-        if (!loading || ordered.length > 0) return [];
-        return Array.from({ length: 5 }, (_, index) => ({
+    const buildPlaceholderEntries = (count: number, prefix: string) =>
+        Array.from({ length: count }, (_, index) => ({
             album: {
-                id: `loading-${index}`,
+                id: `${prefix}-${index}`,
                 name: skeletonLabel,
                 album_type: 'album',
                 total_tracks: 1,
@@ -75,7 +84,7 @@ export function DiscographyShelf({
             } as SimplifiedAlbum,
             tracks: [
                 {
-                    id: `loading-track-${index}`,
+                    id: `${prefix}-track-${index}`,
                     name: skeletonLabel,
                     duration_ms: 0,
                     artists: [],
@@ -92,12 +101,22 @@ export function DiscographyShelf({
                 } as SimplifiedTrack,
             ],
         }));
+    const placeholderEntries = useMemo(() => {
+        if (!loading || ordered.length > 0) return [];
+        return buildPlaceholderEntries(5, 'loading');
     }, [loading, ordered.length, skeletonLabel]);
+    const loadingMoreEntries = useMemo(() => {
+        if (!loadingMore || placeholderEntries.length > 0) return [];
+        return buildPlaceholderEntries(3, 'loading-more');
+    }, [loadingMore, placeholderEntries.length, skeletonLabel]);
     const displayEntries =
-        placeholderEntries.length > 0 ? placeholderEntries : ordered;
+        placeholderEntries.length > 0
+            ? placeholderEntries
+            : [...ordered, ...loadingMoreEntries];
     const { scrollRef, fade } = useScrollFade('horizontal', [
         displayEntries.length,
     ]);
+    const sentinelRef = useRef<HTMLDivElement | null>(null);
     const {
         focusRefs,
         activeIndex,
@@ -141,6 +160,26 @@ export function DiscographyShelf({
         });
         return () => observer.disconnect();
     }, [displayEntries, focusRefs]);
+
+    useEffect(() => {
+        const root = scrollRef.current;
+        const target = sentinelRef.current;
+        if (!root || !target || !onLoadMore || !hasMore || loadingMore) return;
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (loadingMore || !hasMore) return;
+                if (entries.some((entry) => entry.isIntersecting)) onLoadMore();
+            },
+            {
+                root,
+                rootMargin: '0px 240px 0px 0px',
+            }
+        );
+
+        observer.observe(target);
+        return () => observer.disconnect();
+    }, [hasMore, loadingMore, onLoadMore]);
     const renderTimelineMarkers = () =>
         displayEntries.map((entry, index) => {
             const releaseLabel = formatIsoDate(
@@ -252,7 +291,12 @@ export function DiscographyShelf({
                         <Flex gap="2" className="min-w-max">
                             {displayEntries.map((entry, index) => {
                                 const key = entry.album.id ?? entry.album.name;
-                                const canActivate = Boolean(entry.album.id);
+                                const entryLoading = isPlaceholderEntry(
+                                    entry,
+                                    skeletonLabel
+                                );
+                                const canActivate =
+                                    Boolean(entry.album.id) && !entryLoading;
                                 return (
                                     <div
                                         key={key}
@@ -288,11 +332,16 @@ export function DiscographyShelf({
                                             trackCount={trackCount}
                                             onAlbumClick={onAlbumClick}
                                             onTrackClick={onTrackClick}
-                                            loading={loading}
+                                            loading={loading || entryLoading}
                                         />
                                     </div>
                                 );
                             })}
+                            <div
+                                ref={sentinelRef}
+                                aria-hidden
+                                className="h-full w-px shrink-0"
+                            />
                         </Flex>
                     </Flex>
                 </Flex>

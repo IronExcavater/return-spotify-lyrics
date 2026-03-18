@@ -319,23 +319,8 @@ export function useMediaSectionEditor({
     const clampColumnWidth = (val: number) =>
         Math.min(COLUMN_WIDTH_MAX, Math.max(COLUMN_WIDTH_MIN, val));
     const showError = Boolean(errorMessage);
-    const isPending = loading || showError;
-    const placeholderItems = useMemo(() => {
-        if (!isPending) return [];
-        const cols = maxVisible ?? (orientation === 'horizontal' ? 4 : 8);
-        const rows = itemsPerColumn ?? 3;
-        const count = orientation === 'horizontal' ? cols * rows : cols;
-        const safeCount = Math.max(6, Math.min(count, 48));
-        return Array.from({ length: safeCount }).map((_, idx) => ({
-            id: `${section.id}-placeholder-${idx}`,
-            title: '\u00A0',
-            subtitle: '\u00A0',
-        }));
-    }, [isPending, itemsPerColumn, maxVisible, orientation, section.id]);
-    const shelfItems =
-        isPending && section.items.length === 0
-            ? placeholderItems
-            : section.items;
+    const showLoadingState = loading && section.items.length === 0;
+    const isPending = showLoadingState || showError;
 
     const toRows = pxToRows ? (px: number) => Math.round(pxToRows(px)) : null;
     const toPx = rowsToPx ? (rows: number) => Math.round(rowsToPx(rows)) : null;
@@ -478,6 +463,7 @@ export function useMediaSectionEditor({
         focusDraft,
         groupWidths,
         isPending,
+        showLoadingState,
         itemsPerColumn,
         layoutCols,
         layoutRows,
@@ -501,7 +487,6 @@ export function useMediaSectionEditor({
         setColsDraft,
         setRowsDraft,
         setWidthDraft,
-        shelfItems,
         skipEditTransition,
         toggleGroup,
         typeLabelRef,
