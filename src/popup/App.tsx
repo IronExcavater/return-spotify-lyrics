@@ -17,7 +17,7 @@ import { PlaybackBar } from './components/PlaybackBar';
 import { ProtectedLayout } from './components/ProtectedLayout';
 import { ReauthDialog } from './components/ReauthDialog';
 import { SettingsProvider } from './context/SettingsContext';
-import { primeTrackPlaylistCatalogCache } from './data/trackPlaylists';
+import { primeTrackPlaylistCatalogCache } from './data/playlistStore';
 import {
     MEDIA_CACHE_KEYS,
     type ProfileCacheEntry,

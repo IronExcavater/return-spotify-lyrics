@@ -5,7 +5,7 @@ import type {
     MediaActionGroup,
     MediaItem,
 } from '../../shared/types';
-import { canManageTrackPlaylists } from '../data/trackPlaylists';
+import { canManageTrackPlaylists } from '../data/playlistStore';
 import { updateCachedAssumedNowPlaying } from './mediaCacheEntries';
 
 const openExternal = (url: string) => {

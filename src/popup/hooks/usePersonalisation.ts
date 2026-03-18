@@ -8,6 +8,10 @@ import {
     type PersonalisationSnapshot,
 } from '../../shared/personalisation';
 import type { SearchFilter } from '../../shared/types';
+import {
+    readPersonalisationSnapshot,
+    writePersonalisationSnapshot,
+} from '../data/personalisationStore';
 import { useAnalyticsKnowledge } from './useAnalytics';
 
 const LOADING_SNAPSHOT: PersonalisationSnapshot = {
@@ -25,8 +29,6 @@ export type PersonalisationState = PersonalisationSnapshot & {
     loading: boolean;
 };
 
-let cachedSnapshot: PersonalisationSnapshot | null = null;
-
 export function usePersonalisation({
     searchQuery = '',
     filters = [],
@@ -41,7 +43,7 @@ export function usePersonalisation({
     );
     const recordedRef = useRef(false);
     const [snapshot, setSnapshot] = useState<PersonalisationSnapshot | null>(
-        () => cachedSnapshot
+        readPersonalisationSnapshot
     );
 
     useEffect(() => {
@@ -59,7 +61,7 @@ export function usePersonalisation({
     useEffect(() => {
         if (!hydrated || snapshot) return;
         const next = buildPersonalisationSnapshot(knowledge);
-        cachedSnapshot = next;
+        writePersonalisationSnapshot(next);
         setSnapshot(next);
     }, [filters.length, hydrated, knowledge, searchQuery, snapshot]);
 

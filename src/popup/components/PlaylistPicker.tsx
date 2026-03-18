@@ -18,7 +18,7 @@ import {
     resolveTrackPlaylistTarget,
     toggleTrackPlaylistMembership,
     type PlaylistCatalogEntry,
-} from '../data/trackPlaylists';
+} from '../data/playlistStore';
 import { Fade } from './Fade';
 import { Marquee } from './Marquee';
 import { SearchList, SearchListItem, SearchListMessage } from './SearchList';

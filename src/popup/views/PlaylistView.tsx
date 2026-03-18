@@ -42,7 +42,7 @@ import {
     PLAYLIST_PAGE_SIZE,
     storePlaylistContentState,
     type PlaylistContentState,
-} from '../data/trackPlaylists';
+} from '../data/playlistStore';
 import { useAuth } from '../hooks/useAuth';
 import { useHistory } from '../hooks/useHistory';
 import { buildMediaActions } from '../hooks/useMediaActions';

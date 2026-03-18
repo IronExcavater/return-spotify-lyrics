@@ -1,128 +1,19 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 
-import { createLogger, logError } from '../../shared/logging';
-
-export type CacheKey = string;
-
-const imageLogger = createLogger('image');
-const IMAGE_CACHE_LIMIT = 50;
-
-const imageObjectUrlBySrc = new Map<string, string>();
-const imageCacheOrder: string[] = [];
-const imageActiveRefs = new Map<string, number>();
-const imagePendingBySrc = new Map<string, Promise<string>>();
-
-const mediaCache = new Map<CacheKey, unknown>();
-const signatures = new Map<CacheKey, string>();
-const listeners = new Set<() => void>();
-
-const setImageActive = (src: string, delta: number) => {
-    const next = (imageActiveRefs.get(src) ?? 0) + delta;
-    if (next <= 0) imageActiveRefs.delete(src);
-    else imageActiveRefs.set(src, next);
-};
-
-const pruneImageCache = () => {
-    if (imageCacheOrder.length <= IMAGE_CACHE_LIMIT) return;
-
-    let index = 0;
-    while (
-        imageCacheOrder.length > IMAGE_CACHE_LIMIT &&
-        index < imageCacheOrder.length
-    ) {
-        const candidate = imageCacheOrder[index];
-        if ((imageActiveRefs.get(candidate) ?? 0) > 0) {
-            index += 1;
-            continue;
-        }
-
-        imageCacheOrder.splice(index, 1);
-        const objectUrl = imageObjectUrlBySrc.get(candidate);
-        if (objectUrl) URL.revokeObjectURL(objectUrl);
-        imageObjectUrlBySrc.delete(candidate);
-    }
-};
-
-const subscribe = (listener: () => void) => {
-    listeners.add(listener);
-    return () => {
-        listeners.delete(listener);
-    };
-};
-
-const emit = () => {
-    listeners.forEach((listener) => listener());
-};
-
-const fetchCachedImage = (src: string): Promise<string> => {
-    const cached = imageObjectUrlBySrc.get(src);
-    if (cached) return Promise.resolve(cached);
-
-    const pending = imagePendingBySrc.get(src);
-    if (pending) return pending;
-
-    const request = (async () => {
-        const response = await fetch(src);
-        if (!response.ok) throw new Error('image fetch failed');
-
-        const blob = await response.blob();
-        const objectUrl = URL.createObjectURL(blob);
-
-        if (!imageObjectUrlBySrc.has(src)) {
-            imageObjectUrlBySrc.set(src, objectUrl);
-            imageCacheOrder.push(src);
-            pruneImageCache();
-            return objectUrl;
-        }
-
-        const existing = imageObjectUrlBySrc.get(src)!;
-        URL.revokeObjectURL(objectUrl);
-        return existing;
-    })();
-
-    imagePendingBySrc.set(src, request);
-    request.finally(() => {
-        imagePendingBySrc.delete(src);
-    });
-
-    return request;
-};
-
-const resolveImageUrl = <T>(
-    entry: T,
-    imageUrl?: MediaCacheUpdateOptions<T>['imageUrl']
-) => {
-    if (typeof imageUrl === 'function') return imageUrl(entry);
-    if (typeof imageUrl === 'string') return imageUrl;
-
-    if (
-        entry &&
-        typeof entry === 'object' &&
-        'imageUrl' in (entry as Record<string, unknown>)
-    ) {
-        const candidate = (entry as { imageUrl?: unknown }).imageUrl;
-        if (typeof candidate === 'string') return candidate;
-    }
-
-    return undefined;
-};
-
-export type MediaCacheUpdateOptions<T> = {
-    signature?: string;
-    imageUrl?: string | ((entry: T) => string | undefined);
-};
-
-export const primeCachedImage = (src?: string) => {
-    if (!src) return;
-    void fetchCachedImage(src).catch((error) => {
-        logError(imageLogger, 'Failed to cache image', error);
-    });
-};
+import {
+    getCachedImageSource,
+    markCachedImageActive,
+    primeCachedImage,
+    readMediaCacheEntry,
+    subscribeToMediaCacheStore,
+    type CacheKey,
+    type MediaCacheUpdateOptions,
+    updateMediaCacheEntry,
+} from '../data/mediaCacheStore';
 
 export function useCachedImage(src?: string) {
     const [resolvedSrc, setResolvedSrc] = useState<string | undefined>(() => {
-        if (!src) return undefined;
-        return imageObjectUrlBySrc.get(src) ?? src;
+        return getCachedImageSource(src);
     });
 
     useEffect(() => {
@@ -131,52 +22,28 @@ export function useCachedImage(src?: string) {
             return;
         }
 
-        setImageActive(src, 1);
+        const release = markCachedImageActive(src);
 
-        const cached = imageObjectUrlBySrc.get(src);
-        if (cached) {
+        const cached = getCachedImageSource(src);
+        if (cached && cached !== src) {
             setResolvedSrc(cached);
-            return () => {
-                setImageActive(src, -1);
-            };
+            return release;
         }
 
         setResolvedSrc(src);
         primeCachedImage(src);
-
-        return () => {
-            setImageActive(src, -1);
-        };
+        return release;
     }, [src]);
 
     return resolvedSrc ?? src;
 }
 
-export const updateMediaCacheEntry = <T>(
-    key: CacheKey,
-    entry: T | null | undefined,
-    options: MediaCacheUpdateOptions<T> = {}
-) => {
-    if (!entry) {
-        if (!mediaCache.has(key)) return;
-        mediaCache.delete(key);
-        signatures.delete(key);
-        emit();
-        return;
-    }
-
-    const signature = options.signature ?? JSON.stringify(entry);
-    if (signatures.get(key) === signature) return;
-
-    mediaCache.set(key, entry);
-    signatures.set(key, signature);
-    primeCachedImage(resolveImageUrl(entry, options.imageUrl));
-    emit();
-};
-
 export const useMediaCacheEntry = <T>(key: CacheKey) =>
     useSyncExternalStore(
-        subscribe,
-        () => (mediaCache.get(key) as T | undefined) ?? null,
-        () => (mediaCache.get(key) as T | undefined) ?? null
+        subscribeToMediaCacheStore,
+        () => readMediaCacheEntry<T>(key),
+        () => readMediaCacheEntry<T>(key)
     );
+
+export { primeCachedImage, updateMediaCacheEntry };
+export type { CacheKey, MediaCacheUpdateOptions };
