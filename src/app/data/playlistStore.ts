@@ -67,7 +67,7 @@ type PlaylistCatalogCache = {
     playlists: PlaylistCatalogEntry[];
 };
 
-type PlaylistMembershipCacheEntry = {
+type PlaylistTrackIndexCacheEntry = {
     playlistId: string;
     snapshotId: string;
     total: number;
@@ -94,21 +94,10 @@ type PlaylistContentCacheEntry = {
     chunksByOffset: Record<string, PlaylistContentChunkCacheEntry>;
 };
 
-type TrackPlaylistCacheV1 = {
-    version: 1;
-    catalog?: {
-        userId?: string;
-        fetchedAt: number;
-        playlists: PlaylistCatalogEntry[];
-    };
-    membershipsByPlaylistId: Record<string, PlaylistMembershipCacheEntry>;
-};
-
 type TrackPlaylistCache = {
-    version: 2;
     userId?: string;
     catalog?: PlaylistCatalogCache;
-    membershipsByPlaylistId: Record<string, PlaylistMembershipCacheEntry>;
+    membershipsByPlaylistId: Record<string, PlaylistTrackIndexCacheEntry>;
     contentsByPlaylistId: Record<string, PlaylistContentCacheEntry>;
 };
 
@@ -165,7 +154,6 @@ const getCurrentUserId = async () => {
 const createEmptyTrackPlaylistCache = (
     userId?: string
 ): TrackPlaylistCache => ({
-    version: 2,
     userId,
     membershipsByPlaylistId: {},
     contentsByPlaylistId: {},
@@ -174,65 +162,69 @@ const createEmptyTrackPlaylistCache = (
 const isFresh = (updatedAt: number | undefined, maxAgeMs: number) =>
     Boolean(updatedAt && Date.now() - updatedAt < maxAgeMs);
 
-const normalizeTrackPlaylistCache = (
-    value: TrackPlaylistCache | TrackPlaylistCacheV1 | undefined,
+const hydrateTrackPlaylistCache = (
+    value: Partial<TrackPlaylistCache> | undefined,
     userId?: string
 ): TrackPlaylistCache => {
-    const normalized: TrackPlaylistCache =
-        value?.version === 2
-            ? {
-                  version: 2,
-                  userId: value.userId,
-                  catalog: value.catalog,
-                  membershipsByPlaylistId: value.membershipsByPlaylistId ?? {},
-                  contentsByPlaylistId: value.contentsByPlaylistId ?? {},
-              }
-            : value?.version === 1
-              ? {
-                    version: 2,
-                    userId: value.catalog?.userId ?? userId,
-                    catalog: value.catalog
-                        ? {
-                              ...value.catalog,
-                              complete: true,
-                          }
-                        : undefined,
-                    membershipsByPlaylistId:
-                        value.membershipsByPlaylistId ?? {},
-                    contentsByPlaylistId: {},
-                }
-              : createEmptyTrackPlaylistCache(userId);
+    const hydrated: TrackPlaylistCache = {
+        userId: value?.userId,
+        catalog: value?.catalog,
+        membershipsByPlaylistId: value?.membershipsByPlaylistId ?? {},
+        contentsByPlaylistId: value?.contentsByPlaylistId ?? {},
+    };
 
-    if (normalized.userId && userId && normalized.userId !== userId) {
+    if (hydrated.userId && userId && hydrated.userId !== userId) {
         return createEmptyTrackPlaylistCache(userId);
     }
 
-    if (!normalized.userId && userId) {
-        return { ...normalized, userId };
+    if (!hydrated.userId && userId) {
+        return { ...hydrated, userId };
     }
 
-    return normalized;
+    return hydrated;
 };
 
 const readTrackPlaylistCache = async (userId?: string) => {
     if (trackPlaylistCache) {
-        trackPlaylistCache = normalizeTrackPlaylistCache(
+        trackPlaylistCache = hydrateTrackPlaylistCache(
             trackPlaylistCache,
             userId
         );
         return trackPlaylistCache;
     }
 
-    const stored = await getFromStorage<
-        TrackPlaylistCache | TrackPlaylistCacheV1
-    >(TRACK_PLAYLIST_CACHE_KEY);
-    trackPlaylistCache = normalizeTrackPlaylistCache(stored, userId);
+    const stored = await getFromStorage<Partial<TrackPlaylistCache>>(
+        TRACK_PLAYLIST_CACHE_KEY
+    );
+    trackPlaylistCache = hydrateTrackPlaylistCache(stored, userId);
     return trackPlaylistCache;
 };
 
 const writeTrackPlaylistCache = async (next: TrackPlaylistCache) => {
     trackPlaylistCache = next;
     await setInStorage(TRACK_PLAYLIST_CACHE_KEY, next);
+};
+
+const resolveTrackPlaylistCache = async (userId?: string) => {
+    const resolvedUserId = userId ?? (await getCurrentUserId());
+    const cache = await readTrackPlaylistCache(resolvedUserId);
+    return { userId: resolvedUserId, cache };
+};
+
+const updateTrackPlaylistCache = async (
+    userId: string | undefined,
+    update: (
+        cache: TrackPlaylistCache,
+        now: number,
+        resolvedUserId: string | undefined
+    ) => TrackPlaylistCache
+) => {
+    const { userId: resolvedUserId, cache } =
+        await resolveTrackPlaylistCache(userId);
+    const now = Date.now();
+    const next = update(cache, now, resolvedUserId);
+    await writeTrackPlaylistCache(next);
+    return { userId: resolvedUserId, cache: next, now };
 };
 
 const resolveCachedCatalog = (
@@ -259,6 +251,26 @@ const resolveCachedCatalog = (
     };
 };
 
+const getTrackPlaylistIndexEntry = (
+    cache: TrackPlaylistCache,
+    playlistId: string
+) => cache.membershipsByPlaylistId[playlistId];
+
+const isUsableTrackPlaylistIndex = ({
+    entry,
+    snapshotId,
+    maxAgeMs,
+}: {
+    entry?: PlaylistTrackIndexCacheEntry;
+    snapshotId: string;
+    maxAgeMs: number;
+}) =>
+    Boolean(
+        entry &&
+            entry.snapshotId === snapshotId &&
+            isFresh(entry.updatedAt, maxAgeMs)
+    );
+
 const resolveCachedPlaylistMembership = ({
     playlist,
     trackId,
@@ -268,10 +280,17 @@ const resolveCachedPlaylistMembership = ({
     trackId: string;
     cache: TrackPlaylistCache;
 }) => {
-    const entry = cache.membershipsByPlaylistId[playlist.id];
+    const entry = getTrackPlaylistIndexEntry(cache, playlist.id);
+    if (
+        !isUsableTrackPlaylistIndex({
+            entry,
+            snapshotId: playlist.snapshotId,
+            maxAgeMs: PARTIAL_MEMBERSHIP_USABLE_MS,
+        })
+    ) {
+        return null;
+    }
     if (!entry) return null;
-    if (entry.snapshotId !== playlist.snapshotId) return null;
-    if (!isFresh(entry.updatedAt, PARTIAL_MEMBERSHIP_USABLE_MS)) return null;
     if (entry.trackIds.includes(trackId)) return true;
     if (entry.loadedCount >= entry.total) return false;
     return null;
@@ -331,6 +350,9 @@ const getTrackIds = (items: PlaylistDedupableItem[]) =>
     items
         .map((item) => item.playlistTrackId)
         .filter((trackId): trackId is string => Boolean(trackId));
+
+const mergeTrackIds = (...values: string[][]) =>
+    Array.from(new Set(values.flat()));
 
 const sumItemDurations = (items: PlaylistDedupableItem[]) =>
     items.reduce((total, item) => total + (item.durationMs ?? 0), 0);
@@ -424,6 +446,67 @@ const upsertPlaylistCatalogEntry = (
     return nextPlaylists;
 };
 
+const createTrackPlaylistIndexEntry = ({
+    playlistId,
+    snapshotId,
+    total,
+    loadedCount,
+    trackIds,
+    updatedAt,
+}: {
+    playlistId: string;
+    snapshotId: string;
+    total: number;
+    loadedCount: number;
+    trackIds: string[];
+    updatedAt: number;
+}): PlaylistTrackIndexCacheEntry => ({
+    playlistId,
+    snapshotId,
+    total,
+    loadedCount: Math.min(total, Math.max(0, loadedCount)),
+    trackIds: Array.from(new Set(trackIds)),
+    updatedAt,
+});
+
+const buildTrackPlaylistIndexFromState = (
+    state: Omit<PlaylistContentState, 'fetchedAt'>,
+    snapshotId: string,
+    total: number,
+    updatedAt: number
+) =>
+    createTrackPlaylistIndexEntry({
+        playlistId: state.playlist.id,
+        snapshotId,
+        total,
+        loadedCount: state.itemsOffset,
+        trackIds: getTrackIds(state.items),
+        updatedAt,
+    });
+
+const withCatalogCache = ({
+    cache,
+    playlists,
+    userId,
+    fetchedAt,
+    complete,
+}: {
+    cache: TrackPlaylistCache;
+    playlists: PlaylistCatalogEntry[];
+    userId?: string;
+    fetchedAt: number;
+    complete: boolean;
+}): TrackPlaylistCache => ({
+    ...cache,
+    userId: userId ?? cache.userId,
+    catalog: {
+        userId,
+        fetchedAt,
+        complete,
+        playlists,
+    },
+});
+
 const upsertTrackPlaylistCatalog = async ({
     playlists,
     userId,
@@ -433,17 +516,15 @@ const upsertTrackPlaylistCatalog = async ({
     userId?: string;
     complete: boolean;
 }) => {
-    const cache = await readTrackPlaylistCache(userId);
-    await writeTrackPlaylistCache({
-        ...cache,
-        userId: userId ?? cache.userId,
-        catalog: {
-            userId,
-            fetchedAt: Date.now(),
-            complete,
+    await updateTrackPlaylistCache(userId, (cache, now) =>
+        withCatalogCache({
+            cache,
             playlists,
-        },
-    });
+            userId,
+            fetchedAt: now,
+            complete,
+        })
+    );
 };
 
 const patchTrackPlaylistCatalogEntry = async ({
@@ -457,8 +538,8 @@ const patchTrackPlaylistCatalogEntry = async ({
     total: number;
     userId?: string;
 }) => {
-    const resolvedUserId = userId ?? (await getCurrentUserId());
-    const cache = await readTrackPlaylistCache(resolvedUserId);
+    const { userId: resolvedUserId, cache } =
+        await resolveTrackPlaylistCache(userId);
     const current = resolveCachedCatalog(cache, resolvedUserId).playlists;
     const index = current.findIndex((item) => item.id === playlistId);
     if (index < 0) return;
@@ -484,74 +565,81 @@ const persistPlaylistContentState = async ({
     state: Omit<PlaylistContentState, 'fetchedAt'>;
     userId?: string;
 }) => {
-    const resolvedUserId = userId ?? (await getCurrentUserId());
-    const cache = await readTrackPlaylistCache(resolvedUserId);
-    const now = Date.now();
-    const snapshotId = state.snapshotId ?? state.playlist.snapshot_id;
-    const existing = cache.contentsByPlaylistId[state.playlist.id];
-    const nextChunks = buildPlaylistContentChunks(state.items, now);
-    const preservedChunks =
-        existing?.snapshotId === snapshotId
-            ? Object.fromEntries(
-                  Object.entries(existing.chunksByOffset).filter(
-                      ([offset]) => Number(offset) >= state.itemsOffset
-                  )
-              )
-            : {};
-    const nextContentEntry: PlaylistContentCacheEntry = {
-        playlistId: state.playlist.id,
-        snapshotId,
-        total: state.playlist.tracks.total ?? state.itemsOffset,
-        playlist: state.playlist,
-        fetchedAt: now,
-        updatedAt: now,
-        chunksByOffset: {
-            ...preservedChunks,
-            ...nextChunks,
-        },
-    };
-    const resolvedContent =
-        resolvePlaylistContentStateFromEntry(nextContentEntry);
-    const resolvedState = resolvedContent.state ?? {
-        ...state,
-        fetchedAt: now,
-    };
-    const currentCatalog = resolveCachedCatalog(
-        cache,
-        resolvedUserId
-    ).playlists;
-    const nextCatalogEntry = toPlaylistEntry(state.playlist, resolvedUserId);
-
-    await writeTrackPlaylistCache({
-        ...cache,
-        userId: resolvedUserId ?? cache.userId,
-        catalog: {
-            userId: resolvedUserId,
-            fetchedAt: cache.catalog?.fetchedAt ?? now,
-            complete: cache.catalog?.complete ?? false,
-            playlists: upsertPlaylistCatalogEntry(
-                currentCatalog,
-                nextCatalogEntry
-            ),
-        },
-        membershipsByPlaylistId: {
-            ...cache.membershipsByPlaylistId,
-            [state.playlist.id]: {
+    const { cache, now } = await updateTrackPlaylistCache(
+        userId,
+        (currentCache, currentNow, resolvedUserId) => {
+            const snapshotId = state.snapshotId ?? state.playlist.snapshot_id;
+            const existing =
+                currentCache.contentsByPlaylistId[state.playlist.id];
+            const nextChunks = buildPlaylistContentChunks(
+                state.items,
+                currentNow
+            );
+            const preservedChunks =
+                existing?.snapshotId === snapshotId
+                    ? Object.fromEntries(
+                          Object.entries(existing.chunksByOffset).filter(
+                              ([offset]) => Number(offset) >= state.itemsOffset
+                          )
+                      )
+                    : {};
+            const nextContentEntry: PlaylistContentCacheEntry = {
                 playlistId: state.playlist.id,
                 snapshotId,
-                total: nextContentEntry.total,
-                loadedCount: resolvedState.itemsOffset,
-                trackIds: getTrackIds(resolvedState.items),
-                updatedAt: now,
-            },
-        },
-        contentsByPlaylistId: prunePlaylistContentEntries({
-            ...cache.contentsByPlaylistId,
-            [state.playlist.id]: nextContentEntry,
-        }),
-    });
+                total: state.playlist.tracks.total ?? state.itemsOffset,
+                playlist: state.playlist,
+                fetchedAt: currentNow,
+                updatedAt: currentNow,
+                chunksByOffset: {
+                    ...preservedChunks,
+                    ...nextChunks,
+                },
+            };
+            const currentCatalog = resolveCachedCatalog(
+                currentCache,
+                resolvedUserId
+            ).playlists;
+            const nextCatalogEntry = toPlaylistEntry(
+                state.playlist,
+                resolvedUserId
+            );
 
-    return resolvedState;
+            return withCatalogCache({
+                cache: {
+                    ...currentCache,
+                    membershipsByPlaylistId: {
+                        ...currentCache.membershipsByPlaylistId,
+                        [state.playlist.id]: buildTrackPlaylistIndexFromState(
+                            state,
+                            snapshotId,
+                            nextContentEntry.total,
+                            currentNow
+                        ),
+                    },
+                    contentsByPlaylistId: prunePlaylistContentEntries({
+                        ...currentCache.contentsByPlaylistId,
+                        [state.playlist.id]: nextContentEntry,
+                    }),
+                },
+                playlists: upsertPlaylistCatalogEntry(
+                    currentCatalog,
+                    nextCatalogEntry
+                ),
+                userId: resolvedUserId,
+                fetchedAt: currentCache.catalog?.fetchedAt ?? currentNow,
+                complete: currentCache.catalog?.complete ?? false,
+            });
+        }
+    );
+
+    const contentEntry = cache.contentsByPlaylistId[state.playlist.id];
+    const resolvedContent = resolvePlaylistContentStateFromEntry(contentEntry);
+    return (
+        resolvedContent.state ?? {
+            ...state,
+            fetchedAt: now,
+        }
+    );
 };
 
 export const primeTrackPlaylistCatalogCache = async (userId?: string) => {
@@ -577,34 +665,33 @@ const storeTrackPlaylistLoadedItems = async ({
     trackIds: string[];
     userId?: string;
 }) => {
-    const resolvedUserId = userId ?? (await getCurrentUserId());
-    const cache = await readTrackPlaylistCache(resolvedUserId);
-    const existing = cache.membershipsByPlaylistId[playlistId];
-    const mergedTrackIds = Array.from(
-        new Set(
+    await updateTrackPlaylistCache(userId, (cache, now) => {
+        const existing = getTrackPlaylistIndexEntry(cache, playlistId);
+        const mergedTrackIds =
             existing?.snapshotId === snapshotId
-                ? [...existing.trackIds, ...trackIds]
-                : trackIds
-        )
-    );
+                ? mergeTrackIds(existing.trackIds, trackIds)
+                : trackIds;
 
-    await writeTrackPlaylistCache({
-        ...cache,
-        userId: resolvedUserId ?? cache.userId,
-        membershipsByPlaylistId: {
-            ...cache.membershipsByPlaylistId,
-            [playlistId]: {
-                playlistId,
-                snapshotId,
-                total,
-                loadedCount: Math.min(
+        return {
+            ...cache,
+            userId: userId ?? cache.userId,
+            membershipsByPlaylistId: {
+                ...cache.membershipsByPlaylistId,
+                [playlistId]: createTrackPlaylistIndexEntry({
+                    playlistId,
+                    snapshotId,
                     total,
-                    Math.max(existing?.loadedCount ?? 0, loadedCount)
-                ),
-                trackIds: mergedTrackIds,
-                updatedAt: Date.now(),
+                    loadedCount: Math.max(
+                        existing?.snapshotId === snapshotId
+                            ? existing.loadedCount
+                            : 0,
+                        loadedCount
+                    ),
+                    trackIds: mergedTrackIds,
+                    updatedAt: now,
+                }),
             },
-        },
+        };
     });
 };
 
@@ -659,9 +746,8 @@ export const formatTrackPlaylistError = (error: unknown, fallback: string) => {
 export const loadTrackPlaylists = async (
     target: TrackPlaylistTarget
 ): Promise<TrackPlaylistsResult> => {
-    const userId = await getCurrentUserId();
+    const { userId, cache } = await resolveTrackPlaylistCache();
     syncLikedCacheOwner(userId);
-    const cache = await readTrackPlaylistCache(userId);
     const cachedCatalog = resolveCachedCatalog(cache, userId);
 
     const liked = isLikedFresh(target.trackId)
@@ -694,8 +780,8 @@ export const loadTrackPlaylists = async (
 };
 
 export const loadTrackPlaylistCatalog = async (userId?: string) => {
-    const resolvedUserId = userId ?? (await getCurrentUserId());
-    const cache = await readTrackPlaylistCache(resolvedUserId);
+    const { userId: resolvedUserId, cache } =
+        await resolveTrackPlaylistCache(userId);
     const cachedCatalog = resolveCachedCatalog(cache, resolvedUserId);
     if (cachedCatalog.complete && cachedCatalog.fresh) {
         return cachedCatalog.playlists;
@@ -750,6 +836,14 @@ export const ensureTrackLikedMembership = async ({
     return promise;
 };
 
+const toResolvedTrackPlaylistIndex = (entry: PlaylistTrackIndexCacheEntry) => ({
+    playlistId: entry.playlistId,
+    snapshotId: entry.snapshotId,
+    total: entry.total,
+    trackIds: entry.trackIds,
+    updatedAt: entry.updatedAt,
+});
+
 export const ensureTrackPlaylistIndex = async ({
     playlist,
     userId,
@@ -759,29 +853,26 @@ export const ensureTrackPlaylistIndex = async ({
     userId?: string;
     trackId?: string;
 }) => {
-    const cache = await readTrackPlaylistCache(userId);
-    const cachedMembership = cache.membershipsByPlaylistId[playlist.id];
+    const { cache } = await resolveTrackPlaylistCache(userId);
+    const cachedMembership = getTrackPlaylistIndexEntry(cache, playlist.id);
     if (
-        cachedMembership &&
-        cachedMembership.snapshotId === playlist.snapshotId &&
-        isFresh(cachedMembership.updatedAt, PARTIAL_MEMBERSHIP_USABLE_MS)
+        isUsableTrackPlaylistIndex({
+            entry: cachedMembership,
+            snapshotId: playlist.snapshotId,
+            maxAgeMs: PARTIAL_MEMBERSHIP_USABLE_MS,
+        }) &&
+        cachedMembership
     ) {
         const fullyLoaded =
             cachedMembership.loadedCount >= cachedMembership.total;
         const trackIsKnown =
             trackId != null && cachedMembership.trackIds.includes(trackId);
         if (fullyLoaded || trackIsKnown) {
-            return {
-                playlistId: cachedMembership.playlistId,
-                snapshotId: cachedMembership.snapshotId,
-                total: cachedMembership.total,
-                trackIds: cachedMembership.trackIds,
-                updatedAt: cachedMembership.updatedAt,
-            };
+            return toResolvedTrackPlaylistIndex(cachedMembership);
         }
     }
 
-    const index = await sendSpotifyMessage('getPlaylistMembershipIndex', {
+    const index = await sendSpotifyMessage('getPlaylistTrackIndex', {
         id: playlist.id,
         snapshotId: playlist.snapshotId,
     });
@@ -835,14 +926,15 @@ export const toggleTrackPlaylistMembership = async ({
         throw new Error('Playlist not found');
     }
 
+    const { cache } = await resolveTrackPlaylistCache(userId);
+    const existing = getTrackPlaylistIndexEntry(cache, playlistId);
+
     if (shouldSave) {
         const result = await sendSpotifyMessage('addTracksToPlaylist', {
             playlistId,
             uris: [trackUri],
         });
         const nextTotal = playlist.total + 1;
-        const cache = await readTrackPlaylistCache(userId);
-        const existing = cache.membershipsByPlaylistId[playlistId];
         await patchTrackPlaylistCatalogEntry({
             playlistId,
             snapshotId: result.snapshot_id,
@@ -853,13 +945,8 @@ export const toggleTrackPlaylistMembership = async ({
             playlistId,
             snapshotId: result.snapshot_id,
             total: nextTotal,
-            loadedCount: Math.min(
-                nextTotal,
-                Math.max(1, (existing?.loadedCount ?? 0) + 1)
-            ),
-            trackIds: Array.from(
-                new Set([...(existing?.trackIds ?? []), trackId])
-            ),
+            loadedCount: Math.max(1, (existing?.loadedCount ?? 0) + 1),
+            trackIds: mergeTrackIds(existing?.trackIds ?? [], [trackId]),
             userId,
         });
         return;
@@ -871,8 +958,6 @@ export const toggleTrackPlaylistMembership = async ({
         snapshotId: playlist.snapshotId,
     });
     const nextTotal = Math.max(0, playlist.total - 1);
-    const cache = await readTrackPlaylistCache(userId);
-    const existing = cache.membershipsByPlaylistId[playlistId];
     await patchTrackPlaylistCatalogEntry({
         playlistId,
         snapshotId: result.snapshot_id,
@@ -894,8 +979,7 @@ export const toggleTrackPlaylistMembership = async ({
 export const getCachedPlaylistContentState = async (
     playlistId: string
 ): Promise<CachedPlaylistContentResult> => {
-    const userId = await getCurrentUserId();
-    const cache = await readTrackPlaylistCache(userId);
+    const { cache } = await resolveTrackPlaylistCache();
     const contentEntry = cache.contentsByPlaylistId[playlistId];
     const resolved = resolvePlaylistContentStateFromEntry(contentEntry);
 

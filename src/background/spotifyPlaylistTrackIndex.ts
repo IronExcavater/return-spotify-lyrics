@@ -11,7 +11,7 @@ const PLAYLIST_PAGE_SIZE = 50 as MaxInt<50>;
 const PLAYLIST_REQUEST_SPACING_MS = 250;
 const SPOTIFY_TRACK_URI_PATTERN = /^spotify:track:([A-Za-z0-9]{22})$/;
 
-export type PlaylistMembershipEntry = {
+export type SpotifyPlaylistTrackIndexEntry = {
     playlistId: string;
     snapshotId: string;
     total: number;
@@ -19,13 +19,16 @@ export type PlaylistMembershipEntry = {
     updatedAt: number;
 };
 
-// Membership indexes are expensive, so keep them in the background by snapshot.
-const membershipCache = new Map<string, PlaylistMembershipEntry>();
-const membershipPromises = new Map<string, Promise<PlaylistMembershipEntry>>();
+// Full playlist track indexes are expensive, so keep them in the background by snapshot.
+const trackIndexCache = new Map<string, SpotifyPlaylistTrackIndexEntry>();
+const trackIndexPromises = new Map<
+    string,
+    Promise<SpotifyPlaylistTrackIndexEntry>
+>();
 let playlistRequestQueue: Promise<void> = Promise.resolve();
 let playlistBackoffUntil = 0;
 let lastPlaylistRequestAt = 0;
-let membershipOwnerKey: string | undefined;
+let trackIndexOwnerKey: string | undefined;
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -45,22 +48,22 @@ const noteSpotifyPlaylistRateLimit = (retryAfterMs: number) => {
     );
 };
 
-const syncPlaylistMembershipOwner = (ownerKey?: string) => {
-    if (ownerKey && ownerKey === membershipOwnerKey) return;
+const syncPlaylistTrackIndexOwner = (ownerKey?: string) => {
+    if (ownerKey && ownerKey === trackIndexOwnerKey) return;
 
-    membershipCache.clear();
-    membershipPromises.clear();
+    trackIndexCache.clear();
+    trackIndexPromises.clear();
     playlistRequestQueue = Promise.resolve();
     playlistBackoffUntil = 0;
     lastPlaylistRequestAt = 0;
-    membershipOwnerKey = ownerKey;
+    trackIndexOwnerKey = ownerKey;
 };
 
-export const clearSpotifyPlaylistMembership = () => {
-    syncPlaylistMembershipOwner(undefined);
+export const clearSpotifyPlaylistTrackIndexCache = () => {
+    syncPlaylistTrackIndexOwner(undefined);
 };
 
-const patchPlaylistMembership = ({
+const patchSpotifyPlaylistTrackIndex = ({
     playlistId,
     snapshotId,
     uris,
@@ -71,7 +74,7 @@ const patchPlaylistMembership = ({
     uris: string[];
     shouldSave: boolean;
 }) => {
-    const existing = membershipCache.get(playlistId);
+    const existing = trackIndexCache.get(playlistId);
     if (!existing) return;
 
     const trackIds = [...existing.trackIds];
@@ -89,7 +92,7 @@ const patchPlaylistMembership = ({
         if (index >= 0) trackIds.splice(index, 1);
     });
 
-    membershipCache.set(playlistId, {
+    trackIndexCache.set(playlistId, {
         ...existing,
         snapshotId,
         total: Math.max(
@@ -131,7 +134,7 @@ const ensurePlaylistClient = async () => {
     ]);
     if (!token || !client) throw new Error('Spotify session not initialised');
 
-    syncPlaylistMembershipOwner(token.refresh_token);
+    syncPlaylistTrackIndexOwner(token.refresh_token);
     return client;
 };
 
@@ -153,7 +156,7 @@ const withPlaylistRateLimit = async <T>(request: () => Promise<T>) => {
     }
 };
 
-export const getSpotifyPlaylistMembership = async ({
+export const getSpotifyPlaylistTrackIndex = async ({
     id,
     market,
     snapshotId,
@@ -162,13 +165,13 @@ export const getSpotifyPlaylistMembership = async ({
     market?: Market;
     snapshotId?: string;
 }) => {
-    const existing = membershipCache.get(id);
+    const existing = trackIndexCache.get(id);
     if (existing && (!snapshotId || existing.snapshotId === snapshotId)) {
         return existing;
     }
 
     const promiseKey = `${id}:${snapshotId ?? 'latest'}`;
-    const existingPromise = membershipPromises.get(promiseKey);
+    const existingPromise = trackIndexPromises.get(promiseKey);
     if (existingPromise) return existingPromise;
 
     const promise = (async () => {
@@ -230,7 +233,7 @@ export const getSpotifyPlaylistMembership = async ({
             collect(page.items);
         }
 
-        const nextIndex: PlaylistMembershipEntry = {
+        const nextIndex: SpotifyPlaylistTrackIndexEntry = {
             playlistId: id,
             snapshotId: resolvedSnapshotId,
             total: firstPage.total,
@@ -238,17 +241,17 @@ export const getSpotifyPlaylistMembership = async ({
             updatedAt: Date.now(),
         };
 
-        membershipCache.set(id, nextIndex);
+        trackIndexCache.set(id, nextIndex);
         return nextIndex;
     })().finally(() => {
-        membershipPromises.delete(promiseKey);
+        trackIndexPromises.delete(promiseKey);
     });
 
-    membershipPromises.set(promiseKey, promise);
+    trackIndexPromises.set(promiseKey, promise);
     return promise;
 };
 
-export const addSpotifyPlaylistTracks = async ({
+export const addTracksToSpotifyPlaylist = async ({
     playlistId,
     uris,
     position,
@@ -269,7 +272,7 @@ export const addSpotifyPlaylistTracks = async ({
         )
     );
 
-    patchPlaylistMembership({
+    patchSpotifyPlaylistTrackIndex({
         playlistId,
         snapshotId: response.snapshot_id,
         uris,
@@ -279,7 +282,7 @@ export const addSpotifyPlaylistTracks = async ({
     return response;
 };
 
-export const removeSpotifyPlaylistTracks = async ({
+export const removeTracksFromSpotifyPlaylist = async ({
     playlistId,
     uris,
     snapshotId,
@@ -300,7 +303,7 @@ export const removeSpotifyPlaylistTracks = async ({
         )
     );
 
-    patchPlaylistMembership({
+    patchSpotifyPlaylistTrackIndex({
         playlistId,
         snapshotId: response.snapshot_id,
         uris,

@@ -1,11 +1,11 @@
 import type { ItemTypes, MaxInt, Market } from '@spotify/web-api-ts-sdk';
 import { getSpotifySdk } from './spotifyAuth.ts';
 import {
-    addSpotifyPlaylistTracks,
-    clearSpotifyPlaylistMembership,
-    getSpotifyPlaylistMembership,
-    removeSpotifyPlaylistTracks,
-} from './spotifyPlaylistMembership.ts';
+    addTracksToSpotifyPlaylist,
+    clearSpotifyPlaylistTrackIndexCache,
+    getSpotifyPlaylistTrackIndex,
+    removeTracksFromSpotifyPlaylist,
+} from './spotifyPlaylistTrackIndex.ts';
 
 async function requireClient() {
     const client = await getSpotifySdk();
@@ -65,7 +65,7 @@ const withActiveDevice = async <T>(
 };
 
 export const clearSpotifyRpcCaches = () => {
-    clearSpotifyPlaylistMembership();
+    clearSpotifyPlaylistTrackIndexCache();
 };
 
 const saveSpotifyTracks = async (ids: string[]) => {
@@ -437,7 +437,7 @@ export const spotifyRpc = {
             offset
         );
     },
-    getPlaylistMembershipIndex: async ({
+    getPlaylistTrackIndex: async ({
         id,
         market,
         snapshotId,
@@ -446,7 +446,7 @@ export const spotifyRpc = {
         market?: Market;
         snapshotId?: string;
     }) => {
-        return getSpotifyPlaylistMembership({ id, market, snapshotId });
+        return getSpotifyPlaylistTrackIndex({ id, market, snapshotId });
     },
     addTracksToPlaylist: async ({
         playlistId,
@@ -456,7 +456,7 @@ export const spotifyRpc = {
         playlistId: string;
         uris: string[];
         position?: number;
-    }) => addSpotifyPlaylistTracks({ playlistId, uris, position }),
+    }) => addTracksToSpotifyPlaylist({ playlistId, uris, position }),
     removeTracksFromPlaylist: async ({
         playlistId,
         uris,
@@ -465,7 +465,7 @@ export const spotifyRpc = {
         playlistId: string;
         uris: string[];
         snapshotId?: string;
-    }) => removeSpotifyPlaylistTracks({ playlistId, uris, snapshotId }),
+    }) => removeTracksFromSpotifyPlaylist({ playlistId, uris, snapshotId }),
     changePlaylistDetails: async ({
         id,
         name,

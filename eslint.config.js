@@ -35,7 +35,7 @@ export default defineConfig([
         },
         settings: {
             tailwindcss: {
-                config: path.join(__dirname, 'src/popup/styles/globals.css'),
+                config: path.join(__dirname, 'src/app/styles/globals.css'),
             },
         },
         rules: {
@@ -76,7 +76,7 @@ export default defineConfig([
             'tailwind-canonical-classes/tailwind-canonical-classes': [
                 'warn',
                 {
-                    cssPath: './src/popup/styles/globals.css',
+                    cssPath: './src/app/styles/globals.css',
                 },
             ],
         },
