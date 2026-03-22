@@ -119,7 +119,7 @@ export function MediaHero({
 
     return (
         <BackgroundImage
-            className={sticky ? 'sticky top-0 z-10 w-full' : 'w-full'}
+            className={sticky ? 'sticky top-0 z-20 w-full' : 'w-full'}
             style={heroMaskStyle}
             ref={heroRef}
             imageUrl={heroUrl}

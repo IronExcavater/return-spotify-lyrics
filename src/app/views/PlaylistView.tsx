@@ -573,30 +573,27 @@ export function PlaylistView() {
             className="no-overflow-anchor scrollbar-gutter-stable flex min-h-0 flex-col overflow-y-auto"
             scrollRef={scrollRef}
         >
-            <StickyLayout.Sticky order={0} className="z-10" heightOffset={8}>
-                <MediaHero
-                    hero={hero}
-                    loading={showInitialLoading}
-                    heroUrl={hero?.heroUrl}
-                    scrollRef={scrollRef}
-                    collapseKey={viewKey}
-                    resetScroll={false}
-                    mergedHeroActions={mergedHeroActions}
-                    canTogglePlayback={canTogglePlayback}
-                    sticky={false}
-                    onPlay={() => {
-                        if (playNowAction) {
-                            playNowAction.onSelect();
-                            return;
-                        }
-                        const contextUri = hero?.item?.uri;
-                        if (!contextUri) return;
-                        void sendSpotifyMessage('startPlayback', {
-                            contextUri,
-                        });
-                    }}
-                />
-            </StickyLayout.Sticky>
+            <MediaHero
+                hero={hero}
+                loading={showInitialLoading}
+                heroUrl={hero?.heroUrl}
+                scrollRef={scrollRef}
+                collapseKey={viewKey}
+                resetScroll={false}
+                mergedHeroActions={mergedHeroActions}
+                canTogglePlayback={canTogglePlayback}
+                onPlay={() => {
+                    if (playNowAction) {
+                        playNowAction.onSelect();
+                        return;
+                    }
+                    const contextUri = hero?.item?.uri;
+                    if (!contextUri) return;
+                    void sendSpotifyMessage('startPlayback', {
+                        contextUri,
+                    });
+                }}
+            />
 
             <StickyLayout.Body>
                 <div className="bg-background absolute -top-2 z-10 h-2 w-full shrink-0" />
