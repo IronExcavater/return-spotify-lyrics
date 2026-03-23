@@ -14,7 +14,7 @@ import {
     trackToItem,
 } from '../../shared/media';
 import { SEARCH_LIMIT, type SearchType } from '../../shared/search';
-import type { MediaShelfItem } from '../components/MediaShelf';
+import type { MediaShelfItem } from '../types/mediaShelf';
 
 export type SearchOffsets = Record<SearchType, number | null>;
 

@@ -39,12 +39,12 @@ import {
     MediaSection,
     type MediaSectionState,
 } from '../components/MediaSection';
-import type { MediaShelfItem } from '../components/MediaShelf';
 import { SkeletonText } from '../components/SkeletonText';
 import { StickyLayout } from '../components/StickyLayout';
 import { handleMenuTriggerKeyDown } from '../hooks/useActions';
 import { usePersonalisation } from '../hooks/usePersonalisation';
 import { useSettings } from '../hooks/useSettings';
+import type { MediaShelfItem } from '../types/mediaShelf';
 import {
     buildSearchOffsets,
     mapSearchPage,

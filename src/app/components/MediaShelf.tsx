@@ -1,7 +1,6 @@
 import {
     type CSSProperties,
     Fragment,
-    ReactNode,
     useCallback,
     useEffect,
     useMemo,
@@ -19,22 +18,18 @@ import {
 import { Flex, Text } from '@radix-ui/themes';
 import clsx from 'clsx';
 import { MdMusicNote } from 'react-icons/md';
-import type { MediaActionGroup, MediaItem } from '../../shared/types';
+import type { MediaActionGroup } from '../../shared/types';
 import { useHistory } from '../hooks/useHistory';
 import { buildMediaActions } from '../hooks/useMediaActions';
 import { buildMediaNavigationFromItem } from '../hooks/useMediaRoute';
 import { useScrollFade } from '../hooks/useScrollFade';
 import { useShelfNavigation } from '../hooks/useShelfNavigation';
+import type { MediaShelfItem } from '../types/mediaShelf';
 import { MediaActionsMenu } from './MediaActionsMenu';
 import { MediaCard } from './MediaCard';
 import { MediaRow, type MediaRowProps } from './MediaRow';
 import { TextButton } from './TextButton';
 
-export interface MediaShelfItem extends MediaItem {
-    icon?: ReactNode;
-    loading?: boolean;
-    listKey?: string;
-}
 type TrackSubtitleMode = 'artist' | 'artist-album' | 'artists';
 interface Props {
     droppableId?: string;

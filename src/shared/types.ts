@@ -1,3 +1,4 @@
+import type { ComponentType } from 'react';
 import { Episode, Track } from '@spotify/web-api-ts-sdk';
 
 export type PillValue =
@@ -18,11 +19,16 @@ export type SearchFilter = {
     value: PillValue;
 };
 
+export type MediaArtist = {
+    id?: string;
+    name: string;
+};
+
 export type MediaItem = {
     id: string;
     title: string;
     subtitle?: string;
-    artists?: Array<{ id?: string; name: string }>;
+    artists?: MediaArtist[];
     imageUrl?: string;
     uri?: string;
     externalUrl?: string;
@@ -42,12 +48,27 @@ export type MediaKind =
     | 'episode'
     | 'audiobook';
 
-export type MediaAction = {
+export type MediaActionIcon = ComponentType<{ className?: string }>;
+
+type MediaActionBase = {
     id: string;
     label: string;
     shortcut?: string;
+    tooltip?: string;
     onSelect: () => void;
 };
+
+export type MediaMenuAction = MediaActionBase & {
+    icon?: MediaActionIcon;
+    presentation?: 'item';
+};
+
+export type MediaIconAction = MediaActionBase & {
+    icon: MediaActionIcon;
+    presentation: 'icon';
+};
+
+export type MediaAction = MediaMenuAction | MediaIconAction;
 
 export type MediaActionGroup = {
     primary: MediaAction[];

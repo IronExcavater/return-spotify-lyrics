@@ -16,6 +16,7 @@ import { NavBar } from './components/NavBar';
 import { PlaybackBar } from './components/PlaybackBar';
 import { ProtectedLayout } from './components/ProtectedLayout';
 import { ReauthDialog } from './components/ReauthDialog';
+import { ToastViewport } from './components/ToastViewport';
 import { SettingsProvider } from './context/SettingsContext';
 import { primeTrackPlaylistCatalogCache } from './data/playlistStore';
 import {
@@ -462,6 +463,7 @@ export default function App({ surface = 'popup' }: AppProps) {
                     onReconnect={handleReauth}
                 />
 
+                <ToastViewport />
                 {profileFloating.portal}
                 {navFloating.portal}
             </Flex>

@@ -8,10 +8,11 @@ import {
 } from '../hooks/useMediaSectionEditor';
 import { useSectionHeader } from '../hooks/useSectionHeader';
 import type { MediaSectionState } from '../types/mediaSection';
+import type { MediaShelfItem } from '../types/mediaShelf';
 import { MediaRow } from './MediaRow';
 import { MediaSectionEditControls } from './MediaSectionEditControls';
 import { MediaSectionHeader } from './MediaSectionHeader';
-import { MediaShelf, type MediaShelfItem } from './MediaShelf';
+import { MediaShelf } from './MediaShelf';
 
 export type { MediaSectionState } from '../types/mediaSection';
 

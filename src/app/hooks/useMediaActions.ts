@@ -1,4 +1,7 @@
 import { useCallback, useMemo } from 'react';
+import { Link2Icon } from '@radix-ui/react-icons';
+import { RiSpotifyFill } from 'react-icons/ri';
+
 import { sendSpotifyMessage } from '../../shared/messaging';
 import type {
     MediaAction,
@@ -6,10 +9,37 @@ import type {
     MediaItem,
 } from '../../shared/types';
 import { canManageTrackPlaylists } from '../data/playlistStore';
+import { showToast } from '../data/toastStore';
 import { updateCachedAssumedNowPlaying } from './mediaCacheEntries';
+
+const ENTER_SHORTCUT = 'Enter';
 
 const openExternal = (url: string) => {
     window.open(url, '_blank', 'noopener,noreferrer');
+};
+
+const copyLink = (url: string) => {
+    const request = navigator.clipboard?.writeText(url);
+    if (!request) {
+        showToast({
+            title: 'Could not copy link',
+            tone: 'danger',
+        });
+        return;
+    }
+
+    void request.then(
+        () =>
+            showToast({
+                title: 'Link copied',
+                tone: 'success',
+            }),
+        () =>
+            showToast({
+                title: 'Could not copy link',
+                tone: 'danger',
+            })
+    );
 };
 
 const addUrisToQueue = async (uris: string[]) => {
@@ -56,6 +86,7 @@ const addPlaylistToQueue = async (playlistId: string) => {
 export const TRACK_PLAYLISTS_ACTION_ID = 'choose-playlists';
 const TRACK_PLAYLISTS_ACTION_LABEL = 'Choose playlists';
 const openTrackPlaylists = () => undefined;
+
 const isEditableTarget = (target: EventTarget | null) => {
     if (!(target instanceof HTMLElement)) return false;
     if (target.isContentEditable) return true;
@@ -79,7 +110,7 @@ export const buildMediaActions = (item: MediaItem): MediaActionGroup => {
             primary.push({
                 id: 'play-now',
                 label: 'Play now',
-                shortcut: '↵',
+                shortcut: ENTER_SHORTCUT,
                 onSelect: () => {
                     updateCachedAssumedNowPlaying(item);
                     void sendSpotifyMessage('startPlayback', {
@@ -99,7 +130,7 @@ export const buildMediaActions = (item: MediaItem): MediaActionGroup => {
             primary.push({
                 id: 'play-now',
                 label: 'Play now',
-                shortcut: '↵',
+                shortcut: ENTER_SHORTCUT,
                 onSelect: () => {
                     void sendSpotifyMessage('startPlayback', {
                         contextUri: item.uri!,
@@ -140,9 +171,23 @@ export const buildMediaActions = (item: MediaItem): MediaActionGroup => {
 
     if (item.externalUrl) {
         secondary.push({
+            id: 'copy-link',
+            label: 'Copy link',
+            tooltip: 'Copy link',
+            shortcut: 'L',
+            icon: Link2Icon,
+            presentation: 'icon',
+            onSelect: () => {
+                copyLink(item.externalUrl!);
+            },
+        });
+        secondary.push({
             id: 'open-spotify',
             label: 'Open in Spotify',
+            tooltip: 'Spotify',
             shortcut: 'O',
+            icon: RiSpotifyFill,
+            presentation: 'icon',
             onSelect: () => openExternal(item.externalUrl!),
         });
     }
@@ -162,7 +207,7 @@ export const useMediaActions = (item?: MediaItem | null) =>
 
 const shortcutMatches = (shortcut: string, event: KeyboardEvent) => {
     if (event.metaKey || event.ctrlKey || event.altKey) return false;
-    if (shortcut === '↵') return event.key === 'Enter';
+    if (shortcut === ENTER_SHORTCUT) return event.key === 'Enter';
     return event.key.toLowerCase() === shortcut.toLowerCase();
 };
 

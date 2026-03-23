@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { DropdownMenu } from '@radix-ui/themes';
+import { DropdownMenu, Flex, Text, Tooltip } from '@radix-ui/themes';
 import type {
     MediaAction,
     MediaActionGroup,
+    MediaIconAction,
     MediaItem,
 } from '../../shared/types';
 import { useDropdownSurface } from '../hooks/useDropdownSurface';
@@ -27,6 +28,9 @@ type Props = {
     size?: Size;
 };
 
+const isIconAction = (action: MediaAction): action is MediaIconAction =>
+    action.presentation === 'icon';
+
 export function MediaActionsMenu({
     actions,
     item,
@@ -37,12 +41,16 @@ export function MediaActionsMenu({
     const [view, setView] = useState<MenuView>('actions');
     const primaryActions = actions?.primary ?? [];
     const secondaryActions = actions?.secondary ?? [];
+    const secondaryMenuActions = secondaryActions.filter(
+        (action) => !isIconAction(action)
+    );
+    const secondaryIconActions = secondaryActions.filter(isIconAction);
     const allActions = [...primaryActions, ...secondaryActions];
     const hasPlaylistAction = allActions.some(
         (action) => action.id === TRACK_PLAYLISTS_ACTION_ID
     );
     const showSecondarySeparator =
-        secondaryActions.length > 0 && primaryActions.length > 0;
+        secondaryMenuActions.length > 0 && primaryActions.length > 0;
 
     useEffect(() => {
         setView('actions');
@@ -86,6 +94,28 @@ export function MediaActionsMenu({
         </DropdownMenu.Item>
     );
 
+    const renderShareAction = (action: MediaIconAction) => {
+        const Icon = action.icon;
+        const tooltip = action.tooltip ?? action.label;
+
+        return (
+            <Tooltip key={action.id} content={tooltip} className="shadow-lg">
+                <DropdownMenu.Item
+                    asChild
+                    onSelect={(event) => handleActionSelect(action, event)}
+                >
+                    <button
+                        type="button"
+                        aria-label={tooltip}
+                        className="w-6! justify-center! p-0!"
+                    >
+                        <Icon />
+                    </button>
+                </DropdownMenu.Item>
+            </Tooltip>
+        );
+    };
+
     return (
         <DropdownMenu.Content
             align={align}
@@ -109,7 +139,23 @@ export function MediaActionsMenu({
                 <>
                     {primaryActions.map(renderActionItem)}
                     {showSecondarySeparator && <DropdownMenu.Separator />}
-                    {secondaryActions.map(renderActionItem)}
+                    {secondaryMenuActions.map(renderActionItem)}
+                    {secondaryIconActions.length > 0 && (
+                        <Flex
+                            align="center"
+                            justify="between"
+                            pl="2"
+                            role="group"
+                            aria-label="Share actions"
+                        >
+                            <Text as="span" size={size}>
+                                Share
+                            </Text>
+                            <Flex align="center" gap="1">
+                                {secondaryIconActions.map(renderShareAction)}
+                            </Flex>
+                        </Flex>
+                    )}
                 </>
             )}
         </DropdownMenu.Content>

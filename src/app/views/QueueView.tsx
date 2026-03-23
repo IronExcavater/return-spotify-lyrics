@@ -11,7 +11,7 @@ import {
     MediaSection,
     type MediaSectionState,
 } from '../components/MediaSection';
-import { MediaShelf, type MediaShelfItem } from '../components/MediaShelf';
+import { MediaShelf } from '../components/MediaShelf';
 import { StickyLayout } from '../components/StickyLayout';
 import {
     MEDIA_CACHE_KEYS,
@@ -24,6 +24,7 @@ import {
     useMediaCacheEntry,
 } from '../hooks/useMediaCache';
 import { useSettings } from '../hooks/useSettings';
+import type { MediaShelfItem } from '../types/mediaShelf';
 
 const logger = createLogger('queue');
 const POLL_MS = 5000;

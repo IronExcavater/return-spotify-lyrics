@@ -1,4 +1,4 @@
-import type { MediaShelfItem } from '../components/MediaShelf';
+import type { MediaShelfItem } from './mediaShelf';
 
 export type MediaSectionState = {
     id: string;

@@ -1,4 +1,4 @@
-import type { MediaShelfItem } from '../components/MediaShelf';
+import type { MediaShelfItem } from '../types/mediaShelf';
 
 export type PlaylistDedupableItem = MediaShelfItem & {
     playlistIndex: number;

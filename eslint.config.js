@@ -36,6 +36,7 @@ export default defineConfig([
         settings: {
             tailwindcss: {
                 config: path.join(__dirname, 'src/app/styles/globals.css'),
+                whitelist: ['^rt-[A-Za-z0-9-]+$', '^search-list-surface$'],
             },
         },
         rules: {
