@@ -11,6 +11,11 @@ type ReadEntry<T = unknown> = {
     listeners: Set<() => void>;
 };
 
+type WriteSpotifyReadOptions = {
+    cacheMs?: number;
+    fetchedAt?: number;
+};
+
 export type SpotifyReadSnapshot<T> = {
     status: ReadStatus;
     data?: T;
@@ -131,6 +136,32 @@ const cleanup = (key: string, cacheMs: number) => {
     }
 };
 
+const setEntryData = <T>(
+    key: string,
+    entry: ReadEntry<T>,
+    data: T | undefined,
+    options: WriteSpotifyReadOptions = {}
+) => {
+    const nextCacheMs = options.cacheMs ?? entry.cacheMs ?? DEFAULT_CACHE_MS;
+    const nextFetchedAt =
+        data === undefined ? undefined : (options.fetchedAt ?? Date.now());
+    const nextDataChanged = entry.data !== data;
+    const nextFetchedAtChanged = entry.fetchedAt !== nextFetchedAt;
+
+    entry.cacheMs = nextCacheMs;
+    entry.data = data;
+    entry.error = undefined;
+    entry.fetchedAt = nextFetchedAt;
+    entry.promise = undefined;
+    entry.retryAt = undefined;
+    clearRetryTimer(entry);
+
+    if (!nextDataChanged && !nextFetchedAtChanged) return;
+
+    notifySpotifyReadListeners(key);
+    cleanup(key, nextCacheMs);
+};
+
 const scheduleRetry = <T>(key: string, config: SpotifyReadConfig<T>) => {
     const entry = getEntry<T>(key);
     if (!entry.retryAt || entry.retryAt <= Date.now()) return;
@@ -212,6 +243,25 @@ export async function readSpotify<T>({
     notifySpotifyReadListeners(key);
     return promise;
 }
+
+export const writeSpotifyReadData = <T>(
+    key: string,
+    data: T | undefined,
+    options: WriteSpotifyReadOptions = {}
+) => {
+    const entry = getEntry<T>(key);
+    setEntryData(key, entry, data, options);
+};
+
+export const updateSpotifyReadData = <T>(
+    key: string,
+    updater: (previous: T | undefined) => T | undefined,
+    options: WriteSpotifyReadOptions = {}
+) => {
+    const entry = getEntry<T>(key);
+    const next = updater(entry.data);
+    setEntryData(key, entry, next, options);
+};
 
 export const subscribeToSpotifyReadStore = (
     key: string,

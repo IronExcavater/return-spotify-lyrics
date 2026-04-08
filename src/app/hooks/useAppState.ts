@@ -146,7 +146,6 @@ export function useAppState({
     const [appState, setAppState] = useState<AppState>({});
     const [activeBar, setActiveBarState] = useState<BarKey>('home');
 
-    const previousBarRef = useRef<BarKey | null>(null);
     const currentRouteRef = useRef<RouteValue | null>(currentRoute);
     const navigateRef = useRef(navigate);
     const openedRef = useRef(false);
@@ -211,11 +210,11 @@ export function useAppState({
     // Hydrate per-surface app state.
     useEffect(() => {
         setHydrated(false);
-        previousBarRef.current = null;
         openedRef.current = false;
 
         let cancelled = false;
-        void getFromStorage<AppState>(appStateKey, (saved) => {
+        void (async () => {
+            const saved = await getFromStorage<AppState>(appStateKey);
             if (cancelled) return;
 
             const persisted = saved ?? {};
@@ -227,13 +226,12 @@ export function useAppState({
 
             setAppState(persisted);
             setActiveBarState(initialBar);
-            previousBarRef.current = initialBar;
 
             if (currentRouteRef.current !== initialRoute) {
                 navigateRef.current(initialRoute, { replace: true });
             }
             setHydrated(true);
-        });
+        })();
 
         return () => {
             cancelled = true;
@@ -294,8 +292,6 @@ export function useAppState({
         const routeAllowed =
             currentRoute != null &&
             isRouteAllowed(currentRoute, activeBar, routeRules);
-
-        previousBarRef.current = activeBar;
 
         if (!routeAllowed && currentRoute !== nextRoute) {
             navigate(nextRoute, { replace: true });

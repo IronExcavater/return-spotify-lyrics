@@ -1,16 +1,28 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+    type SetStateAction,
+} from 'react';
 import {
     clearSpotifyReads,
     readSpotify,
     readSpotifySnapshot,
     sameSpotifyReadSnapshot,
     subscribeToSpotifyReadStore,
+    updateSpotifyReadData,
+    writeSpotifyReadData,
     type SpotifyReadConfig,
     type SpotifyReadSnapshot,
 } from '../data/spotifyReadStore';
 
 type HookConfig<T> = SpotifyReadConfig<T> & {
     enabled?: boolean;
+    initialData?: T | null;
+    onError?: (error: unknown) => void;
+    pollMs?: number;
     refreshOnFocus?: boolean;
     getNextRefreshMs?: (snapshot: SpotifyReadSnapshot<T>) => number | null;
 };
@@ -24,6 +36,9 @@ export function useSpotifyRead<T>({
     staleMs = DEFAULT_STALE_MS,
     cacheMs = DEFAULT_CACHE_MS,
     enabled = true,
+    initialData = null,
+    onError,
+    pollMs,
     refreshOnFocus = false,
     getNextRefreshMs,
 }: HookConfig<T>) {
@@ -33,6 +48,7 @@ export function useSpotifyRead<T>({
         staleMs,
         cacheMs,
     });
+    const onErrorRef = useRef(onError);
     const [snapshot, setSnapshot] = useState<SpotifyReadSnapshot<T>>(() =>
         readSpotifySnapshot<T>(key, staleMs)
     );
@@ -43,6 +59,14 @@ export function useSpotifyRead<T>({
         staleMs,
         cacheMs,
     };
+    onErrorRef.current = onError;
+
+    useEffect(() => {
+        if (initialData == null) return;
+        if (readSpotifySnapshot<T>(key, staleMs).data !== undefined) return;
+
+        writeSpotifyReadData(key, initialData, { cacheMs });
+    }, [cacheMs, initialData, key, staleMs]);
 
     useEffect(() => {
         setSnapshot((previous) => {
@@ -63,11 +87,17 @@ export function useSpotifyRead<T>({
     }, [key, staleMs]);
 
     const refresh = useCallback(
-        async (force = false) =>
-            readSpotify({
-                ...configRef.current,
-                force,
-            }),
+        async (force = false) => {
+            try {
+                return await readSpotify({
+                    ...configRef.current,
+                    force,
+                });
+            } catch (error) {
+                onErrorRef.current?.(error);
+                throw error;
+            }
+        },
         []
     );
 
@@ -76,10 +106,12 @@ export function useSpotifyRead<T>({
         void readSpotify(configRef.current).catch(() => undefined);
     }, [cacheMs, enabled, key, staleMs]);
 
-    const nextRefreshMs = useMemo(
-        () => (enabled ? (getNextRefreshMs?.(snapshot) ?? null) : null),
-        [enabled, getNextRefreshMs, snapshot]
-    );
+    const nextRefreshMs = useMemo(() => {
+        if (!enabled) return null;
+        if (pollMs != null) return pollMs;
+
+        return getNextRefreshMs?.(snapshot) ?? null;
+    }, [enabled, getNextRefreshMs, pollMs, snapshot]);
 
     useEffect(() => {
         if (!enabled || nextRefreshMs == null || snapshot.retryAt) return;
@@ -110,9 +142,42 @@ export function useSpotifyRead<T>({
         };
     }, [enabled, refresh, refreshOnFocus]);
 
+    const setData = useCallback(
+        (value: SetStateAction<T | null>) => {
+            updateSpotifyReadData<T>(
+                key,
+                (previous) => {
+                    const current = previous ?? initialData ?? undefined;
+                    const next =
+                        typeof value === 'function'
+                            ? (
+                                  value as (
+                                      previous: T | null
+                                  ) => T | null
+                              )(current ?? null)
+                            : value;
+
+                    return next ?? undefined;
+                },
+                { cacheMs }
+            );
+        },
+        [cacheMs, initialData, key]
+    );
+
+    const data = snapshot.data ?? initialData ?? null;
+    const loading =
+        data == null &&
+        (snapshot.status === 'idle' || snapshot.status === 'loading');
+    const refreshing = data != null && snapshot.isFetching;
+
     return {
+        data,
+        loading,
+        refreshing,
         ...snapshot,
         refresh,
+        setData,
     };
 }
 

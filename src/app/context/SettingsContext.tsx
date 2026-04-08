@@ -43,12 +43,22 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
 
     useEffect(() => {
-        void getFromStorage<Settings>(SETTINGS_KEY, (saved) =>
-            setSettings(mergeSettings(saved))
-        );
-        return onStorageChange<Settings>(SETTINGS_KEY, (next) =>
+        let cancelled = false;
+        const unsubscribe = onStorageChange<Settings>(SETTINGS_KEY, (next) =>
             setSettings(mergeSettings(next))
         );
+
+        void (async () => {
+            const saved = await getFromStorage<Settings>(SETTINGS_KEY);
+            if (cancelled) return;
+
+            setSettings(mergeSettings(saved));
+        })();
+
+        return () => {
+            cancelled = true;
+            unsubscribe();
+        };
     }, []);
 
     const updateSettings = useCallback((patch: Partial<Settings>) => {

@@ -214,7 +214,6 @@ export function MediaView() {
     const location = useLocation();
     const { settings } = useSettings();
     const { goTo } = useHistory();
-    const routeHistory = useMemo(() => ({ goTo }), [goTo]);
     const market = resolveMarket(settings.locale);
     const locale = resolveLocale(settings.locale);
 
@@ -222,7 +221,6 @@ export function MediaView() {
     const { state, restoring } = useRouteState<MediaRouteState>({
         locationState,
         store: mediaRouteStore,
-        routeHistory,
         routePath: '/media',
     });
 

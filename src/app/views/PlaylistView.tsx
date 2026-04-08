@@ -44,7 +44,6 @@ import {
     type PlaylistContentState,
 } from '../data/playlistStore';
 import { useAuth } from '../hooks/useAuth';
-import { useHistory } from '../hooks/useHistory';
 import { buildMediaActions } from '../hooks/useMediaActions';
 import type { MediaRouteState } from '../hooks/useMediaRoute';
 import { playlistRouteStore, useRouteState } from '../hooks/useRouteState';
@@ -93,14 +92,12 @@ const toPlaylistDetailsDraft = (
 export function PlaylistView() {
     const location = useLocation();
     const { settings } = useSettings();
-    const routeHistory = useHistory();
     const { profile } = useAuth();
     const market = resolveMarket(settings.locale);
     const locationState = location.state as MediaRouteState | null;
     const { state, restoring } = useRouteState<MediaRouteState>({
         locationState,
         store: playlistRouteStore,
-        routeHistory,
         routePath: '/playlist',
     });
     const [data, setData] = useState<PlaylistViewState | null>(null);

@@ -17,13 +17,13 @@ import {
     MEDIA_CACHE_KEYS,
     type NowPlayingCacheEntry,
 } from '../hooks/mediaCacheEntries';
-import { useLazyPolling } from '../hooks/useLazyPolling';
 import { buildMediaActions } from '../hooks/useMediaActions';
 import {
     updateMediaCacheEntry,
     useMediaCacheEntry,
 } from '../hooks/useMediaCache';
 import { useSettings } from '../hooks/useSettings';
+import { useSpotifyRead } from '../hooks/useSpotifyRead';
 import type { MediaShelfItem } from '../types/mediaShelf';
 
 const logger = createLogger('queue');
@@ -183,23 +183,29 @@ export function QueueView() {
             locale
         );
         const normalizedQueue = normalizeUpcomingQueue(queueItems, currentItem);
-        return {
+        const nextState = {
             current: currentItem,
             queue: normalizedQueue,
         } satisfies QueueState;
-    }, [cachedNowPlayingItem, locale]);
+
+        const previous = queueStateRef.current ?? cachedQueueState ?? null;
+        if (!previous) return nextState;
+
+        return mergeQueueState(previous, nextState);
+    }, [cachedNowPlayingItem, cachedQueueState, locale]);
 
     const {
         data: queueState,
         loading,
         refresh,
         setData,
-    } = useLazyPolling<QueueState>({
+    } = useSpotifyRead<QueueState>({
+        key: MEDIA_CACHE_KEYS.queueView,
         load: loadQueue,
         enabled: !syncingQueue,
-        intervalMs: POLL_MS,
         initialData: cachedQueueState,
-        merge: mergeQueueState,
+        staleMs: 0,
+        pollMs: POLL_MS,
         onError: (error) => logError(logger, 'Failed to load queue', error),
     });
 

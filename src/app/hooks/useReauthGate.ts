@@ -30,10 +30,22 @@ export function useReauthGate() {
             setMissingScopes(missing);
         };
 
-        void getFromStorage<StoredToken>(TOKEN_KEY, updateFromToken);
-        return onStorageChange<StoredToken>(TOKEN_KEY, (next) => {
+        let cancelled = false;
+        const unsubscribe = onStorageChange<StoredToken>(TOKEN_KEY, (next) => {
             updateFromToken(next);
         });
+
+        void (async () => {
+            const token = await getFromStorage<StoredToken>(TOKEN_KEY);
+            if (cancelled) return;
+
+            updateFromToken(token);
+        })();
+
+        return () => {
+            cancelled = true;
+            unsubscribe();
+        };
     }, []);
 
     const reasons = useMemo<ReauthReason[]>(

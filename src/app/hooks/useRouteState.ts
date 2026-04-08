@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 import { getFromStorage, setInStorage } from '../../shared/storage';
 import type { MediaRouteState } from './useMediaRoute';
@@ -16,18 +17,9 @@ type CreateRouteStateStoreInput<T> = {
     shouldPersist?: (previous: T | null, next: T | null) => boolean;
 };
 
-type RouteHistory = {
-    goTo: (
-        path: string,
-        state?: unknown,
-        options?: { samePathBehavior?: 'replace' | 'push' }
-    ) => void;
-};
-
 type UseRouteStateInput<T> = {
     locationState: T | null;
     store: RouteStateStore<T>;
-    routeHistory: RouteHistory;
     routePath: string;
     fallbackState?: T | null;
 };
@@ -67,10 +59,10 @@ export function createRouteStateStore<T>({
 export function useRouteState<T>({
     locationState,
     store,
-    routeHistory,
     routePath,
     fallbackState,
 }: UseRouteStateInput<T>) {
+    const navigate = useNavigate();
     const hasValidState = (state: T | null) =>
         state != null && store.isValid(state);
     const validLocationState = hasValidState(locationState)
@@ -114,11 +106,12 @@ export function useRouteState<T>({
             restoreGuard.current = false;
             return;
         }
-        if (state && !restoreGuard.current) {
-            restoreGuard.current = true;
-            routeHistory.goTo(routePath, state);
-        }
-    }, [routeHistory, routePath, state, store, validLocationState]);
+
+        if (!state || restoreGuard.current) return;
+
+        restoreGuard.current = true;
+        navigate(routePath, { replace: true, state });
+    }, [navigate, routePath, state, store, validLocationState]);
 
     return { state, restoring };
 }

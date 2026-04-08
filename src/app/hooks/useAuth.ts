@@ -121,21 +121,33 @@ export function useAuth() {
 
     // Initial auth sync
     useEffect(() => {
-        void getFromStorage<UserProfile>(SPOTIFY_USER_KEY, (user) => {
-            if (user) {
-                setCachedUser(user);
-                updateCachedProfile(user);
+        let cancelled = false;
+
+        void (async () => {
+            const [storedUser, storedConnection] = await Promise.all([
+                getFromStorage<UserProfile>(SPOTIFY_USER_KEY),
+                getFromStorage<SpotifyConnectionMeta>(SPOTIFY_CONNECTION_KEY),
+            ]);
+            if (cancelled) return;
+
+            if (storedUser) {
+                setCachedUser(storedUser);
+                updateCachedProfile(storedUser);
             }
-            if (!sessionActiveRef.current && user) setUser(user);
-        });
-        void getFromStorage<SpotifyConnectionMeta>(
-            SPOTIFY_CONNECTION_KEY,
-            (meta) => {
-                connectionRef.current = meta;
-                setConnection(meta);
+
+            if (!sessionActiveRef.current && storedUser) {
+                setUser(storedUser);
             }
-        );
+
+            connectionRef.current = storedConnection;
+            setConnection(storedConnection);
+        })();
+
         void sync();
+
+        return () => {
+            cancelled = true;
+        };
     }, []);
 
     const lastAuthState = useRef<boolean | undefined>(undefined);

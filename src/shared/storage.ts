@@ -1,23 +1,15 @@
-export function getFromStorage<T>(
-    key: string,
-    callback?: (value: T | undefined) => void
-): Promise<T | undefined> {
+export function getFromStorage<T>(key: string): Promise<T | undefined> {
     const read = (res: Record<string, unknown>): T | undefined =>
         res[key] as T | undefined;
 
     return new Promise((resolve) => {
         chrome.storage.local.get(key, (r) => {
-            const value = read(r);
-            callback?.(value);
-            resolve(value);
+            resolve(read(r));
         });
     });
 }
 
-export function mustGetFromStorage<T>(
-    key: string,
-    callback?: (value: T) => void
-): Promise<T> {
+export function mustGetFromStorage<T>(key: string): Promise<T> {
     const read = (res: Record<string, unknown>): T => {
         if (!(key in res))
             throw new Error(`Required storage key ${key} not found`);
@@ -27,9 +19,7 @@ export function mustGetFromStorage<T>(
     return new Promise((resolve, reject) => {
         chrome.storage.local.get(key, (r) => {
             try {
-                const value = read(r);
-                callback?.(value);
-                resolve(value);
+                resolve(read(r));
             } catch (err) {
                 reject(err);
             }

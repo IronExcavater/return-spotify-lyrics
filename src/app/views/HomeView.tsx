@@ -218,9 +218,20 @@ export function HomeView({ searchQuery, filters }: Props) {
     );
 
     useEffect(() => {
-        void getFromStorage<StoredHomeSection[]>(HOME_LAYOUT_KEY, (saved) => {
+        let cancelled = false;
+
+        void (async () => {
+            const saved = await getFromStorage<StoredHomeSection[]>(
+                HOME_LAYOUT_KEY
+            );
+            if (cancelled) return;
+
             setHomeSections(mergeLayout(saved ?? undefined));
-        });
+        })();
+
+        return () => {
+            cancelled = true;
+        };
     }, []);
 
     useEffect(() => {

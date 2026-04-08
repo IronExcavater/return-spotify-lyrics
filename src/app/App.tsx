@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { PersonIcon } from '@radix-ui/react-icons';
 import { Flex } from '@radix-ui/themes';
 import {
@@ -52,11 +52,110 @@ import { ProfileView } from './views/ProfileView';
 import { QueueView } from './views/QueueView';
 
 const BAR_KEYS: readonly BarKey[] = ['home', 'playback'];
+const WIDTH_BOUNDS = { min: 350, max: 500 } as const;
+const HEIGHT_BOUNDS = { min: 300, max: 600 } as const;
 
 const isHomeRouteState = (
     state: RouteState | null | undefined
 ): state is HomeRouteState =>
     !!state && ('searchQuery' in state || 'searchFilters' in state);
+
+const toHomeRouteState = (
+    query: string,
+    filters: HomeRouteState['searchFilters'] = []
+): HomeRouteState | undefined => {
+    const nextFilters = filters && filters.length > 0 ? filters : undefined;
+    if (!query.trim() && !nextFilters) return undefined;
+
+    return {
+        searchQuery: query,
+        searchFilters: nextFilters,
+    };
+};
+
+type SearchStateSync = ReturnType<typeof useSearch>;
+
+function useHomeSearchRouteState(
+    pathname: string,
+    locationState: RouteState | null,
+    search: SearchStateSync,
+    rememberState: (state?: RouteState) => void
+) {
+    const lastHomeStateRef = useRef<HomeRouteState | null>(null);
+    const currentHomeState = useMemo(
+        () => toHomeRouteState(search.query, search.filters) ?? null,
+        [search.filters, search.query]
+    );
+    const debouncedHomeState = useMemo(
+        () =>
+            toHomeRouteState(
+                search.debouncedQuery,
+                search.debouncedFilters
+            ) ?? null,
+        [search.debouncedFilters, search.debouncedQuery]
+    );
+
+    useEffect(() => {
+        if (pathname !== '/home') return;
+        if (!isHomeRouteState(locationState)) return;
+
+        search.setSearchState({
+            query: locationState.searchQuery ?? '',
+            filters: locationState.searchFilters ?? [],
+        });
+    }, [locationState, pathname, search.setSearchState]);
+
+    useEffect(() => {
+        if (pathname !== '/home') return;
+
+        lastHomeStateRef.current = currentHomeState;
+    }, [currentHomeState, pathname]);
+
+    useEffect(() => {
+        if (pathname !== '/home') return;
+
+        rememberState(debouncedHomeState ?? undefined);
+    }, [debouncedHomeState, pathname, rememberState]);
+
+    return lastHomeStateRef;
+}
+
+function useLastContentPath(pathname: string) {
+    const lastContentPathRef = useRef('/home');
+
+    useEffect(() => {
+        if (pathname === '/profile') return;
+
+        lastContentPathRef.current = pathname;
+    }, [pathname]);
+
+    return lastContentPathRef;
+}
+
+function useResizeObserverNudge(activeBar: BarKey, pathname: string) {
+    useEffect(() => {
+        const body = document.body;
+        const previousPadding = body.style.paddingRight;
+        body.style.paddingRight = '0.5px';
+
+        const raf = requestAnimationFrame(() => {
+            body.style.paddingRight = previousPadding;
+            window.dispatchEvent(new Event('resize'));
+        });
+
+        return () => {
+            cancelAnimationFrame(raf);
+            body.style.paddingRight = previousPadding;
+        };
+    }, [activeBar, pathname]);
+}
+
+type GuardedRoute = {
+    path: string;
+    element: ReactNode;
+    when: boolean;
+    redirectTo: string;
+};
 
 type AppProps = {
     surface?: Surface;
@@ -66,9 +165,6 @@ export default function App({ surface = 'popup' }: AppProps) {
     const navigate = useNavigate();
     const location = useLocation();
     const surfaceConfig = getSurfaceConfig(surface);
-
-    const widthBounds = { min: 350, max: 500 } as const;
-    const heightBounds = { min: 300, max: 600 } as const;
 
     const { authed, profile, login, logout, connection } = useAuth();
     const {
@@ -81,8 +177,8 @@ export default function App({ surface = 'popup' }: AppProps) {
     const controls = usePlayerShortcutControls();
     const { needsReauth, missingScopes } = useReauthGate();
     const appState = useAppState({
-        fallbackWidth: widthBounds.min,
-        fallbackHeight: heightBounds.min,
+        fallbackWidth: WIDTH_BOUNDS.min,
+        fallbackHeight: HEIGHT_BOUNDS.min,
         surface,
         showBars: authed !== false,
         hasPlayback,
@@ -99,45 +195,12 @@ export default function App({ surface = 'popup' }: AppProps) {
     const canShowPlaybackBar = hasPlayback || !playbackKnown;
 
     const profileImage = profile?.images?.[0]?.url ?? cachedProfile?.imageUrl;
-
-    const lastHomeStateRef = useRef<HomeRouteState | null>(null);
-
-    useEffect(() => {
-        if (location.pathname !== '/home') return;
-        const state = location.state as RouteState | null;
-        if (!isHomeRouteState(state)) return;
-        search.setSearchState({
-            query: state.searchQuery ?? '',
-            filters: state.searchFilters ?? [],
-        });
-    }, [location.pathname, location.state, search.setSearchState]);
-
-    useEffect(() => {
-        if (location.pathname !== '/home') return;
-        lastHomeStateRef.current = {
-            searchQuery: search.query,
-            searchFilters:
-                search.filters && search.filters.length > 0
-                    ? search.filters
-                    : undefined,
-        };
-    }, [location.pathname, search.filters, search.query]);
-
-    useEffect(() => {
-        if (location.pathname !== '/home') return;
-        routeHistory.rememberState({
-            searchQuery: search.debouncedQuery,
-            searchFilters:
-                search.debouncedFilters && search.debouncedFilters.length > 0
-                    ? search.debouncedFilters
-                    : undefined,
-        });
-    }, [
+    const lastHomeStateRef = useHomeSearchRouteState(
         location.pathname,
-        routeHistory.rememberState,
-        search.debouncedFilters,
-        search.debouncedQuery,
-    ]);
+        location.state as RouteState | null,
+        search,
+        routeHistory.rememberState
+    );
 
     useEffect(() => {
         if (authed !== true) return;
@@ -153,14 +216,7 @@ export default function App({ surface = 'popup' }: AppProps) {
         logout();
         window.setTimeout(() => login(), 150);
     };
-
-    // Slots
-    const lastContentPathRef = useRef('/home');
-
-    useEffect(() => {
-        if (location.pathname !== '/profile')
-            lastContentPathRef.current = location.pathname;
-    }, [location.pathname]);
+    const lastContentPathRef = useLastContentPath(location.pathname);
 
     useAppShortcuts({
         showBars: appState.showBars,
@@ -241,22 +297,7 @@ export default function App({ surface = 'popup' }: AppProps) {
         enabled: appState.showBars,
     });
 
-    // Force a lightweight layout change on app state updates so ResizeObservers rerun.
-    useEffect(() => {
-        const body = document.body;
-        const prevPadding = body.style.paddingRight;
-        body.style.paddingRight = '0.5px';
-
-        const raf = requestAnimationFrame(() => {
-            body.style.paddingRight = prevPadding;
-            window.dispatchEvent(new Event('resize'));
-        });
-
-        return () => {
-            cancelAnimationFrame(raf);
-            body.style.paddingRight = prevPadding;
-        };
-    }, [appState.activeBar, location.pathname]);
+    useResizeObserverNudge(appState.activeBar, location.pathname);
 
     const handleOpenMediaFromPlayback = useCallback(
         (route: MediaRouteState) => {
@@ -268,6 +309,118 @@ export default function App({ surface = 'popup' }: AppProps) {
             });
         },
         [appState.setActiveBar, routeHistory.goTo]
+    );
+
+    const handleSearchClear = useCallback(() => {
+        if (search.query.trim()) {
+            void trackSearch(ANALYTICS_EVENTS.searchClear, {
+                reason: 'search query cleared',
+            });
+        }
+
+        search.setQuery('');
+    }, [search.query, search.setQuery, trackSearch]);
+
+    const handleSearchSubmit = useCallback(() => {
+        void trackSearch(ANALYTICS_EVENTS.searchSubmit, {
+            reason: 'search submitted',
+            data: {
+                query: search.query.trim(),
+                filters: search.filters.map((filter) => filter.kind),
+            },
+        });
+
+        routeHistory.goTo(
+            '/home',
+            toHomeRouteState(search.query, search.filters)
+        );
+    }, [routeHistory.goTo, search.filters, search.query, trackSearch]);
+
+    const handleGoBack = useCallback(() => {
+        const previous = routeHistory.goBack();
+        if (previous?.path !== '/home') return;
+
+        const homeState = isHomeRouteState(previous.state)
+            ? previous.state
+            : undefined;
+        search.setSearchState({
+            query: homeState?.searchQuery ?? '',
+            filters: homeState?.searchFilters ?? [],
+        });
+    }, [routeHistory.goBack, search.setSearchState]);
+
+    const appRoutes = useMemo<GuardedRoute[]>(
+        () => [
+            {
+                path: '/',
+                element: <></>,
+                when: mustLogin,
+                redirectTo: '/login',
+            },
+            {
+                path: '/home',
+                element: (
+                    <HomeView
+                        searchQuery={search.debouncedQuery}
+                        filters={search.debouncedFilters}
+                    />
+                ),
+                when: mustLogin,
+                redirectTo: '/login',
+            },
+            {
+                path: '/lyrics',
+                element: <LyricsView />,
+                when: mustLogin,
+                redirectTo: '/login',
+            },
+            {
+                path: '/profile',
+                element: (
+                    <ProfileView
+                        profile={profile}
+                        connection={connection}
+                        onLogout={logout}
+                    />
+                ),
+                when: mustLogin,
+                redirectTo: '/login',
+            },
+            {
+                path: '/queue',
+                element: <QueueView />,
+                when: mustLogin,
+                redirectTo: '/login',
+            },
+            {
+                path: '/media',
+                element: <MediaView />,
+                when: mustLogin,
+                redirectTo: '/login',
+            },
+            {
+                path: '/playlist',
+                element: <PlaylistView />,
+                when: mustLogin,
+                redirectTo: '/login',
+            },
+            {
+                path: '/login',
+                element: <LoginView onLogin={login} />,
+                when: mustLogout,
+                redirectTo: '/home',
+            },
+        ],
+        [
+            connection,
+            login,
+            logout,
+            mustLogin,
+            mustLogout,
+            profile,
+            search.debouncedFilters,
+            search.debouncedQuery,
+        ]
     );
 
     const appContent = (
@@ -292,54 +445,10 @@ export default function App({ surface = 'popup' }: AppProps) {
                                 navSlot={navFloating.anchors.home}
                                 searchQuery={search.query}
                                 onSearchChange={search.setQuery}
-                                onClearSearch={() => {
-                                    if (search.query.trim()) {
-                                        void trackSearch(
-                                            ANALYTICS_EVENTS.searchClear,
-                                            {
-                                                reason: 'search query cleared',
-                                            }
-                                        );
-                                    }
-                                    search.setQuery('');
-                                }}
-                                onSearchSubmit={() => {
-                                    void trackSearch(
-                                        ANALYTICS_EVENTS.searchSubmit,
-                                        {
-                                            reason: 'search submitted',
-                                            data: {
-                                                query: search.query.trim(),
-                                                filters: search.filters.map(
-                                                    (filter) => filter.kind
-                                                ),
-                                            },
-                                        }
-                                    );
-                                    routeHistory.goTo('/home', {
-                                        searchQuery: search.query,
-                                        searchFilters:
-                                            search.filters.length > 0
-                                                ? search.filters
-                                                : undefined,
-                                    });
-                                }}
+                                onClearSearch={handleSearchClear}
+                                onSearchSubmit={handleSearchSubmit}
                                 canGoBack={routeHistory.canGoBack}
-                                onGoBack={() => {
-                                    const previous = routeHistory.goBack();
-                                    if (previous?.path === '/home') {
-                                        const homeState = isHomeRouteState(
-                                            previous.state
-                                        )
-                                            ? previous.state
-                                            : undefined;
-                                        search.setSearchState({
-                                            query: homeState?.searchQuery ?? '',
-                                            filters:
-                                                homeState?.searchFilters ?? [],
-                                        });
-                                    }
-                                }}
+                                onGoBack={handleGoBack}
                                 filters={search.filters}
                                 availableFilters={search.available}
                                 onAddFilter={search.addFilter}
@@ -354,105 +463,20 @@ export default function App({ surface = 'popup' }: AppProps) {
 
                 {/* Routes */}
                 <Routes>
-                    <Route
-                        path="/"
-                        element={
-                            <ProtectedLayout
-                                when={mustLogin}
-                                redirectTo="/login"
-                            >
-                                <></>
-                            </ProtectedLayout>
-                        }
-                    />
-
-                    <Route
-                        path="/home"
-                        element={
-                            <ProtectedLayout
-                                when={mustLogin}
-                                redirectTo="/login"
-                            >
-                                <HomeView
-                                    searchQuery={search.debouncedQuery}
-                                    filters={search.debouncedFilters}
-                                />
-                            </ProtectedLayout>
-                        }
-                    />
-
-                    <Route
-                        path="/lyrics"
-                        element={
-                            <ProtectedLayout
-                                when={mustLogin}
-                                redirectTo="/login"
-                            >
-                                <LyricsView />
-                            </ProtectedLayout>
-                        }
-                    />
-
-                    <Route
-                        path="/profile"
-                        element={
-                            <ProtectedLayout
-                                when={mustLogin}
-                                redirectTo="/login"
-                            >
-                                <ProfileView
-                                    profile={profile}
-                                    connection={connection}
-                                    onLogout={logout}
-                                />
-                            </ProtectedLayout>
-                        }
-                    />
-                    <Route
-                        path="/queue"
-                        element={
-                            <ProtectedLayout
-                                when={mustLogin}
-                                redirectTo="/login"
-                            >
-                                <QueueView />
-                            </ProtectedLayout>
-                        }
-                    />
-                    <Route
-                        path="/media"
-                        element={
-                            <ProtectedLayout
-                                when={mustLogin}
-                                redirectTo="/login"
-                            >
-                                <MediaView />
-                            </ProtectedLayout>
-                        }
-                    />
-                    <Route
-                        path="/playlist"
-                        element={
-                            <ProtectedLayout
-                                when={mustLogin}
-                                redirectTo="/login"
-                            >
-                                <PlaylistView />
-                            </ProtectedLayout>
-                        }
-                    />
-
-                    <Route
-                        path="/login"
-                        element={
-                            <ProtectedLayout
-                                when={mustLogout}
-                                redirectTo="/home"
-                            >
-                                <LoginView onLogin={login} />
-                            </ProtectedLayout>
-                        }
-                    />
+                    {appRoutes.map((route) => (
+                        <Route
+                            key={route.path}
+                            path={route.path}
+                            element={
+                                <ProtectedLayout
+                                    when={route.when}
+                                    redirectTo={route.redirectTo}
+                                >
+                                    {route.element}
+                                </ProtectedLayout>
+                            }
+                        />
+                    ))}
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
 
@@ -478,14 +502,14 @@ export default function App({ surface = 'popup' }: AppProps) {
         <Resizer
             width={{
                 value: appState.layout.width,
-                min: widthBounds.min,
-                max: widthBounds.max,
+                min: WIDTH_BOUNDS.min,
+                max: WIDTH_BOUNDS.max,
                 override: appState.layout.widthOverride,
             }}
             height={{
                 value: appState.layout.height,
-                min: heightBounds.min,
-                max: heightBounds.max,
+                min: HEIGHT_BOUNDS.min,
+                max: HEIGHT_BOUNDS.max,
                 override: appState.layout.heightOverride,
             }}
             onWidthChange={appState.setWidth}

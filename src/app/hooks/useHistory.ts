@@ -59,6 +59,9 @@ const serializeState = (state?: RouteState) => {
     return `home:${query}:${serializeFilters(filters)}`;
 };
 
+const serializeEntry = (path: string, state?: RouteState) =>
+    `${path}:${serializeState(state)}`;
+
 const listeners = new Set<() => void>();
 const historyStack: HistoryEntry[] = [];
 const MAX_HISTORY = 30;
@@ -116,7 +119,8 @@ export function useHistory() {
     const navigate = useNavigate();
     const location = useLocation();
     const [canGoBack, setCanGoBack] = useState(getCanGoBack());
-    const lastLocation = useRef<string | null>(null);
+    const lastEntryKey = useRef<string | null>(null);
+
     useEffect(() => {
         const update = () => setCanGoBack(getCanGoBack());
         listeners.add(update);
@@ -126,12 +130,12 @@ export function useHistory() {
     }, []);
 
     useEffect(() => {
-        if (lastLocation.current === location.pathname) return;
-        lastLocation.current = location.pathname;
-        recordRoute(
-            location.pathname,
-            location.state as RouteState | undefined
-        );
+        const locationState = location.state as RouteState | undefined;
+        const entryKey = serializeEntry(location.pathname, locationState);
+        if (lastEntryKey.current === entryKey) return;
+
+        lastEntryKey.current = entryKey;
+        recordRoute(location.pathname, locationState);
     }, [location.pathname, location.state]);
 
     const goTo = useCallback(
@@ -149,13 +153,17 @@ export function useHistory() {
                 isSamePath &&
                 serializeState(currentState) === serializeState(nextState)
             ) {
-                recordRoute(path, state, options?.samePathBehavior ?? 'push');
+                recordRoute(
+                    path,
+                    nextState,
+                    options?.samePathBehavior ?? 'push'
+                );
                 return;
             }
-            recordRoute(path, state, options?.samePathBehavior ?? 'push');
-            navigate(path, { state, replace: isSamePath });
+            recordRoute(path, nextState, options?.samePathBehavior ?? 'push');
+            navigate(path, { state: nextState, replace: isSamePath });
         },
-        [location.pathname, navigate]
+        [location.pathname, location.state, navigate]
     );
 
     const goBack = useCallback((): HistoryEntry | null => {
