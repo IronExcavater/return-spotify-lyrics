@@ -20,12 +20,6 @@ import clsx from 'clsx';
 
 import { resolveLocale } from '../../shared/locale';
 import { createLogger, logError } from '../../shared/logging';
-import {
-    albumTrackToItem,
-    playlistToItem,
-    topArtistToItem,
-    trackToItem,
-} from '../../shared/media';
 import { sendSpotifyMessage } from '../../shared/messaging';
 import {
     DEFAULT_SEARCH_TYPES,
@@ -50,6 +44,7 @@ import {
     mapSearchPage,
     mapSearchResults,
 } from '../utils/searchMapping';
+import { HOME_SECTION_LOADERS, type HomeSectionId } from './homeLoaders';
 import { buildHomeSections } from './homeSections';
 import { SEARCH_SECTION_BASE, buildSearchSections } from './searchSections';
 
@@ -61,7 +56,11 @@ interface Props {
 const logger = createLogger('home');
 
 const HOME_LAYOUT_KEY = 'homeLayout';
+const ALWAYS_VISIBLE_SECTIONS = new Set(['user-playlists', 'saved-tracks']);
+
 type SectionStatus = { loading: boolean; error: string | null };
+type SectionMode = 'home' | 'search';
+type StatusByMode = Record<SectionMode, Record<string, SectionStatus>>;
 const SEARCH_TYPE_BY_SECTION_ID: Record<string, SearchType> =
     Object.fromEntries(
         (Object.keys(SEARCH_SECTION_BASE) as SearchType[]).map((type) => [
@@ -83,6 +82,16 @@ const describeRpcError = (error: unknown) => {
     if (typeof error === 'string' && error.trim().length > 0) return error;
     return 'Request failed.';
 };
+
+const createSearchOffsets = (): Record<SearchType, number | null> => ({
+    track: 0,
+    album: 0,
+    artist: 0,
+    playlist: 0,
+    show: 0,
+    episode: 0,
+    audiobook: 0,
+});
 
 type StoredHomeSection = Pick<
     MediaSectionState,
@@ -156,15 +165,161 @@ const mergeLayout = (
     return merged;
 };
 
-const dedupeItems = (items: MediaShelfItem[]) => {
-    const seen = new Set<string>();
-    return items.filter((item) => {
-        if (!item.id) return true;
-        if (seen.has(item.id)) return false;
-        seen.add(item.id);
-        return true;
-    });
+type HomeViewHeaderProps = {
+    heading: { title: string; subtitle: string };
+    headingLoading: boolean;
+    editing: boolean;
+    isEditable: boolean;
+    isSearching: boolean;
+    availableHomeSections: MediaSectionState[];
+    onEditingChange: (next: boolean) => void;
+    onAddSection: (id: string) => void;
+    onRestore: () => void;
 };
+
+function HomeViewHeader({
+    heading,
+    headingLoading,
+    editing,
+    isEditable,
+    isSearching,
+    availableHomeSections,
+    onEditingChange,
+    onAddSection,
+    onRestore,
+}: HomeViewHeaderProps) {
+    return (
+        <Flex
+            justify="between"
+            direction="column"
+            className={clsx('relative min-w-0', isEditable && 'bg-background')}
+            ml="-3"
+            mr="-1"
+            pl="3"
+            pr="1"
+            py="1"
+            mb={isEditable ? '4' : undefined}
+        >
+            <Flex>
+                {!editing && (
+                    <SkeletonText
+                        loading={headingLoading}
+                        preset="media-row"
+                        variant="title"
+                        fullWidth={false}
+                        className="inline-flex"
+                    >
+                        <Text size="3" weight="bold">
+                            {heading.title}
+                        </Text>
+                    </SkeletonText>
+                )}
+
+                {isEditable && (
+                    <Flex align="center" gap="2" className="relative">
+                        <DropdownMenu.Root>
+                            <DropdownMenu.Trigger
+                                onKeyDown={handleMenuTriggerKeyDown}
+                            >
+                                <IconButton
+                                    size="1"
+                                    variant="soft"
+                                    color="green"
+                                    radius="full"
+                                    aria-label="Add section"
+                                    disabled={availableHomeSections.length === 0}
+                                >
+                                    <PlusIcon />
+                                </IconButton>
+                            </DropdownMenu.Trigger>
+                            <DropdownMenu.Content size="1">
+                                {availableHomeSections.length === 0 && (
+                                    <DropdownMenu.Item disabled>
+                                        All sections added
+                                    </DropdownMenu.Item>
+                                )}
+                                {availableHomeSections.map((section) => (
+                                    <DropdownMenu.Item
+                                        key={section.id}
+                                        onSelect={() => onAddSection(section.id)}
+                                    >
+                                        {section.title}
+                                    </DropdownMenu.Item>
+                                ))}
+                            </DropdownMenu.Content>
+                        </DropdownMenu.Root>
+
+                        <AlertDialog.Root>
+                            <AlertDialog.Trigger>
+                                <Button size="1" variant="soft" color="red">
+                                    Restore
+                                </Button>
+                            </AlertDialog.Trigger>
+                            <AlertDialog.Content maxWidth="260px" size="1">
+                                <AlertDialog.Title size="3">
+                                    Revert home layout?
+                                </AlertDialog.Title>
+                                <AlertDialog.Description size="2">
+                                    Restore the default shelves.
+                                </AlertDialog.Description>
+                                <Flex mt="3" justify="end" gap="2">
+                                    <AlertDialog.Cancel>
+                                        <Button variant="soft" size="1">
+                                            Cancel
+                                        </Button>
+                                    </AlertDialog.Cancel>
+                                    <AlertDialog.Action>
+                                        <Button
+                                            variant="soft"
+                                            color="red"
+                                            size="1"
+                                            onClick={onRestore}
+                                            autoFocus
+                                        >
+                                            Revert
+                                        </Button>
+                                    </AlertDialog.Action>
+                                </Flex>
+                            </AlertDialog.Content>
+                        </AlertDialog.Root>
+                    </Flex>
+                )}
+
+                {!isSearching && (
+                    <Flex align="center" gap="1" ml="auto">
+                        <Text size="1" color="gray">
+                            Edit
+                        </Text>
+                        <Switch
+                            size="1"
+                            checked={isEditable}
+                            onCheckedChange={onEditingChange}
+                            aria-label="Toggle customise mode"
+                        />
+                    </Flex>
+                )}
+
+                {isEditable && (
+                    <div className="pointer-events-none absolute top-full right-0 left-0 z-0 h-4 bg-linear-to-b from-background to-transparent" />
+                )}
+            </Flex>
+
+            {!isEditable && (
+                <SkeletonText
+                    loading={headingLoading}
+                    preset="media-row"
+                    variant="subtitle"
+                    fullWidth={false}
+                    className="inline-flex"
+                >
+                    <Text size="1" color="gray">
+                        {heading.subtitle}
+                    </Text>
+                </SkeletonText>
+            )}
+        </Flex>
+    );
+}
 
 export function HomeView({ searchQuery, filters }: Props) {
     const [homeSections, setHomeSections] = useState<MediaSectionState[]>(() =>
@@ -174,12 +329,10 @@ export function HomeView({ searchQuery, filters }: Props) {
         () => buildSearchSections(DEFAULT_SEARCH_TYPES)
     );
     const [editing, setEditing] = useState(false);
-    const [homeStatus, setHomeStatus] = useState<Record<string, SectionStatus>>(
-        {}
-    );
-    const [searchStatus, setSearchStatus] = useState<
-        Record<string, SectionStatus>
-    >({});
+    const [statusByMode, setStatusByMode] = useState<StatusByMode>({
+        home: {},
+        search: {},
+    });
     const [homeRefreshKey, setHomeRefreshKey] = useState(0);
     const [lastAddedId, setLastAddedId] = useState<string | null>(null);
     const { settings } = useSettings();
@@ -190,15 +343,9 @@ export function HomeView({ searchQuery, filters }: Props) {
     const homeSectionsRef = useRef<MediaSectionState[]>(homeSections);
     const homeLoadSeqRef = useRef<Record<string, number>>({});
     const searchLoadSeqRef = useRef(0);
-    const searchOffsetsRef = useRef<Record<SearchType, number | null>>({
-        track: 0,
-        album: 0,
-        artist: 0,
-        playlist: 0,
-        show: 0,
-        episode: 0,
-        audiobook: 0,
-    });
+    const searchOffsetsRef = useRef<Record<SearchType, number | null>>(
+        createSearchOffsets()
+    );
 
     const { heading, loading: headingLoading } = usePersonalisation({
         searchQuery,
@@ -211,8 +358,9 @@ export function HomeView({ searchQuery, filters }: Props) {
     );
 
     const isSearching = searchContext.active;
+    const activeMode: SectionMode = isSearching ? 'search' : 'home';
     const activeSections = isSearching ? searchSections : homeSections;
-    const statusById = isSearching ? searchStatus : homeStatus;
+    const statusById = statusByMode[activeMode];
     const isLoading = activeSections.some(
         (section) => statusById[section.id]?.loading
     );
@@ -237,6 +385,31 @@ export function HomeView({ searchQuery, filters }: Props) {
     useEffect(() => {
         homeSectionsRef.current = homeSections;
     }, [homeSections]);
+
+    const updateStatuses = useCallback(
+        (
+            mode: SectionMode,
+            updater: (
+                previous: Record<string, SectionStatus>
+            ) => Record<string, SectionStatus>
+        ) => {
+            setStatusByMode((previous) => ({
+                ...previous,
+                [mode]: updater(previous[mode]),
+            }));
+        },
+        []
+    );
+
+    const setSectionStatus = useCallback(
+        (mode: SectionMode, sectionId: string, status: SectionStatus) => {
+            updateStatuses(mode, (previous) => ({
+                ...previous,
+                [sectionId]: status,
+            }));
+        },
+        [updateStatuses]
+    );
 
     const setActiveSections = useCallback(
         (updater: (prev: MediaSectionState[]) => MediaSectionState[]) => {
@@ -377,185 +550,18 @@ export function HomeView({ searchQuery, filters }: Props) {
             const seq = (homeLoadSeqRef.current[sectionId] ?? 0) + 1;
             homeLoadSeqRef.current[sectionId] = seq;
             if (options.markLoading !== false) {
-                setHomeStatus((prev) => ({
-                    ...prev,
-                    [sectionId]: { loading: true, error: null },
-                }));
+                setSectionStatus('home', sectionId, {
+                    loading: true,
+                    error: null,
+                });
             }
 
             try {
-                let items: MediaShelfItem[] = [];
-                switch (sectionId) {
-                    case 'recent': {
-                        const recentlyPlayed = await sendSpotifyMessage(
-                            'getRecentlyPlayedTracks',
-                            { limit: 20 }
-                        );
-                        items = dedupeItems(
-                            recentlyPlayed.items.map((entry) =>
-                                trackToItem(entry.track)
-                            )
-                        );
-                        break;
-                    }
-                    case 'top-tracks': {
-                        const topTracks = await sendSpotifyMessage(
-                            'getTopTracks',
-                            { limit: 20, timeRange: 'short_term' }
-                        );
-                        let topTracksItems = topTracks.items.map((track) =>
-                            trackToItem(track)
-                        );
-                        if (topTracksItems.length < 12) {
-                            try {
-                                const fallbacks = await Promise.allSettled([
-                                    sendSpotifyMessage('getTopTracks', {
-                                        limit: 50,
-                                        timeRange: 'medium_term',
-                                    }),
-                                    sendSpotifyMessage('getTopTracks', {
-                                        limit: 50,
-                                        timeRange: 'long_term',
-                                    }),
-                                ]);
-                                const merged = new Map<
-                                    string,
-                                    MediaShelfItem
-                                >();
-                                topTracksItems.forEach((item) => {
-                                    if (item.id) merged.set(item.id, item);
-                                });
-                                fallbacks.forEach((result) => {
-                                    if (result.status !== 'fulfilled') return;
-                                    result.value.items.forEach((track) => {
-                                        const item = trackToItem(track);
-                                        if (item.id && !merged.has(item.id)) {
-                                            merged.set(item.id, item);
-                                        }
-                                    });
-                                });
-                                topTracksItems = Array.from(
-                                    merged.values()
-                                ).slice(0, 50);
-                            } catch (error) {
-                                logError(
-                                    logger,
-                                    'Top tracks fallback failed',
-                                    error
-                                );
-                            }
-                        }
-                        items = topTracksItems;
-                        break;
-                    }
-                    case 'top-artists': {
-                        const topArtists = await sendSpotifyMessage(
-                            'getTopArtists',
-                            { limit: 50, timeRange: 'short_term' }
-                        );
-                        let topArtistsItems = topArtists.items.map((artist) =>
-                            topArtistToItem(artist)
-                        );
-                        if (topArtistsItems.length < 12) {
-                            try {
-                                const fallbacks = await Promise.allSettled([
-                                    sendSpotifyMessage('getTopArtists', {
-                                        limit: 50,
-                                        timeRange: 'medium_term',
-                                    }),
-                                    sendSpotifyMessage('getTopArtists', {
-                                        limit: 50,
-                                        timeRange: 'long_term',
-                                    }),
-                                ]);
-                                const merged = new Map<
-                                    string,
-                                    MediaShelfItem
-                                >();
-                                topArtistsItems.forEach((item) => {
-                                    if (item.id) merged.set(item.id, item);
-                                });
-                                fallbacks.forEach((result) => {
-                                    if (result.status !== 'fulfilled') return;
-                                    result.value.items.forEach((artist) => {
-                                        const item = topArtistToItem(artist);
-                                        if (item.id && !merged.has(item.id)) {
-                                            merged.set(item.id, item);
-                                        }
-                                    });
-                                });
-                                topArtistsItems = Array.from(
-                                    merged.values()
-                                ).slice(0, 50);
-                            } catch (error) {
-                                logError(
-                                    logger,
-                                    'Top artists fallback failed',
-                                    error
-                                );
-                            }
-                        }
-                        items = topArtistsItems;
-                        break;
-                    }
-                    case 'new-releases': {
-                        const newReleases = await sendSpotifyMessage(
-                            'getNewReleases',
-                            { limit: 20 }
-                        );
-                        const albums = newReleases.albums.items
-                            .filter((album) => Boolean(album.id))
-                            .slice(0, 8);
-                        const albumTrackPages = await Promise.allSettled(
-                            albums.map((album) =>
-                                sendSpotifyMessage('getAlbumTracks', {
-                                    id: album.id!,
-                                    limit: Math.min(
-                                        3,
-                                        Math.max(1, album.total_tracks ?? 1)
-                                    ) as 1 | 2 | 3,
-                                })
-                            )
-                        );
-                        items = dedupeItems(
-                            albumTrackPages
-                                .flatMap((result, index) =>
-                                    result.status === 'fulfilled'
-                                        ? result.value.items.map((track) =>
-                                              albumTrackToItem(
-                                                  track,
-                                                  albums[index]
-                                              )
-                                          )
-                                        : []
-                                )
-                                .slice(0, 20)
-                        );
-                        break;
-                    }
-                    case 'user-playlists': {
-                        const userPlaylists = await sendSpotifyMessage(
-                            'getUserPlaylists',
-                            { limit: 20 }
-                        );
-                        items = userPlaylists.items.map((playlist) =>
-                            playlistToItem(playlist)
-                        );
-                        break;
-                    }
-                    case 'saved-tracks': {
-                        const saved = await sendSpotifyMessage(
-                            'getSavedTracks',
-                            { limit: 20 }
-                        );
-                        items = saved.items.map((entry) =>
-                            trackToItem(entry.track)
-                        );
-                        break;
-                    }
-                    default:
-                        return;
-                }
+                const loadItems =
+                    HOME_SECTION_LOADERS[sectionId as HomeSectionId];
+                if (!loadItems) return;
+
+                const items = await loadItems();
 
                 if (homeLoadSeqRef.current[sectionId] !== seq) return;
 
@@ -575,23 +581,20 @@ export function HomeView({ searchQuery, filters }: Props) {
                             : section
                     )
                 );
-                setHomeStatus((prev) => ({
-                    ...prev,
-                    [sectionId]: { loading: false, error: null },
-                }));
+                setSectionStatus('home', sectionId, {
+                    loading: false,
+                    error: null,
+                });
             } catch (error) {
                 if (homeLoadSeqRef.current[sectionId] !== seq) return;
                 logError(logger, `Home section ${sectionId} failed`, error);
-                setHomeStatus((prev) => ({
-                    ...prev,
-                    [sectionId]: {
-                        loading: false,
-                        error: describeRpcError(error),
-                    },
-                }));
+                setSectionStatus('home', sectionId, {
+                    loading: false,
+                    error: describeRpcError(error),
+                });
             }
         },
-        [isSearching]
+        [isSearching, setSectionStatus]
     );
 
     const addSection = useCallback(
@@ -637,22 +640,13 @@ export function HomeView({ searchQuery, filters }: Props) {
                 };
             });
         });
-        setSearchStatus(() => {
-            const next: Record<string, SectionStatus> = {};
-            nextSectionIds.forEach((id) => {
+        updateStatuses('search', () =>
+            nextSectionIds.reduce<Record<string, SectionStatus>>((next, id) => {
                 next[id] = { loading: true, error: null };
-            });
-            return next;
-        });
-        searchOffsetsRef.current = {
-            track: 0,
-            album: 0,
-            artist: 0,
-            playlist: 0,
-            show: 0,
-            episode: 0,
-            audiobook: 0,
-        };
+                return next;
+            }, {})
+        );
+        searchOffsetsRef.current = createSearchOffsets();
 
         void (async () => {
             try {
@@ -695,34 +689,41 @@ export function HomeView({ searchQuery, filters }: Props) {
                         };
                     })
                 );
-                setSearchStatus(
-                    nextSections.reduce<Record<string, SectionStatus>>(
-                        (acc, section) => {
-                            acc[section.id] = { loading: false, error: null };
-                            return acc;
-                        },
-                        {}
-                    )
+                updateStatuses(
+                    'search',
+                    () =>
+                        nextSections.reduce<Record<string, SectionStatus>>(
+                            (acc, section) => {
+                                acc[section.id] = {
+                                    loading: false,
+                                    error: null,
+                                };
+                                return acc;
+                            },
+                            {}
+                        )
                 );
             } catch (error) {
                 if (searchLoadSeqRef.current !== seq) return;
                 logError(logger, 'Search failed', error);
                 const message = describeRpcError(error);
-                setSearchStatus(
-                    nextSections.reduce<Record<string, SectionStatus>>(
-                        (acc, section) => {
-                            acc[section.id] = {
-                                loading: false,
-                                error: message,
-                            };
-                            return acc;
-                        },
-                        {}
-                    )
+                updateStatuses(
+                    'search',
+                    () =>
+                        nextSections.reduce<Record<string, SectionStatus>>(
+                            (acc, section) => {
+                                acc[section.id] = {
+                                    loading: false,
+                                    error: message,
+                                };
+                                return acc;
+                            },
+                            {}
+                        )
                 );
             }
         })();
-    }, [locale, searchContext.query, searchContext.types]);
+    }, [locale, searchContext.query, searchContext.types, updateStatuses]);
 
     const handleSectionRetry = useCallback(
         (sectionId: string) => {
@@ -754,8 +755,8 @@ export function HomeView({ searchQuery, filters }: Props) {
         if (isSearching) return;
         const ids = homeSectionsRef.current.map((section) => section.id);
         if (ids.length === 0) return;
-        setHomeStatus((prev) => {
-            const next: Record<string, SectionStatus> = { ...prev };
+        updateStatuses('home', (previous) => {
+            const next = { ...previous };
             ids.forEach((id) => {
                 next[id] = { loading: true, error: null };
             });
@@ -764,21 +765,17 @@ export function HomeView({ searchQuery, filters }: Props) {
         ids.forEach((id) => {
             void loadHomeSection(id, { markLoading: false });
         });
-    }, [homeRefreshKey, isSearching, loadHomeSection]);
+    }, [homeRefreshKey, isSearching, loadHomeSection, updateStatuses]);
 
     useEffect(() => {
         if (!isSearching || !searchContext.query) {
-            setSearchStatus({});
+            updateStatuses('search', () => ({}));
             return;
         }
         reloadSearch();
-    }, [isSearching, reloadSearch, searchContext.query]);
+    }, [isSearching, reloadSearch, searchContext.query, updateStatuses]);
 
     const isEditable = editing && !isSearching;
-    const alwaysVisibleSections = useMemo(
-        () => new Set(['user-playlists', 'saved-tracks']),
-        []
-    );
     const visibleSections = useMemo(
         () =>
             isEditable || isLoading
@@ -786,150 +783,10 @@ export function HomeView({ searchQuery, filters }: Props) {
                 : activeSections.filter(
                       (section) =>
                           section.items.length > 0 ||
-                          alwaysVisibleSections.has(section.id) ||
+                          ALWAYS_VISIBLE_SECTIONS.has(section.id) ||
                           Boolean(statusById[section.id]?.error)
                   ),
-        [
-            activeSections,
-            alwaysVisibleSections,
-            isEditable,
-            isLoading,
-            statusById,
-        ]
-    );
-
-    const headerContent = (
-        <Flex
-            justify="between"
-            direction="column"
-            className={clsx('relative min-w-0', isEditable && 'bg-background')}
-            ml="-3"
-            mr="-1"
-            pl="3"
-            pr="1"
-            py="1"
-            mb={isEditable ? '4' : undefined}
-        >
-            <Flex>
-                {!editing && (
-                    <SkeletonText
-                        loading={headingLoading}
-                        preset="media-row"
-                        variant="title"
-                        fullWidth={false}
-                        className="inline-flex"
-                    >
-                        <Text size="3" weight="bold">
-                            {heading.title}
-                        </Text>
-                    </SkeletonText>
-                )}
-
-                {isEditable && (
-                    <Flex align="center" gap="2" className="relative">
-                        <DropdownMenu.Root>
-                            <DropdownMenu.Trigger
-                                onKeyDown={handleMenuTriggerKeyDown}
-                            >
-                                <IconButton
-                                    size="1"
-                                    variant="soft"
-                                    color="green"
-                                    radius="full"
-                                    aria-label="Add section"
-                                    disabled={
-                                        availableHomeSections.length === 0
-                                    }
-                                >
-                                    <PlusIcon />
-                                </IconButton>
-                            </DropdownMenu.Trigger>
-                            <DropdownMenu.Content size="1">
-                                {availableHomeSections.length === 0 && (
-                                    <DropdownMenu.Item disabled>
-                                        All sections added
-                                    </DropdownMenu.Item>
-                                )}
-                                {availableHomeSections.map((section) => (
-                                    <DropdownMenu.Item
-                                        key={section.id}
-                                        onSelect={() => addSection(section.id)}
-                                    >
-                                        {section.title}
-                                    </DropdownMenu.Item>
-                                ))}
-                            </DropdownMenu.Content>
-                        </DropdownMenu.Root>
-
-                        <AlertDialog.Root>
-                            <AlertDialog.Trigger>
-                                <Button size="1" variant="soft" color="red">
-                                    Restore
-                                </Button>
-                            </AlertDialog.Trigger>
-                            <AlertDialog.Content maxWidth="260px" size="1">
-                                <AlertDialog.Title size="3">
-                                    Revert home layout?
-                                </AlertDialog.Title>
-                                <AlertDialog.Description size="2">
-                                    Restore the default shelves.
-                                </AlertDialog.Description>
-                                <Flex mt="3" justify="end" gap="2">
-                                    <AlertDialog.Cancel>
-                                        <Button variant="soft" size="1">
-                                            Cancel
-                                        </Button>
-                                    </AlertDialog.Cancel>
-                                    <AlertDialog.Action>
-                                        <Button
-                                            variant="soft"
-                                            color="red"
-                                            size="1"
-                                            onClick={resetSections}
-                                            autoFocus
-                                        >
-                                            Revert
-                                        </Button>
-                                    </AlertDialog.Action>
-                                </Flex>
-                            </AlertDialog.Content>
-                        </AlertDialog.Root>
-                    </Flex>
-                )}
-
-                {!isSearching && (
-                    <Flex align="center" gap="1" ml="auto">
-                        <Text size="1" color="gray">
-                            Edit
-                        </Text>
-                        <Switch
-                            size="1"
-                            checked={isEditable}
-                            onCheckedChange={setEditing}
-                            aria-label="Toggle customise mode"
-                        />
-                    </Flex>
-                )}
-
-                {isEditable && (
-                    <div className="pointer-events-none absolute top-full right-0 left-0 z-0 h-4 bg-linear-to-b from-background to-transparent" />
-                )}
-            </Flex>
-
-            {!isEditable && (
-                <SkeletonText
-                    loading={headingLoading}
-                    preset="media-row"
-                    variant="subtitle"
-                    fullWidth={false}
-                    className="inline-flex"
-                >
-                    <Text size="1" color="gray">
-                        {heading.subtitle}
-                    </Text>
-                </SkeletonText>
-            )}
-        </Flex>
+        [activeSections, isEditable, isLoading, statusById]
     );
 
     return (
@@ -941,7 +798,17 @@ export function HomeView({ searchQuery, filters }: Props) {
                 heightOffset={15}
                 disabled={!isEditable}
             >
-                {headerContent}
+                <HomeViewHeader
+                    heading={heading}
+                    headingLoading={headingLoading}
+                    editing={editing}
+                    isEditable={isEditable}
+                    isSearching={isSearching}
+                    availableHomeSections={availableHomeSections}
+                    onEditingChange={setEditing}
+                    onAddSection={addSection}
+                    onRestore={resetSections}
+                />
             </StickyLayout.Sticky>
 
             <StickyLayout.Body>

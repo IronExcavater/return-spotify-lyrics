@@ -77,6 +77,36 @@ type PlaylistDetailsDraft = {
     isCollaborative: boolean;
 };
 
+type PlaylistDialogsState = {
+    editOpen: boolean;
+    dedupeOpen: boolean;
+    dedupeLoading: boolean;
+    dedupeRemoving: boolean;
+};
+
+type PlaylistUiState = {
+    loading: boolean;
+    saving: boolean;
+    dialogs: PlaylistDialogsState;
+    dedupeItems: PlaylistTrackItem[] | null;
+    detailsDraft: PlaylistDetailsDraft | null;
+};
+
+const DEFAULT_DIALOGS: PlaylistDialogsState = {
+    editOpen: false,
+    dedupeOpen: false,
+    dedupeLoading: false,
+    dedupeRemoving: false,
+};
+
+const INITIAL_UI_STATE: PlaylistUiState = {
+    loading: true,
+    saving: false,
+    dialogs: DEFAULT_DIALOGS,
+    dedupeItems: null,
+    detailsDraft: null,
+};
+
 const toPlaylistDetailsDraft = (
     playlist: Pick<
         Playlist<Track>,
@@ -101,25 +131,46 @@ export function PlaylistView() {
         routePath: '/playlist',
     });
     const [data, setData] = useState<PlaylistViewState | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [saving, setSaving] = useState(false);
-    const [editOpen, setEditOpen] = useState(false);
-    const [dedupeOpen, setDedupeOpen] = useState(false);
-    const [dedupeLoading, setDedupeLoading] = useState(false);
-    const [dedupeRemoving, setDedupeRemoving] = useState(false);
-    const [dedupeItems, setDedupeItems] = useState<PlaylistTrackItem[] | null>(
-        null
+    const [uiState, setUiState] = useState<PlaylistUiState>(INITIAL_UI_STATE);
+    const updateUiState = useCallback(
+        (updater: (previous: PlaylistUiState) => PlaylistUiState) => {
+            setUiState((previous) => {
+                const next = updater(previous);
+                return Object.is(previous, next) ? previous : next;
+            });
+        },
+        []
     );
-    const [detailsDraft, setDetailsDraft] =
-        useState<PlaylistDetailsDraft | null>(null);
+    const patchUiState = useCallback(
+        (patch: Partial<PlaylistUiState>) => {
+            updateUiState((previous) => ({ ...previous, ...patch }));
+        },
+        [updateUiState]
+    );
+    const patchDialogs = useCallback(
+        (patch: Partial<PlaylistDialogsState>) => {
+            updateUiState((previous) => ({
+                ...previous,
+                dialogs: {
+                    ...previous.dialogs,
+                    ...patch,
+                },
+            }));
+        },
+        [updateUiState]
+    );
     const applyPlaylistState = useCallback((nextData: PlaylistViewState) => {
         setData(nextData);
-        setDetailsDraft(toPlaylistDetailsDraft(nextData.playlist));
-    }, []);
+        patchUiState({
+            detailsDraft: toPlaylistDetailsDraft(nextData.playlist),
+        });
+    }, [patchUiState]);
+    const { loading, saving, detailsDraft, dedupeItems, dialogs } = uiState;
+    const { editOpen, dedupeOpen, dedupeLoading, dedupeRemoving } = dialogs;
 
     const loadPlaylist = useCallback(
         async (playlistId: string, nextMarket: Market) => {
-            setLoading(true);
+            patchUiState({ loading: true });
             try {
                 const nextData = await loadPlaylistContentState({
                     playlistId,
@@ -130,23 +181,31 @@ export function PlaylistView() {
             } catch (error) {
                 logError(logger, 'Failed to load playlist', error);
             } finally {
-                setLoading(false);
+                patchUiState({ loading: false });
             }
         },
-        [applyPlaylistState, settings.locale]
+        [applyPlaylistState, patchUiState, settings.locale]
     );
 
     useEffect(() => {
         if (!state?.id || state.kind !== 'playlist') {
             setData(null);
-            setDetailsDraft(null);
-            setDedupeItems(null);
-            setLoading(false);
+            patchUiState({
+                loading: false,
+                saving: false,
+                detailsDraft: null,
+                dedupeItems: null,
+                dialogs: DEFAULT_DIALOGS,
+            });
             return;
         }
         let cancelled = false;
-        setDedupeItems(null);
-        setLoading(true);
+        patchUiState({
+            loading: true,
+            saving: false,
+            dedupeItems: null,
+            dialogs: DEFAULT_DIALOGS,
+        });
         void getCachedPlaylistContentState(state.id).then((cached) => {
             if (cancelled || !cached.entry) return;
             applyPlaylistState(cached.entry);
@@ -155,7 +214,7 @@ export function PlaylistView() {
         return () => {
             cancelled = true;
         };
-    }, [applyPlaylistState, loadPlaylist, market, state?.id, state?.kind]);
+    }, [applyPlaylistState, loadPlaylist, market, patchUiState, state?.id, state?.kind]);
 
     const showInitialLoading = loading && !data;
 
@@ -285,7 +344,7 @@ export function PlaylistView() {
               shortcut: 'E',
               onSelect: () => {
                   resetDetailsDraft();
-                  setEditOpen(true);
+                  patchDialogs({ editOpen: true });
               },
           }
         : null;
@@ -315,20 +374,30 @@ export function PlaylistView() {
 
     const resetDetailsDraft = useCallback(() => {
         if (!data) return;
-        setDetailsDraft({
-            name: data.playlist.name ?? '',
-            description: data.playlist.description ?? '',
-            isPublic:
-                data.playlist.public === null
-                    ? null
-                    : Boolean(data.playlist.public),
-            isCollaborative: Boolean(data.playlist.collaborative),
+        patchUiState({
+            detailsDraft: {
+                name: data.playlist.name ?? '',
+                description: data.playlist.description ?? '',
+                isPublic:
+                    data.playlist.public === null
+                        ? null
+                        : Boolean(data.playlist.public),
+                isCollaborative: Boolean(data.playlist.collaborative),
+            },
         });
-    }, [data]);
+    }, [data, patchUiState]);
+    const updateDetailsDraft = useCallback(
+        (updater: (previous: PlaylistDetailsDraft) => PlaylistDetailsDraft) => {
+            patchUiState({
+                detailsDraft: detailsDraft ? updater(detailsDraft) : null,
+            });
+        },
+        [detailsDraft, patchUiState]
+    );
 
     const handleSaveDetails = useCallback(async () => {
         if (!data || !detailsDraft) return;
-        setSaving(true);
+        patchUiState({ saving: true });
         try {
             await sendSpotifyMessage('changePlaylistDetails', {
                 id: data.playlist.id,
@@ -351,13 +420,13 @@ export function PlaylistView() {
                       }
                     : prev
             );
-            setEditOpen(false);
+            patchDialogs({ editOpen: false });
         } catch (error) {
             logError(logger, 'Failed to save playlist details', error);
         } finally {
-            setSaving(false);
+            patchUiState({ saving: false });
         }
-    }, [data, detailsDraft]);
+    }, [data, detailsDraft, patchDialogs, patchUiState]);
 
     const handleReorder = useCallback(
         (
@@ -428,9 +497,10 @@ export function PlaylistView() {
 
     const openDedupeDialog = useCallback(async () => {
         if (!data || !canEdit || !state?.id) return;
-        setDedupeOpen(true);
-        setDedupeLoading(true);
-        setDedupeItems(data.itemsHasMore ? null : data.items);
+        patchUiState({
+            dedupeItems: data.itemsHasMore ? null : data.items,
+        });
+        patchDialogs({ dedupeOpen: true, dedupeLoading: true });
         try {
             const complete = await ensurePlaylistContentStateLoaded({
                 playlistId: state.id,
@@ -438,14 +508,14 @@ export function PlaylistView() {
                 locale: settings.locale,
                 base: data,
             });
-            setDedupeItems(complete.items);
+            patchUiState({ dedupeItems: complete.items });
         } catch (error) {
             logError(logger, 'Failed to prepare playlist dedupe', error);
-            setDedupeItems(data.items);
+            patchUiState({ dedupeItems: data.items });
         } finally {
-            setDedupeLoading(false);
+            patchDialogs({ dedupeLoading: false });
         }
-    }, [canEdit, data, market, settings.locale, state?.id]);
+    }, [canEdit, data, market, patchDialogs, patchUiState, settings.locale, state?.id]);
 
     const handleRemoveDuplicates = useCallback(
         async (items: PlaylistDedupableItem[]) => {
@@ -462,7 +532,7 @@ export function PlaylistView() {
 
             if (tracksByUri.size === 0) return;
 
-            setDedupeRemoving(true);
+            patchDialogs({ dedupeRemoving: true });
             try {
                 await sendSpotifyMessage('removePlaylistItemsByPosition', {
                     id: data.playlist.id,
@@ -479,8 +549,8 @@ export function PlaylistView() {
                 if (state?.id) {
                     await loadPlaylist(state.id, market);
                 }
-                setDedupeItems(null);
-                setDedupeOpen(false);
+                patchUiState({ dedupeItems: null });
+                patchDialogs({ dedupeOpen: false });
             } catch (error) {
                 logError(
                     logger,
@@ -488,10 +558,10 @@ export function PlaylistView() {
                     error
                 );
             } finally {
-                setDedupeRemoving(false);
+                patchDialogs({ dedupeRemoving: false });
             }
         },
-        [data, loadPlaylist, market, state?.id]
+        [data, loadPlaylist, market, patchDialogs, patchUiState, state?.id]
     );
 
     const getItemActions = useCallback(
@@ -665,7 +735,7 @@ export function PlaylistView() {
 
             <FullPageDialog
                 open={editOpen}
-                onOpenChange={setEditOpen}
+                onOpenChange={(nextOpen) => patchDialogs({ editOpen: nextOpen })}
                 title="Edit playlist"
                 description="Update the title, description, and visibility settings."
             >
@@ -679,14 +749,10 @@ export function PlaylistView() {
                                 value={detailsDraft.name}
                                 disabled={saving}
                                 onChange={(event) =>
-                                    setDetailsDraft((prev) =>
-                                        prev
-                                            ? {
-                                                  ...prev,
-                                                  name: event.target.value,
-                                              }
-                                            : prev
-                                    )
+                                    updateDetailsDraft((previous) => ({
+                                        ...previous,
+                                        name: event.target.value,
+                                    }))
                                 }
                             />
                         </Flex>
@@ -700,15 +766,10 @@ export function PlaylistView() {
                                 resize="vertical"
                                 rows={6}
                                 onChange={(event) =>
-                                    setDetailsDraft((prev) =>
-                                        prev
-                                            ? {
-                                                  ...prev,
-                                                  description:
-                                                      event.target.value,
-                                              }
-                                            : prev
-                                    )
+                                    updateDetailsDraft((previous) => ({
+                                        ...previous,
+                                        description: event.target.value,
+                                    }))
                                 }
                             />
                         </Flex>
@@ -718,14 +779,10 @@ export function PlaylistView() {
                                     checked={detailsDraft.isPublic ?? false}
                                     disabled={saving}
                                     onCheckedChange={(value) =>
-                                        setDetailsDraft((prev) =>
-                                            prev
-                                                ? {
-                                                      ...prev,
-                                                      isPublic: value,
-                                                  }
-                                                : prev
-                                        )
+                                        updateDetailsDraft((previous) => ({
+                                            ...previous,
+                                            isPublic: value,
+                                        }))
                                     }
                                 />
                                 <Text size="2">Public</Text>
@@ -735,14 +792,10 @@ export function PlaylistView() {
                                     checked={detailsDraft.isCollaborative}
                                     disabled={saving}
                                     onCheckedChange={(value) =>
-                                        setDetailsDraft((prev) =>
-                                            prev
-                                                ? {
-                                                      ...prev,
-                                                      isCollaborative: value,
-                                                  }
-                                                : prev
-                                        )
+                                        updateDetailsDraft((previous) => ({
+                                            ...previous,
+                                            isCollaborative: value,
+                                        }))
                                     }
                                 />
                                 <Text size="2">Collaborative</Text>
@@ -755,7 +808,7 @@ export function PlaylistView() {
                                 disabled={saving}
                                 onClick={() => {
                                     resetDetailsDraft();
-                                    setEditOpen(false);
+                                    patchDialogs({ editOpen: false });
                                 }}
                             >
                                 Cancel
@@ -774,7 +827,9 @@ export function PlaylistView() {
             </FullPageDialog>
             <PlaylistDedupeDialog
                 open={dedupeOpen}
-                onOpenChange={setDedupeOpen}
+                onOpenChange={(nextOpen) =>
+                    patchDialogs({ dedupeOpen: nextOpen })
+                }
                 analysis={dedupeAnalysis}
                 loading={dedupeLoading}
                 removing={dedupeRemoving}
