@@ -721,7 +721,7 @@ export function MediaView() {
             />
 
             <StickyLayout.Body>
-                <div className="bg-background absolute -top-2 z-10 h-2 w-full shrink-0" />
+                <div className="absolute -top-2 z-10 h-2 w-full shrink-0 bg-background" />
                 <Flex pl="3" pr="1" direction="column">
                     {activeKind === 'album' && (
                         <>

@@ -135,7 +135,7 @@ export function MediaSectionEditControls({
                 gap="0.5"
                 p="1"
                 className={clsx(
-                    'bg-panel-solid/90 min-h-9 rounded-full shadow-sm backdrop-blur',
+                    'min-h-9 rounded-full bg-panel-solid/90 shadow-sm backdrop-blur',
                     editor.skipEditTransition
                         ? 'transition-none'
                         : 'transition-[opacity,width,transform]',

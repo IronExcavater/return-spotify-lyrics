@@ -57,7 +57,7 @@ export const TextButton = forwardRef<
                 className,
                 isInteractive && forceHover && 'text-accent-11',
                 isInteractive &&
-                    'hover:text-accent-11 focus-visible:text-accent-11 cursor-pointer'
+                    'cursor-pointer hover:text-accent-11 focus-visible:text-accent-11'
             )}
             style={style}
         >
@@ -78,7 +78,7 @@ export const TextButton = forwardRef<
                     className={clsx(
                         'no-underline transition-colors',
                         isInteractive &&
-                            'hover:text-accent-11 focus-visible:text-accent-11 cursor-pointer focus-visible:underline focus-visible:underline-offset-2 focus-visible:outline-none',
+                            'cursor-pointer hover:text-accent-11 focus-visible:text-accent-11 focus-visible:underline focus-visible:underline-offset-2 focus-visible:outline-none',
                         buttonClassName
                     )}
                     aria-disabled={disabled || undefined}
@@ -102,7 +102,7 @@ export const TextButton = forwardRef<
                     className={clsx(
                         'no-underline transition-colors',
                         isInteractive &&
-                            'hover:text-accent-11 focus-visible:text-accent-11 cursor-pointer hover:bg-transparent focus-visible:underline focus-visible:underline-offset-2 focus-visible:outline-none',
+                            'cursor-pointer hover:bg-transparent hover:text-accent-11 focus-visible:text-accent-11 focus-visible:underline focus-visible:underline-offset-2 focus-visible:outline-none',
                         buttonClassName,
                         'border-0 bg-transparent p-0'
                     )}
@@ -117,7 +117,7 @@ export const TextButton = forwardRef<
                     className={clsx(
                         'no-underline transition-colors',
                         isInteractive &&
-                            'hover:text-accent-11 focus-visible:text-accent-11 cursor-pointer focus-visible:underline focus-visible:underline-offset-2 focus-visible:outline-none',
+                            'cursor-pointer hover:text-accent-11 focus-visible:text-accent-11 focus-visible:underline focus-visible:underline-offset-2 focus-visible:outline-none',
                         buttonClassName
                     )}
                     aria-disabled={disabled || undefined}

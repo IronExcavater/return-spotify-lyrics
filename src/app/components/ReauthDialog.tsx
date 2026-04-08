@@ -33,7 +33,7 @@ const renderScopeChip = (scope: string) => {
         <Text
             key={scope}
             size="1"
-            className="text-gray-11 rounded-full bg-white/5 px-2 py-0.5 transition-colors hover:bg-white/8"
+            className="rounded-full bg-white/5 px-2 py-0.5 text-gray-11 transition-colors hover:bg-white/8"
         >
             {scope}
         </Text>

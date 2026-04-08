@@ -52,7 +52,7 @@ export function SegmentedControl<Key extends string>({
                 <span
                     aria-hidden="true"
                     data-orientation={orientation}
-                    className="bg-accentA-4 pointer-events-none absolute rounded-full transition-transform"
+                    className="pointer-events-none absolute rounded-full bg-accentA-4 transition-transform"
                     style={{
                         top: 0,
                         left: 0,

@@ -82,7 +82,7 @@ export function MediaAlbum({
                 className={clsx(
                     'w-full min-w-0 self-stretch text-[12px]',
                     canClick &&
-                        'text-gray-12 hover:text-accent-11 cursor-pointer'
+                        'cursor-pointer text-gray-12 hover:text-accent-11'
                 )}
                 onClick={() => {
                     if (!canClick) return;
@@ -182,7 +182,7 @@ export function MediaAlbum({
                                         onClick={(event) =>
                                             event.stopPropagation()
                                         }
-                                        className="bg-panel-solid/10! pointer-events-none m-1! ml-auto! self-start! opacity-0! backdrop-blur-[2px]! transition-opacity group-hover:pointer-events-auto group-hover:opacity-100! hover:bg-(--accent-11)/10! hover:backdrop-blur-xs! data-[state=open]:pointer-events-auto data-[state=open]:opacity-100!"
+                                        className="pointer-events-none m-1! ml-auto! self-start! bg-panel-solid/10! opacity-0! backdrop-blur-[2px]! transition-opacity group-hover:pointer-events-auto group-hover:opacity-100! hover:bg-(--accent-11)/10! hover:backdrop-blur-xs! data-[state=open]:pointer-events-auto data-[state=open]:opacity-100!"
                                     >
                                         <DotsHorizontalIcon />
                                     </IconButton>

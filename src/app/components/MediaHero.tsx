@@ -127,7 +127,7 @@ export function MediaHero({
             zoom={1.06}
             showGradient
         >
-            <div className="from-background pointer-events-none absolute inset-y-0 right-0 z-10 w-40 bg-linear-to-l to-transparent" />
+            <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-40 bg-linear-to-l from-background to-transparent" />
             <Flex
                 align="center"
                 gap="2"
@@ -160,7 +160,7 @@ export function MediaHero({
                                 className="pointer-events-none absolute inset-0"
                             >
                                 <Flex
-                                    className="bg-panel-solid/10 rounded-full text-white opacity-0 backdrop-blur-[2px] transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
+                                    className="rounded-full bg-panel-solid/10 text-white opacity-0 backdrop-blur-[2px] transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
                                     p="1"
                                 >
                                     <PlayIcon />

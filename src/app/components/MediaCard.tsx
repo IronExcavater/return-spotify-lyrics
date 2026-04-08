@@ -128,8 +128,8 @@ export function MediaCard({
                                             ? 'm-2!'
                                             : 'm-1!',
                                         contextMenuDisabled
-                                            ? 'bg-panel-solid/10! pointer-events-none ml-auto! self-start! opacity-0! backdrop-blur-[2px]! transition-opacity group-focus-within:opacity-100! group-hover:opacity-100! group-focus-visible:opacity-100! data-[state=open]:opacity-100!'
-                                            : 'bg-panel-solid/10! pointer-events-none ml-auto! self-start! opacity-0! backdrop-blur-[2px]! transition-opacity group-focus-within:pointer-events-auto group-focus-within:opacity-100! group-hover:pointer-events-auto group-hover:opacity-100! group-focus-visible:pointer-events-auto group-focus-visible:opacity-100! hover:bg-(--accent-11)/10! hover:backdrop-blur-xs! data-[state=open]:pointer-events-auto data-[state=open]:opacity-100!'
+                                            ? 'pointer-events-none ml-auto! self-start! bg-panel-solid/10! opacity-0! backdrop-blur-[2px]! transition-opacity group-focus-within:opacity-100! group-hover:opacity-100! group-focus-visible:opacity-100! data-[state=open]:opacity-100!'
+                                            : 'pointer-events-none ml-auto! self-start! bg-panel-solid/10! opacity-0! backdrop-blur-[2px]! transition-opacity group-focus-within:pointer-events-auto group-focus-within:opacity-100! group-hover:pointer-events-auto group-hover:opacity-100! group-focus-visible:pointer-events-auto group-focus-visible:opacity-100! hover:bg-(--accent-11)/10! hover:backdrop-blur-xs! data-[state=open]:pointer-events-auto data-[state=open]:opacity-100!'
                                     )}
                                 >
                                     <DotsHorizontalIcon />

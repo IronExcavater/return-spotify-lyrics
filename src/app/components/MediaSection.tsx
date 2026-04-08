@@ -136,7 +136,7 @@ function MediaSectionImpl({
         <div
             ref={headerLayout.sectionRef}
             className={clsx(
-                'group/section rounded-2 bg-background relative isolate transition-all',
+                'group/section relative isolate rounded-2 bg-background transition-all',
                 editing && dragging && 'z-20',
                 className
             )}
@@ -144,7 +144,7 @@ function MediaSectionImpl({
         >
             <div
                 aria-hidden="true"
-                className="bg-background pointer-events-none absolute -inset-1 -z-10 rounded-[calc(var(--radius-3)+4px)]"
+                className="pointer-events-none absolute -inset-1 -z-10 rounded-[calc(var(--radius-3)+4px)] bg-background"
             />
             <div className="pointer-events-none absolute -z-10 opacity-0">
                 <Flex
@@ -202,7 +202,7 @@ function MediaSectionImpl({
                     >
                         <div
                             className={clsx(
-                                'rounded-2 bg-panel-solid/85 text-1 text-gray-12 flex max-w-65 flex-col items-center gap-2 px-4 py-3 text-center shadow-sm backdrop-blur transition-[opacity,transform] duration-200',
+                                'flex max-w-65 flex-col items-center gap-2 rounded-2 bg-panel-solid/85 px-4 py-3 text-center text-1 text-gray-12 shadow-sm backdrop-blur transition-[opacity,transform] duration-200',
                                 errorMessage
                                     ? 'translate-y-0 opacity-100'
                                     : '-translate-y-1 opacity-0'
@@ -229,9 +229,9 @@ function MediaSectionImpl({
                         <Flex
                             align="center"
                             gap="1"
-                            className="bg-panel-solid/90 text-1 text-gray-12 rounded-full px-2 py-1.5 shadow-sm backdrop-blur"
+                            className="rounded-full bg-panel-solid/90 px-2 py-1.5 text-1 text-gray-12 shadow-sm backdrop-blur"
                         >
-                            <span className="bg-accent-9 h-2 w-2 animate-pulse rounded-full" />
+                            <span className="h-2 w-2 animate-pulse rounded-full bg-accent-9" />
                             Loading more
                         </Flex>
                     </div>

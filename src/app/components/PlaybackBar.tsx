@@ -217,7 +217,7 @@ export function PlaybackBar({
                                     className="pointer-events-none absolute inset-0"
                                 >
                                     <Flex
-                                        className="bg-panel-solid/10 rounded-full text-white opacity-0 backdrop-blur-[2px] transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
+                                        className="rounded-full bg-panel-solid/10 text-white opacity-0 backdrop-blur-[2px] transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
                                         p="1"
                                     >
                                         {isPlaying ? (

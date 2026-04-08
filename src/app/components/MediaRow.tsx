@@ -168,7 +168,7 @@ export function MediaRow({
                 setIsTitleProxyHovered(false);
             }}
             className={clsx(
-                'group rounded-2 bg-background w-full min-w-0',
+                'group w-full min-w-0 rounded-2 bg-background',
                 handleRowClick && 'cursor-pointer',
                 className
             )}

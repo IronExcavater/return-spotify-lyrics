@@ -82,14 +82,14 @@ export function MediaGroupShelf({
 
             <div
                 className={clsx(
-                    'from-panel-solid via-panel-solid/70 pointer-events-none absolute top-0 right-0 left-0 z-10 h-3 bg-linear-to-b to-transparent transition-opacity',
+                    'pointer-events-none absolute top-0 right-0 left-0 z-10 h-3 bg-linear-to-b from-panel-solid via-panel-solid/70 to-transparent transition-opacity',
                     fade.start ? 'opacity-100' : 'opacity-0'
                 )}
                 aria-hidden
             />
             <div
                 className={clsx(
-                    'from-panel-solid via-panel-solid/70 pointer-events-none absolute right-0 bottom-0 left-0 z-10 h-3 bg-linear-to-t to-transparent transition-opacity',
+                    'pointer-events-none absolute right-0 bottom-0 left-0 z-10 h-3 bg-linear-to-t from-panel-solid via-panel-solid/70 to-transparent transition-opacity',
                     fade.end ? 'opacity-100' : 'opacity-0'
                 )}
                 aria-hidden

@@ -522,10 +522,10 @@ export function Pill({
             onKeyDown={handleContainerKeyDown}
             onBlur={handleBlur}
             className={clsx(
-                'group bg-grayA-2 text-gray-12 ring-grayA-6 max-w-full min-w-0 shrink items-center rounded-full p-0.5 ring-1 transition-colors',
-                'focus-within:ring-accent-8 hover:ring-accent-8 focus-within:ring-2 hover:ring-2 focus-visible:outline-none',
+                'group max-w-full min-w-0 shrink items-center rounded-full bg-grayA-2 p-0.5 text-gray-12 ring-1 ring-grayA-6 transition-colors',
+                'focus-within:ring-2 focus-within:ring-accent-8 hover:ring-2 hover:ring-accent-8 focus-visible:outline-none',
                 editable &&
-                    'focus-within:border-accent-8 hover:border-accent-8 cursor-text',
+                    'cursor-text focus-within:border-accent-8 hover:border-accent-8',
                 className
             )}
         >
@@ -605,7 +605,7 @@ export function Pill({
                                     variant="ghost"
                                     radius="full"
                                     color="gray"
-                                    className="bg-grayA-3 text-gray-12 hover:bg-grayA-4 h-4! min-h-0 w-4! min-w-0 shrink-0"
+                                    className="h-4! min-h-0 w-4! min-w-0 shrink-0 bg-grayA-3 text-gray-12 hover:bg-grayA-4"
                                     onClick={(event) => {
                                         event.stopPropagation();
                                         handleRemoveRange();
@@ -621,7 +621,7 @@ export function Pill({
                                 variant="ghost"
                                 radius="full"
                                 color="gray"
-                                className="bg-grayA-3 text-gray-12 hover:bg-grayA-4 h-4! min-h-0 w-4! min-w-0 shrink-0"
+                                className="h-4! min-h-0 w-4! min-w-0 shrink-0 bg-grayA-3 text-gray-12 hover:bg-grayA-4"
                                 onClick={(event) => {
                                     event.stopPropagation();
                                     handleAddRange();

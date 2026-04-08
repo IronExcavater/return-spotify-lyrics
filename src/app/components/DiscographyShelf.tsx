@@ -202,7 +202,7 @@ export function DiscographyShelf({
                     className="flex-none"
                     style={{ width: markerWidth || undefined }}
                 >
-                    <span className="bg-accent-9 relative z-1 h-2 w-2 rounded-full" />
+                    <span className="relative z-1 h-2 w-2 rounded-full bg-accent-9" />
                     {fullDate ? (
                         <Tooltip content={fullDate}>
                             <Text
@@ -285,7 +285,7 @@ export function DiscographyShelf({
                 >
                     <Flex direction="column" className="min-w-max">
                         <Flex className="relative min-w-max" mb="2" gap="2">
-                            <div className="bg-grayA-4 pointer-events-none absolute top-1 right-2 left-2 h-px" />
+                            <div className="pointer-events-none absolute top-1 right-2 left-2 h-px bg-grayA-4" />
                             {renderTimelineMarkers()}
                         </Flex>
                         <Flex gap="2" className="min-w-max">
@@ -309,7 +309,7 @@ export function DiscographyShelf({
                                             index === activeIndex ? 0 : -1
                                         }
                                         aria-disabled={!canActivate}
-                                        className="rounded-2 focus-visible:ring-accent-9 focus-visible:ring-offset-background shrink-0 focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
+                                        className="shrink-0 rounded-2 focus-visible:ring-2 focus-visible:ring-accent-9 focus-visible:ring-offset-1 focus-visible:ring-offset-background focus-visible:outline-none"
                                         style={
                                             entry.tracks.length > 1
                                                 ? { width: resolvedCardWidth }
@@ -347,14 +347,14 @@ export function DiscographyShelf({
                 </Flex>
                 <div
                     className={clsx(
-                        'from-background via-background/60 pointer-events-none absolute top-0 left-0 z-10 h-full w-2 bg-linear-to-r to-transparent transition-opacity',
+                        'pointer-events-none absolute top-0 left-0 z-10 h-full w-2 bg-linear-to-r from-background via-background/60 to-transparent transition-opacity',
                         fade.start ? 'opacity-100' : 'opacity-0'
                     )}
                     aria-hidden
                 />
                 <div
                     className={clsx(
-                        'from-background via-background/60 pointer-events-none absolute top-0 right-0 z-10 h-full w-2 bg-linear-to-l to-transparent transition-opacity',
+                        'pointer-events-none absolute top-0 right-0 z-10 h-full w-2 bg-linear-to-l from-background via-background/60 to-transparent transition-opacity',
                         fade.end ? 'opacity-100' : 'opacity-0'
                     )}
                     aria-hidden

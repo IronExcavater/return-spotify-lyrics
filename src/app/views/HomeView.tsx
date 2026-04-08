@@ -901,7 +901,7 @@ export function HomeView({ searchQuery, filters }: Props) {
                 )}
 
                 {isEditable && (
-                    <div className="from-background pointer-events-none absolute top-full right-0 left-0 z-0 h-4 bg-linear-to-b to-transparent" />
+                    <div className="pointer-events-none absolute top-full right-0 left-0 z-0 h-4 bg-linear-to-b from-background to-transparent" />
                 )}
             </Flex>
 
@@ -923,7 +923,7 @@ export function HomeView({ searchQuery, filters }: Props) {
 
     return (
         <StickyLayout.Root className="no-overflow-anchor scrollbar-gutter-stable relative flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
-            <div className="bg-background z-30 h-2 shrink-0" />
+            <div className="z-30 h-2 shrink-0 bg-background" />
             <StickyLayout.Sticky
                 order={0}
                 className="z-30 pr-1 pl-3"

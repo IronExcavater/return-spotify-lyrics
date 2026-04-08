@@ -546,14 +546,14 @@ export function MediaShelf({
                 <>
                     <div
                         className={clsx(
-                            'from-background via-background/60 pointer-events-none absolute top-0 left-0 z-10 h-full w-2 bg-linear-to-r to-transparent transition-opacity',
+                            'pointer-events-none absolute top-0 left-0 z-10 h-full w-2 bg-linear-to-r from-background via-background/60 to-transparent transition-opacity',
                             fade.start ? 'opacity-100' : 'opacity-0'
                         )}
                         aria-hidden
                     />
                     <div
                         className={clsx(
-                            'from-background via-background/60 pointer-events-none absolute top-0 right-0 z-10 h-full w-2 bg-linear-to-l to-transparent transition-opacity',
+                            'pointer-events-none absolute top-0 right-0 z-10 h-full w-2 bg-linear-to-l from-background via-background/60 to-transparent transition-opacity',
                             fade.end ? 'opacity-100' : 'opacity-0'
                         )}
                         aria-hidden
@@ -565,14 +565,14 @@ export function MediaShelf({
             <>
                 <div
                     className={clsx(
-                        'from-background via-background/60 pointer-events-none absolute top-0 right-0 left-0 z-10 h-2 bg-linear-to-b to-transparent transition-opacity',
+                        'pointer-events-none absolute top-0 right-0 left-0 z-10 h-2 bg-linear-to-b from-background via-background/60 to-transparent transition-opacity',
                         fade.start ? 'opacity-100' : 'opacity-0'
                     )}
                     aria-hidden
                 />
                 <div
                     className={clsx(
-                        'from-background via-background/60 pointer-events-none absolute right-0 bottom-0 left-0 z-10 h-2 bg-linear-to-t to-transparent transition-opacity',
+                        'pointer-events-none absolute right-0 bottom-0 left-0 z-10 h-2 bg-linear-to-t from-background via-background/60 to-transparent transition-opacity',
                         fade.end ? 'opacity-100' : 'opacity-0'
                     )}
                     aria-hidden
@@ -817,7 +817,7 @@ export function MediaShelf({
                     aria-disabled={!canActivate}
                     data-media-shelf-item="true"
                     className={clsx(
-                        'group rounded-2 bg-background focus-visible:ring-accent-9 focus-visible:ring-offset-background focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none',
+                        'group rounded-2 bg-background focus-visible:ring-2 focus-visible:ring-accent-9 focus-visible:ring-offset-1 focus-visible:ring-offset-background focus-visible:outline-none',
                         dragProvided &&
                             loaded &&
                             'cursor-grab active:cursor-grabbing'

@@ -28,7 +28,7 @@ export function Toast({ toast }: Props) {
             align="center"
             gap="2"
             className={clsx(
-                'border-grayA-6 bg-panel-solid/60 pointer-events-auto rounded-xl border px-3 py-2 backdrop-blur transition ease-[cubic-bezier(0.16,1,0.3,1)]',
+                'pointer-events-auto rounded-xl border border-grayA-6 bg-panel-solid/60 px-3 py-2 backdrop-blur transition ease-[cubic-bezier(0.16,1,0.3,1)]',
                 isOpen ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
             )}
         >

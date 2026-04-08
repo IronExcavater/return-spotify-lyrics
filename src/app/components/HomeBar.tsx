@@ -224,14 +224,14 @@ export function HomeBar({
                     </Flex>
                     <div
                         className={clsx(
-                            'from-background via-background/60 pointer-events-none absolute top-2 left-0 h-[calc(100%-0.5rem)] w-2 bg-linear-to-r to-transparent transition-opacity',
+                            'pointer-events-none absolute top-2 left-0 h-[calc(100%-0.5rem)] w-2 bg-linear-to-r from-background via-background/60 to-transparent transition-opacity',
                             filterFade.start ? 'opacity-100' : 'opacity-0'
                         )}
                         aria-hidden
                     />
                     <div
                         className={clsx(
-                            'from-background via-background/60 pointer-events-none absolute top-2 right-0 h-[calc(100%-0.5rem)] w-2 bg-linear-to-l to-transparent transition-opacity',
+                            'pointer-events-none absolute top-2 right-0 h-[calc(100%-0.5rem)] w-2 bg-linear-to-l from-background via-background/60 to-transparent transition-opacity',
                             filterFade.end ? 'opacity-100' : 'opacity-0'
                         )}
                         aria-hidden
