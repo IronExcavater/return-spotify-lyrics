@@ -124,6 +124,21 @@ const getLoadingPlaceholderCount = ({
     );
 };
 
+const groupItemsByColumn = (
+    items: MediaShelfItem[],
+    itemsPerColumn: number
+) => {
+    const grouped: MediaShelfItem[][] = [];
+
+    items.forEach((item, index) => {
+        const columnIndex = Math.floor(index / itemsPerColumn);
+        if (!grouped[columnIndex]) grouped[columnIndex] = [];
+        grouped[columnIndex].push(item);
+    });
+
+    return grouped;
+};
+
 function getScrollParent(node: HTMLElement | null): HTMLElement | Window {
     let current: HTMLElement | null = node;
     while (current) {
@@ -222,15 +237,11 @@ export function MediaShelf({
     ]);
     const routeHistory = useHistory();
     const columns = useMemo(() => {
-        if (orientation !== 'horizontal' || itemsPerColumn <= 0)
+        if (orientation !== 'horizontal' || itemsPerColumn <= 0) {
             return [visibleItems];
-        const grouped: MediaShelfItem[][] = [];
-        visibleItems.forEach((item, idx) => {
-            const colIndex = Math.floor(idx / itemsPerColumn);
-            if (!grouped[colIndex]) grouped[colIndex] = [];
-            grouped[colIndex].push(item);
-        });
-        return grouped;
+        }
+
+        return groupItemsByColumn(visibleItems, itemsPerColumn);
     }, [visibleItems, orientation, itemsPerColumn]);
     const effectiveColumnWidth =
         variant === 'list' ? (columnWidth ?? 300) : undefined;

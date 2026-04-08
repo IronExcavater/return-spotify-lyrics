@@ -12,6 +12,7 @@ import {
     Tooltip,
 } from '@radix-ui/themes';
 import { UserProfile } from '@spotify/web-api-ts-sdk';
+
 import { resolveLocale } from '../../shared/locale';
 import {
     SearchList,
@@ -20,6 +21,11 @@ import {
 } from '../components/SearchList';
 import { SkeletonText } from '../components/SkeletonText';
 import { TextButton } from '../components/TextButton';
+import {
+    DEFAULT_LOCALE_OPTION,
+    filterLocaleOptions,
+    findLocaleOption,
+} from '../data/localeOptions';
 import {
     MEDIA_CACHE_KEYS,
     type ProfileCacheEntry,
@@ -33,49 +39,15 @@ const relativeFormatter = new Intl.RelativeTimeFormat(undefined, {
     numeric: 'auto',
 });
 
-const LOCALE_OPTIONS = [
-    { label: 'System', locale: 'system' },
-    { label: 'United States', locale: 'en-US' },
-    { label: 'United Kingdom', locale: 'en-GB' },
-    { label: 'Australia', locale: 'en-AU' },
-    { label: 'Canada', locale: 'en-CA' },
-    { label: 'Ireland', locale: 'en-IE' },
-    { label: 'New Zealand', locale: 'en-NZ' },
-    { label: 'South Africa', locale: 'en-ZA' },
-    { label: 'France', locale: 'fr-FR' },
-    { label: 'Germany', locale: 'de-DE' },
-    { label: 'Italy', locale: 'it-IT' },
-    { label: 'Spain', locale: 'es-ES' },
-    { label: 'Portugal', locale: 'pt-PT' },
-    { label: 'Brazil', locale: 'pt-BR' },
-    { label: 'Netherlands', locale: 'nl-NL' },
-    { label: 'Sweden', locale: 'sv-SE' },
-    { label: 'Norway', locale: 'nb-NO' },
-    { label: 'Denmark', locale: 'da-DK' },
-    { label: 'Finland', locale: 'fi-FI' },
-    { label: 'Poland', locale: 'pl-PL' },
-    { label: 'Czech Republic', locale: 'cs-CZ' },
-    { label: 'Hungary', locale: 'hu-HU' },
-    { label: 'Romania', locale: 'ro-RO' },
-    { label: 'Greece', locale: 'el-GR' },
-    { label: 'Turkey', locale: 'tr-TR' },
-    { label: 'Russia', locale: 'ru-RU' },
-    { label: 'Ukraine', locale: 'uk-UA' },
-    { label: 'Israel', locale: 'he-IL' },
-    { label: 'Saudi Arabia', locale: 'ar-SA' },
-    { label: 'India', locale: 'hi-IN' },
-    { label: 'Thailand', locale: 'th-TH' },
-    { label: 'Vietnam', locale: 'vi-VN' },
-    { label: 'Indonesia', locale: 'id-ID' },
-    { label: 'Malaysia', locale: 'ms-MY' },
-    { label: 'Japan', locale: 'ja-JP' },
-    { label: 'South Korea', locale: 'ko-KR' },
-    { label: 'China', locale: 'zh-CN' },
-    { label: 'Taiwan', locale: 'zh-TW' },
-] as const;
+type ProfileStat = {
+    label: string;
+    value: string;
+    hint?: string;
+};
 
-function formatRelative(timestamp?: number, now?: number) {
+const formatRelative = (timestamp?: number, now?: number) => {
     if (!timestamp || !now) return undefined;
+
     const diff = timestamp - now;
     const ranges: [Intl.RelativeTimeFormatUnit, number][] = [
         ['day', 86400000],
@@ -85,20 +57,67 @@ function formatRelative(timestamp?: number, now?: number) {
     ];
 
     for (const [unit, ms] of ranges) {
-        if (Math.abs(diff) >= ms || unit === 'second') {
-            return relativeFormatter.format(Math.round(diff / ms), unit);
-        }
+        if (Math.abs(diff) < ms && unit !== 'second') continue;
+        return relativeFormatter.format(Math.round(diff / ms), unit);
     }
 
     return undefined;
-}
+};
 
-function formatAbsolute(
+const formatAbsolute = (
     timestamp: number | undefined,
     formatter: Intl.DateTimeFormat
-) {
-    return timestamp ? formatter.format(new Date(timestamp)) : undefined;
-}
+) => (timestamp ? formatter.format(new Date(timestamp)) : undefined);
+
+const buildStats = ({
+    absoluteFormatter,
+    connection,
+    followers,
+    fullDateFormatter,
+    relativeNow,
+}: {
+    absoluteFormatter: Intl.DateTimeFormat;
+    connection?: SpotifyConnectionMeta;
+    followers?: number;
+    fullDateFormatter: Intl.DateTimeFormat;
+    relativeNow: number;
+}): ProfileStat[] => {
+    const connectedRelative = formatRelative(
+        connection?.connectedAt,
+        relativeNow
+    );
+    const lastSyncRelative = formatRelative(
+        connection?.lastActiveAt,
+        relativeNow
+    );
+
+    return [
+        {
+            label: 'Followers',
+            value: followers != null ? followers.toLocaleString() : '\u2014',
+        },
+        {
+            label: 'Signed in',
+            value:
+                connectedRelative ??
+                formatAbsolute(connection?.connectedAt, absoluteFormatter) ??
+                '\u2014',
+            hint: connection?.connectedAt
+                ? formatAbsolute(connection.connectedAt, fullDateFormatter)
+                : undefined,
+        },
+        {
+            label: 'Last update',
+            value:
+                lastSyncRelative ??
+                formatAbsolute(connection?.lastActiveAt, absoluteFormatter) ??
+                '\u2014',
+            hint: connection?.lastActiveAt
+                ? formatAbsolute(connection.lastActiveAt, fullDateFormatter)
+                : undefined,
+        },
+    ];
+};
 
 interface Props {
     profile: UserProfile | undefined;
@@ -110,15 +129,18 @@ export function ProfileView({ profile, onLogout, connection }: Props) {
     const cachedProfile = useMediaCacheEntry<ProfileCacheEntry>(
         MEDIA_CACHE_KEYS.profile
     );
+    const { settings, updateSettings } = useSettings();
+
     const loading = !profile && !cachedProfile;
     const [relativeNow, setRelativeNow] = useState(Date.now());
     const [localeSearch, setLocaleSearch] = useState('');
     const [localeOpen, setLocaleOpen] = useState(false);
-    const { settings, updateSettings } = useSettings();
+
     const localeDropdown = useDropdownSurface({
         onRequestClose: () => setLocaleOpen(false),
         onClosed: () => setLocaleSearch(''),
     });
+
     const resolvedLocale = resolveLocale(settings.locale);
     const absoluteFormatter = useMemo(
         () =>
@@ -145,91 +167,59 @@ export function ProfileView({ profile, onLogout, connection }: Props) {
         return () => window.clearInterval(interval);
     }, []);
 
-    const id = profile?.id ?? cachedProfile?.id;
-    const name = profile?.display_name ?? cachedProfile?.name;
-    const image = useCachedImage(
-        profile?.images?.[0]?.url ?? cachedProfile?.imageUrl
+    const resolvedProfile = {
+        id: profile?.id ?? cachedProfile?.id,
+        name: profile?.display_name ?? cachedProfile?.name,
+        imageUrl: profile?.images?.[0]?.url ?? cachedProfile?.imageUrl,
+        link: profile?.external_urls?.spotify ?? cachedProfile?.externalUrl,
+        followers: profile?.followers?.total,
+    };
+
+    const image = useCachedImage(resolvedProfile.imageUrl);
+    const stats = useMemo(
+        () =>
+            buildStats({
+                absoluteFormatter,
+                connection,
+                followers: resolvedProfile.followers,
+                fullDateFormatter,
+                relativeNow,
+            }),
+        [
+            absoluteFormatter,
+            connection,
+            fullDateFormatter,
+            relativeNow,
+            resolvedProfile.followers,
+        ]
     );
-    const link = profile?.external_urls?.spotify ?? cachedProfile?.externalUrl;
-    const followers = profile?.followers?.total;
-
-    const stats = useMemo(() => {
-        const connectedRelative = formatRelative(
-            connection?.connectedAt,
-            relativeNow
-        );
-        const lastSyncRelative = formatRelative(
-            connection?.lastActiveAt,
-            relativeNow
-        );
-
-        return [
-            {
-                label: 'Followers',
-                value: followers != null ? followers.toLocaleString() : '—',
-            },
-            {
-                label: 'Signed in',
-                value:
-                    connectedRelative ??
-                    formatAbsolute(
-                        connection?.connectedAt,
-                        absoluteFormatter
-                    ) ??
-                    '—',
-                hint: connection?.connectedAt
-                    ? formatAbsolute(connection.connectedAt, fullDateFormatter)
-                    : undefined,
-            },
-            {
-                label: 'Last update',
-                value:
-                    lastSyncRelative ??
-                    formatAbsolute(
-                        connection?.lastActiveAt,
-                        absoluteFormatter
-                    ) ??
-                    '—',
-                hint: connection?.lastActiveAt
-                    ? formatAbsolute(connection.lastActiveAt, fullDateFormatter)
-                    : undefined,
-            },
-        ];
-    }, [
-        absoluteFormatter,
-        connection?.connectedAt,
-        connection?.lastActiveAt,
-        followers,
-        fullDateFormatter,
-        relativeNow,
-    ]);
-
-    const localeOptions = useMemo(() => {
-        const query = localeSearch.trim().toLowerCase();
-        if (!query) return LOCALE_OPTIONS;
-        return LOCALE_OPTIONS.filter(
-            (option) =>
-                option.label.toLowerCase().includes(query) ||
-                option.locale.toLowerCase().includes(query)
-        );
-    }, [localeSearch]);
-
-    const activeLocale =
-        LOCALE_OPTIONS.find((option) => option.locale === settings.locale) ??
-        LOCALE_OPTIONS[0];
+    const localeOptions = useMemo(
+        () => filterLocaleOptions(localeSearch),
+        [localeSearch]
+    );
+    const activeLocale = findLocaleOption(settings.locale);
 
     return (
         <Flex direction="column" justify="center">
             <Flex p="3" direction="column" gap="2">
-                {/* Avatar + display name */}
                 <Flex align="center" justify="between" gap="3">
                     <Flex
                         gap="3"
                         align="center"
                         onClick={
-                            link ? () => window.open(link, '_blank') : undefined
+                            resolvedProfile.link
+                                ? () =>
+                                      window.open(
+                                          resolvedProfile.link,
+                                          '_blank'
+                                      )
+                                : undefined
                         }
-                        className={link ? 'group cursor-pointer' : 'group'}
+                        className={
+                            resolvedProfile.link
+                                ? 'group cursor-pointer'
+                                : 'group'
+                        }
                     >
                         <Avatar
                             radius="full"
@@ -250,7 +240,7 @@ export function ProfileView({ profile, onLogout, connection }: Props) {
                                     interactive
                                     className="group-hover:text-accent-11"
                                 >
-                                    {name}
+                                    {resolvedProfile.name}
                                 </TextButton>
                             </SkeletonText>
                             <SkeletonText
@@ -265,7 +255,7 @@ export function ProfileView({ profile, onLogout, connection }: Props) {
                                     interactive
                                     className="group-hover:text-accent-11"
                                 >
-                                    @{id}
+                                    @{resolvedProfile.id}
                                 </TextButton>
                             </SkeletonText>
                         </Flex>
@@ -362,7 +352,7 @@ export function ProfileView({ profile, onLogout, connection }: Props) {
                             </Flex>
                             <Switch
                                 size="1"
-                                checked={!!settings.reducedMotion}
+                                checked={Boolean(settings.reducedMotion)}
                                 onCheckedChange={(checked) =>
                                     updateSettings({ reducedMotion: checked })
                                 }
@@ -399,7 +389,8 @@ export function ProfileView({ profile, onLogout, connection }: Props) {
                                         variant="soft"
                                         className="max-w-30 truncate"
                                     >
-                                        {activeLocale.label}
+                                        {activeLocale.label ??
+                                            DEFAULT_LOCALE_OPTION.label}
                                     </Button>
                                 </Popover.Trigger>
                                 <Popover.Content

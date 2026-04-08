@@ -105,6 +105,71 @@ const alignRangeForMode = (
 const rangeToDateString = (range: DateRangeValue) =>
     range.from ?? range.to ?? '';
 
+const getDateFormatOptions = (
+    granularity: DateGranularity,
+    mode: 'display' | 'edit'
+) => {
+    if (granularity === 'year') {
+        return { year: 'numeric' } satisfies Intl.DateTimeFormatOptions;
+    }
+
+    if (granularity === 'month') {
+        return mode === 'edit'
+            ? ({
+                  month: '2-digit',
+                  year: 'numeric',
+              } satisfies Intl.DateTimeFormatOptions)
+            : ({
+                  month: 'short',
+                  year: 'numeric',
+              } satisfies Intl.DateTimeFormatOptions);
+    }
+
+    return mode === 'edit'
+        ? ({
+              day: '2-digit',
+              month: '2-digit',
+              year: 'numeric',
+          } satisfies Intl.DateTimeFormatOptions)
+        : ({
+              day: 'numeric',
+              month: 'short',
+              year: 'numeric',
+          } satisfies Intl.DateTimeFormatOptions);
+};
+
+const buildDateDraft = (
+    value: DateLikeValue,
+    formatDateForEdit: (iso?: string) => string | undefined
+): DateDraft => {
+    if (value.type === 'date') {
+        const formatted = formatDateForEdit(value.value);
+        return {
+            mode: 'date',
+            range: { from: formatted, to: formatted },
+        };
+    }
+
+    return {
+        mode: 'date-range',
+        range: {
+            from: formatDateForEdit(value.value.from),
+            to: formatDateForEdit(value.value.to),
+        },
+    };
+};
+
+const fixImpossibleRange = (range: DateRangeValue): DateRangeValue => {
+    const normalized = normalizeRangeValue(range);
+    const { from, to } = normalized;
+
+    if (from && to && from > to) {
+        return { from, to: from };
+    }
+
+    return normalized;
+};
+
 interface Props {
     label?: string;
     value: PillValue;
@@ -127,38 +192,22 @@ export function Pill({
     const [isEditing, setIsEditing] = useState(false);
     const { settings } = useSettings();
     const locale = resolveLocale(settings.locale);
-    const dateFormatter = useMemo(() => {
-        const options =
-            dateGranularity === 'year'
-                ? ({ year: 'numeric' } satisfies Intl.DateTimeFormatOptions)
-                : dateGranularity === 'month'
-                  ? ({
-                        month: 'short',
-                        year: 'numeric',
-                    } satisfies Intl.DateTimeFormatOptions)
-                  : ({
-                        day: 'numeric',
-                        month: 'short',
-                        year: 'numeric',
-                    } satisfies Intl.DateTimeFormatOptions);
-        return new Intl.DateTimeFormat(locale, options);
-    }, [dateGranularity, locale]);
-    const editFormatter = useMemo(() => {
-        const options =
-            dateGranularity === 'year'
-                ? ({ year: 'numeric' } satisfies Intl.DateTimeFormatOptions)
-                : dateGranularity === 'month'
-                  ? ({
-                        month: '2-digit',
-                        year: 'numeric',
-                    } satisfies Intl.DateTimeFormatOptions)
-                  : ({
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: 'numeric',
-                    } satisfies Intl.DateTimeFormatOptions);
-        return new Intl.DateTimeFormat(locale, options);
-    }, [dateGranularity, locale]);
+    const dateFormatter = useMemo(
+        () =>
+            new Intl.DateTimeFormat(
+                locale,
+                getDateFormatOptions(dateGranularity, 'display')
+            ),
+        [dateGranularity, locale]
+    );
+    const editFormatter = useMemo(
+        () =>
+            new Intl.DateTimeFormat(
+                locale,
+                getDateFormatOptions(dateGranularity, 'edit')
+            ),
+        [dateGranularity, locale]
+    );
     const editPattern = useMemo(
         () => resolveEditPattern(editFormatter),
         [editFormatter]
@@ -264,21 +313,7 @@ export function Pill({
 
     useEffect(() => {
         if (!isDateValue || isEditing) return;
-        if (value.type === 'date') {
-            const formatted = formatDateForEdit(value.value);
-            setDateDraft({
-                mode: 'date',
-                range: { from: formatted, to: formatted },
-            });
-            return;
-        }
-        setDateDraft({
-            mode: 'date-range',
-            range: {
-                from: formatDateForEdit(value.value.from),
-                to: formatDateForEdit(value.value.to),
-            },
-        });
+        setDateDraft(buildDateDraft(value, formatDateForEdit));
     }, [value, isEditing, isDateValue, formatDateForEdit]);
 
     useEffect(() => {
@@ -356,23 +391,7 @@ export function Pill({
 
     const cancelDraft = () => {
         if (isTextValue) setTextDraft(value.value);
-        if (isDateValue) {
-            if (value.type === 'date') {
-                const formatted = formatDateForEdit(value.value);
-                setDateDraft({
-                    mode: 'date',
-                    range: { from: formatted, to: formatted },
-                });
-            } else {
-                setDateDraft({
-                    mode: 'date-range',
-                    range: {
-                        from: formatDateForEdit(value.value.from),
-                        to: formatDateForEdit(value.value.to),
-                    },
-                });
-            }
-        }
+        if (isDateValue) setDateDraft(buildDateDraft(value, formatDateForEdit));
         setIsEditing(false);
     };
 
@@ -471,15 +490,6 @@ export function Pill({
                 },
             };
         });
-    };
-
-    const fixImpossibleRange = (range: DateRangeValue): DateRangeValue => {
-        const normalized = normalizeRangeValue(range);
-        const { from, to } = normalized;
-        if (from && to && from > to) {
-            return { from, to: from };
-        }
-        return normalized;
     };
 
     const updateDateRange = (key: keyof DateRangeValue, rawValue: string) => {

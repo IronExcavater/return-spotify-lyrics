@@ -99,6 +99,8 @@ function ControlSeparator() {
     );
 }
 
+const INFINITE_LABEL = '\u221E';
+
 type Props = {
     editor: MediaSectionEditor;
     editing: boolean;
@@ -418,7 +420,7 @@ export function MediaSectionEditControls({
                                 value={
                                     editor.clampDraft ?? editor.displayClampStr
                                 }
-                                placeholder="∞"
+                                placeholder={INFINITE_LABEL}
                                 hideSteppers
                                 onDecrement={() => undefined}
                                 onIncrement={() => undefined}
@@ -459,7 +461,8 @@ export function MediaSectionEditControls({
                                 }}
                                 onValueFocus={() =>
                                     editor.setClampDraft(
-                                        editor.displayClampStr === '∞'
+                                        editor.displayClampStr ===
+                                            INFINITE_LABEL
                                             ? ''
                                             : editor.displayClampStr
                                     )
