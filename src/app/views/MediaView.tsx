@@ -1,11 +1,10 @@
-import { Fragment, useCallback, useRef, useState } from 'react';
-import { Flex, Text, Tooltip } from '@radix-ui/themes';
+import { Fragment, useCallback, useState } from 'react';
+import { Text, Tooltip } from '@radix-ui/themes';
 import type {
     Album,
     SimplifiedEpisode,
     SimplifiedTrack,
 } from '@spotify/web-api-ts-sdk';
-import { useLocation } from 'react-router-dom';
 
 import {
     formatDurationLong,
@@ -23,14 +22,17 @@ import {
 } from '../../shared/media';
 import { sendSpotifyMessage } from '../../shared/messaging';
 import { MediaItem } from '../../shared/types.ts';
+import { DetailViewLayout } from '../components/DetailViewLayout';
+import {
+    DetailViewLoadingState,
+    DetailViewMessage,
+} from '../components/DetailViewState';
 import { DiscographyShelf } from '../components/DiscographyShelf';
-import { type HeroData, MediaHero } from '../components/MediaHero';
+import { type HeroData } from '../components/MediaHero';
 import {
     MediaSection,
     type MediaSectionState,
 } from '../components/MediaSection';
-import { SkeletonText } from '../components/SkeletonText';
-import { StickyLayout } from '../components/StickyLayout';
 import { TextButton } from '../components/TextButton';
 import { updateCachedAssumedNowPlaying } from '../hooks/mediaCacheEntries';
 import { useHistory } from '../hooks/useHistory';
@@ -41,7 +43,7 @@ import {
     useMediaData,
 } from '../hooks/useMediaData';
 import type { MediaRouteState } from '../hooks/useMediaRoute';
-import { mediaRouteStore, useRouteState } from '../hooks/useRouteState';
+import { mediaRouteStore, useStoredRouteState } from '../hooks/useRouteState';
 import { useSettings } from '../hooks/useSettings';
 
 const CONTEXT_KIND_LABEL: Partial<Record<MediaItem['parentKind'], string>> = {
@@ -620,15 +622,12 @@ function ArtistSections({
 }
 
 export function MediaView() {
-    const location = useLocation();
     const { settings } = useSettings();
     const { goTo } = useHistory();
     const market = resolveMarket(settings.locale);
     const locale = resolveLocale(settings.locale);
 
-    const locationState = location.state as MediaRouteState | null;
-    const { state, restoring } = useRouteState<MediaRouteState>({
-        locationState,
+    const { state, restoring } = useStoredRouteState<MediaRouteState>({
         store: mediaRouteStore,
         routePath: '/media',
     });
@@ -837,95 +836,63 @@ export function MediaView() {
         [goTo]
     );
 
-    const scrollRef = useRef<HTMLDivElement | null>(null);
-
     if (!state) {
-        if (restoring) {
-            return (
-                <Flex p="3" direction="column" gap="2">
-                    <SkeletonText loading variant="title">
-                        <Text size="5" weight="bold" />
-                    </SkeletonText>
-                    <SkeletonText loading variant="subtitle">
-                        <Text size="2" color="gray" />
-                    </SkeletonText>
-                </Flex>
-            );
-        }
+        if (restoring) return <DetailViewLoadingState />;
 
         return (
-            <Flex p="3" direction="column">
-                <Text size="2" color="gray">
-                    Select a media item to view details.
-                </Text>
-            </Flex>
+            <DetailViewMessage message="Select a media item to view details." />
         );
     }
 
     if (!loading && !viewData && !isResolvingRoute && !isStaleSelection) {
         return (
-            <Flex p="3" direction="column">
-                <Text size="2" color="gray">
-                    This media type is not supported yet.
-                </Text>
-            </Flex>
+            <DetailViewMessage message="This media type is not supported yet." />
         );
     }
 
     return (
-        <StickyLayout.Root
-            className="no-overflow-anchor scrollbar-gutter-stable flex min-h-0 flex-col overflow-y-auto"
-            scrollRef={scrollRef}
+        <DetailViewLayout
+            hero={hero}
+            loading={isLoadingView}
+            heroUrl={hero?.heroUrl}
+            collapseKey={viewKey}
+            mergedHeroActions={mergedHeroActions}
+            canTogglePlayback={canTogglePlayback}
+            onPlay={handlePlay}
         >
-            <MediaHero
-                hero={hero}
-                loading={isLoadingView}
-                heroUrl={hero?.heroUrl}
-                scrollRef={scrollRef}
-                collapseKey={viewKey}
-                mergedHeroActions={mergedHeroActions}
-                canTogglePlayback={canTogglePlayback}
-                onPlay={handlePlay}
-            />
-
-            <StickyLayout.Body>
-                <div className="absolute -top-2 z-10 h-2 w-full shrink-0 bg-background" />
-                <Flex pl="3" pr="1" direction="column">
-                    {activeKind === 'album' && (
-                        <AlbumSections
-                            albumData={albumData}
-                            isLoadingView={isLoadingView}
-                            onTitleClick={handleAlbumTitleClick}
-                            popularAlbumTracks={popularAlbumTracks}
-                            popularLoading={albumPopularLoading}
-                            recommendedLoading={albumRecommendedLoading}
-                            shouldShowAlbumSection={shouldShowAlbumSection}
-                        />
-                    )}
-                    {activeKind === 'show' && (
-                        <ShowSections
-                            isLoadingView={isLoadingView}
-                            onLoadMore={loadMoreEpisodes}
-                            recommendedLoading={showRecommendedLoading}
-                            showData={showData}
-                        />
-                    )}
-                    {activeKind === 'artist' && (
-                        <ArtistSections
-                            artistData={artistData}
-                            discographySort={discographySort}
-                            discographyTrackCount={discographyTrackCount}
-                            isLoadingView={isLoadingView}
-                            locale={settings.locale}
-                            onAlbumClick={handleOpenDiscographyAlbum}
-                            onLoadMore={loadMoreDiscography}
-                            onSortChange={setDiscographySort}
-                            onTrackClick={handleOpenDiscographyTrack}
-                            recommendedLoading={artistRecommendedLoading}
-                        />
-                    )}
-                </Flex>
-            </StickyLayout.Body>
-        </StickyLayout.Root>
+            {activeKind === 'album' && (
+                <AlbumSections
+                    albumData={albumData}
+                    isLoadingView={isLoadingView}
+                    onTitleClick={handleAlbumTitleClick}
+                    popularAlbumTracks={popularAlbumTracks}
+                    popularLoading={albumPopularLoading}
+                    recommendedLoading={albumRecommendedLoading}
+                    shouldShowAlbumSection={shouldShowAlbumSection}
+                />
+            )}
+            {activeKind === 'show' && (
+                <ShowSections
+                    isLoadingView={isLoadingView}
+                    onLoadMore={loadMoreEpisodes}
+                    recommendedLoading={showRecommendedLoading}
+                    showData={showData}
+                />
+            )}
+            {activeKind === 'artist' && (
+                <ArtistSections
+                    artistData={artistData}
+                    discographySort={discographySort}
+                    discographyTrackCount={discographyTrackCount}
+                    isLoadingView={isLoadingView}
+                    locale={settings.locale}
+                    onAlbumClick={handleOpenDiscographyAlbum}
+                    onLoadMore={loadMoreDiscography}
+                    onSortChange={setDiscographySort}
+                    onTrackClick={handleOpenDiscographyTrack}
+                    recommendedLoading={artistRecommendedLoading}
+                />
+            )}
+        </DetailViewLayout>
     );
 }

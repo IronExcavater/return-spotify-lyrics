@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     Button,
     Flex,
@@ -15,7 +15,6 @@ import type {
     PlaylistedTrack,
     Track,
 } from '@spotify/web-api-ts-sdk';
-import { useLocation } from 'react-router-dom';
 
 import { safeRequest } from '../../shared/async';
 import { formatDurationLong } from '../../shared/date';
@@ -24,8 +23,13 @@ import { createLogger, logError } from '../../shared/logging';
 import { playlistToItem } from '../../shared/media';
 import { sendSpotifyMessage } from '../../shared/messaging';
 import type { MediaActionGroup } from '../../shared/types';
+import { DetailViewLayout } from '../components/DetailViewLayout';
+import {
+    DetailViewLoadingState,
+    DetailViewMessage,
+} from '../components/DetailViewState';
 import { FullPageDialog } from '../components/FullPageDialog';
-import { MediaHero, type HeroData } from '../components/MediaHero';
+import { type HeroData } from '../components/MediaHero';
 import {
     MediaSection,
     type MediaSectionState,
@@ -33,7 +37,6 @@ import {
 import { MediaShelf } from '../components/MediaShelf';
 import { PlaylistDedupeDialog } from '../components/PlaylistDedupeDialog';
 import { SkeletonText } from '../components/SkeletonText';
-import { StickyLayout } from '../components/StickyLayout';
 import {
     ensurePlaylistContentStateLoaded,
     getCachedPlaylistContentState,
@@ -46,7 +49,10 @@ import {
 import { useAuth } from '../hooks/useAuth';
 import { buildMediaActions } from '../hooks/useMediaActions';
 import type { MediaRouteState } from '../hooks/useMediaRoute';
-import { playlistRouteStore, useRouteState } from '../hooks/useRouteState';
+import {
+    playlistRouteStore,
+    useStoredRouteState,
+} from '../hooks/useRouteState';
 import { useSettings } from '../hooks/useSettings';
 import type { MediaShelfItem } from '../types/mediaShelf';
 import { sumDurationMs } from '../utils/mediaLookup';
@@ -120,13 +126,10 @@ const toPlaylistDetailsDraft = (
 });
 
 export function PlaylistView() {
-    const location = useLocation();
     const { settings } = useSettings();
     const { profile } = useAuth();
     const market = resolveMarket(settings.locale);
-    const locationState = location.state as MediaRouteState | null;
-    const { state, restoring } = useRouteState<MediaRouteState>({
-        locationState,
+    const { state, restoring } = useStoredRouteState<MediaRouteState>({
         store: playlistRouteStore,
         routePath: '/playlist',
     });
@@ -159,12 +162,15 @@ export function PlaylistView() {
         },
         [updateUiState]
     );
-    const applyPlaylistState = useCallback((nextData: PlaylistViewState) => {
-        setData(nextData);
-        patchUiState({
-            detailsDraft: toPlaylistDetailsDraft(nextData.playlist),
-        });
-    }, [patchUiState]);
+    const applyPlaylistState = useCallback(
+        (nextData: PlaylistViewState) => {
+            setData(nextData);
+            patchUiState({
+                detailsDraft: toPlaylistDetailsDraft(nextData.playlist),
+            });
+        },
+        [patchUiState]
+    );
     const { loading, saving, detailsDraft, dedupeItems, dialogs } = uiState;
     const { editOpen, dedupeOpen, dedupeLoading, dedupeRemoving } = dialogs;
 
@@ -214,7 +220,14 @@ export function PlaylistView() {
         return () => {
             cancelled = true;
         };
-    }, [applyPlaylistState, loadPlaylist, market, patchUiState, state?.id, state?.kind]);
+    }, [
+        applyPlaylistState,
+        loadPlaylist,
+        market,
+        patchUiState,
+        state?.id,
+        state?.kind,
+    ]);
 
     const showInitialLoading = loading && !data;
 
@@ -320,7 +333,6 @@ export function PlaylistView() {
     }, [data]);
 
     const viewKey = state?.id ?? 'playlist';
-    const scrollRef = useRef<HTMLDivElement | null>(null);
 
     const isOwner =
         data?.playlist.owner?.id && profile?.id
@@ -515,7 +527,15 @@ export function PlaylistView() {
         } finally {
             patchDialogs({ dedupeLoading: false });
         }
-    }, [canEdit, data, market, patchDialogs, patchUiState, settings.locale, state?.id]);
+    }, [
+        canEdit,
+        data,
+        market,
+        patchDialogs,
+        patchUiState,
+        settings.locale,
+        state?.id,
+    ]);
 
     const handleRemoveDuplicates = useCallback(
         async (items: PlaylistDedupableItem[]) => {
@@ -605,47 +625,25 @@ export function PlaylistView() {
     } satisfies MediaSectionState;
 
     if (!state) {
-        if (restoring) {
-            return (
-                <Flex p="3" direction="column" gap="2">
-                    <SkeletonText loading variant="title">
-                        <Text size="5" weight="bold" />
-                    </SkeletonText>
-                    <SkeletonText loading variant="subtitle">
-                        <Text size="2" color="gray" />
-                    </SkeletonText>
-                </Flex>
-            );
-        }
+        if (restoring) return <DetailViewLoadingState />;
+
         return (
-            <Flex p="3" direction="column">
-                <Text size="2" color="gray">
-                    Select a playlist to view details.
-                </Text>
-            </Flex>
+            <DetailViewMessage message="Select a playlist to view details." />
         );
     }
 
     if (!loading && !data) {
         return (
-            <Flex p="3" direction="column">
-                <Text size="2" color="gray">
-                    This playlist is not available yet.
-                </Text>
-            </Flex>
+            <DetailViewMessage message="This playlist is not available yet." />
         );
     }
 
     return (
-        <StickyLayout.Root
-            className="no-overflow-anchor scrollbar-gutter-stable flex min-h-0 flex-col overflow-y-auto"
-            scrollRef={scrollRef}
-        >
-            <MediaHero
+        <>
+            <DetailViewLayout
                 hero={hero}
                 loading={showInitialLoading}
                 heroUrl={hero?.heroUrl}
-                scrollRef={scrollRef}
                 collapseKey={viewKey}
                 resetScroll={false}
                 mergedHeroActions={mergedHeroActions}
@@ -655,87 +653,86 @@ export function PlaylistView() {
                         playNowAction.onSelect();
                         return;
                     }
+
                     const contextUri = hero?.item?.uri;
                     if (!contextUri) return;
+
                     void sendSpotifyMessage('startPlayback', {
                         contextUri,
                     });
                 }}
-            />
-
-            <StickyLayout.Body>
-                <div className="absolute -top-2 z-10 h-2 w-full shrink-0 bg-background" />
-                <Flex pl="3" pr="1" direction="column" gap="3">
-                    {(showInitialLoading || trimmedDescription.length > 0) && (
-                        <Flex direction="column" gap="1" pt="2">
-                            <Text size="1" color="gray">
-                                Description
-                            </Text>
-                            {showInitialLoading ? (
-                                <Flex
-                                    direction="column"
-                                    gap="1"
-                                    className="max-w-120"
+                contentGap="3"
+            >
+                {(showInitialLoading || trimmedDescription.length > 0) && (
+                    <Flex direction="column" gap="1" pt="2">
+                        <Text size="1" color="gray">
+                            Description
+                        </Text>
+                        {showInitialLoading ? (
+                            <Flex
+                                direction="column"
+                                gap="1"
+                                className="max-w-120"
+                            >
+                                <SkeletonText
+                                    loading
+                                    variant="subtitle"
+                                    fullWidth={false}
                                 >
-                                    <SkeletonText
-                                        loading
-                                        variant="subtitle"
-                                        fullWidth={false}
-                                    >
-                                        <Text size="2" />
-                                    </SkeletonText>
-                                    <SkeletonText
-                                        loading
-                                        variant="subtitle"
-                                        fullWidth={false}
-                                        seed={1}
-                                    >
-                                        <Text size="2" />
-                                    </SkeletonText>
-                                </Flex>
-                            ) : (
-                                <Text size="2">{trimmedDescription}</Text>
-                            )}
-                        </Flex>
-                    )}
-
-                    <MediaSection
-                        editing={false}
-                        loading={showInitialLoading}
-                        section={tracksSection}
-                        onChange={() => undefined}
-                        renderContent={({ loading: sectionLoading }) => (
-                            <MediaShelf
-                                items={trackItems}
-                                variant="list"
-                                orientation="vertical"
-                                itemsPerColumn={6}
-                                draggable={reorderEnabled}
-                                interactive={!sectionLoading}
-                                itemLoading={sectionLoading}
-                                totalCount={trackTotalCount}
-                                hasMore={trackHasMore}
-                                loadingMore={trackLoadingMore}
-                                onLoadMore={loadMoreItems}
-                                onReorder={handleReorder}
-                                getActions={getItemActions}
-                                getRowProps={(item) => {
-                                    const playlistItem =
-                                        item as PlaylistTrackItem;
-                                    return {
-                                        showPosition: true,
-                                        position: playlistItem.playlistIndex,
-                                    };
-                                }}
-                            />
+                                    <Text size="2" />
+                                </SkeletonText>
+                                <SkeletonText
+                                    loading
+                                    variant="subtitle"
+                                    fullWidth={false}
+                                    seed={1}
+                                >
+                                    <Text size="2" />
+                                </SkeletonText>
+                            </Flex>
+                        ) : (
+                            <Text size="2">{trimmedDescription}</Text>
                         )}
-                    />
-                </Flex>
-            </StickyLayout.Body>
+                    </Flex>
+                )}
 
+                <MediaSection
+                    editing={false}
+                    loading={showInitialLoading}
+                    section={tracksSection}
+                    onChange={() => undefined}
+                    renderContent={({ loading: sectionLoading }) => (
+                        <MediaShelf
+                            items={trackItems}
+                            variant="list"
+                            orientation="vertical"
+                            itemsPerColumn={6}
+                            draggable={reorderEnabled}
+                            interactive={!sectionLoading}
+                            itemLoading={sectionLoading}
+                            totalCount={trackTotalCount}
+                            hasMore={trackHasMore}
+                            loadingMore={trackLoadingMore}
+                            onLoadMore={loadMoreItems}
+                            onReorder={handleReorder}
+                            getActions={getItemActions}
+                            getRowProps={(item) => {
+                                const playlistItem = item as PlaylistTrackItem;
+
+                                return {
+                                    showPosition: true,
+                                    position: playlistItem.playlistIndex,
+                                };
+                            }}
+                        />
+                    )}
+                />
+            </DetailViewLayout>
             <FullPageDialog
                 open={editOpen}
-                onOpenChange={(nextOpen) => patchDialogs({ editOpen: nextOpen })}
+                onOpenChange={(nextOpen) =>
+                    patchDialogs({ editOpen: nextOpen })
+                }
                 title="Edit playlist"
                 description="Update the title, description, and visibility settings."
             >
@@ -835,6 +832,6 @@ export function PlaylistView() {
                 removing={dedupeRemoving}
                 onConfirm={handleRemoveDuplicates}
             />
-        </StickyLayout.Root>
+        </>
     );
 }

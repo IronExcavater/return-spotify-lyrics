@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 import { getFromStorage, setInStorage } from '../../shared/storage';
 import type { MediaRouteState } from './useMediaRoute';
@@ -23,6 +23,8 @@ type UseRouteStateInput<T> = {
     routePath: string;
     fallbackState?: T | null;
 };
+
+type UseStoredRouteStateInput<T> = Omit<UseRouteStateInput<T>, 'locationState'>;
 
 const alwaysValid = () => true;
 
@@ -114,6 +116,15 @@ export function useRouteState<T>({
     }, [navigate, routePath, state, store, validLocationState]);
 
     return { state, restoring };
+}
+
+export function useStoredRouteState<T>(input: UseStoredRouteStateInput<T>) {
+    const location = useLocation();
+
+    return useRouteState<T>({
+        ...input,
+        locationState: (location.state as T | null) ?? null,
+    });
 }
 
 const shouldPersistMediaState = (
