@@ -4,6 +4,7 @@
 @import './scrollbar.css';
 @import './fade.css';
 @import './radix-themes.css';
+
 @tailwind utilities;
 
 @layer utilities {
