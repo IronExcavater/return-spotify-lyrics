@@ -1,6 +1,6 @@
 import { type ReactNode, useRef } from 'react';
 
-import { Flex } from '@radix-ui/themes';
+import { Box, Flex } from '@radix-ui/themes';
 import type { MediaActionGroup } from '../../shared/types';
 import { type HeroData, MediaHero } from './MediaHero';
 import { StickyLayout } from './StickyLayout';
@@ -34,7 +34,7 @@ export function DetailViewLayout({
 
     return (
         <StickyLayout.Root
-            className="no-overflow-anchor scrollbar-gutter-stable flex min-h-0 flex-col overflow-y-auto"
+            className="no-overflow-anchor scrollbar-gutter-stable flex flex-col overflow-y-auto"
             scrollRef={scrollRef}
         >
             <MediaHero
@@ -50,7 +50,7 @@ export function DetailViewLayout({
             />
 
             <StickyLayout.Body>
-                <div className="absolute -top-2 z-10 h-2 w-full shrink-0 bg-background" />
+                <Box className="absolute -top-2 z-10 h-2 w-full bg-background" />
                 <Flex pl="3" pr="1" direction="column" gap={contentGap}>
                     {children}
                 </Flex>
