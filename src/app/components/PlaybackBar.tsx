@@ -15,7 +15,7 @@ import { SimplifiedArtist, SimplifiedShow } from '@spotify/web-api-ts-sdk';
 import clsx from 'clsx';
 import { MdMusicNote } from 'react-icons/md';
 
-import { episodeToItem, artistToItem, trackToItem } from '../../shared/media';
+import { artistToItem, trackOrEpisodeToItem } from '../../shared/media';
 import { asEpisode, asTrack } from '../../shared/types';
 import {
     MEDIA_CACHE_KEYS,
@@ -128,11 +128,8 @@ export function PlaybackBar({
     };
 
     const handleOpenMedia = () => {
-        const item = track
-            ? trackToItem(track)
-            : episode
-              ? episodeToItem(episode, undefined, episode.show)
-              : null;
+        const source = track ?? episode;
+        const item = source ? trackOrEpisodeToItem(source) : null;
         const route = item ? buildMediaRouteFromItem(item) : null;
         if (!route) return;
         if (onOpenMediaRoute) {

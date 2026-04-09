@@ -13,10 +13,62 @@ import {
     showToItem,
     trackToItem,
 } from '../../shared/media';
-import { SEARCH_LIMIT, type SearchType } from '../../shared/search';
+import {
+    DEFAULT_SEARCH_TYPES,
+    SEARCH_LIMIT,
+    type SearchType,
+} from '../../shared/search';
 import type { MediaShelfItem } from '../types/mediaShelf';
 
 export type SearchOffsets = Record<SearchType, number | null>;
+
+type SearchMappingResult = {
+    items: MediaShelfItem[];
+    hasMore: boolean;
+};
+
+const SEARCH_TYPE_MAPPERS: Record<
+    SearchType,
+    (
+        result: SearchResults<ItemTypes[]> | SearchResults<[ItemTypes]>,
+        locale: string
+    ) => SearchMappingResult
+> = {
+    track: (result) => ({
+        items: result.tracks?.items.map(trackToItem) ?? [],
+        hasMore: Boolean(result.tracks?.next),
+    }),
+    album: (result) => ({
+        items: result.albums?.items.map(albumToItem) ?? [],
+        hasMore: Boolean(result.albums?.next),
+    }),
+    artist: (result) => ({
+        items: result.artists?.items.map(artistToItem) ?? [],
+        hasMore: Boolean(result.artists?.next),
+    }),
+    playlist: (result) => ({
+        items:
+            result.playlists?.items
+                .filter((item): item is SimplifiedPlaylist => Boolean(item))
+                .map(playlistToItem) ?? [],
+        hasMore: Boolean(result.playlists?.next),
+    }),
+    show: (result) => ({
+        items: result.shows?.items.map(showToItem) ?? [],
+        hasMore: Boolean(result.shows?.next),
+    }),
+    episode: (result, locale) => ({
+        items:
+            result.episodes?.items.map((episode) =>
+                episodeToItem(episode, locale)
+            ) ?? [],
+        hasMore: Boolean(result.episodes?.next),
+    }),
+    audiobook: (result) => ({
+        items: result.audiobooks?.items.map(audiobookToItem) ?? [],
+        hasMore: Boolean(result.audiobooks?.next),
+    }),
+};
 
 export const buildSearchOffsets = (
     result: SearchResults<ItemTypes[]>,
@@ -35,33 +87,14 @@ export const mapSearchResults = (
     result: SearchResults<ItemTypes[]>,
     locale: string
 ) => {
-    const itemsByType: Record<SearchType, MediaShelfItem[]> = {
-        track: result.tracks?.items.map((track) => trackToItem(track)) ?? [],
-        album: result.albums?.items.map((album) => albumToItem(album)) ?? [],
-        artist:
-            result.artists?.items.map((artist) => artistToItem(artist)) ?? [],
-        playlist:
-            result.playlists?.items
-                .filter((item): item is SimplifiedPlaylist => !!item)
-                .map((playlist) => playlistToItem(playlist)) ?? [],
-        show: result.shows?.items.map((show) => showToItem(show)) ?? [],
-        episode:
-            result.episodes?.items.map((episode) =>
-                episodeToItem(episode, locale)
-            ) ?? [],
-        audiobook:
-            result.audiobooks?.items.map((book) => audiobookToItem(book)) ?? [],
-    };
+    const itemsByType = {} as Record<SearchType, MediaShelfItem[]>;
+    const hasMoreByType = {} as Record<SearchType, boolean>;
 
-    const hasMoreByType: Record<SearchType, boolean> = {
-        track: !!result.tracks?.next,
-        album: !!result.albums?.next,
-        artist: !!result.artists?.next,
-        playlist: !!result.playlists?.next,
-        show: !!result.shows?.next,
-        episode: !!result.episodes?.next,
-        audiobook: !!result.audiobooks?.next,
-    };
+    DEFAULT_SEARCH_TYPES.forEach((type) => {
+        const mapped = SEARCH_TYPE_MAPPERS[type](result, locale);
+        itemsByType[type] = mapped.items;
+        hasMoreByType[type] = mapped.hasMore;
+    });
 
     return { itemsByType, hasMoreByType };
 };
@@ -71,58 +104,8 @@ export const mapSearchPage = (
     result: SearchResults<[ItemTypes]>,
     locale: string
 ) => {
-    let items: MediaShelfItem[] = [];
-    let hasMore = false;
-
-    switch (type) {
-        case 'track': {
-            const page = result.tracks;
-            items = page?.items.map(trackToItem) ?? [];
-            hasMore = !!page?.next;
-            break;
-        }
-        case 'album': {
-            const page = result.albums;
-            items = page?.items.map(albumToItem) ?? [];
-            hasMore = !!page?.next;
-            break;
-        }
-        case 'artist': {
-            const page = result.artists;
-            items = page?.items.map(artistToItem) ?? [];
-            hasMore = !!page?.next;
-            break;
-        }
-        case 'playlist': {
-            const page = result.playlists;
-            items =
-                page?.items
-                    .filter((item): item is SimplifiedPlaylist => !!item)
-                    .map(playlistToItem) ?? [];
-            hasMore = !!page?.next;
-            break;
-        }
-        case 'show': {
-            const page = result.shows;
-            items = page?.items.map(showToItem) ?? [];
-            hasMore = !!page?.next;
-            break;
-        }
-        case 'episode': {
-            const page = result.episodes;
-            items =
-                page?.items.map((episode) => episodeToItem(episode, locale)) ??
-                [];
-            hasMore = !!page?.next;
-            break;
-        }
-        case 'audiobook': {
-            const page = result.audiobooks;
-            items = page?.items.map(audiobookToItem) ?? [];
-            hasMore = !!page?.next;
-            break;
-        }
-    }
+    const mapped = SEARCH_TYPE_MAPPERS[type](result, locale);
+    const { items, hasMore } = mapped;
 
     return { items, hasMore, nextOffset: hasMore ? SEARCH_LIMIT : null };
 };

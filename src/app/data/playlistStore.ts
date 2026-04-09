@@ -7,7 +7,7 @@ import type {
     Track,
 } from '@spotify/web-api-ts-sdk';
 
-import { episodeToItem, trackToItem } from '../../shared/media';
+import { trackOrEpisodeToItem } from '../../shared/media';
 import { sendSpotifyMessage } from '../../shared/messaging';
 import { getFromStorage, setInStorage } from '../../shared/storage';
 import type { MediaItem } from '../../shared/types';
@@ -312,9 +312,7 @@ export const mapPlaylistContentItems = (
     return safeEntries.map((entry, index) => {
         const track = entry.track;
         const item: MediaItem | null = track
-            ? track.type === 'episode'
-                ? episodeToItem(track as Episode, locale)
-                : trackToItem(track as Track)
+            ? trackOrEpisodeToItem(track as Track | Episode, locale)
             : null;
         if (!item) {
             return {

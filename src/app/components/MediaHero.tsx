@@ -1,6 +1,7 @@
 import type { CSSProperties, ReactNode, RefObject } from 'react';
 import { DotsHorizontalIcon, PlayIcon } from '@radix-ui/react-icons';
 import {
+    Box,
     DropdownMenu,
     Flex,
     IconButton,
@@ -56,6 +57,63 @@ const HERO_TOP_PAD_MAX = 12;
 const HERO_TOP_PAD_MIN = 4;
 const HERO_BOTTOM_PAD_MAX = 18;
 const HERO_BOTTOM_PAD_MIN = 10;
+const HERO_TEXT_WIDTH_OPTIONS = {
+    titleMin: 78,
+    titleRange: 30,
+    subtitleMin: 32,
+    subtitleRange: 34,
+    titleOffset: 11,
+    subtitleOffset: 29,
+} as const;
+const HERO_SKELETON_SEEDS = {
+    title: 0,
+    subtitle: 5,
+    info: 17,
+    duration: 29,
+} as const;
+
+function HeroMenuButton({
+    loading,
+    actions,
+    item,
+}: {
+    loading: boolean;
+    actions: MediaActionGroup | null;
+    item?: MediaItem;
+}) {
+    const hasActions =
+        Boolean(actions) &&
+        (actions?.primary.length ?? 0) + (actions?.secondary.length ?? 0) > 0;
+
+    if (!loading && (!hasActions || !item)) return null;
+
+    const trigger = (
+        <IconButton
+            variant="ghost"
+            radius="full"
+            size="1"
+            color="gray"
+            disabled={loading || !hasActions}
+            onClick={(event) => event.stopPropagation()}
+            onPointerDown={(event) => event.stopPropagation()}
+        >
+            <DotsHorizontalIcon />
+        </IconButton>
+    );
+
+    if (loading || !hasActions || !item) {
+        return trigger;
+    }
+
+    return (
+        <DropdownMenu.Root>
+            <DropdownMenu.Trigger onKeyDown={handleMenuTriggerKeyDown}>
+                {trigger}
+            </DropdownMenu.Trigger>
+            <MediaActionsMenu actions={actions} item={item} />
+        </DropdownMenu.Root>
+    );
+}
 
 export function MediaHero({
     hero,
@@ -88,9 +146,10 @@ export function MediaHero({
     });
     const heroImageRadius = hero?.item.kind === 'artist' ? 'full' : 'small';
     const hasHeroActions =
-        mergedHeroActions &&
-        (mergedHeroActions.primary.length > 0 ||
-            mergedHeroActions.secondary.length > 0);
+        Boolean(mergedHeroActions) &&
+        (mergedHeroActions?.primary.length ?? 0) +
+            (mergedHeroActions?.secondary.length ?? 0) >
+            0;
     const skeletonLabel = '\u00A0';
     const resolvedHeroTitle = heroTitle ?? hero?.title ?? '';
     const resolvedHeroTitleLabel = loading ? skeletonLabel : resolvedHeroTitle;
@@ -127,7 +186,7 @@ export function MediaHero({
             zoom={1.06}
             showGradient
         >
-            <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-40 bg-linear-to-l from-background to-transparent" />
+            <Box className="pointer-events-none absolute inset-y-0 right-0 z-10 w-40 bg-linear-to-l from-background to-transparent" />
             <Flex
                 align="center"
                 gap="2"
@@ -178,16 +237,10 @@ export function MediaHero({
                 >
                     <SkeletonText
                         loading={loading}
+                        seed={HERO_SKELETON_SEEDS.title}
                         preset="media-row"
                         variant="title"
-                        widthOptions={{
-                            titleMin: 78,
-                            titleRange: 30,
-                            subtitleMin: 32,
-                            subtitleRange: 34,
-                            titleOffset: 11,
-                            subtitleOffset: 29,
-                        }}
+                        widthOptions={HERO_TEXT_WIDTH_OPTIONS}
                     >
                         <Fade enabled={!loading} grow>
                             <Marquee mode="bounce" grow>
@@ -211,16 +264,10 @@ export function MediaHero({
                                 {(hasSubtitle || loading) && (
                                     <SkeletonText
                                         loading={loading}
+                                        seed={HERO_SKELETON_SEEDS.subtitle}
                                         preset="media-row"
                                         variant="subtitle"
-                                        widthOptions={{
-                                            titleMin: 78,
-                                            titleRange: 30,
-                                            subtitleMin: 32,
-                                            subtitleRange: 34,
-                                            titleOffset: 11,
-                                            subtitleOffset: 29,
-                                        }}
+                                        widthOptions={HERO_TEXT_WIDTH_OPTIONS}
                                     >
                                         <Fade enabled={!loading} grow>
                                             <Marquee mode="left" grow>
@@ -232,16 +279,10 @@ export function MediaHero({
                                 {(hasInfo || loading) && (
                                     <SkeletonText
                                         loading={loading}
+                                        seed={HERO_SKELETON_SEEDS.info}
                                         preset="media-row"
                                         variant="subtitle"
-                                        widthOptions={{
-                                            titleMin: 78,
-                                            titleRange: 30,
-                                            subtitleMin: 32,
-                                            subtitleRange: 34,
-                                            titleOffset: 11,
-                                            subtitleOffset: 29,
-                                        }}
+                                        widthOptions={HERO_TEXT_WIDTH_OPTIONS}
                                     >
                                         <Fade enabled={!loading} grow>
                                             <Marquee mode="left" grow>
@@ -258,16 +299,10 @@ export function MediaHero({
                                 {(hasDuration || loading) && (
                                     <SkeletonText
                                         loading={loading}
+                                        seed={HERO_SKELETON_SEEDS.duration}
                                         preset="media-row"
                                         variant="subtitle"
-                                        widthOptions={{
-                                            titleMin: 78,
-                                            titleRange: 30,
-                                            subtitleMin: 32,
-                                            subtitleRange: 34,
-                                            titleOffset: 11,
-                                            subtitleOffset: 29,
-                                        }}
+                                        widthOptions={HERO_TEXT_WIDTH_OPTIONS}
                                         fullWidth={false}
                                         style={
                                             loading
@@ -280,30 +315,11 @@ export function MediaHero({
                                         </Text>
                                     </SkeletonText>
                                 )}
-                                {hasHeroActions && (
-                                    <DropdownMenu.Root>
-                                        <DropdownMenu.Trigger
-                                            disabled={loading}
-                                            onKeyDown={handleMenuTriggerKeyDown}
-                                        >
-                                            <IconButton
-                                                variant="ghost"
-                                                radius="full"
-                                                size="1"
-                                                color="gray"
-                                                onClick={(event) =>
-                                                    event.stopPropagation()
-                                                }
-                                            >
-                                                <DotsHorizontalIcon />
-                                            </IconButton>
-                                        </DropdownMenu.Trigger>
-                                        <MediaActionsMenu
-                                            actions={mergedHeroActions}
-                                            item={hero?.item}
-                                        />
-                                    </DropdownMenu.Root>
-                                )}
+                                <HeroMenuButton
+                                    loading={loading}
+                                    actions={mergedHeroActions}
+                                    item={hero?.item}
+                                />
                             </Flex>
                         </Flex>
                     )}

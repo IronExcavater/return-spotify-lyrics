@@ -17,6 +17,7 @@ import {
     albumTrackToItem,
     artistToItem,
     formatAlbumType,
+    resolveSpotifyMediaId,
     showEpisodeToItem,
     showToItem,
 } from '../../shared/media';
@@ -37,14 +38,16 @@ import { TextButton } from '../components/TextButton';
 import { updateCachedAssumedNowPlaying } from '../hooks/mediaCacheEntries';
 import { useHistory } from '../hooks/useHistory';
 import { buildMediaActions } from '../hooks/useMediaActions';
-import {
-    resolveMediaDataId,
-    type MediaDataState,
-    useMediaData,
-} from '../hooks/useMediaData';
+import { useMediaData } from '../hooks/useMediaData';
 import type { MediaRouteState } from '../hooks/useMediaRoute';
 import { mediaRouteStore, useStoredRouteState } from '../hooks/useRouteState';
 import { useSettings } from '../hooks/useSettings';
+import type {
+    AlbumViewData,
+    ArtistViewData,
+    MediaDataState,
+    ShowViewData,
+} from '../mediaData/types';
 
 const CONTEXT_KIND_LABEL: Partial<Record<MediaItem['parentKind'], string>> = {
     album: 'album',
@@ -59,10 +62,6 @@ type HeroRoutes = {
     goToArtist: (id: string) => void;
     goToShow: (id: string) => void;
 };
-
-type AlbumViewData = Extract<MediaDataState, { kind: 'album' }>;
-type ShowViewData = Extract<MediaDataState, { kind: 'show' }>;
-type ArtistViewData = Extract<MediaDataState, { kind: 'artist' }>;
 
 const buildReleaseInfo = (album: Album, locale: string) => {
     const albumType = formatAlbumType(album);
@@ -650,7 +649,7 @@ export function MediaView() {
     const dataMatchesState = matchesState(data, state, isResolvingRoute);
     const viewData = dataMatchesState ? data : null;
     const resolvedSelectedId = state?.selectedId
-        ? resolveMediaDataId(state.selectedId)
+        ? resolveSpotifyMediaId(state.selectedId)
         : undefined;
     const selectedTrack = findSelectedTrack(
         viewData,

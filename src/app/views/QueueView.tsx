@@ -4,7 +4,7 @@ import type { Episode, Track } from '@spotify/web-api-ts-sdk';
 
 import { resolveLocale } from '../../shared/locale';
 import { createLogger, logError } from '../../shared/logging';
-import { episodeToItem, trackToItem } from '../../shared/media';
+import { trackOrEpisodeToItem } from '../../shared/media';
 import { sendSpotifyMessage } from '../../shared/messaging';
 import type { MediaActionGroup, MediaItem } from '../../shared/types';
 import {
@@ -37,16 +37,6 @@ type QueueEntry = MediaShelfItem & {
 type QueueState = {
     current: MediaItem | null;
     queue: QueueEntry[];
-};
-
-const isEpisodeItem = (item: Track | Episode): item is Episode =>
-    item.type === 'episode' || 'show' in item;
-
-const mapQueueItem = (item: Track | Episode, locale: string): MediaItem => {
-    if (isEpisodeItem(item)) {
-        return episodeToItem(item, locale, item.show);
-    }
-    return trackToItem(item);
 };
 
 const mediaIdentity = (item: MediaItem | null) =>
@@ -98,7 +88,7 @@ const mapQueueEntries = (
 ): QueueEntry[] => {
     const occurrences = new Map<string, number>();
     return (queue ?? []).map((item) => {
-        const mapped = mapQueueItem(item, locale);
+        const mapped = trackOrEpisodeToItem(item, locale);
         const signature = queueSignature(mapped);
         const nextOccurrence = (occurrences.get(signature) ?? 0) + 1;
         occurrences.set(signature, nextOccurrence);
@@ -166,7 +156,7 @@ export function QueueView() {
     const cachedNowPlayingItem = useMemo(
         () =>
             cachedNowPlaying?.item
-                ? mapQueueItem(cachedNowPlaying.item, locale)
+                ? trackOrEpisodeToItem(cachedNowPlaying.item, locale)
                 : null,
         [cachedNowPlaying?.item, locale]
     );
@@ -174,7 +164,7 @@ export function QueueView() {
     const loadQueue = useCallback(async () => {
         const data = await sendSpotifyMessage('getQueue');
         const currentItem = data.currently_playing
-            ? mapQueueItem(data.currently_playing, locale)
+            ? trackOrEpisodeToItem(data.currently_playing, locale)
             : cachedNowPlayingItem
               ? cachedNowPlayingItem
               : null;

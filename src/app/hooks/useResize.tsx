@@ -1,4 +1,11 @@
-import { ReactNode, RefObject, useEffect, useMemo, useRef } from 'react';
+import {
+    ReactNode,
+    RefObject,
+    useEffect,
+    useLayoutEffect,
+    useMemo,
+    useRef,
+} from 'react';
 
 interface WidthConfig {
     value: number;
@@ -45,9 +52,54 @@ function applyToRoot(cssProp: 'width' | 'height', size: number | 'auto') {
     if (body) applyDimension(body, cssProp, size);
 }
 
+type RootSize = {
+    width: number;
+    height: number | 'auto';
+};
+
 function clamp(value: number, min: number, max: number) {
     return Math.min(max, Math.max(min, value));
 }
+
+const getHeightMode = (value: number | 'auto') =>
+    value === 'auto' ? 'auto' : 'fixed';
+
+const readRenderedRootSize = (): Required<
+    Pick<RootSize, 'width' | 'height'>
+> => {
+    const root = document.documentElement;
+    const body = document.body;
+    const rootRect = root.getBoundingClientRect();
+    const bodyRect = body.getBoundingClientRect();
+
+    return {
+        width: Math.max(
+            Math.ceil(rootRect.width),
+            Math.ceil(bodyRect.width),
+            root.clientWidth,
+            body.clientWidth
+        ),
+        height: Math.max(
+            Math.ceil(rootRect.height),
+            Math.ceil(bodyRect.height),
+            root.scrollHeight,
+            body.scrollHeight,
+            root.clientHeight,
+            body.clientHeight
+        ),
+    };
+};
+
+const applyRootSize = ({ width, height }: RootSize) => {
+    applyToRoot('width', width);
+    applyToRoot('height', height);
+};
+
+const shouldForceRelayout = (previous: RootSize | null, next: RootSize) => {
+    if (!previous) return false;
+
+    return getHeightMode(previous.height) !== getHeightMode(next.height);
+};
 
 export function Resizer({
     width,
@@ -82,6 +134,8 @@ export function Resizer({
     const heightRef = useRef<number>(
         typeof resolvedHeight === 'number' ? resolvedHeight : height.max
     );
+    const appliedSizeRef = useRef<RootSize | null>(null);
+    const relayoutFrameRef = useRef<number | null>(null);
 
     useEffect(() => {
         if (typeof resolvedWidth === 'number') {
@@ -95,13 +149,44 @@ export function Resizer({
         }
     }, [resolvedHeight]);
 
-    useEffect(() => {
-        applyToRoot('width', resolvedWidth);
-    }, [resolvedWidth]);
+    useLayoutEffect(() => {
+        if (relayoutFrameRef.current != null) {
+            cancelAnimationFrame(relayoutFrameRef.current);
+            relayoutFrameRef.current = null;
+        }
 
-    useEffect(() => {
-        applyToRoot('height', resolvedHeight);
-    }, [resolvedHeight]);
+        const nextSize = {
+            width: resolvedWidth,
+            height: resolvedHeight,
+        } satisfies RootSize;
+        const previousSize = appliedSizeRef.current;
+        appliedSizeRef.current = nextSize;
+
+        if (!shouldForceRelayout(previousSize, nextSize)) {
+            applyRootSize(nextSize);
+            return;
+        }
+
+        const measuredSize = readRenderedRootSize();
+        applyRootSize({
+            width: measuredSize.width,
+            height: measuredSize.height,
+        });
+
+        void document.documentElement.offsetHeight;
+
+        applyRootSize(nextSize);
+        relayoutFrameRef.current = requestAnimationFrame(() => {
+            applyRootSize(nextSize);
+            relayoutFrameRef.current = null;
+        });
+
+        return () => {
+            if (relayoutFrameRef.current == null) return;
+            cancelAnimationFrame(relayoutFrameRef.current);
+            relayoutFrameRef.current = null;
+        };
+    }, [resolvedHeight, resolvedWidth]);
 
     const addDragListener = (
         ref: RefObject<HTMLDivElement>,
