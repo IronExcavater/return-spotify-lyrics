@@ -228,25 +228,21 @@ export const spotifyRpc = {
             const resolvedCurrentUri =
                 playback?.item?.uri ?? currentUri ?? null;
             const queueUris = upcomingUris.filter((uri) => Boolean(uri));
-            const startUri = resolvedCurrentUri ?? queueUris[0] ?? null;
-            if (!startUri) return;
+            const nextUris = resolvedCurrentUri
+                ? [resolvedCurrentUri, ...queueUris]
+                : queueUris;
 
+            if (nextUris.length === 0) return;
+
+            // Rebuild the queue in one request. Mixing play + queue endpoints is not stable.
             await startPlaybackRequest(client, deviceId, {
-                uris: [startUri],
+                uris: nextUris,
                 positionMs:
                     resolvedCurrentUri &&
                     playback?.item?.uri === resolvedCurrentUri
                         ? (playback.progress_ms ?? undefined)
                         : undefined,
             });
-
-            const remainingQueue = resolvedCurrentUri
-                ? queueUris
-                : queueUris.slice(1);
-
-            for (const uri of remainingQueue) {
-                await client.player.addItemToPlaybackQueue(uri, deviceId);
-            }
         });
     },
 

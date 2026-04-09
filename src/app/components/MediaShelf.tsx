@@ -1075,12 +1075,7 @@ export function MediaShelf({
         </Flex>
     );
     return (
-        <DragDropContext
-            onDragEnd={handleDragEnd}
-            disableSecondaryAxisScroll
-            lockSecondaryAxisMovement
-            clampToVisibleBounds
-        >
+        <DragDropContext onDragEnd={handleDragEnd}>
             <Droppable
                 droppableId={droppableId}
                 isDropDisabled={!draggable}

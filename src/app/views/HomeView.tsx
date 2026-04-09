@@ -823,13 +823,10 @@ export function HomeView({ searchQuery, filters }: Props) {
                     <DragDropContext
                         onDragEnd={onSectionDragEnd}
                         ignoreSizeLimits
-                        disableSecondaryAxisScroll
                         zIndexOptions={{
                             dragging: 20,
                             dropAnimating: 20,
                         }}
-                        lockSecondaryAxisMovement
-                        clampToVisibleBounds
                     >
                         <Droppable
                             droppableId="home-sections"

@@ -1,260 +1,34 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback } from 'react';
 import { Button, Flex, Text } from '@radix-ui/themes';
-import type { Episode, Track } from '@spotify/web-api-ts-sdk';
 
 import { resolveLocale } from '../../shared/locale';
-import { createLogger, logError } from '../../shared/logging';
-import { trackOrEpisodeToItem } from '../../shared/media';
-import { sendSpotifyMessage } from '../../shared/messaging';
-import type { MediaActionGroup, MediaItem } from '../../shared/types';
+import type { MediaActionGroup } from '../../shared/types';
 import {
     MediaSection,
     type MediaSectionState,
 } from '../components/MediaSection';
 import { MediaShelf } from '../components/MediaShelf';
 import { StickyLayout } from '../components/StickyLayout';
-import {
-    MEDIA_CACHE_KEYS,
-    type NowPlayingCacheEntry,
-} from '../hooks/mediaCacheEntries';
 import { buildMediaActions } from '../hooks/useMediaActions';
-import {
-    updateMediaCacheEntry,
-    useMediaCacheEntry,
-} from '../hooks/useMediaCache';
+import { type QueueEntry, useQueueState } from '../hooks/useQueueState';
 import { useSettings } from '../hooks/useSettings';
-import { useSpotifyRead } from '../hooks/useSpotifyRead';
 import type { MediaShelfItem } from '../types/mediaShelf';
-
-const logger = createLogger('queue');
-const POLL_MS = 5000;
-
-type QueueEntry = MediaShelfItem & {
-    queueKey: string;
-    queueSignature: string;
-};
-
-type QueueState = {
-    current: MediaItem | null;
-    queue: QueueEntry[];
-};
-
-const mediaIdentity = (item: MediaItem | null) =>
-    item
-        ? [
-              item.kind ?? '',
-              item.uri ?? '',
-              item.id ?? '',
-              item.title ?? '',
-              item.subtitle ?? '',
-          ].join('|')
-        : '';
-
-const queueSignature = (item: MediaItem) =>
-    [
-        item.kind ?? '',
-        item.uri ?? '',
-        item.id ?? '',
-        item.title ?? '',
-        item.subtitle ?? '',
-        item.imageUrl ?? '',
-    ].join('|');
-
-const normalizeLabel = (value?: string) => value?.trim().toLowerCase() ?? '';
-
-const isSameQueueItem = (left: MediaItem, right: MediaItem) => {
-    if (left.uri && right.uri && left.uri === right.uri) return true;
-    if (
-        left.id &&
-        right.id &&
-        left.id === right.id &&
-        left.kind === right.kind
-    ) {
-        return true;
-    }
-
-    if (left.uri || right.uri || left.id || right.id) return false;
-
-    return (
-        left.kind === right.kind &&
-        normalizeLabel(left.title) === normalizeLabel(right.title) &&
-        normalizeLabel(left.subtitle) === normalizeLabel(right.subtitle)
-    );
-};
-
-const mapQueueEntries = (
-    queue: Array<Track | Episode> | undefined,
-    locale: string
-): QueueEntry[] => {
-    const occurrences = new Map<string, number>();
-    return (queue ?? []).map((item) => {
-        const mapped = trackOrEpisodeToItem(item, locale);
-        const signature = queueSignature(mapped);
-        const nextOccurrence = (occurrences.get(signature) ?? 0) + 1;
-        occurrences.set(signature, nextOccurrence);
-        const queueKey = `${signature}#${nextOccurrence}`;
-        return {
-            ...mapped,
-            queueSignature: signature,
-            queueKey,
-            listKey: queueKey,
-        };
-    });
-};
-
-const normalizeUpcomingQueue = (
-    queue: QueueEntry[],
-    current: MediaItem | null
-): QueueEntry[] => {
-    if (!current || queue.length === 0) return queue;
-
-    // Spotify can echo the currently playing item at the head of the queue.
-    // Only strip that single echoed entry; repeated upcoming duplicates are real.
-    if (!isSameQueueItem(queue[0], current)) return queue;
-    return queue.slice(1);
-};
-
-const mergeQueueState = (prev: QueueState, next: QueueState): QueueState => {
-    const nextCurrent =
-        mediaIdentity(prev.current) === mediaIdentity(next.current)
-            ? prev.current
-            : next.current;
-
-    const previousByKey = new Map(
-        prev.queue.map((item) => [item.queueKey, item])
-    );
-    const mergedQueue = next.queue.map(
-        (item) => previousByKey.get(item.queueKey) ?? item
-    );
-
-    const queueUnchanged =
-        prev.queue.length === mergedQueue.length &&
-        prev.queue.every((item, index) => item === mergedQueue[index]);
-
-    if (prev.current === nextCurrent && queueUnchanged) return prev;
-    return { current: nextCurrent, queue: mergedQueue };
-};
-
-const queueStateSignature = (state: QueueState) =>
-    [
-        mediaIdentity(state.current),
-        ...state.queue.map((item) => item.queueKey),
-    ].join('||');
 
 export function QueueView() {
     const { settings } = useSettings();
     const locale = resolveLocale(settings.locale);
-    const cachedQueueState = useMediaCacheEntry<QueueState>(
-        MEDIA_CACHE_KEYS.queueView
-    );
-    const cachedNowPlaying = useMediaCacheEntry<NowPlayingCacheEntry>(
-        MEDIA_CACHE_KEYS.nowPlaying
-    );
-    const [syncingQueue, setSyncingQueue] = useState(false);
-    const syncingQueueRef = useRef(false);
-    const queueStateRef = useRef<QueueState | null>(null);
-    const cachedNowPlayingItem = useMemo(
-        () =>
-            cachedNowPlaying?.item
-                ? trackOrEpisodeToItem(cachedNowPlaying.item, locale)
-                : null,
-        [cachedNowPlaying?.item, locale]
-    );
-
-    const loadQueue = useCallback(async () => {
-        const data = await sendSpotifyMessage('getQueue');
-        const currentItem = data.currently_playing
-            ? trackOrEpisodeToItem(data.currently_playing, locale)
-            : cachedNowPlayingItem
-              ? cachedNowPlayingItem
-              : null;
-        const queueItems = mapQueueEntries(
-            data.queue as Array<Track | Episode> | undefined,
-            locale
-        );
-        const normalizedQueue = normalizeUpcomingQueue(queueItems, currentItem);
-        const nextState = {
-            current: currentItem,
-            queue: normalizedQueue,
-        } satisfies QueueState;
-
-        const previous = queueStateRef.current ?? cachedQueueState ?? null;
-        if (!previous) return nextState;
-
-        return mergeQueueState(previous, nextState);
-    }, [cachedNowPlayingItem, cachedQueueState, locale]);
-
     const {
-        data: queueState,
         loading,
-        refresh,
-        setData,
-    } = useSpotifyRead<QueueState>({
-        key: MEDIA_CACHE_KEYS.queueView,
-        load: loadQueue,
-        enabled: !syncingQueue,
-        initialData: cachedQueueState,
-        staleMs: 0,
-        pollMs: POLL_MS,
-        onError: (error) => logError(logger, 'Failed to load queue', error),
-    });
+        syncing: syncingQueue,
+        nowPlaying,
+        upcoming,
+        clearQueue,
+        reorderQueue,
+        removeFromQueue,
+    } = useQueueState(locale);
 
-    useEffect(() => {
-        queueStateRef.current = queueState;
-    }, [queueState]);
-
-    useEffect(() => {
-        if (!queueState) return;
-        updateMediaCacheEntry(MEDIA_CACHE_KEYS.queueView, queueState, {
-            signature: queueStateSignature(queueState),
-        });
-    }, [queueState]);
-
-    const upcoming = queueState?.queue ?? [];
-    const nowPlaying = queueState?.current ?? cachedNowPlayingItem;
     const nowPlayingLoading = loading && !nowPlaying;
     const upcomingLoading = loading && upcoming.length === 0;
-
-    const syncQueueToSpotify = useCallback(
-        async (nextQueue: QueueEntry[]) => {
-            if (syncingQueueRef.current) return;
-            syncingQueueRef.current = true;
-            setSyncingQueue(true);
-
-            try {
-                const currentUri = queueStateRef.current?.current?.uri ?? null;
-                await sendSpotifyMessage('syncQueue', {
-                    upcomingUris: nextQueue
-                        .map((item) => item.uri)
-                        .filter((uri): uri is string => Boolean(uri)),
-                    currentUri: currentUri ?? undefined,
-                });
-                await refresh();
-            } catch (error) {
-                logError(logger, 'Failed to sync queue order', error);
-                await refresh();
-            } finally {
-                syncingQueueRef.current = false;
-                setSyncingQueue(false);
-            }
-        },
-        [refresh]
-    );
-
-    const handleRemoveFromQueue = useCallback(
-        (queueKey: string) => {
-            if (syncingQueueRef.current) return;
-            const currentQueue = queueStateRef.current?.queue ?? [];
-            const nextQueue = currentQueue.filter(
-                (item) => item.queueKey !== queueKey
-            );
-            if (nextQueue.length === currentQueue.length) return;
-
-            setData((prev) => (prev ? { ...prev, queue: nextQueue } : prev));
-            void syncQueueToSpotify(nextQueue);
-        },
-        [setData, syncQueueToSpotify]
-    );
 
     const getQueueItemActions = useCallback(
         (item: MediaShelfItem): MediaActionGroup => {
@@ -263,21 +37,24 @@ export function QueueView() {
             const primary = base.primary.filter(
                 (action) => action.id !== 'add-queue'
             );
+
             primary.push({
                 id: 'remove-queue',
                 label: 'Remove from queue',
-                shortcut: '⌫',
+                shortcut: 'Del',
                 onSelect: () => {
-                    handleRemoveFromQueue(queueItem.queueKey);
+                    removeFromQueue(queueItem.queueKey);
                 },
             });
+
             return { primary, secondary: base.secondary };
         },
-        [handleRemoveFromQueue]
+        [removeFromQueue]
     );
 
     const getNowPlayingActions = useCallback((item: MediaShelfItem) => {
         const base = buildMediaActions(item);
+
         return {
             primary: base.primary.filter(
                 (action) =>
@@ -291,19 +68,10 @@ export function QueueView() {
 
     const handleReorder = useCallback(
         (items: MediaShelfItem[]) => {
-            if (syncingQueueRef.current) return;
-            const nextQueue = items as QueueEntry[];
-            setData((prev) => (prev ? { ...prev, queue: nextQueue } : prev));
-            void syncQueueToSpotify(nextQueue);
+            reorderQueue(items as QueueEntry[]);
         },
-        [setData, syncQueueToSpotify]
+        [reorderQueue]
     );
-
-    const handleClearQueue = useCallback(() => {
-        if (syncingQueueRef.current) return;
-        setData((prev) => (prev ? { ...prev, queue: [] } : prev));
-        void syncQueueToSpotify([]);
-    }, [setData, syncQueueToSpotify]);
 
     const queueHeaderRight = (
         <Button
@@ -311,7 +79,7 @@ export function QueueView() {
             variant="soft"
             color="gray"
             disabled={upcomingLoading || syncingQueue || upcoming.length === 0}
-            onClick={handleClearQueue}
+            onClick={clearQueue}
         >
             Clear queue
         </Button>
@@ -352,6 +120,7 @@ export function QueueView() {
                                     </Text>
                                 );
                             }
+
                             return (
                                 <MediaShelf
                                     items={nowPlaying ? [nowPlaying] : []}
@@ -389,6 +158,7 @@ export function QueueView() {
                                     </Text>
                                 );
                             }
+
                             return (
                                 <MediaShelf
                                     items={upcoming}
