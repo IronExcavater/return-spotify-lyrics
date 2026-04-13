@@ -298,10 +298,29 @@ export const spotifyRpc = {
         upcomingUris: string[];
         currentUri?: string;
     }) => {
-        void args;
-        throw new Error(
-            'Queue sync is temporarily disabled while the Spotify queue mutation path is being rebuilt.'
-        );
+        const { upcomingUris, currentUri } = args;
+        const client = await requireClient();
+        return withActiveDevice(client, async (deviceId) => {
+            const playback = await client.player.getPlaybackState();
+            const resolvedCurrentUri =
+                playback?.item?.uri ?? currentUri ?? null;
+            const queueUris = upcomingUris.filter((uri) => Boolean(uri));
+            const nextUris = resolvedCurrentUri
+                ? [resolvedCurrentUri, ...queueUris]
+                : queueUris;
+
+            if (nextUris.length === 0) return;
+
+            // Rebuild the queue in one request. Mixing play + queue endpoints is not stable.
+            await startPlaybackRequest(client, deviceId, {
+                uris: nextUris,
+                positionMs:
+                    resolvedCurrentUri &&
+                    playback?.item?.uri === resolvedCurrentUri
+                        ? (playback.progress_ms ?? undefined)
+                        : undefined,
+            });
+        });
     },
 
     saveTracks: saveSpotifyTracks,

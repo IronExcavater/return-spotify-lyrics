@@ -17,8 +17,6 @@ const logger = createLogger('queue');
 export const DEFAULT_QUEUE_POLL_MS = 5000;
 const RECENTLY_PLAYED_REFRESH_MS = 30_000;
 
-export type QueueEditUnavailableReason = 'spotify-queue-read-only';
-
 export type QueueEntry = MediaShelfItem & {
     queueKey: string;
     queueSignature: string;
@@ -28,7 +26,6 @@ export type QueueViewState = {
     current: MediaItem | null;
     queue: QueueEntry[];
     recentlyPlayed: MediaShelfItem[];
-    editUnavailableReason: QueueEditUnavailableReason;
 };
 
 const mediaIdentity = (item: MediaItem | null) =>
@@ -88,11 +85,15 @@ const dedupeRecentlyPlayed = (items: MediaShelfItem[]) => {
     });
 };
 
-const mapQueueEntries = (queue: MediaItem[]): QueueEntry[] => {
+const mapQueueEntries = (
+    queue: Array<Track | Episode> | undefined,
+    locale: string
+): QueueEntry[] => {
     const occurrences = new Map<string, number>();
 
-    return queue.map((item) => {
-        const signature = queueSignature(item);
+    return (queue ?? []).map((item) => {
+        const mapped = trackOrEpisodeToItem(item, locale);
+        const signature = queueSignature(mapped);
         const nextOccurrence = (occurrences.get(signature) ?? 0) + 1;
 
         occurrences.set(signature, nextOccurrence);
@@ -100,7 +101,7 @@ const mapQueueEntries = (queue: MediaItem[]): QueueEntry[] => {
         const queueKey = `${signature}#${nextOccurrence}`;
 
         return {
-            ...item,
+            ...mapped,
             queueSignature: signature,
             listKey: queueKey,
             queueKey,
@@ -167,8 +168,7 @@ const mergeQueueState = (
     if (
         previous.current === nextCurrent &&
         queueUnchanged &&
-        recentlyPlayedUnchanged &&
-        previous.editUnavailableReason === next.editUnavailableReason
+        recentlyPlayedUnchanged
     ) {
         return previous;
     }
@@ -177,19 +177,21 @@ const mergeQueueState = (
         current: nextCurrent,
         queue: mergedQueue,
         recentlyPlayed: mergedRecentlyPlayed,
-        editUnavailableReason: next.editUnavailableReason,
     };
 };
 
 const queueStateSignature = (state: QueueViewState) =>
     [
         mediaIdentity(state.current),
-        state.editUnavailableReason,
         ...state.queue.map((item) => item.queueKey),
         ...state.recentlyPlayed.map(
             (item) => item.listKey ?? item.uri ?? item.id
         ),
     ].join('||');
+
+const sameQueueOrder = (left: QueueEntry[], right: QueueEntry[]) =>
+    left.length === right.length &&
+    left.every((item, index) => item.queueKey === right[index]?.queueKey);
 
 const isDocumentVisible = () =>
     typeof document === 'undefined' || document.visibilityState === 'visible';
@@ -218,6 +220,7 @@ export function useQueueState(locale: string, pollMs = DEFAULT_QUEUE_POLL_MS) {
     const [recentlyPlayedLoading, setRecentlyPlayedLoading] = useState(
         () => cachedQueueState == null
     );
+    const [syncing, setSyncing] = useState(false);
 
     const mountedRef = useRef(false);
     const queueStateRef = useRef<QueueViewState | null>(queueState);
@@ -225,6 +228,7 @@ export function useQueueState(locale: string, pollMs = DEFAULT_QUEUE_POLL_MS) {
     const refreshPromiseRef = useRef<Promise<void> | null>(null);
     const refreshQueuedRef = useRef(false);
     const pollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const syncingRef = useRef(false);
     const refreshRef = useRef<() => Promise<void>>(async () => undefined);
     const lastRecentlyPlayedRefreshRef = useRef(0);
 
@@ -252,6 +256,8 @@ export function useQueueState(locale: string, pollMs = DEFAULT_QUEUE_POLL_MS) {
         updateMediaCacheEntry(MEDIA_CACHE_KEYS.queueView, resolved, {
             signature: queueStateSignature(resolved),
         });
+
+        return resolved;
     }, []);
 
     const loadQueueSnapshot = useCallback(async () => {
@@ -260,9 +266,8 @@ export function useQueueState(locale: string, pollMs = DEFAULT_QUEUE_POLL_MS) {
             ? trackOrEpisodeToItem(data.currently_playing, locale)
             : cachedNowPlayingItem;
         const queueItems = mapQueueEntries(
-            ((data.queue as Array<Track | Episode> | undefined) ?? []).map(
-                (item) => trackOrEpisodeToItem(item, locale)
-            )
+            data.queue as Array<Track | Episode> | undefined,
+            locale
         );
 
         return {
@@ -292,7 +297,7 @@ export function useQueueState(locale: string, pollMs = DEFAULT_QUEUE_POLL_MS) {
     const schedulePoll = useCallback(() => {
         clearPollTimeout();
 
-        if (pollMs <= 0 || !isDocumentVisible()) return;
+        if (pollMs <= 0 || syncingRef.current || !isDocumentVisible()) return;
 
         pollTimeoutRef.current = setTimeout(() => {
             pollTimeoutRef.current = null;
@@ -301,6 +306,8 @@ export function useQueueState(locale: string, pollMs = DEFAULT_QUEUE_POLL_MS) {
     }, [clearPollTimeout, pollMs]);
 
     const refresh = useCallback(async () => {
+        if (syncingRef.current) return;
+
         clearPollTimeout();
 
         if (refreshPromiseRef.current) {
@@ -339,7 +346,6 @@ export function useQueueState(locale: string, pollMs = DEFAULT_QUEUE_POLL_MS) {
                 commitQueueState({
                     ...queueSnapshot,
                     recentlyPlayed,
-                    editUnavailableReason: 'spotify-queue-read-only',
                 });
             })
             .catch((error) => {
@@ -377,6 +383,80 @@ export function useQueueState(locale: string, pollMs = DEFAULT_QUEUE_POLL_MS) {
 
     refreshRef.current = refresh;
 
+    const syncQueueToSpotify = useCallback(
+        async (nextQueue: QueueEntry[]) => {
+            if (syncingRef.current) return;
+
+            syncingRef.current = true;
+            refreshSeqRef.current += 1;
+            refreshQueuedRef.current = false;
+            clearPollTimeout();
+
+            if (mountedRef.current) {
+                setSyncing(true);
+            }
+
+            const nextState: QueueViewState = {
+                current: queueStateRef.current?.current ?? cachedNowPlayingItem,
+                queue: nextQueue,
+                recentlyPlayed: queueStateRef.current?.recentlyPlayed ?? [],
+            };
+
+            commitQueueState(nextState);
+
+            try {
+                await sendSpotifyMessage('syncQueue', {
+                    upcomingUris: nextQueue
+                        .map((item) => item.uri)
+                        .filter((uri): uri is string => Boolean(uri)),
+                    currentUri: nextState.current?.uri ?? undefined,
+                });
+            } catch (error) {
+                logError(logger, 'Failed to sync queue order', error);
+            } finally {
+                syncingRef.current = false;
+
+                if (mountedRef.current) {
+                    setSyncing(false);
+                }
+
+                await refreshRef.current();
+            }
+        },
+        [cachedNowPlayingItem, clearPollTimeout, commitQueueState]
+    );
+
+    const reorderQueue = useCallback(
+        (items: QueueEntry[]) => {
+            const currentQueue = queueStateRef.current?.queue ?? [];
+
+            if (sameQueueOrder(currentQueue, items)) return;
+            void syncQueueToSpotify(items);
+        },
+        [syncQueueToSpotify]
+    );
+
+    const removeFromQueue = useCallback(
+        (queueKey: string) => {
+            if (syncingRef.current) return;
+
+            const currentQueue = queueStateRef.current?.queue ?? [];
+            const nextQueue = currentQueue.filter(
+                (item) => item.queueKey !== queueKey
+            );
+
+            if (nextQueue.length === currentQueue.length) return;
+
+            void syncQueueToSpotify(nextQueue);
+        },
+        [syncQueueToSpotify]
+    );
+
+    const clearQueue = useCallback(() => {
+        if (syncingRef.current) return;
+        void syncQueueToSpotify([]);
+    }, [syncQueueToSpotify]);
+
     useEffect(() => {
         mountedRef.current = true;
 
@@ -393,11 +473,10 @@ export function useQueueState(locale: string, pollMs = DEFAULT_QUEUE_POLL_MS) {
 
     useEffect(() => {
         if (!cachedQueueState || queueStateRef.current) return;
-        queueStateRef.current = cachedQueueState;
-        setQueueState(cachedQueueState);
+        commitQueueState(cachedQueueState);
         setLoading(false);
         setRecentlyPlayedLoading(false);
-    }, [cachedQueueState]);
+    }, [cachedQueueState, commitQueueState]);
 
     useEffect(() => {
         void refresh();
@@ -433,9 +512,12 @@ export function useQueueState(locale: string, pollMs = DEFAULT_QUEUE_POLL_MS) {
     return {
         loading,
         recentlyPlayedLoading,
+        syncing,
         nowPlaying: queueState?.current ?? cachedNowPlayingItem,
         upcoming: queueState?.queue ?? [],
         recentlyPlayed: queueState?.recentlyPlayed ?? [],
-        editUnavailableReason: queueState?.editUnavailableReason,
+        clearQueue,
+        reorderQueue,
+        removeFromQueue,
     };
 }

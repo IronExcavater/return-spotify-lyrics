@@ -3,7 +3,7 @@ import {
     CounterClockwiseClockIcon,
     ListBulletIcon,
 } from '@radix-ui/react-icons';
-import { Flex, Tabs, Text } from '@radix-ui/themes';
+import { Button, Flex, Tabs, Text } from '@radix-ui/themes';
 
 import { resolveLocale } from '../../shared/locale';
 import type { MediaActionGroup } from '../../shared/types';
@@ -14,7 +14,7 @@ import {
 import { MediaShelf } from '../components/MediaShelf';
 import { StickyLayout } from '../components/StickyLayout';
 import { buildMediaActions } from '../hooks/useMediaActions';
-import { useQueueState } from '../hooks/useQueueState';
+import { type QueueEntry, useQueueState } from '../hooks/useQueueState';
 import { useSettings } from '../hooks/useSettings';
 import type { MediaShelfItem } from '../types/mediaShelf';
 
@@ -26,9 +26,13 @@ export function QueueView() {
     const {
         loading,
         recentlyPlayedLoading,
+        syncing: syncingQueue,
         nowPlaying,
         upcoming,
         recentlyPlayed,
+        clearQueue,
+        reorderQueue,
+        removeFromQueue,
     } = useQueueState(locale);
     const [activeTab, setActiveTab] = useState<QueueTab>('queue');
 
@@ -56,6 +60,28 @@ export function QueueView() {
 
     const getQueueItemActions = useCallback(
         (item: MediaShelfItem): MediaActionGroup => {
+            const queueItem = item as QueueEntry;
+            const base = buildMediaActions(queueItem);
+            const primary = base.primary.filter(
+                (action) => action.id !== 'add-queue'
+            );
+
+            primary.push({
+                id: 'remove-queue',
+                label: 'Remove from queue',
+                shortcut: 'Del',
+                onSelect: () => {
+                    removeFromQueue(queueItem.queueKey);
+                },
+            });
+
+            return { primary, secondary: base.secondary };
+        },
+        [removeFromQueue]
+    );
+
+    const getRecentlyPlayedActions = useCallback(
+        (item: MediaShelfItem): MediaActionGroup => {
             const base = buildMediaActions(item);
 
             return {
@@ -81,6 +107,25 @@ export function QueueView() {
             secondary: base.secondary,
         } satisfies MediaActionGroup;
     }, []);
+
+    const handleReorder = useCallback(
+        (items: MediaShelfItem[]) => {
+            reorderQueue(items as QueueEntry[]);
+        },
+        [reorderQueue]
+    );
+
+    const queueHeaderRight = (
+        <Button
+            size="1"
+            variant="soft"
+            color="gray"
+            disabled={upcomingLoading || syncingQueue || upcoming.length === 0}
+            onClick={clearQueue}
+        >
+            Clear queue
+        </Button>
+    );
 
     return (
         <StickyLayout.Root className="no-overflow-anchor scrollbar-gutter-stable flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
@@ -166,6 +211,7 @@ export function QueueView() {
                                 <MediaSection
                                     editing={false}
                                     loading={upcomingLoading}
+                                    headerRight={queueHeaderRight}
                                     section={
                                         {
                                             id: 'queue-up-next',
@@ -197,9 +243,14 @@ export function QueueView() {
                                                 variant="list"
                                                 orientation="vertical"
                                                 itemsPerColumn={6}
+                                                draggable={
+                                                    !sectionLoading &&
+                                                    !syncingQueue
+                                                }
                                                 interactive={!sectionLoading}
                                                 itemLoading={sectionLoading}
                                                 enablePrimaryPlay
+                                                onReorder={handleReorder}
                                                 getActions={getQueueItemActions}
                                             />
                                         );
@@ -248,7 +299,9 @@ export function QueueView() {
                                             interactive={!sectionLoading}
                                             itemLoading={sectionLoading}
                                             enablePrimaryPlay
-                                            getActions={getQueueItemActions}
+                                            getActions={
+                                                getRecentlyPlayedActions
+                                            }
                                         />
                                     );
                                 }}
