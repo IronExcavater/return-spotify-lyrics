@@ -11,14 +11,13 @@ import type {
     Episode,
     Market,
     Page,
-    Playlist,
     PlaylistedTrack,
     Track,
 } from '@spotify/web-api-ts-sdk';
 
 import { safeRequest } from '../../shared/async';
 import { formatDurationLong } from '../../shared/date';
-import { resolveMarket } from '../../shared/locale';
+import { resolveLocale, resolveMarket } from '../../shared/locale';
 import { createLogger, logError } from '../../shared/logging';
 import { playlistToItem } from '../../shared/media';
 import { sendSpotifyMessage } from '../../shared/messaging';
@@ -45,6 +44,7 @@ import {
     PLAYLIST_PAGE_SIZE,
     storePlaylistContentState,
     type PlaylistContentState,
+    type PlaylistWithNullablePublic,
 } from '../data/playlistStore';
 import { useAuth } from '../hooks/useAuth';
 import { buildMediaActions } from '../hooks/useMediaActions';
@@ -115,7 +115,7 @@ const INITIAL_UI_STATE: PlaylistUiState = {
 
 const toPlaylistDetailsDraft = (
     playlist: Pick<
-        Playlist<Track>,
+        PlaylistWithNullablePublic,
         'name' | 'description' | 'public' | 'collaborative'
     >
 ): PlaylistDetailsDraft => ({
@@ -128,6 +128,7 @@ const toPlaylistDetailsDraft = (
 export function PlaylistView() {
     const { settings } = useSettings();
     const { profile } = useAuth();
+    const locale = resolveLocale(settings.locale);
     const market = resolveMarket(settings.locale);
     const { state, restoring } = useStoredRouteState<MediaRouteState>({
         store: playlistRouteStore,
@@ -181,7 +182,7 @@ export function PlaylistView() {
                 const nextData = await loadPlaylistContentState({
                     playlistId,
                     market: nextMarket,
-                    locale: settings.locale,
+                    locale,
                 });
                 applyPlaylistState(nextData);
             } catch (error) {
@@ -190,7 +191,7 @@ export function PlaylistView() {
                 patchUiState({ loading: false });
             }
         },
-        [applyPlaylistState, patchUiState, settings.locale]
+        [applyPlaylistState, locale, patchUiState]
     );
 
     useEffect(() => {
@@ -232,18 +233,24 @@ export function PlaylistView() {
     const showInitialLoading = loading && !data;
 
     const loadMoreItems = useCallback(async () => {
-        let offset: number | null = null;
-        let snapshotId: string | undefined;
-        let currentData: PlaylistViewState | null = null;
-        setData((prev) => {
-            if (!prev || prev.itemsLoadingMore || !prev.itemsHasMore)
-                return prev;
-            currentData = prev;
-            offset = prev.itemsOffset;
-            snapshotId = prev.snapshotId;
-            return { ...prev, itemsLoadingMore: true };
-        });
-        if (offset == null || !state?.id || !currentData) return;
+        const currentData = data;
+        if (
+            !currentData ||
+            currentData.itemsLoadingMore ||
+            !currentData.itemsHasMore
+        ) {
+            return;
+        }
+        if (!state?.id) return;
+
+        const offset = currentData.itemsOffset;
+        const snapshotId = currentData.snapshotId;
+
+        setData((prev) =>
+            prev && prev.itemsOffset === offset
+                ? { ...prev, itemsLoadingMore: true }
+                : prev
+        );
         try {
             const page = await safeRequest(
                 () =>
@@ -271,11 +278,7 @@ export function PlaylistView() {
                 playlist: currentData.playlist,
                 items: [
                     ...currentData.items,
-                    ...mapPlaylistContentItems(
-                        pageItems,
-                        settings.locale,
-                        offset
-                    ),
+                    ...mapPlaylistContentItems(pageItems, locale, offset),
                 ],
                 totalDurationMs:
                     currentData.totalDurationMs + sumDurationMs(tracks),
@@ -293,7 +296,7 @@ export function PlaylistView() {
                 prev ? { ...prev, itemsLoadingMore: false } : prev
             );
         }
-    }, [market, settings.locale, state?.id]);
+    }, [data, locale, market, state?.id]);
 
     useEffect(() => {
         if (!data || data.itemsLoadingMore) return;
@@ -517,7 +520,7 @@ export function PlaylistView() {
             const complete = await ensurePlaylistContentStateLoaded({
                 playlistId: state.id,
                 market,
-                locale: settings.locale,
+                locale,
                 base: data,
             });
             patchUiState({ dedupeItems: complete.items });
@@ -527,15 +530,7 @@ export function PlaylistView() {
         } finally {
             patchDialogs({ dedupeLoading: false });
         }
-    }, [
-        canEdit,
-        data,
-        market,
-        patchDialogs,
-        patchUiState,
-        settings.locale,
-        state?.id,
-    ]);
+    }, [canEdit, data, market, patchDialogs, patchUiState, locale, state?.id]);
 
     const handleRemoveDuplicates = useCallback(
         async (items: PlaylistDedupableItem[]) => {
@@ -707,6 +702,7 @@ export function PlaylistView() {
                             variant="list"
                             orientation="vertical"
                             itemsPerColumn={6}
+                            enablePrimaryPlay
                             draggable={reorderEnabled}
                             interactive={!sectionLoading}
                             itemLoading={sectionLoading}

@@ -35,7 +35,7 @@ type AppShellProps = {
         onUpdateFilter: Parameters<typeof HomeBar>[0]['onUpdateFilter'];
         onRemoveFilter: Parameters<typeof HomeBar>[0]['onRemoveFilter'];
         onClearFilters: () => void;
-        inputRef: RefObject<HTMLInputElement | null>;
+        inputRef: RefObject<HTMLInputElement> | undefined;
     };
     history: {
         canGoBack: boolean;
@@ -70,7 +70,7 @@ export function AppShell({
         <SettingsProvider>
             <Flex direction="column" height="100%">
                 {showBars && (
-                    <Flex className="relative z-30 border-b-2 border-grayA-6 bg-panel-solid">
+                    <Flex className="border-grayA-6 bg-panel-solid relative z-30 border-b-2">
                         {activeBar === 'playback' && (
                             <PlaybackBar
                                 profileSlot={profileSlot.playback}

@@ -1,283 +1,76 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Button, Flex, Text } from '@radix-ui/themes';
-import type { Episode, Track } from '@spotify/web-api-ts-sdk';
+import { useCallback, useMemo, useState } from 'react';
+import {
+    CounterClockwiseClockIcon,
+    ListBulletIcon,
+} from '@radix-ui/react-icons';
+import { Flex, Tabs, Text } from '@radix-ui/themes';
 
 import { resolveLocale } from '../../shared/locale';
-import { createLogger, logError } from '../../shared/logging';
-import { trackOrEpisodeToItem } from '../../shared/media';
-import { sendSpotifyMessage } from '../../shared/messaging';
-import type { MediaActionGroup, MediaItem } from '../../shared/types';
+import type { MediaActionGroup } from '../../shared/types';
 import {
     MediaSection,
     type MediaSectionState,
 } from '../components/MediaSection';
 import { MediaShelf } from '../components/MediaShelf';
 import { StickyLayout } from '../components/StickyLayout';
-import {
-    MEDIA_CACHE_KEYS,
-    type NowPlayingCacheEntry,
-} from '../hooks/mediaCacheEntries';
 import { buildMediaActions } from '../hooks/useMediaActions';
-import {
-    updateMediaCacheEntry,
-    useMediaCacheEntry,
-} from '../hooks/useMediaCache';
+import { useQueueState } from '../hooks/useQueueState';
 import { useSettings } from '../hooks/useSettings';
-import { useSpotifyRead } from '../hooks/useSpotifyRead';
 import type { MediaShelfItem } from '../types/mediaShelf';
 
-const logger = createLogger('queue');
-const POLL_MS = 5000;
-
-type QueueEntry = MediaShelfItem & {
-    queueKey: string;
-    queueSignature: string;
-};
-
-type QueueState = {
-    current: MediaItem | null;
-    queue: QueueEntry[];
-};
-
-const mediaIdentity = (item: MediaItem | null) =>
-    item
-        ? [
-              item.kind ?? '',
-              item.uri ?? '',
-              item.id ?? '',
-              item.title ?? '',
-              item.subtitle ?? '',
-          ].join('|')
-        : '';
-
-const queueSignature = (item: MediaItem) =>
-    [
-        item.kind ?? '',
-        item.uri ?? '',
-        item.id ?? '',
-        item.title ?? '',
-        item.subtitle ?? '',
-        item.imageUrl ?? '',
-    ].join('|');
-
-const normalizeLabel = (value?: string) => value?.trim().toLowerCase() ?? '';
-
-const isSameQueueItem = (left: MediaItem, right: MediaItem) => {
-    if (left.uri && right.uri && left.uri === right.uri) return true;
-    if (
-        left.id &&
-        right.id &&
-        left.id === right.id &&
-        left.kind === right.kind
-    ) {
-        return true;
-    }
-
-    if (left.uri || right.uri || left.id || right.id) return false;
-
-    return (
-        left.kind === right.kind &&
-        normalizeLabel(left.title) === normalizeLabel(right.title) &&
-        normalizeLabel(left.subtitle) === normalizeLabel(right.subtitle)
-    );
-};
-
-const mapQueueEntries = (
-    queue: Array<Track | Episode> | undefined,
-    locale: string
-): QueueEntry[] => {
-    const occurrences = new Map<string, number>();
-    return (queue ?? []).map((item) => {
-        const mapped = trackOrEpisodeToItem(item, locale);
-        const signature = queueSignature(mapped);
-        const nextOccurrence = (occurrences.get(signature) ?? 0) + 1;
-        occurrences.set(signature, nextOccurrence);
-        const queueKey = `${signature}#${nextOccurrence}`;
-        return {
-            ...mapped,
-            queueSignature: signature,
-            queueKey,
-            listKey: queueKey,
-        };
-    });
-};
-
-const normalizeUpcomingQueue = (
-    queue: QueueEntry[],
-    current: MediaItem | null
-): QueueEntry[] => {
-    if (!current || queue.length === 0) return queue;
-
-    // Spotify can echo the currently playing item at the head of the queue.
-    // Only strip that single echoed entry; repeated upcoming duplicates are real.
-    if (!isSameQueueItem(queue[0], current)) return queue;
-    return queue.slice(1);
-};
-
-const mergeQueueState = (prev: QueueState, next: QueueState): QueueState => {
-    const nextCurrent =
-        mediaIdentity(prev.current) === mediaIdentity(next.current)
-            ? prev.current
-            : next.current;
-
-    const previousByKey = new Map(
-        prev.queue.map((item) => [item.queueKey, item])
-    );
-    const mergedQueue = next.queue.map(
-        (item) => previousByKey.get(item.queueKey) ?? item
-    );
-
-    const queueUnchanged =
-        prev.queue.length === mergedQueue.length &&
-        prev.queue.every((item, index) => item === mergedQueue[index]);
-
-    if (prev.current === nextCurrent && queueUnchanged) return prev;
-    return { current: nextCurrent, queue: mergedQueue };
-};
-
-const queueStateSignature = (state: QueueState) =>
-    [
-        mediaIdentity(state.current),
-        ...state.queue.map((item) => item.queueKey),
-    ].join('||');
+type QueueTab = 'queue' | 'recently-played';
 
 export function QueueView() {
     const { settings } = useSettings();
     const locale = resolveLocale(settings.locale);
-    const cachedQueueState = useMediaCacheEntry<QueueState>(
-        MEDIA_CACHE_KEYS.queueView
-    );
-    const cachedNowPlaying = useMediaCacheEntry<NowPlayingCacheEntry>(
-        MEDIA_CACHE_KEYS.nowPlaying
-    );
-    const [syncingQueue, setSyncingQueue] = useState(false);
-    const syncingQueueRef = useRef(false);
-    const queueStateRef = useRef<QueueState | null>(null);
-    const cachedNowPlayingItem = useMemo(
-        () =>
-            cachedNowPlaying?.item
-                ? trackOrEpisodeToItem(cachedNowPlaying.item, locale)
-                : null,
-        [cachedNowPlaying?.item, locale]
-    );
-
-    const loadQueue = useCallback(async () => {
-        const data = await sendSpotifyMessage('getQueue');
-        const currentItem = data.currently_playing
-            ? trackOrEpisodeToItem(data.currently_playing, locale)
-            : cachedNowPlayingItem
-              ? cachedNowPlayingItem
-              : null;
-        const queueItems = mapQueueEntries(
-            data.queue as Array<Track | Episode> | undefined,
-            locale
-        );
-        const normalizedQueue = normalizeUpcomingQueue(queueItems, currentItem);
-        const nextState = {
-            current: currentItem,
-            queue: normalizedQueue,
-        } satisfies QueueState;
-
-        const previous = queueStateRef.current ?? cachedQueueState ?? null;
-        if (!previous) return nextState;
-
-        return mergeQueueState(previous, nextState);
-    }, [cachedNowPlayingItem, cachedQueueState, locale]);
-
     const {
-        data: queueState,
         loading,
-        refresh,
-        setData,
-    } = useSpotifyRead<QueueState>({
-        key: MEDIA_CACHE_KEYS.queueView,
-        load: loadQueue,
-        enabled: !syncingQueue,
-        initialData: cachedQueueState,
-        staleMs: 0,
-        pollMs: POLL_MS,
-        onError: (error) => logError(logger, 'Failed to load queue', error),
-    });
+        recentlyPlayedLoading,
+        nowPlaying,
+        upcoming,
+        recentlyPlayed,
+    } = useQueueState(locale);
+    const [activeTab, setActiveTab] = useState<QueueTab>('queue');
 
-    useEffect(() => {
-        queueStateRef.current = queueState;
-    }, [queueState]);
-
-    useEffect(() => {
-        if (!queueState) return;
-        updateMediaCacheEntry(MEDIA_CACHE_KEYS.queueView, queueState, {
-            signature: queueStateSignature(queueState),
-        });
-    }, [queueState]);
-
-    const upcoming = queueState?.queue ?? [];
-    const nowPlaying = queueState?.current ?? cachedNowPlayingItem;
     const nowPlayingLoading = loading && !nowPlaying;
     const upcomingLoading = loading && upcoming.length === 0;
-
-    const syncQueueToSpotify = useCallback(
-        async (nextQueue: QueueEntry[]) => {
-            if (syncingQueueRef.current) return;
-            syncingQueueRef.current = true;
-            setSyncingQueue(true);
-
-            try {
-                const currentUri = queueStateRef.current?.current?.uri ?? null;
-                await sendSpotifyMessage('syncQueue', {
-                    upcomingUris: nextQueue
-                        .map((item) => item.uri)
-                        .filter((uri): uri is string => Boolean(uri)),
-                    currentUri: currentUri ?? undefined,
-                });
-                await refresh();
-            } catch (error) {
-                logError(logger, 'Failed to sync queue order', error);
-                await refresh();
-            } finally {
-                syncingQueueRef.current = false;
-                setSyncingQueue(false);
-            }
-        },
-        [refresh]
-    );
-
-    const handleRemoveFromQueue = useCallback(
-        (queueKey: string) => {
-            if (syncingQueueRef.current) return;
-            const currentQueue = queueStateRef.current?.queue ?? [];
-            const nextQueue = currentQueue.filter(
-                (item) => item.queueKey !== queueKey
-            );
-            if (nextQueue.length === currentQueue.length) return;
-
-            setData((prev) => (prev ? { ...prev, queue: nextQueue } : prev));
-            void syncQueueToSpotify(nextQueue);
-        },
-        [setData, syncQueueToSpotify]
+    const recentlyPlayedSectionLoading =
+        recentlyPlayedLoading && recentlyPlayed.length === 0;
+    const tabItems = useMemo<
+        Array<{ key: QueueTab; label: string; icon: JSX.Element }>
+    >(
+        () => [
+            {
+                key: 'queue',
+                label: 'Queue',
+                icon: <ListBulletIcon />,
+            },
+            {
+                key: 'recently-played',
+                label: 'Recently played',
+                icon: <CounterClockwiseClockIcon />,
+            },
+        ],
+        []
     );
 
     const getQueueItemActions = useCallback(
         (item: MediaShelfItem): MediaActionGroup => {
-            const queueItem = item as QueueEntry;
-            const base = buildMediaActions(queueItem);
-            const primary = base.primary.filter(
-                (action) => action.id !== 'add-queue'
-            );
-            primary.push({
-                id: 'remove-queue',
-                label: 'Remove from queue',
-                shortcut: '⌫',
-                onSelect: () => {
-                    handleRemoveFromQueue(queueItem.queueKey);
-                },
-            });
-            return { primary, secondary: base.secondary };
+            const base = buildMediaActions(item);
+
+            return {
+                primary: base.primary.filter(
+                    (action) => action.id !== 'add-queue'
+                ),
+                secondary: base.secondary,
+            };
         },
-        [handleRemoveFromQueue]
+        []
     );
 
     const getNowPlayingActions = useCallback((item: MediaShelfItem) => {
         const base = buildMediaActions(item);
+
         return {
             primary: base.primary.filter(
                 (action) =>
@@ -288,34 +81,6 @@ export function QueueView() {
             secondary: base.secondary,
         } satisfies MediaActionGroup;
     }, []);
-
-    const handleReorder = useCallback(
-        (items: MediaShelfItem[]) => {
-            if (syncingQueueRef.current) return;
-            const nextQueue = items as QueueEntry[];
-            setData((prev) => (prev ? { ...prev, queue: nextQueue } : prev));
-            void syncQueueToSpotify(nextQueue);
-        },
-        [setData, syncQueueToSpotify]
-    );
-
-    const handleClearQueue = useCallback(() => {
-        if (syncingQueueRef.current) return;
-        setData((prev) => (prev ? { ...prev, queue: [] } : prev));
-        void syncQueueToSpotify([]);
-    }, [setData, syncQueueToSpotify]);
-
-    const queueHeaderRight = (
-        <Button
-            size="1"
-            variant="soft"
-            color="gray"
-            disabled={upcomingLoading || syncingQueue || upcoming.length === 0}
-            onClick={handleClearQueue}
-        >
-            Clear queue
-        </Button>
-    );
 
     return (
         <StickyLayout.Root className="no-overflow-anchor scrollbar-gutter-stable flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
@@ -329,81 +94,167 @@ export function QueueView() {
                     gap="3"
                     className="min-w-0"
                 >
-                    <MediaSection
-                        editing={false}
-                        loading={nowPlayingLoading}
-                        stickyHeader={false}
-                        section={
-                            {
-                                id: 'queue-now-playing',
-                                title: 'Now playing',
-                                view: 'list',
-                                infinite: 'rows',
-                                rows: 0,
-                                items: nowPlaying ? [nowPlaying] : [],
-                            } satisfies MediaSectionState
+                    <Tabs.Root
+                        value={activeTab}
+                        onValueChange={(value) =>
+                            setActiveTab(value as QueueTab)
                         }
-                        onChange={() => undefined}
-                        renderContent={({ loading: sectionLoading }) => {
-                            if (!sectionLoading && !nowPlaying) {
-                                return (
-                                    <Text size="2" color="gray">
-                                        Nothing is playing right now.
-                                    </Text>
-                                );
-                            }
-                            return (
-                                <MediaShelf
-                                    items={nowPlaying ? [nowPlaying] : []}
-                                    variant="list"
-                                    orientation="vertical"
-                                    itemsPerColumn={1}
-                                    interactive={!sectionLoading}
-                                    itemLoading={sectionLoading}
-                                    getActions={getNowPlayingActions}
-                                />
-                            );
-                        }}
-                    />
+                    >
+                        <Tabs.List size="1">
+                            {tabItems.map((tab) => (
+                                <Tabs.Trigger key={tab.key} value={tab.key}>
+                                    <Flex align="center" gap="2">
+                                        {tab.icon}
+                                        <span>{tab.label}</span>
+                                    </Flex>
+                                </Tabs.Trigger>
+                            ))}
+                        </Tabs.List>
 
-                    <MediaSection
-                        editing={false}
-                        loading={upcomingLoading}
-                        headerRight={queueHeaderRight}
-                        section={
-                            {
-                                id: 'queue-up-next',
-                                title: 'Up next',
-                                view: 'list',
-                                infinite: 'rows',
-                                rows: 0,
-                                items: upcoming,
-                            } satisfies MediaSectionState
-                        }
-                        onChange={() => undefined}
-                        renderContent={({ loading: sectionLoading }) => {
-                            if (!sectionLoading && upcoming.length === 0) {
-                                return (
-                                    <Text size="2" color="gray">
-                                        Queue is empty.
-                                    </Text>
-                                );
-                            }
-                            return (
-                                <MediaShelf
-                                    items={upcoming}
-                                    variant="list"
-                                    orientation="vertical"
-                                    itemsPerColumn={6}
-                                    draggable={!sectionLoading && !syncingQueue}
-                                    interactive={!sectionLoading}
-                                    itemLoading={sectionLoading}
-                                    onReorder={handleReorder}
-                                    getActions={getQueueItemActions}
+                        <Tabs.Content value="queue">
+                            <Flex direction="column" gap="3" pt="3">
+                                <MediaSection
+                                    editing={false}
+                                    loading={nowPlayingLoading}
+                                    stickyHeader={false}
+                                    section={
+                                        {
+                                            id: 'queue-now-playing',
+                                            title: 'Now playing',
+                                            view: 'list',
+                                            infinite: 'rows',
+                                            rows: 0,
+                                            items: nowPlaying
+                                                ? [nowPlaying]
+                                                : [],
+                                        } satisfies MediaSectionState
+                                    }
+                                    onChange={() => undefined}
+                                    renderContent={({
+                                        loading: sectionLoading,
+                                    }) => {
+                                        if (!sectionLoading && !nowPlaying) {
+                                            return (
+                                                <Text size="2" color="gray">
+                                                    Nothing is playing right
+                                                    now.
+                                                </Text>
+                                            );
+                                        }
+
+                                        return (
+                                            <MediaShelf
+                                                items={
+                                                    nowPlaying
+                                                        ? [nowPlaying]
+                                                        : []
+                                                }
+                                                variant="list"
+                                                orientation="vertical"
+                                                itemsPerColumn={1}
+                                                interactive={!sectionLoading}
+                                                itemLoading={sectionLoading}
+                                                enablePrimaryPlay
+                                                getActions={
+                                                    getNowPlayingActions
+                                                }
+                                            />
+                                        );
+                                    }}
                                 />
-                            );
-                        }}
-                    />
+
+                                <MediaSection
+                                    editing={false}
+                                    loading={upcomingLoading}
+                                    section={
+                                        {
+                                            id: 'queue-up-next',
+                                            title: 'Up next',
+                                            view: 'list',
+                                            infinite: 'rows',
+                                            rows: 0,
+                                            items: upcoming,
+                                        } satisfies MediaSectionState
+                                    }
+                                    onChange={() => undefined}
+                                    renderContent={({
+                                        loading: sectionLoading,
+                                    }) => {
+                                        if (
+                                            !sectionLoading &&
+                                            upcoming.length === 0
+                                        ) {
+                                            return (
+                                                <Text size="2" color="gray">
+                                                    Queue is empty.
+                                                </Text>
+                                            );
+                                        }
+
+                                        return (
+                                            <MediaShelf
+                                                items={upcoming}
+                                                variant="list"
+                                                orientation="vertical"
+                                                itemsPerColumn={6}
+                                                interactive={!sectionLoading}
+                                                itemLoading={sectionLoading}
+                                                enablePrimaryPlay
+                                                getActions={getQueueItemActions}
+                                            />
+                                        );
+                                    }}
+                                />
+                            </Flex>
+                        </Tabs.Content>
+
+                        <Tabs.Content value="recently-played">
+                            <MediaSection
+                                editing={false}
+                                loading={recentlyPlayedSectionLoading}
+                                stickyHeader={false}
+                                section={
+                                    {
+                                        id: 'queue-recently-played',
+                                        title: 'Recently played',
+                                        view: 'list',
+                                        infinite: 'rows',
+                                        rows: 0,
+                                        items: recentlyPlayed,
+                                    } satisfies MediaSectionState
+                                }
+                                onChange={() => undefined}
+                                renderContent={({
+                                    loading: sectionLoading,
+                                }) => {
+                                    if (
+                                        !sectionLoading &&
+                                        recentlyPlayed.length === 0
+                                    ) {
+                                        return (
+                                            <Text size="2" color="gray">
+                                                Nothing has been played
+                                                recently.
+                                            </Text>
+                                        );
+                                    }
+
+                                    return (
+                                        <MediaShelf
+                                            items={recentlyPlayed}
+                                            variant="list"
+                                            orientation="vertical"
+                                            itemsPerColumn={6}
+                                            interactive={!sectionLoading}
+                                            itemLoading={sectionLoading}
+                                            enablePrimaryPlay
+                                            getActions={getQueueItemActions}
+                                        />
+                                    );
+                                }}
+                            />
+                        </Tabs.Content>
+                    </Tabs.Root>
                 </Flex>
             </StickyLayout.Body>
         </StickyLayout.Root>

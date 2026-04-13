@@ -2,12 +2,12 @@ import type {
     Album,
     Artist,
     Episode,
+    Playlist,
     Show,
     SimplifiedAlbum,
     SimplifiedArtist,
     SimplifiedAudiobook,
     SimplifiedEpisode,
-    SimplifiedPlaylist,
     SimplifiedShow,
     SimplifiedTrack,
     Track,
@@ -199,7 +199,12 @@ export const albumToItem = (album: SimplifiedAlbum | Album): MediaItem =>
         kind: 'album',
     });
 
-export const playlistToItem = (playlist: SimplifiedPlaylist): MediaItem =>
+type PlaylistItemSource = Pick<
+    Playlist<Track>,
+    'id' | 'uri' | 'name' | 'owner' | 'images' | 'external_urls'
+>;
+
+export const playlistToItem = (playlist: PlaylistItemSource): MediaItem =>
     createCollectionMediaItem({
         id: playlist.id,
         uri: playlist.uri,

@@ -4,7 +4,7 @@ import {
     type MouseEvent,
     type ReactNode,
 } from 'react';
-import { DotsHorizontalIcon } from '@radix-ui/react-icons';
+import { DotsHorizontalIcon, PlayIcon } from '@radix-ui/react-icons';
 import {
     Checkbox,
     DropdownMenu,
@@ -14,6 +14,7 @@ import {
 } from '@radix-ui/themes';
 import clsx from 'clsx';
 
+import type { MediaPrimaryAction } from '../../shared/types';
 import { handleMenuTriggerKeyDown } from '../hooks/useActions';
 import { useInteractiveTargetGuard } from '../hooks/useInteractiveTargetGuard';
 import { AvatarButton } from './AvatarButton';
@@ -31,9 +32,11 @@ export interface MediaRowProps {
     imageShape?: 'round' | 'square';
     showImage?: boolean;
     onClick?: () => void;
+    onTitleClick?: () => void;
     loading?: boolean;
     contextMenu?: ReactNode;
     contextMenuDisabled?: boolean;
+    primaryAction?: MediaPrimaryAction;
     className?: string;
     style?: CSSProperties;
     seed?: number;
@@ -50,29 +53,81 @@ const POSITION_LABEL_CLASS_NAME =
 
 type MediaRowSelection = NonNullable<MediaRowProps['selection']>;
 
+function PrimaryPlayButton({
+    action,
+    visible,
+}: {
+    action?: MediaPrimaryAction;
+    visible: boolean;
+}) {
+    if (!action) return null;
+
+    return (
+        <IconButton
+            data-title-hover-stop="true"
+            data-media-secondary-action="true"
+            type="button"
+            size="1"
+            variant="ghost"
+            radius="full"
+            color="gray"
+            disabled={action.disabled}
+            onClick={(event) => {
+                event.stopPropagation();
+                if (action.disabled) return;
+                action.onSelect();
+            }}
+            onPointerDown={(event) => event.stopPropagation()}
+            className={clsx(
+                'absolute inset-0 m-auto opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100',
+                visible && 'opacity-100'
+            )}
+            aria-label={action.label ?? 'Play'}
+        >
+            <PlayIcon />
+        </IconButton>
+    );
+}
+
 function MediaRowPosition({
     label,
     selection,
     showSelection,
+    primaryAction,
+    primaryActionVisible,
 }: {
     label: string;
     selection?: MediaRowSelection;
     showSelection: boolean;
+    primaryAction?: MediaPrimaryAction;
+    primaryActionVisible: boolean;
 }) {
     if (!selection) {
         return (
-            <div className="flex h-8 w-9 items-center justify-center">
-                <span className={POSITION_LABEL_CLASS_NAME}>{label}</span>
+            <div className="relative flex h-8 w-9 items-center justify-center">
+                <span
+                    className={clsx(
+                        POSITION_LABEL_CLASS_NAME,
+                        primaryActionVisible && 'opacity-0'
+                    )}
+                >
+                    {label}
+                </span>
+                <PrimaryPlayButton
+                    action={primaryAction}
+                    visible={primaryActionVisible}
+                />
             </div>
         );
     }
 
     return (
-        <div className="flex h-8 w-9 flex-col items-center justify-center overflow-hidden">
+        <div className="relative flex h-8 w-9 flex-col items-center justify-center overflow-hidden">
             <div
                 className={clsx(
                     'flex min-w-[4ch] justify-center transition-transform',
-                    showSelection ? '-translate-y-0.5' : 'translate-y-1.5'
+                    showSelection ? '-translate-y-0.5' : 'translate-y-1.5',
+                    primaryActionVisible && 'opacity-0'
                 )}
             >
                 <span className={POSITION_LABEL_CLASS_NAME}>{label}</span>
@@ -96,6 +151,10 @@ function MediaRowPosition({
                     }
                 />
             </div>
+            <PrimaryPlayButton
+                action={primaryAction}
+                visible={primaryActionVisible}
+            />
         </div>
     );
 }
@@ -109,9 +168,11 @@ export function MediaRow({
     imageShape = 'square',
     showImage = true,
     onClick,
+    onTitleClick,
     loading = false,
     contextMenu,
     contextMenuDisabled = false,
+    primaryAction,
     className,
     style,
     seed = 0,
@@ -132,23 +193,44 @@ export function MediaRow({
                   height: 'var(--line-height-1)',
               };
     const handleRowClick = loading ? undefined : onClick;
+    const handleTitleClick = loading
+        ? undefined
+        : (onTitleClick ?? handleRowClick);
     const [isRowHovered, setIsRowHovered] = useState(false);
     const [isTitleProxyHovered, setIsTitleProxyHovered] = useState(false);
+    const [isSecondaryHovered, setIsSecondaryHovered] = useState(false);
     const { isInteractiveTarget } = useInteractiveTargetGuard();
     const showSelection = Boolean(
         selection && (selection.checked || isRowHovered)
     );
+    const showPrimaryAction =
+        !loading &&
+        Boolean(primaryAction) &&
+        !isSecondaryHovered &&
+        (isRowHovered || showSelection);
     const positionLabel = Number.isFinite(position)
         ? String(Number(position) + 1)
         : '';
+
     const handleContainerClick = (event: MouseEvent<HTMLDivElement>) => {
         if (!handleRowClick) return;
         if (isInteractiveTarget(event.target)) return;
         handleRowClick();
     };
+
     const updateTitleProxyHover = (target: EventTarget | null) => {
-        const next = Boolean(handleRowClick) && !isInteractiveTarget(target);
+        const next = Boolean(handleTitleClick) && !isInteractiveTarget(target);
         setIsTitleProxyHovered((previous) =>
+            previous === next ? previous : next
+        );
+    };
+
+    const updateSecondaryHover = (target: EventTarget | null) => {
+        const element = target instanceof Element ? target : null;
+        const next = Boolean(
+            element?.closest('[data-media-secondary-action="true"]')
+        );
+        setIsSecondaryHovered((previous) =>
             previous === next ? previous : next
         );
     };
@@ -161,14 +243,19 @@ export function MediaRow({
             onPointerEnter={(event) => {
                 setIsRowHovered(true);
                 updateTitleProxyHover(event.target);
+                updateSecondaryHover(event.target);
             }}
-            onPointerMove={(event) => updateTitleProxyHover(event.target)}
+            onPointerMove={(event) => {
+                updateTitleProxyHover(event.target);
+                updateSecondaryHover(event.target);
+            }}
             onPointerLeave={() => {
                 setIsRowHovered(false);
                 setIsTitleProxyHovered(false);
+                setIsSecondaryHovered(false);
             }}
             className={clsx(
-                'group w-full min-w-0 rounded-2 bg-background',
+                'group rounded-2 bg-background w-full min-w-0',
                 handleRowClick && 'cursor-pointer',
                 className
             )}
@@ -180,6 +267,8 @@ export function MediaRow({
                         label={positionLabel}
                         selection={selection}
                         showSelection={showSelection}
+                        primaryAction={primaryAction}
+                        primaryActionVisible={showPrimaryAction}
                     />
                 </Flex>
             )}
@@ -195,7 +284,36 @@ export function MediaRow({
                         aria-label={title}
                         hideRing
                         tabIndex={-1}
-                    />
+                        disabled={primaryAction?.disabled}
+                        onClick={
+                            primaryAction
+                                ? (event) => {
+                                      event.stopPropagation();
+                                      if (primaryAction.disabled) return;
+                                      primaryAction.onSelect();
+                                  }
+                                : undefined
+                        }
+                        overlayPointerEvents="none"
+                    >
+                        {!showPosition && primaryAction && (
+                            <Flex
+                                align="center"
+                                justify="center"
+                                className="pointer-events-none absolute inset-0"
+                            >
+                                <Flex
+                                    className={clsx(
+                                        'bg-panel-solid/10 rounded-full text-white opacity-0 backdrop-blur-[2px] transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100',
+                                        showPrimaryAction && 'opacity-100'
+                                    )}
+                                    p="1"
+                                >
+                                    <PlayIcon />
+                                </Flex>
+                            </Flex>
+                        )}
+                    </AvatarButton>
                 </Skeleton>
             )}
             <Flex direction="column" flexGrow="1" className="min-w-0">
@@ -235,12 +353,12 @@ export function MediaRow({
                                     <TextButton
                                         size="2"
                                         weight="medium"
-                                        interactive={Boolean(handleRowClick)}
+                                        interactive={Boolean(handleTitleClick)}
                                         forceHover={isTitleProxyHovered}
                                         onClick={
-                                            handleRowClick
+                                            handleTitleClick
                                                 ? () => {
-                                                      handleRowClick();
+                                                      handleTitleClick();
                                                   }
                                                 : undefined
                                         }
@@ -287,6 +405,7 @@ export function MediaRow({
                     >
                         <IconButton
                             data-title-hover-stop="true"
+                            data-media-secondary-action="true"
                             variant="ghost"
                             radius="full"
                             size="1"

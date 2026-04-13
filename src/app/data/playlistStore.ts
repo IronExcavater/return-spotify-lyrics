@@ -3,7 +3,6 @@ import type {
     Market,
     Playlist,
     PlaylistedTrack,
-    SimplifiedPlaylist,
     Track,
 } from '@spotify/web-api-ts-sdk';
 
@@ -44,8 +43,20 @@ export type PlaylistCatalogEntry = {
     editable: boolean;
 };
 
+export type PlaylistWithNullablePublic = Omit<Playlist<Track>, 'public'> & {
+    public: boolean | null;
+};
+
+type PlaylistEntrySource = Pick<
+    Playlist<Track>,
+    'id' | 'name' | 'images' | 'snapshot_id' | 'collaborative'
+> & {
+    owner?: Pick<Playlist<Track>['owner'], 'id' | 'display_name'> | null;
+    tracks?: { total?: number | null } | null;
+};
+
 export type PlaylistContentState = {
-    playlist: Playlist<Track>;
+    playlist: PlaylistWithNullablePublic;
     items: PlaylistDedupableItem[];
     totalDurationMs: number;
     itemsOffset: number;
@@ -88,7 +99,7 @@ type PlaylistContentCacheEntry = {
     playlistId: string;
     snapshotId: string;
     total: number;
-    playlist?: Playlist<Track>;
+    playlist?: PlaylistWithNullablePublic;
     fetchedAt: number;
     updatedAt: number;
     chunksByOffset: Record<string, PlaylistContentChunkCacheEntry>;
@@ -132,7 +143,7 @@ const parseSpotifyTrackId = (value?: string) => {
 };
 
 const toPlaylistEntry = (
-    playlist: SimplifiedPlaylist,
+    playlist: PlaylistEntrySource,
     currentUserId?: string
 ): PlaylistCatalogEntry => ({
     id: playlist.id,
@@ -302,6 +313,16 @@ const createPlaylistItemKey = (entry: PlaylistedTrack, index: number) => {
     const added = entry.added_at ?? 'unknown';
     return `${base}:${added}:${index}`;
 };
+
+const normalizePlaylist = (
+    playlist: Playlist<Track>
+): PlaylistWithNullablePublic => ({
+    ...playlist,
+    public:
+        typeof playlist.public === 'boolean' || playlist.public === null
+            ? playlist.public
+            : null,
+});
 
 export const mapPlaylistContentItems = (
     entries: Array<PlaylistedTrack> = [],
@@ -1013,6 +1034,7 @@ export const loadPlaylistContentState = async ({
         id: playlistId,
         market,
     });
+    const normalizedPlaylist = normalizePlaylist(playlist);
     const pageItems = Array.isArray(playlist.tracks?.items)
         ? playlist.tracks.items
         : [];
@@ -1025,13 +1047,13 @@ export const loadPlaylistContentState = async ({
 
     return persistPlaylistContentState({
         state: {
-            playlist,
+            playlist: normalizedPlaylist,
             items,
             totalDurationMs: sumDurationMs(tracks),
             itemsOffset: nextOffset,
             itemsHasMore: nextOffset < totalItems,
             itemsLoadingMore: false,
-            snapshotId: playlist.snapshot_id,
+            snapshotId: normalizedPlaylist.snapshot_id,
         },
     });
 };

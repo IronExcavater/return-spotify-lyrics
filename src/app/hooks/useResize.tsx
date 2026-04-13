@@ -29,76 +29,45 @@ interface Props {
     children: ReactNode;
 }
 
-function applyDimension(
-    element: HTMLElement,
-    cssProp: 'width' | 'height',
-    size: number | 'auto'
-) {
-    if (size === 'auto') {
-        if (cssProp === 'width') {
-            element.style.removeProperty(cssProp);
-        } else {
-            element.style[cssProp] = 'auto';
-        }
-        return;
-    }
-    element.style[cssProp] = `${size}px`;
-}
-
-function applyToRoot(cssProp: 'width' | 'height', size: number | 'auto') {
-    const root = document.documentElement;
-    const body = document.body;
-    if (root) applyDimension(root, cssProp, size);
-    if (body) applyDimension(body, cssProp, size);
-}
-
 type RootSize = {
     width: number;
-    height: number | 'auto';
+    height: number;
 };
 
 function clamp(value: number, min: number, max: number) {
     return Math.min(max, Math.max(min, value));
 }
 
-const getHeightMode = (value: number | 'auto') =>
-    value === 'auto' ? 'auto' : 'fixed';
-
-const readRenderedRootSize = (): Required<
-    Pick<RootSize, 'width' | 'height'>
-> => {
-    const root = document.documentElement;
-    const body = document.body;
-    const rootRect = root.getBoundingClientRect();
-    const bodyRect = body.getBoundingClientRect();
-
-    return {
-        width: Math.max(
-            Math.ceil(rootRect.width),
-            Math.ceil(bodyRect.width),
-            root.clientWidth,
-            body.clientWidth
-        ),
-        height: Math.max(
-            Math.ceil(rootRect.height),
-            Math.ceil(bodyRect.height),
-            root.scrollHeight,
-            body.scrollHeight,
-            root.clientHeight,
-            body.clientHeight
-        ),
-    };
+const getRootElements = () => {
+    const root = document.getElementById('root');
+    return [document.documentElement, document.body, root].filter(
+        (element): element is HTMLElement => Boolean(element)
+    );
 };
+
+function applyDimension(
+    element: HTMLElement,
+    cssProp: 'width' | 'height',
+    size: number
+) {
+    element.style[cssProp] = `${size}px`;
+}
 
 const applyRootSize = ({ width, height }: RootSize) => {
-    applyToRoot('width', width);
-    applyToRoot('height', height);
+    getRootElements().forEach((element) => {
+        applyDimension(element, 'width', width);
+        applyDimension(element, 'height', height);
+    });
 };
 
-const shouldForceRelayout = (previous: RootSize | null, next: RootSize) => {
-    if (!previous) return false;
+const measureAutoHeight = (node: HTMLElement | null) => {
+    if (!node) return 0;
 
-    return getHeightMode(previous.height) !== getHeightMode(next.height);
+    const rectHeight = Math.ceil(node.getBoundingClientRect().height);
+    const scrollHeight = Math.ceil(node.scrollHeight);
+    const offsetHeight = Math.ceil(node.offsetHeight);
+
+    return Math.max(rectHeight, scrollHeight, offsetHeight);
 };
 
 export function Resizer({
@@ -111,6 +80,7 @@ export function Resizer({
     const horizontalRef = useRef<HTMLDivElement>(null);
     const verticalRef = useRef<HTMLDivElement>(null);
     const cornerRef = useRef<HTMLDivElement>(null);
+    const contentRef = useRef<HTMLDivElement>(null);
 
     const resolvedWidth = useMemo(() => {
         return typeof width.override === 'number'
@@ -134,8 +104,7 @@ export function Resizer({
     const heightRef = useRef<number>(
         typeof resolvedHeight === 'number' ? resolvedHeight : height.max
     );
-    const appliedSizeRef = useRef<RootSize | null>(null);
-    const relayoutFrameRef = useRef<number | null>(null);
+    const appliedAutoHeightRef = useRef<number>(0);
 
     useEffect(() => {
         if (typeof resolvedWidth === 'number') {
@@ -150,41 +119,47 @@ export function Resizer({
     }, [resolvedHeight]);
 
     useLayoutEffect(() => {
-        if (relayoutFrameRef.current != null) {
-            cancelAnimationFrame(relayoutFrameRef.current);
-            relayoutFrameRef.current = null;
-        }
+        if (typeof resolvedHeight !== 'number') return;
+        applyRootSize({ width: resolvedWidth, height: resolvedHeight });
+    }, [resolvedHeight, resolvedWidth]);
 
-        const nextSize = {
-            width: resolvedWidth,
-            height: resolvedHeight,
-        } satisfies RootSize;
-        const previousSize = appliedSizeRef.current;
-        appliedSizeRef.current = nextSize;
+    useLayoutEffect(() => {
+        if (resolvedHeight !== 'auto') return;
 
-        if (!shouldForceRelayout(previousSize, nextSize)) {
-            applyRootSize(nextSize);
-            return;
-        }
+        const content = contentRef.current;
+        if (!content) return;
 
-        const measuredSize = readRenderedRootSize();
-        applyRootSize({
-            width: measuredSize.width,
-            height: measuredSize.height,
-        });
+        let frameId: number | null = null;
 
-        void document.documentElement.offsetHeight;
+        const applyMeasuredHeight = () => {
+            const nextHeight = measureAutoHeight(content);
+            if (!nextHeight || appliedAutoHeightRef.current === nextHeight) {
+                return;
+            }
 
-        applyRootSize(nextSize);
-        relayoutFrameRef.current = requestAnimationFrame(() => {
-            applyRootSize(nextSize);
-            relayoutFrameRef.current = null;
-        });
+            appliedAutoHeightRef.current = nextHeight;
+            applyRootSize({ width: resolvedWidth, height: nextHeight });
+        };
+
+        const scheduleMeasure = () => {
+            if (frameId != null) cancelAnimationFrame(frameId);
+
+            frameId = requestAnimationFrame(() => {
+                frameId = null;
+                applyMeasuredHeight();
+            });
+        };
+
+        applyMeasuredHeight();
+
+        const observer = new ResizeObserver(scheduleMeasure);
+        observer.observe(content);
+        window.addEventListener('resize', scheduleMeasure);
 
         return () => {
-            if (relayoutFrameRef.current == null) return;
-            cancelAnimationFrame(relayoutFrameRef.current);
-            relayoutFrameRef.current = null;
+            if (frameId != null) cancelAnimationFrame(frameId);
+            observer.disconnect();
+            window.removeEventListener('resize', scheduleMeasure);
         };
     }, [resolvedHeight, resolvedWidth]);
 
@@ -262,8 +237,9 @@ export function Resizer({
         if (
             typeof resolvedWidth !== 'number' ||
             typeof resolvedHeight !== 'number'
-        )
+        ) {
             return;
+        }
 
         const minHeightValue = typeof height.min === 'number' ? height.min : 0;
 
@@ -319,7 +295,15 @@ export function Resizer({
                 />
             )}
 
-            {children}
+            <div
+                ref={contentRef}
+                style={{
+                    width: '100%',
+                    height: resolvedHeight === 'auto' ? 'auto' : '100%',
+                }}
+            >
+                {children}
+            </div>
         </>
     );
 }

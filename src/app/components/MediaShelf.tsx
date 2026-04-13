@@ -20,7 +20,10 @@ import clsx from 'clsx';
 import { MdMusicNote } from 'react-icons/md';
 import type { MediaActionGroup } from '../../shared/types';
 import { useHistory } from '../hooks/useHistory';
-import { buildMediaActions } from '../hooks/useMediaActions';
+import {
+    buildMediaActions,
+    resolvePrimaryPlayAction,
+} from '../hooks/useMediaActions';
 import { buildMediaNavigationFromItem } from '../hooks/useMediaRoute';
 import { useScrollFade } from '../hooks/useScrollFade';
 import { useShelfNavigation } from '../hooks/useShelfNavigation';
@@ -60,6 +63,7 @@ interface Props {
         item: MediaShelfItem,
         index: number
     ) => MediaActionGroup | null;
+    enablePrimaryPlay?: boolean;
     getRowProps?: (
         item: MediaShelfItem,
         index: number
@@ -179,6 +183,7 @@ export function MediaShelf({
     cardSize,
     trackSubtitleMode,
     getActions,
+    enablePrimaryPlay = false,
     getRowProps,
 }: Props) {
     const createLoadingItem = useCallback(
@@ -557,14 +562,14 @@ export function MediaShelf({
                 <>
                     <div
                         className={clsx(
-                            'pointer-events-none absolute top-0 left-0 z-10 h-full w-2 bg-linear-to-r from-background via-background/60 to-transparent transition-opacity',
+                            'from-background via-background/60 pointer-events-none absolute top-0 left-0 z-10 h-full w-2 bg-linear-to-r to-transparent transition-opacity',
                             fade.start ? 'opacity-100' : 'opacity-0'
                         )}
                         aria-hidden
                     />
                     <div
                         className={clsx(
-                            'pointer-events-none absolute top-0 right-0 z-10 h-full w-2 bg-linear-to-l from-background via-background/60 to-transparent transition-opacity',
+                            'from-background via-background/60 pointer-events-none absolute top-0 right-0 z-10 h-full w-2 bg-linear-to-l to-transparent transition-opacity',
                             fade.end ? 'opacity-100' : 'opacity-0'
                         )}
                         aria-hidden
@@ -576,14 +581,14 @@ export function MediaShelf({
             <>
                 <div
                     className={clsx(
-                        'pointer-events-none absolute top-0 right-0 left-0 z-10 h-2 bg-linear-to-b from-background via-background/60 to-transparent transition-opacity',
+                        'from-background via-background/60 pointer-events-none absolute top-0 right-0 left-0 z-10 h-2 bg-linear-to-b to-transparent transition-opacity',
                         fade.start ? 'opacity-100' : 'opacity-0'
                     )}
                     aria-hidden
                 />
                 <div
                     className={clsx(
-                        'pointer-events-none absolute right-0 bottom-0 left-0 z-10 h-2 bg-linear-to-t from-background via-background/60 to-transparent transition-opacity',
+                        'from-background via-background/60 pointer-events-none absolute right-0 bottom-0 left-0 z-10 h-2 bg-linear-to-t to-transparent transition-opacity',
                         fade.end ? 'opacity-100' : 'opacity-0'
                     )}
                     aria-hidden
@@ -707,13 +712,17 @@ export function MediaShelf({
                 item.kind === 'track'
                     ? resolveTrackSubtitle(item, mode)
                     : (renderArtistLinks(item.artists) ?? item.subtitle);
-            const actions =
-                getActions?.(item, index) ?? buildMediaActions(item);
+            const baseActions = buildMediaActions(item);
+            const actions = getActions?.(item, index) ?? baseActions;
             const rowProps = getRowProps?.(item, index);
             const resolvedPosition =
                 rowProps?.position ?? (item.loading ? index : undefined);
             const hasActions =
                 actions.primary.length > 0 || actions.secondary.length > 0;
+            const primaryPlayAction = enablePrimaryPlay
+                ? (resolvePrimaryPlayAction(baseActions) ??
+                  resolvePrimaryPlayAction(actions))
+                : undefined;
             const contextMenu =
                 hasActions || item.kind === 'track' ? (
                     <MediaActionsMenu actions={actions} item={item} />
@@ -724,6 +733,10 @@ export function MediaShelf({
                 routeHistory.goTo(navigation.path, navigation.state);
             };
             const canActivate = !item.loading && Boolean(navigation);
+            const handlePrimaryClick =
+                primaryPlayAction?.disabled !== true
+                    ? primaryPlayAction?.onSelect
+                    : undefined;
             const content =
                 variant === 'tile' ? (
                     <MediaCard
@@ -733,10 +746,15 @@ export function MediaShelf({
                         icon={item.icon ?? <MdMusicNote />}
                         contextMenu={contextMenu}
                         contextMenuDisabled={false}
+                        primaryAction={primaryPlayAction}
                         seed={seed}
                         loading={item.loading}
                         cardSize={cardSize}
-                        onClick={canActivate ? handleNavigate : undefined}
+                        onClick={
+                            handlePrimaryClick ??
+                            (canActivate ? handleNavigate : undefined)
+                        }
+                        onTitleClick={canActivate ? handleNavigate : undefined}
                     />
                 ) : (
                     <MediaRow
@@ -747,9 +765,14 @@ export function MediaShelf({
                         showImage={showImage}
                         contextMenu={contextMenu}
                         contextMenuDisabled={false}
+                        primaryAction={primaryPlayAction}
                         seed={seed}
                         loading={item.loading}
-                        onClick={canActivate ? handleNavigate : undefined}
+                        onClick={
+                            handlePrimaryClick ??
+                            (canActivate ? handleNavigate : undefined)
+                        }
+                        onTitleClick={canActivate ? handleNavigate : undefined}
                         showPosition={rowProps?.showPosition}
                         position={resolvedPosition}
                         selection={rowProps?.selection}
@@ -771,6 +794,7 @@ export function MediaShelf({
             orientation,
             routeHistory,
             showImage,
+            enablePrimaryPlay,
             trackSubtitleMode,
             variant,
         ]
@@ -828,7 +852,7 @@ export function MediaShelf({
                     aria-disabled={!canActivate}
                     data-media-shelf-item="true"
                     className={clsx(
-                        'group rounded-2 bg-background focus-visible:ring-2 focus-visible:ring-accent-9 focus-visible:ring-offset-1 focus-visible:ring-offset-background focus-visible:outline-none',
+                        'group rounded-2 bg-background focus-visible:ring-accent-9 focus-visible:ring-offset-background focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none',
                         dragProvided &&
                             loaded &&
                             'cursor-grab active:cursor-grabbing'

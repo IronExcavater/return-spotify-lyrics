@@ -1,8 +1,9 @@
 import { ReactNode, useCallback, useState, type MouseEvent } from 'react';
-import { DotsHorizontalIcon } from '@radix-ui/react-icons';
+import { DotsHorizontalIcon, PlayIcon } from '@radix-ui/react-icons';
 import { DropdownMenu, Flex, IconButton, Skeleton } from '@radix-ui/themes';
 import clsx from 'clsx';
 
+import type { MediaPrimaryAction } from '../../shared/types';
 import { handleMenuTriggerKeyDown } from '../hooks/useActions';
 import { useInteractiveTargetGuard } from '../hooks/useInteractiveTargetGuard';
 import { AvatarButton } from './AvatarButton';
@@ -18,9 +19,11 @@ interface Props {
     icon?: ReactNode;
     imageShape?: 'round' | 'square';
     onClick?: () => void;
+    onTitleClick?: () => void;
     loading?: boolean;
     contextMenu?: ReactNode;
     contextMenuDisabled?: boolean;
+    primaryAction?: MediaPrimaryAction;
     className?: string;
     width?: number | string;
     seed?: number;
@@ -32,11 +35,13 @@ export function MediaCard({
     subtitle,
     imageUrl,
     icon,
-    imageShape = 'square',
+    imageShape = 'round',
     onClick,
+    onTitleClick,
     loading = false,
     contextMenu,
     contextMenuDisabled = false,
+    primaryAction,
     className,
     width,
     seed = 0,
@@ -55,35 +60,60 @@ export function MediaCard({
     const resolvedWidth = width ?? resolvedSize.width;
     const subtitleText = typeof subtitle === 'string' ? subtitle : undefined;
     const subtitleContent = subtitleText?.trim() ? subtitleText : ' ';
-    const handleRowClick = loading ? undefined : onClick;
+    const handleCardClick = loading ? undefined : onClick;
+    const handleTitleClick = loading
+        ? undefined
+        : (onTitleClick ?? handleCardClick);
     const [isTitleProxyHovered, setIsTitleProxyHovered] = useState(false);
+    const [isSecondaryHovered, setIsSecondaryHovered] = useState(false);
     const { isInteractiveTarget } = useInteractiveTargetGuard();
 
     const updateTitleProxyHover = useCallback(
         (target: EventTarget | null) => {
             const next =
-                Boolean(handleRowClick) && !isInteractiveTarget(target);
+                Boolean(handleTitleClick) && !isInteractiveTarget(target);
             setIsTitleProxyHovered((prev) => (prev === next ? prev : next));
         },
-        [handleRowClick, isInteractiveTarget]
+        [handleTitleClick, isInteractiveTarget]
     );
+
+    const updateSecondaryHover = useCallback((target: EventTarget | null) => {
+        const element = target instanceof Element ? target : null;
+        const next = Boolean(
+            element?.closest('[data-media-secondary-action="true"]')
+        );
+        setIsSecondaryHovered((prev) => (prev === next ? prev : next));
+    }, []);
+
     const handleContainerClick = (event: MouseEvent<HTMLDivElement>) => {
-        if (!handleRowClick) return;
+        if (!handleCardClick) return;
         if (isInteractiveTarget(event.target)) return;
-        handleRowClick();
+        handleCardClick();
     };
+
+    const showPrimaryAction =
+        !loading && Boolean(primaryAction) && !isSecondaryHovered;
 
     return (
         <Flex
             direction="column"
             gap="1"
             onClick={handleContainerClick}
-            onPointerEnter={(event) => updateTitleProxyHover(event.target)}
-            onPointerMove={(event) => updateTitleProxyHover(event.target)}
-            onPointerLeave={() => setIsTitleProxyHovered(false)}
+            onPointerEnter={(event) => {
+                updateTitleProxyHover(event.target);
+                updateSecondaryHover(event.target);
+            }}
+            onPointerMove={(event) => {
+                updateTitleProxyHover(event.target);
+                updateSecondaryHover(event.target);
+            }}
+            onPointerLeave={() => {
+                setIsTitleProxyHovered(false);
+                setIsSecondaryHovered(false);
+            }}
             className={clsx(
                 'group rounded-2 bg-background',
-                handleRowClick && 'cursor-pointer',
+                handleCardClick && 'cursor-pointer',
                 className
             )}
             style={{ width: resolvedWidth }}
@@ -100,7 +130,35 @@ export function MediaCard({
                     hideRing
                     className="relative"
                     tabIndex={-1}
+                    disabled={primaryAction?.disabled}
+                    onClick={
+                        primaryAction
+                            ? (event) => {
+                                  event.stopPropagation();
+                                  if (primaryAction.disabled) return;
+                                  primaryAction.onSelect();
+                              }
+                            : undefined
+                    }
+                    overlayPointerEvents="none"
                 >
+                    {primaryAction && (
+                        <Flex
+                            align="center"
+                            justify="center"
+                            className="pointer-events-none absolute inset-0"
+                        >
+                            <Flex
+                                className={clsx(
+                                    'bg-panel-solid/10 rounded-full text-white opacity-0 backdrop-blur-[2px] transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100',
+                                    showPrimaryAction && 'opacity-100'
+                                )}
+                                p="1"
+                            >
+                                <PlayIcon />
+                            </Flex>
+                        </Flex>
+                    )}
                     {contextMenu && (
                         <DropdownMenu.Root>
                             <DropdownMenu.Trigger
@@ -109,6 +167,7 @@ export function MediaCard({
                             >
                                 <IconButton
                                     data-title-hover-stop="true"
+                                    data-media-secondary-action="true"
                                     variant="ghost"
                                     radius="full"
                                     size="0"
@@ -128,8 +187,8 @@ export function MediaCard({
                                             ? 'm-2!'
                                             : 'm-1!',
                                         contextMenuDisabled
-                                            ? 'pointer-events-none ml-auto! self-start! bg-panel-solid/10! opacity-0! backdrop-blur-[2px]! transition-opacity group-focus-within:opacity-100! group-hover:opacity-100! group-focus-visible:opacity-100! data-[state=open]:opacity-100!'
-                                            : 'pointer-events-none ml-auto! self-start! bg-panel-solid/10! opacity-0! backdrop-blur-[2px]! transition-opacity group-focus-within:pointer-events-auto group-focus-within:opacity-100! group-hover:pointer-events-auto group-hover:opacity-100! group-focus-visible:pointer-events-auto group-focus-visible:opacity-100! hover:bg-(--accent-11)/10! hover:backdrop-blur-xs! data-[state=open]:pointer-events-auto data-[state=open]:opacity-100!'
+                                            ? 'bg-panel-solid/10! pointer-events-none ml-auto! self-start! opacity-0! backdrop-blur-[2px]! transition-opacity group-focus-within:opacity-100! group-hover:opacity-100! group-focus-visible:opacity-100! data-[state=open]:opacity-100!'
+                                            : 'bg-panel-solid/10! pointer-events-none ml-auto! self-start! opacity-0! backdrop-blur-[2px]! transition-opacity group-focus-within:pointer-events-auto group-focus-within:opacity-100! group-hover:pointer-events-auto group-hover:opacity-100! group-focus-visible:pointer-events-auto group-focus-visible:opacity-100! hover:bg-(--accent-11)/10! hover:backdrop-blur-xs! data-[state=open]:pointer-events-auto data-[state=open]:opacity-100!'
                                     )}
                                 >
                                     <DotsHorizontalIcon />
@@ -152,12 +211,12 @@ export function MediaCard({
                             <TextButton
                                 size="1"
                                 weight="medium"
-                                interactive={Boolean(handleRowClick)}
+                                interactive={Boolean(handleTitleClick)}
                                 forceHover={isTitleProxyHovered}
                                 onClick={
-                                    handleRowClick
+                                    handleTitleClick
                                         ? () => {
-                                              handleRowClick();
+                                              handleTitleClick();
                                           }
                                         : undefined
                                 }

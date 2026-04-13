@@ -7,6 +7,7 @@ import type {
     MediaAction,
     MediaActionGroup,
     MediaItem,
+    MediaPrimaryAction,
 } from '../../shared/types';
 import { canManageTrackPlaylists } from '../data/playlistStore';
 import { showToast } from '../data/toastStore';
@@ -198,6 +199,22 @@ export const buildMediaActions = (item: MediaItem): MediaActionGroup => {
 export const flattenMediaActions = (
     actions?: MediaActionGroup | null
 ): MediaAction[] => (actions ? [...actions.primary, ...actions.secondary] : []);
+
+export const resolvePrimaryPlayAction = (
+    actions?: MediaActionGroup | null
+): MediaPrimaryAction | undefined => {
+    const playNowAction = actions?.primary.find(
+        (action) => action.id === 'play-now'
+    );
+
+    if (!playNowAction) return undefined;
+
+    return {
+        kind: 'play',
+        label: playNowAction.label,
+        onSelect: playNowAction.onSelect,
+    };
+};
 
 export const useMediaActions = (item?: MediaItem | null) =>
     useMemo(

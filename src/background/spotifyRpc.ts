@@ -117,6 +117,21 @@ const startPlaybackRequest = async (
     );
 };
 
+const withDeviceQuery = (deviceId?: string) => {
+    const params = new URLSearchParams();
+    if (deviceId) params.set('device_id', deviceId);
+    const query = params.toString();
+    return query ? `?${query}` : '';
+};
+
+const resolveMarket = (market?: Market): Market => market ?? ('US' as Market);
+
+const withOptionalDevice = <T>(
+    deviceId: string | undefined,
+    withDevice: (resolvedDeviceId: string) => Promise<T>,
+    withoutDevice: () => Promise<T>
+) => (deviceId ? withDevice(deviceId) : withoutDevice());
+
 export const spotifyRpc = {
     currentUser: async () => {
         const client = await requireClient();
@@ -130,49 +145,108 @@ export const spotifyRpc = {
     pausePlayback: async () => {
         const client = await requireClient();
         return withActiveDevice(client, (deviceId) =>
-            client.player.pausePlayback(deviceId)
+            withOptionalDevice(
+                deviceId,
+                (resolvedDeviceId) =>
+                    client.player.pausePlayback(resolvedDeviceId),
+                () =>
+                    client.makeRequest(
+                        'PUT',
+                        `me/player/pause${withDeviceQuery()}`
+                    )
+            )
         );
     },
     startResumePlayback: async () => {
         const client = await requireClient();
         return withActiveDevice(client, (deviceId) =>
-            client.player.startResumePlayback(deviceId)
+            withOptionalDevice(
+                deviceId,
+                (resolvedDeviceId) =>
+                    client.player.startResumePlayback(resolvedDeviceId),
+                () =>
+                    client.makeRequest(
+                        'PUT',
+                        `me/player/play${withDeviceQuery()}`
+                    )
+            )
         );
     },
     seekToPosition: async (positionMs: number) => {
         const client = await requireClient();
         return withActiveDevice(client, (deviceId) =>
-            client.player.seekToPosition(positionMs, deviceId)
+            withOptionalDevice(
+                deviceId,
+                (resolvedDeviceId) =>
+                    client.player.seekToPosition(positionMs, resolvedDeviceId),
+                () => client.player.seekToPosition(positionMs)
+            )
         );
     },
     skipToNext: async () => {
         const client = await requireClient();
         return withActiveDevice(client, (deviceId) =>
-            client.player.skipToNext(deviceId)
+            withOptionalDevice(
+                deviceId,
+                (resolvedDeviceId) =>
+                    client.player.skipToNext(resolvedDeviceId),
+                () =>
+                    client.makeRequest(
+                        'POST',
+                        `me/player/next${withDeviceQuery()}`
+                    )
+            )
         );
     },
     skipToPrevious: async () => {
         const client = await requireClient();
         return withActiveDevice(client, (deviceId) =>
-            client.player.skipToPrevious(deviceId)
+            withOptionalDevice(
+                deviceId,
+                (resolvedDeviceId) =>
+                    client.player.skipToPrevious(resolvedDeviceId),
+                () =>
+                    client.makeRequest(
+                        'POST',
+                        `me/player/previous${withDeviceQuery()}`
+                    )
+            )
         );
     },
     toggleShuffle: async (state: boolean) => {
         const client = await requireClient();
         return withActiveDevice(client, (deviceId) =>
-            client.player.togglePlaybackShuffle(state, deviceId)
+            withOptionalDevice(
+                deviceId,
+                (resolvedDeviceId) =>
+                    client.player.togglePlaybackShuffle(
+                        state,
+                        resolvedDeviceId
+                    ),
+                () => client.player.togglePlaybackShuffle(state)
+            )
         );
     },
     setRepeatMode: async (mode: 'off' | 'track' | 'context') => {
         const client = await requireClient();
         return withActiveDevice(client, (deviceId) =>
-            client.player.setRepeatMode(mode, deviceId)
+            withOptionalDevice(
+                deviceId,
+                (resolvedDeviceId) =>
+                    client.player.setRepeatMode(mode, resolvedDeviceId),
+                () => client.player.setRepeatMode(mode)
+            )
         );
     },
     setPlaybackVolume: async (volume: number) => {
         const client = await requireClient();
         return withActiveDevice(client, (deviceId) =>
-            client.player.setPlaybackVolume(volume, deviceId)
+            withOptionalDevice(
+                deviceId,
+                (resolvedDeviceId) =>
+                    client.player.setPlaybackVolume(volume, resolvedDeviceId),
+                () => client.player.setPlaybackVolume(volume)
+            )
         );
     },
     getAvailableDevices: async () => {
@@ -191,7 +265,12 @@ export const spotifyRpc = {
     addToQueue: async (uri: string) => {
         const client = await requireClient();
         return withActiveDevice(client, (deviceId) =>
-            client.player.addItemToPlaybackQueue(uri, deviceId)
+            withOptionalDevice(
+                deviceId,
+                (resolvedDeviceId) =>
+                    client.player.addItemToPlaybackQueue(uri, resolvedDeviceId),
+                () => client.player.addItemToPlaybackQueue(uri)
+            )
         );
     },
     startPlayback: async ({
@@ -215,39 +294,14 @@ export const spotifyRpc = {
             })
         );
     },
-    syncQueue: async ({
-        upcomingUris,
-        currentUri,
-    }: {
+    syncQueue: async (args: {
         upcomingUris: string[];
         currentUri?: string;
     }) => {
-        const client = await requireClient();
-        return withActiveDevice(client, async (deviceId) => {
-            const playback = await client.player.getPlaybackState();
-            const resolvedCurrentUri =
-                playback?.item?.uri ?? currentUri ?? null;
-            const queueUris = upcomingUris.filter((uri) => Boolean(uri));
-            const startUri = resolvedCurrentUri ?? queueUris[0] ?? null;
-            if (!startUri) return;
-
-            await startPlaybackRequest(client, deviceId, {
-                uris: [startUri],
-                positionMs:
-                    resolvedCurrentUri &&
-                    playback?.item?.uri === resolvedCurrentUri
-                        ? (playback.progress_ms ?? undefined)
-                        : undefined,
-            });
-
-            const remainingQueue = resolvedCurrentUri
-                ? queueUris
-                : queueUris.slice(1);
-
-            for (const uri of remainingQueue) {
-                await client.player.addItemToPlaybackQueue(uri, deviceId);
-            }
-        });
+        void args;
+        throw new Error(
+            'Queue sync is temporarily disabled while the Spotify queue mutation path is being rebuilt.'
+        );
     },
 
     saveTracks: saveSpotifyTracks,
@@ -347,7 +401,7 @@ export const spotifyRpc = {
     },
     getAlbum: async ({ id, market }: { id: string; market?: Market }) => {
         const client = await requireClient();
-        return client.albums.get(id, market);
+        return client.albums.get(id, resolveMarket(market));
     },
     getAlbumTracks: async ({
         id,
@@ -361,7 +415,7 @@ export const spotifyRpc = {
         offset?: number;
     }) => {
         const client = await requireClient();
-        return client.albums.tracks(id, market, limit, offset);
+        return client.albums.tracks(id, resolveMarket(market), limit, offset);
     },
     getArtist: async ({ id }: { id: string }) => {
         const client = await requireClient();
@@ -389,7 +443,13 @@ export const spotifyRpc = {
         offset?: number;
     }) => {
         const client = await requireClient();
-        return client.artists.albums(id, undefined, market, limit, offset);
+        return client.artists.albums(
+            id,
+            undefined,
+            resolveMarket(market),
+            limit,
+            offset
+        );
     },
     getArtistRelatedArtists: async ({ id }: { id: string }) => {
         const client = await requireClient();
@@ -397,7 +457,7 @@ export const spotifyRpc = {
     },
     getShow: async ({ id, market }: { id: string; market?: Market }) => {
         const client = await requireClient();
-        return client.shows.get(id, market);
+        return client.shows.get(id, resolveMarket(market));
     },
     getShowEpisodes: async ({
         id,
@@ -411,11 +471,11 @@ export const spotifyRpc = {
         offset?: number;
     }) => {
         const client = await requireClient();
-        return client.shows.episodes(id, market, limit, offset);
+        return client.shows.episodes(id, resolveMarket(market), limit, offset);
     },
     getPlaylist: async ({ id, market }: { id: string; market?: Market }) => {
         const client = await requireClient();
-        return client.playlists.getPlaylist(id, market);
+        return client.playlists.getPlaylist(id, resolveMarket(market));
     },
     getPlaylistItems: async ({
         id,
@@ -431,7 +491,7 @@ export const spotifyRpc = {
         const client = await requireClient();
         return client.playlists.getPlaylistItems(
             id,
-            market,
+            resolveMarket(market),
             undefined,
             limit,
             offset
@@ -544,7 +604,7 @@ export const spotifyRpc = {
     },
     getEpisode: async ({ id, market }: { id: string; market?: Market }) => {
         const client = await requireClient();
-        return client.episodes.get(id, market);
+        return client.episodes.get(id, resolveMarket(market));
     },
 } as const;
 

@@ -75,6 +75,13 @@ export type MediaActionGroup = {
     secondary: MediaAction[];
 };
 
+export type MediaPrimaryAction = {
+    kind: 'play';
+    label?: string;
+    onSelect: () => void;
+    disabled?: boolean;
+};
+
 export function asTrack(item: Track | Episode | undefined): Track | undefined {
     return item && item.type === 'track' ? (item as Track) : undefined;
 }
