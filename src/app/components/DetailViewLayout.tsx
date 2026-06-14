@@ -2,7 +2,11 @@ import { type ReactNode, useRef } from 'react';
 
 import { Box, Flex } from '@radix-ui/themes';
 import type { MediaActionGroup } from '../../shared/types';
-import { type HeroData, MediaHero } from './MediaHero';
+import {
+    type EditableHeroTitle,
+    type HeroData,
+    MediaHero,
+} from './media/MediaHero';
 import { StickyLayout } from './StickyLayout';
 
 type Props = {
@@ -11,6 +15,7 @@ type Props = {
     heroUrl?: string;
     collapseKey?: string;
     resetScroll?: boolean;
+    editableTitle?: EditableHeroTitle;
     mergedHeroActions: MediaActionGroup | null;
     canTogglePlayback: boolean;
     onPlay: () => void;
@@ -24,6 +29,7 @@ export function DetailViewLayout({
     heroUrl,
     collapseKey,
     resetScroll,
+    editableTitle,
     mergedHeroActions,
     canTogglePlayback,
     onPlay,
@@ -44,13 +50,14 @@ export function DetailViewLayout({
                 scrollRef={scrollRef}
                 collapseKey={collapseKey}
                 resetScroll={resetScroll}
+                editableTitle={editableTitle}
                 mergedHeroActions={mergedHeroActions}
                 canTogglePlayback={canTogglePlayback}
                 onPlay={onPlay}
             />
 
             <StickyLayout.Body>
-                <Box className="absolute -top-2 z-10 h-2 w-full bg-background" />
+                <Box className="bg-background absolute -top-2 z-10 h-2 w-full" />
                 <Flex pl="3" pr="1" direction="column" gap={contentGap}>
                     {children}
                 </Flex>

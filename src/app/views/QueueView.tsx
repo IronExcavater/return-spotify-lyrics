@@ -10,12 +10,12 @@ import type { MediaActionGroup } from '../../shared/types';
 import {
     MediaSection,
     type MediaSectionState,
-} from '../components/MediaSection';
-import { MediaShelf } from '../components/MediaShelf';
+} from '../components/media/MediaSection';
+import { MediaShelf } from '../components/media/MediaShelf';
 import { StickyLayout } from '../components/StickyLayout';
-import { buildMediaActions } from '../hooks/useMediaActions';
 import { type QueueEntry, useQueueState } from '../hooks/useQueueState';
 import { useSettings } from '../hooks/useSettings';
+import { buildMediaActions } from '../mediaActions';
 import type { MediaShelfItem } from '../types/mediaShelf';
 
 type QueueTab = 'queue' | 'recently-played';
@@ -33,6 +33,7 @@ export function QueueView() {
         clearQueue,
         reorderQueue,
         removeFromQueue,
+        premiumRequired,
     } = useQueueState(locale);
     const [activeTab, setActiveTab] = useState<QueueTab>('queue');
 
@@ -61,7 +62,9 @@ export function QueueView() {
     const getQueueItemActions = useCallback(
         (item: MediaShelfItem): MediaActionGroup => {
             const queueItem = item as QueueEntry;
-            const base = buildMediaActions(queueItem);
+            const base = buildMediaActions(queueItem, {
+                premiumPlaybackBlocked: premiumRequired,
+            });
             const primary = base.primary.filter(
                 (action) => action.id !== 'add-queue'
             );
@@ -70,6 +73,7 @@ export function QueueView() {
                 id: 'remove-queue',
                 label: 'Remove from queue',
                 shortcut: 'Del',
+                disabled: premiumRequired,
                 onSelect: () => {
                     removeFromQueue(queueItem.queueKey);
                 },
@@ -77,12 +81,14 @@ export function QueueView() {
 
             return { primary, secondary: base.secondary };
         },
-        [removeFromQueue]
+        [premiumRequired, removeFromQueue]
     );
 
     const getRecentlyPlayedActions = useCallback(
         (item: MediaShelfItem): MediaActionGroup => {
-            const base = buildMediaActions(item);
+            const base = buildMediaActions(item, {
+                premiumPlaybackBlocked: premiumRequired,
+            });
 
             return {
                 primary: base.primary.filter(
@@ -91,22 +97,27 @@ export function QueueView() {
                 secondary: base.secondary,
             };
         },
-        []
+        [premiumRequired]
     );
 
-    const getNowPlayingActions = useCallback((item: MediaShelfItem) => {
-        const base = buildMediaActions(item);
+    const getNowPlayingActions = useCallback(
+        (item: MediaShelfItem) => {
+            const base = buildMediaActions(item, {
+                premiumPlaybackBlocked: premiumRequired,
+            });
 
-        return {
-            primary: base.primary.filter(
-                (action) =>
-                    action.id !== 'play-now' &&
-                    action.id !== 'add-queue' &&
-                    action.id !== 'remove-queue'
-            ),
-            secondary: base.secondary,
-        } satisfies MediaActionGroup;
-    }, []);
+            return {
+                primary: base.primary.filter(
+                    (action) =>
+                        action.id !== 'play-now' &&
+                        action.id !== 'add-queue' &&
+                        action.id !== 'remove-queue'
+                ),
+                secondary: base.secondary,
+            } satisfies MediaActionGroup;
+        },
+        [premiumRequired]
+    );
 
     const handleReorder = useCallback(
         (items: MediaShelfItem[]) => {
@@ -120,7 +131,12 @@ export function QueueView() {
             size="1"
             variant="soft"
             color="gray"
-            disabled={upcomingLoading || syncingQueue || upcoming.length === 0}
+            disabled={
+                premiumRequired ||
+                upcomingLoading ||
+                syncingQueue ||
+                upcoming.length === 0
+            }
             onClick={clearQueue}
         >
             Clear queue
@@ -245,7 +261,8 @@ export function QueueView() {
                                                 itemsPerColumn={6}
                                                 draggable={
                                                     !sectionLoading &&
-                                                    !syncingQueue
+                                                    !syncingQueue &&
+                                                    !premiumRequired
                                                 }
                                                 interactive={!sectionLoading}
                                                 itemLoading={sectionLoading}

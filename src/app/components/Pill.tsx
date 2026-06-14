@@ -10,7 +10,7 @@ import {
     type FocusEvent as ReactFocusEvent,
     RefObject,
 } from 'react';
-import { Cross2Icon, MinusIcon, PlusIcon } from '@radix-ui/react-icons';
+import { Cross2Icon } from '@radix-ui/react-icons';
 import { DropdownMenu, Flex, IconButton, Text } from '@radix-ui/themes';
 import clsx from 'clsx';
 
@@ -20,155 +20,25 @@ import type { PillValue } from '../../shared/types';
 import { handleMenuTriggerKeyDown } from '../hooks/useActions';
 import { useSettings } from '../hooks/useSettings';
 import { InlineInput } from './InlineInput';
+import {
+    alignRangeForMode,
+    buildDateDraft,
+    clampDateToBounds,
+    clampRangeBounds,
+    fixImpossibleRange,
+    formatDateRangeValue,
+    getDateFormatOptions,
+    isDateLikeValue,
+    rangeToDateString,
+    resolveEditPattern,
+    type DateDraft,
+    type DateGranularity,
+    type DateOrder,
+    type DateRangeValue,
+} from './pill/date';
+import { DatePillEditor } from './pill/DatePillEditor';
 
 export type { PillValue } from '../../shared/types';
-
-type DateRangeValue = Extract<PillValue, { type: 'date-range' }>['value'];
-type DateLikeValue = Extract<PillValue, { type: 'date' | 'date-range' }>;
-type DateDraft = { mode: 'date' | 'date-range'; range: DateRangeValue };
-type DateGranularity = 'day' | 'month' | 'year';
-const EARLIEST_MUSIC_YEAR = 1900;
-
-const todayIso = new Date().toISOString().slice(0, 10);
-const minDateIso = `${EARLIEST_MUSIC_YEAR}-01-01`;
-
-const formatDateRangeValue = (
-    range: DateRangeValue,
-    formatter: Intl.DateTimeFormat
-) => {
-    const from = formatDateWithFormatter(range.from, formatter);
-    const to = formatDateWithFormatter(range.to, formatter);
-    if (from && to) return `${from} to ${to}`;
-    return from || to;
-};
-
-const isDateLikeValue = (value: PillValue): value is DateLikeValue =>
-    value.type === 'date' || value.type === 'date-range';
-
-type DateOrder = Array<'day' | 'month' | 'year'>;
-
-const resolveEditPattern = (formatter: Intl.DateTimeFormat) => {
-    const parts = formatter.formatToParts(new Date('2020-01-02'));
-    const order = parts
-        .filter(
-            (part): part is Intl.DateTimeFormatPart =>
-                part.type === 'day' ||
-                part.type === 'month' ||
-                part.type === 'year'
-        )
-        .map((part) => part.type as DateOrder[number]);
-    const separator =
-        parts.find((part) => part.type === 'literal')?.value ?? '/';
-    const placeholder = order
-        .map((token) => {
-            if (token === 'day') return 'dd';
-            if (token === 'month') return 'mm';
-            return 'yyyy';
-        })
-        .join(separator);
-    return { order, separator, placeholder };
-};
-
-const normalizeRangeValue = (range: DateRangeValue): DateRangeValue => ({
-    from: range.from || undefined,
-    to: range.to || undefined,
-});
-
-const clampDateToBounds = (iso?: string): string | undefined => {
-    if (!iso) return undefined;
-    const parsed = Date.parse(iso);
-    if (Number.isNaN(parsed)) return undefined;
-    const clamped = Math.max(
-        Date.parse(minDateIso),
-        Math.min(Date.parse(todayIso), parsed)
-    );
-    return new Date(clamped).toISOString().slice(0, 10);
-};
-
-const clampRangeBounds = (range: DateRangeValue): DateRangeValue => ({
-    from: clampDateToBounds(range.from),
-    to: clampDateToBounds(range.to),
-});
-
-const alignRangeForMode = (
-    range: DateRangeValue,
-    mode: DateDraft['mode']
-): DateRangeValue => {
-    const normalized = normalizeRangeValue(range);
-    if (mode === 'date') {
-        const value = normalized.from ?? normalized.to;
-        return value ? { from: value, to: value } : {};
-    }
-    return normalized;
-};
-
-const rangeToDateString = (range: DateRangeValue) =>
-    range.from ?? range.to ?? '';
-
-const getDateFormatOptions = (
-    granularity: DateGranularity,
-    mode: 'display' | 'edit'
-) => {
-    if (granularity === 'year') {
-        return { year: 'numeric' } satisfies Intl.DateTimeFormatOptions;
-    }
-
-    if (granularity === 'month') {
-        return mode === 'edit'
-            ? ({
-                  month: '2-digit',
-                  year: 'numeric',
-              } satisfies Intl.DateTimeFormatOptions)
-            : ({
-                  month: 'short',
-                  year: 'numeric',
-              } satisfies Intl.DateTimeFormatOptions);
-    }
-
-    return mode === 'edit'
-        ? ({
-              day: '2-digit',
-              month: '2-digit',
-              year: 'numeric',
-          } satisfies Intl.DateTimeFormatOptions)
-        : ({
-              day: 'numeric',
-              month: 'short',
-              year: 'numeric',
-          } satisfies Intl.DateTimeFormatOptions);
-};
-
-const buildDateDraft = (
-    value: DateLikeValue,
-    formatDateForEdit: (iso?: string) => string | undefined
-): DateDraft => {
-    if (value.type === 'date') {
-        const formatted = formatDateForEdit(value.value);
-        return {
-            mode: 'date',
-            range: { from: formatted, to: formatted },
-        };
-    }
-
-    return {
-        mode: 'date-range',
-        range: {
-            from: formatDateForEdit(value.value.from),
-            to: formatDateForEdit(value.value.to),
-        },
-    };
-};
-
-const fixImpossibleRange = (range: DateRangeValue): DateRangeValue => {
-    const normalized = normalizeRangeValue(range);
-    const { from, to } = normalized;
-
-    if (from && to && from > to) {
-        return { from, to: from };
-    }
-
-    return normalized;
-};
 
 interface Props {
     label?: string;
@@ -532,10 +402,10 @@ export function Pill({
             onKeyDown={handleContainerKeyDown}
             onBlur={handleBlur}
             className={clsx(
-                'group max-w-full min-w-0 shrink items-center rounded-full bg-grayA-2 p-0.5 text-gray-12 ring-1 ring-grayA-6 transition-colors',
-                'focus-within:ring-2 focus-within:ring-accent-8 hover:ring-2 hover:ring-accent-8 focus-visible:outline-none',
+                'group bg-grayA-2 text-gray-12 ring-grayA-6 max-w-full min-w-0 shrink items-center rounded-full p-0.5 ring-1 transition-colors',
+                'focus-within:ring-accent-8 hover:ring-accent-8 focus-within:ring-2 hover:ring-2 focus-visible:outline-none',
                 editable &&
-                    'cursor-text focus-within:border-accent-8 hover:border-accent-8',
+                    'focus-within:border-accent-8 hover:border-accent-8 cursor-text',
                 className
             )}
         >
@@ -563,85 +433,19 @@ export function Pill({
                         className="min-w-0 font-normal"
                     />
                 ) : isDateValue ? (
-                    <Flex
-                        align="center"
-                        gap="1"
-                        className="flex-wrap"
-                        onClick={(event: ReactMouseEvent<HTMLDivElement>) =>
-                            event.stopPropagation()
-                        }
-                    >
-                        <InlineInput
-                            ref={dateInputRef}
-                            value={dateDraft.range.from ?? ''}
-                            onChange={(val) =>
-                                isRangeMode
-                                    ? updateDateRange('from', val)
-                                    : updateSingleDate(val)
-                            }
-                            onKeyDown={handleInputKeyDown}
-                            placeholder={placeholder || editPattern.placeholder}
-                            className="min-w-0 font-normal"
-                            style={
-                                dateWidths.from
-                                    ? { width: `${dateWidths.from}px` }
-                                    : undefined
-                            }
-                        />
-
-                        {isRangeMode ? (
-                            <>
-                                <Text size="1" color="gray">
-                                    to
-                                </Text>
-                                <InlineInput
-                                    value={dateDraft.range.to ?? ''}
-                                    onChange={(val) =>
-                                        updateDateRange('to', val)
-                                    }
-                                    onKeyDown={handleInputKeyDown}
-                                    className="min-w-0 font-normal"
-                                    placeholder={
-                                        placeholder || editPattern.placeholder
-                                    }
-                                    style={
-                                        dateWidths.to
-                                            ? { width: `${dateWidths.to}px` }
-                                            : undefined
-                                    }
-                                />
-                                <IconButton
-                                    size="0"
-                                    variant="ghost"
-                                    radius="full"
-                                    color="gray"
-                                    className="h-4! min-h-0 w-4! min-w-0 shrink-0 bg-grayA-3 text-gray-12 hover:bg-grayA-4"
-                                    onClick={(event) => {
-                                        event.stopPropagation();
-                                        handleRemoveRange();
-                                    }}
-                                    aria-label="Remove end date"
-                                >
-                                    <MinusIcon />
-                                </IconButton>
-                            </>
-                        ) : (
-                            <IconButton
-                                size="0"
-                                variant="ghost"
-                                radius="full"
-                                color="gray"
-                                className="h-4! min-h-0 w-4! min-w-0 shrink-0 bg-grayA-3 text-gray-12 hover:bg-grayA-4"
-                                onClick={(event) => {
-                                    event.stopPropagation();
-                                    handleAddRange();
-                                }}
-                                aria-label="Add end date"
-                            >
-                                <PlusIcon />
-                            </IconButton>
-                        )}
-                    </Flex>
+                    <DatePillEditor
+                        dateDraft={dateDraft}
+                        dateInputRef={dateInputRef}
+                        dateWidths={dateWidths}
+                        editPattern={editPattern}
+                        isRangeMode={isRangeMode}
+                        onAddRange={handleAddRange}
+                        onInputKeyDown={handleInputKeyDown}
+                        onRemoveRange={handleRemoveRange}
+                        onUpdateRange={updateDateRange}
+                        onUpdateSingleDate={updateSingleDate}
+                        placeholder={placeholder}
+                    />
                 ) : null
             ) : (
                 <Text

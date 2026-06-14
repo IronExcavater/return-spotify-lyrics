@@ -4,7 +4,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 
 import { type SearchFilter } from '../../shared/types';
 import { HomeBar } from '../components/HomeBar';
-import { PlaybackBar } from '../components/PlaybackBar';
+import { PlaybackBar } from '../components/playback/PlaybackBar';
 import { ProtectedLayout } from '../components/ProtectedLayout';
 import { ReauthDialog } from '../components/ReauthDialog';
 import { ToastViewport } from '../components/ToastViewport';

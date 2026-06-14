@@ -47,6 +47,12 @@ export type SpotifyRpcDispatchEventDetail = {
     op: SpotifyRpcName;
     args?: unknown;
 };
+export const SPOTIFY_RPC_RESULT_EVENT = 'spotify-rpc-result';
+export type SpotifyRpcResultEventDetail = {
+    op: SpotifyRpcName;
+    ok: boolean;
+    error?: string;
+};
 
 const registry: Partial<Record<Msg, AnyHandler>> = {};
 
@@ -114,16 +120,41 @@ const emitSpotifyRpcDispatch = <N extends SpotifyRpcName>(
     );
 };
 
-export const sendSpotifyMessage = <N extends SpotifyRpcName>(
+const emitSpotifyRpcResult = <N extends SpotifyRpcName>(
+    op: N,
+    detail: Omit<SpotifyRpcResultEventDetail, 'op'>
+) => {
+    if (typeof window === 'undefined') return;
+    window.dispatchEvent(
+        new CustomEvent<SpotifyRpcResultEventDetail>(SPOTIFY_RPC_RESULT_EVENT, {
+            detail: {
+                op,
+                ...detail,
+            },
+        })
+    );
+};
+
+export const sendSpotifyMessage = async <N extends SpotifyRpcName>(
     op: N,
     args?: SpotifyRpcArgs<N>
 ) => {
     emitSpotifyRpcDispatch(op, args);
-    return sendMessage<Msg.API_SPOTIFY>({
-        type: Msg.API_SPOTIFY,
-        op,
-        args,
-    }) as Promise<SpotifyRpcReturn<N>>;
+    try {
+        const result = (await sendMessage<Msg.API_SPOTIFY>({
+            type: Msg.API_SPOTIFY,
+            op,
+            args,
+        })) as SpotifyRpcReturn<N>;
+        emitSpotifyRpcResult(op, { ok: true });
+        return result;
+    } catch (error) {
+        emitSpotifyRpcResult(op, {
+            ok: false,
+            error: error instanceof Error ? error.message : String(error),
+        });
+        throw error;
+    }
 };
 
 export const sendLyricsMessage = <N extends LrcRpcName>(

@@ -55,6 +55,7 @@ type MediaActionBase = {
     label: string;
     shortcut?: string;
     tooltip?: string;
+    disabled?: boolean;
     onSelect: () => void;
 };
 

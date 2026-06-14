@@ -10,6 +10,22 @@ export const formatDateWithFormatter = (
     return formatter.format(date);
 };
 
+const dateFormatterCache = new Map<string, Intl.DateTimeFormat>();
+
+const getDateFormatter = (
+    locale: string | undefined,
+    options: Intl.DateTimeFormatOptions
+) => {
+    const resolvedLocale = resolveLocale(locale);
+    const key = `${resolvedLocale}|${JSON.stringify(options)}`;
+    let formatter = dateFormatterCache.get(key);
+    if (!formatter) {
+        formatter = new Intl.DateTimeFormat(resolvedLocale, options);
+        dateFormatterCache.set(key, formatter);
+    }
+    return formatter;
+};
+
 export const formatIsoDate = (
     iso?: string,
     options: Intl.DateTimeFormatOptions = { dateStyle: 'medium' },
@@ -18,8 +34,7 @@ export const formatIsoDate = (
     if (!iso) return undefined;
     const date = new Date(iso);
     if (Number.isNaN(date.getTime())) return iso;
-    const formatter = new Intl.DateTimeFormat(resolveLocale(locale), options);
-    return formatter.format(date);
+    return getDateFormatter(locale, options).format(date);
 };
 
 export const formatDurationShort = (ms?: number) => {

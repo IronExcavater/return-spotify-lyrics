@@ -5,10 +5,7 @@
             "name": "Dev",
             "type": "node-terminal",
             "request": "launch",
-            "command": "npm run dev",
-            "presentation": {
-                "hidden": true
-            }
+            "command": "npm run dev"
         }
     ]
 }

@@ -11,6 +11,10 @@ import {
 } from '../../shared/logging';
 import { Msg, sendMessage, sendSpotifyMessage } from '../../shared/messaging';
 import { getFromStorage, setInStorage } from '../../shared/storage';
+import {
+    resetPremiumPlaybackBlocked,
+    syncPremiumPlaybackFromProfile,
+} from '../data/playbackAccess';
 import { updateCachedProfile } from './mediaCacheEntries';
 import { clearSpotifyReads } from './useSpotifyRead';
 
@@ -45,6 +49,7 @@ export function useAuth() {
             setAuthed(isAuthed);
             setUser(resp);
             void setInStorage<UserProfile>(SPOTIFY_USER_KEY, resp);
+            syncPremiumPlaybackFromProfile(resp);
 
             if (resp) {
                 updateCachedProfile(resp);
@@ -75,6 +80,7 @@ export function useAuth() {
                 sessionActiveRef.current = true;
                 void setInStorage(SPOTIFY_CONNECTION_KEY, nextMeta);
             } else {
+                resetPremiumPlaybackBlocked();
                 sessionActiveRef.current = false;
                 clearSpotifyReads();
             }
@@ -84,6 +90,7 @@ export function useAuth() {
             });
             setAuthed(false);
             setUser(undefined);
+            resetPremiumPlaybackBlocked();
             sessionActiveRef.current = false;
             clearSpotifyReads();
         }
@@ -98,6 +105,7 @@ export function useAuth() {
 
     const logout = () => {
         clearSpotifyReads();
+        resetPremiumPlaybackBlocked();
         void trackAuth(ANALYTICS_EVENTS.authLogout, {
             reason: 'user requested Spotify logout',
         });

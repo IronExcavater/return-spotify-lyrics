@@ -2,10 +2,22 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Episode, Track } from '@spotify/web-api-ts-sdk';
 
 import { createLogger, logError } from '../../shared/logging';
-import { trackOrEpisodeToItem, trackToItem } from '../../shared/media';
+import { trackOrEpisodeToItem } from '../../shared/media';
 import { sendSpotifyMessage } from '../../shared/messaging';
-import type { MediaItem } from '../../shared/types';
-import type { MediaShelfItem } from '../types/mediaShelf';
+import { usePremiumPlaybackBlocked } from '../data/playbackAccess';
+import {
+    DEFAULT_QUEUE_POLL_MS,
+    isDocumentVisible,
+    mapQueueEntries,
+    mapRecentlyPlayedEntries,
+    mergeQueueState,
+    normalizeUpcomingQueue,
+    queueStateSignature,
+    sameQueueOrder,
+    shouldRefreshRecentlyPlayed,
+    type QueueEntry,
+    type QueueViewState,
+} from '../features/queue/model';
 import {
     MEDIA_CACHE_KEYS,
     type NowPlayingCacheEntry,
@@ -14,192 +26,10 @@ import { updateMediaCacheEntry, useMediaCacheEntry } from './useMediaCache';
 
 const logger = createLogger('queue');
 
-export const DEFAULT_QUEUE_POLL_MS = 5000;
-const RECENTLY_PLAYED_REFRESH_MS = 30_000;
-
-export type QueueEntry = MediaShelfItem & {
-    queueKey: string;
-    queueSignature: string;
-};
-
-export type QueueViewState = {
-    current: MediaItem | null;
-    queue: QueueEntry[];
-    recentlyPlayed: MediaShelfItem[];
-};
-
-const mediaIdentity = (item: MediaItem | null) =>
-    item
-        ? [
-              item.kind ?? '',
-              item.uri ?? '',
-              item.id ?? '',
-              item.title ?? '',
-              item.subtitle ?? '',
-          ].join('|')
-        : '';
-
-const queueSignature = (item: MediaItem) =>
-    [
-        item.kind ?? '',
-        item.uri ?? '',
-        item.id ?? '',
-        item.title ?? '',
-        item.subtitle ?? '',
-        item.imageUrl ?? '',
-    ].join('|');
-
-const normalizeLabel = (value?: string) => value?.trim().toLowerCase() ?? '';
-
-const isSameQueueItem = (left: MediaItem, right: MediaItem) => {
-    if (left.uri && right.uri && left.uri === right.uri) return true;
-
-    if (
-        left.id &&
-        right.id &&
-        left.id === right.id &&
-        left.kind === right.kind
-    ) {
-        return true;
-    }
-
-    if (left.uri || right.uri || left.id || right.id) return false;
-
-    return (
-        left.kind === right.kind &&
-        normalizeLabel(left.title) === normalizeLabel(right.title) &&
-        normalizeLabel(left.subtitle) === normalizeLabel(right.subtitle)
-    );
-};
-
-const dedupeRecentlyPlayed = (items: MediaShelfItem[]) => {
-    const seen = new Set<string>();
-
-    return items.filter((item) => {
-        const key = item.uri ?? item.id;
-        if (!key) return true;
-        if (seen.has(key)) return false;
-
-        seen.add(key);
-        return true;
-    });
-};
-
-const mapQueueEntries = (
-    queue: Array<Track | Episode> | undefined,
-    locale: string
-): QueueEntry[] => {
-    const occurrences = new Map<string, number>();
-
-    return (queue ?? []).map((item) => {
-        const mapped = trackOrEpisodeToItem(item, locale);
-        const signature = queueSignature(mapped);
-        const nextOccurrence = (occurrences.get(signature) ?? 0) + 1;
-
-        occurrences.set(signature, nextOccurrence);
-
-        const queueKey = `${signature}#${nextOccurrence}`;
-
-        return {
-            ...mapped,
-            queueSignature: signature,
-            listKey: queueKey,
-            queueKey,
-        };
-    });
-};
-
-const normalizeUpcomingQueue = (
-    queue: QueueEntry[],
-    current: MediaItem | null
-) => {
-    if (!current || queue.length === 0) return queue;
-
-    if (!isSameQueueItem(queue[0], current)) return queue;
-    return queue.slice(1);
-};
-
-const mergeQueueEntries = (previous: QueueEntry[], next: QueueEntry[]) => {
-    const previousByKey = new Map(
-        previous.map((item) => [item.queueKey, item])
-    );
-
-    return next.map((item) => previousByKey.get(item.queueKey) ?? item);
-};
-
-const mergeMediaItems = (
-    previous: MediaShelfItem[],
-    next: MediaShelfItem[]
-) => {
-    const previousByKey = new Map(
-        previous.map((item) => [item.listKey ?? item.uri ?? item.id, item])
-    );
-
-    return next.map((item) => {
-        const key = item.listKey ?? item.uri ?? item.id;
-        if (!key) return item;
-        return previousByKey.get(key) ?? item;
-    });
-};
-
-const mergeQueueState = (
-    previous: QueueViewState,
-    next: QueueViewState
-): QueueViewState => {
-    const nextCurrent =
-        mediaIdentity(previous.current) === mediaIdentity(next.current)
-            ? previous.current
-            : next.current;
-    const mergedQueue = mergeQueueEntries(previous.queue, next.queue);
-    const mergedRecentlyPlayed = mergeMediaItems(
-        previous.recentlyPlayed,
-        next.recentlyPlayed
-    );
-
-    const queueUnchanged =
-        previous.queue.length === mergedQueue.length &&
-        previous.queue.every((item, index) => item === mergedQueue[index]);
-    const recentlyPlayedUnchanged =
-        previous.recentlyPlayed.length === mergedRecentlyPlayed.length &&
-        previous.recentlyPlayed.every(
-            (item, index) => item === mergedRecentlyPlayed[index]
-        );
-
-    if (
-        previous.current === nextCurrent &&
-        queueUnchanged &&
-        recentlyPlayedUnchanged
-    ) {
-        return previous;
-    }
-
-    return {
-        current: nextCurrent,
-        queue: mergedQueue,
-        recentlyPlayed: mergedRecentlyPlayed,
-    };
-};
-
-const queueStateSignature = (state: QueueViewState) =>
-    [
-        mediaIdentity(state.current),
-        ...state.queue.map((item) => item.queueKey),
-        ...state.recentlyPlayed.map(
-            (item) => item.listKey ?? item.uri ?? item.id
-        ),
-    ].join('||');
-
-const sameQueueOrder = (left: QueueEntry[], right: QueueEntry[]) =>
-    left.length === right.length &&
-    left.every((item, index) => item.queueKey === right[index]?.queueKey);
-
-const isDocumentVisible = () =>
-    typeof document === 'undefined' || document.visibilityState === 'visible';
-
-const shouldRefreshRecentlyPlayed = (lastRefreshedAt: number) =>
-    Date.now() - lastRefreshedAt >= RECENTLY_PLAYED_REFRESH_MS;
+export type { QueueEntry, QueueViewState } from '../features/queue/model';
 
 export function useQueueState(locale: string, pollMs = DEFAULT_QUEUE_POLL_MS) {
+    const premiumRequired = usePremiumPlaybackBlocked();
     const cachedQueueState = useMediaCacheEntry<QueueViewState>(
         MEDIA_CACHE_KEYS.queueView
     );
@@ -281,16 +111,8 @@ export function useQueueState(locale: string, pollMs = DEFAULT_QUEUE_POLL_MS) {
             limit: 20,
         });
 
-        return dedupeRecentlyPlayed(
-            ((data.items as Array<{ track: Track }> | undefined) ?? []).map(
-                (entry, index) => ({
-                    ...trackToItem(entry.track),
-                    listKey:
-                        entry.track.uri ??
-                        entry.track.id ??
-                        `recently-played-${index}`,
-                })
-            )
+        return mapRecentlyPlayedEntries(
+            data.items as Array<{ track: Track }> | undefined
         );
     }, []);
 
@@ -306,6 +128,7 @@ export function useQueueState(locale: string, pollMs = DEFAULT_QUEUE_POLL_MS) {
     }, [clearPollTimeout, pollMs]);
 
     const refresh = useCallback(async () => {
+        if (premiumRequired) return;
         if (syncingRef.current) return;
 
         clearPollTimeout();
@@ -379,12 +202,14 @@ export function useQueueState(locale: string, pollMs = DEFAULT_QUEUE_POLL_MS) {
         loadQueueSnapshot,
         loadRecentlyPlayedSnapshot,
         schedulePoll,
+        premiumRequired,
     ]);
 
     refreshRef.current = refresh;
 
     const syncQueueToSpotify = useCallback(
         async (nextQueue: QueueEntry[]) => {
+            if (premiumRequired) return;
             if (syncingRef.current) return;
 
             syncingRef.current = true;
@@ -423,7 +248,12 @@ export function useQueueState(locale: string, pollMs = DEFAULT_QUEUE_POLL_MS) {
                 await refreshRef.current();
             }
         },
-        [cachedNowPlayingItem, clearPollTimeout, commitQueueState]
+        [
+            cachedNowPlayingItem,
+            clearPollTimeout,
+            commitQueueState,
+            premiumRequired,
+        ]
     );
 
     const reorderQueue = useCallback(
@@ -519,5 +349,6 @@ export function useQueueState(locale: string, pollMs = DEFAULT_QUEUE_POLL_MS) {
         clearQueue,
         reorderQueue,
         removeFromQueue,
+        premiumRequired,
     };
 }

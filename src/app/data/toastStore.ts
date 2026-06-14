@@ -66,7 +66,7 @@ const scheduleAutoDismiss = (toast: ToastRecord) => {
     );
 };
 
-export const createToast = ({
+export const showToast = ({
     title,
     description,
     durationMs = DEFAULT_TOAST_DURATION_MS,
@@ -87,8 +87,6 @@ export const createToast = ({
     scheduleAutoDismiss(toast);
     return toast.id;
 };
-
-export const showToast = createToast;
 
 export const dismissToast = (id: string) => {
     const nextToasts = toasts.map((toast) => {

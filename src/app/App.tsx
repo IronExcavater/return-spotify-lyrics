@@ -10,7 +10,7 @@ import {
     useLastContentPath,
 } from './appShell/searchRouteState';
 import { useAppBarPortals } from './appShell/useAppBarPortals';
-import { primeTrackPlaylistCatalogCache } from './data/playlistStore';
+import { primeTrackPlaylistCatalogCache } from './features/playlists/store';
 import {
     MEDIA_CACHE_KEYS,
     type ProfileCacheEntry,

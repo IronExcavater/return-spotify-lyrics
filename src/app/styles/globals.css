@@ -1,3 +1,4 @@
+@import url('https://ironexcavater.github.io/fluent-emoji-webfont/fonts/FluentEmoji3D-balanced-128px.css');
 @import '@radix-ui/themes/styles.css';
 @import 'radix-themes-tw';
 @import './marquee.css';
@@ -40,6 +41,7 @@ body,
 body {
     margin: 0;
     overflow: hidden;
+    font-family: 'Fluent Emoji 3D', var(--default-font-family);
 }
 
 #root {

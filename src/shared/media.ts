@@ -165,6 +165,41 @@ export const resolveSpotifyMediaId = (value: string) => {
     return value;
 };
 
+export const SPOTIFY_ID_PATTERN = /^[A-Za-z0-9]{22}$/;
+
+export type TrackPlaylistTarget = {
+    trackId: string;
+    trackUri: string;
+};
+
+const parseSpotifyTrackId = (value?: string) => {
+    if (!value) return undefined;
+
+    const uriMatch = /^spotify:track:([A-Za-z0-9]{22})$/.exec(value);
+    if (uriMatch) return uriMatch[1];
+
+    return SPOTIFY_ID_PATTERN.test(value) ? value : undefined;
+};
+
+export const resolveTrackPlaylistTarget = (
+    item?: MediaItem | null
+): TrackPlaylistTarget | null => {
+    if (item?.kind !== 'track') return null;
+
+    const trackId =
+        parseSpotifyTrackId(item.id) ?? parseSpotifyTrackId(item.uri);
+    if (!trackId) return null;
+
+    const trackUri = item.uri?.startsWith('spotify:track:')
+        ? item.uri
+        : `spotify:track:${trackId}`;
+
+    return { trackId, trackUri };
+};
+
+export const canManageTrackPlaylists = (item?: MediaItem | null) =>
+    Boolean(resolveTrackPlaylistTarget(item));
+
 export const formatAlbumType = (album: AlbumTypeSource) => {
     const raw = album.album_group ?? album.album_type;
     if (!raw) return undefined;

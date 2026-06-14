@@ -1,22 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-    DragDropContext,
-    Droppable,
-    Draggable,
-    type DropResult,
-} from '@hello-pangea/dnd';
-import { PlusIcon } from '@radix-ui/react-icons';
-import {
-    Flex,
-    Text,
-    Switch,
-    Button,
-    IconButton,
-    AlertDialog,
-    DropdownMenu,
-} from '@radix-ui/themes';
+import type { DropResult } from '@hello-pangea/dnd';
 import type { ItemTypes, SearchResults } from '@spotify/web-api-ts-sdk';
-import clsx from 'clsx';
 
 import { resolveLocale } from '../../shared/locale';
 import { createLogger, logError } from '../../shared/logging';
@@ -27,15 +11,30 @@ import {
     buildSearchContext,
     type SearchType,
 } from '../../shared/search';
-import { getFromStorage, setInStorage } from '../../shared/storage';
 import type { SearchFilter } from '../../shared/types';
-import {
-    MediaSection,
-    type MediaSectionState,
-} from '../components/MediaSection';
-import { SkeletonText } from '../components/SkeletonText';
+import type { MediaSectionState } from '../components/media/MediaSection';
 import { StickyLayout } from '../components/StickyLayout';
-import { handleMenuTriggerKeyDown } from '../hooks/useActions';
+import { HomeSectionList } from '../features/home/HomeSectionList';
+import { HomeViewHeader } from '../features/home/HomeViewHeader';
+import {
+    ALWAYS_VISIBLE_HOME_SECTIONS,
+    readHomeLayout,
+    saveHomeLayout,
+} from '../features/home/layout';
+import {
+    HOME_SECTION_LOADERS,
+    type HomeSectionId,
+} from '../features/home/loaders';
+import { buildSearchSections } from '../features/home/searchSections';
+import { buildHomeSections } from '../features/home/sections';
+import {
+    SEARCH_TYPE_BY_SECTION_ID,
+    createSearchOffsets,
+    describeRpcError,
+    type SectionMode,
+    type SectionStatus,
+    type StatusByMode,
+} from '../features/home/state';
 import { usePersonalisation } from '../hooks/usePersonalisation';
 import { useSettings } from '../hooks/useSettings';
 import type { MediaShelfItem } from '../types/mediaShelf';
@@ -44,9 +43,6 @@ import {
     mapSearchPage,
     mapSearchResults,
 } from '../utils/searchMapping';
-import { HOME_SECTION_LOADERS, type HomeSectionId } from './homeLoaders';
-import { buildHomeSections } from './homeSections';
-import { SEARCH_SECTION_BASE, buildSearchSections } from './searchSections';
 
 interface Props {
     searchQuery: string;
@@ -54,272 +50,6 @@ interface Props {
 }
 
 const logger = createLogger('home');
-
-const HOME_LAYOUT_KEY = 'homeLayout';
-const ALWAYS_VISIBLE_SECTIONS = new Set(['user-playlists', 'saved-tracks']);
-
-type SectionStatus = { loading: boolean; error: string | null };
-type SectionMode = 'home' | 'search';
-type StatusByMode = Record<SectionMode, Record<string, SectionStatus>>;
-const SEARCH_TYPE_BY_SECTION_ID: Record<string, SearchType> =
-    Object.fromEntries(
-        (Object.keys(SEARCH_SECTION_BASE) as SearchType[]).map((type) => [
-            SEARCH_SECTION_BASE[type].id,
-            type,
-        ])
-    ) as Record<string, SearchType>;
-
-const describeRpcError = (error: unknown) => {
-    if (error instanceof Error) return error.message || 'Request failed.';
-    if (
-        error &&
-        typeof error === 'object' &&
-        'message' in error &&
-        typeof (error as { message?: unknown }).message === 'string'
-    ) {
-        return (error as { message: string }).message || 'Request failed.';
-    }
-    if (typeof error === 'string' && error.trim().length > 0) return error;
-    return 'Request failed.';
-};
-
-const createSearchOffsets = (): Record<SearchType, number | null> => ({
-    track: 0,
-    album: 0,
-    artist: 0,
-    playlist: 0,
-    show: 0,
-    episode: 0,
-    audiobook: 0,
-});
-
-type StoredHomeSection = Pick<
-    MediaSectionState,
-    | 'id'
-    | 'title'
-    | 'subtitle'
-    | 'view'
-    | 'columns'
-    | 'rows'
-    | 'infinite'
-    | 'rowHeight'
-    | 'columnWidth'
-    | 'cardSize'
-    | 'clampUnit'
-    | 'wideColumns'
->;
-
-const stripSection = (section: MediaSectionState): StoredHomeSection => ({
-    id: section.id,
-    title: section.title,
-    subtitle: section.subtitle,
-    view: section.view,
-    columns: section.columns,
-    rows: section.rows,
-    infinite: section.infinite,
-    rowHeight: section.rowHeight,
-    columnWidth: section.columnWidth,
-    cardSize: section.cardSize,
-    clampUnit: section.clampUnit,
-    wideColumns: section.wideColumns,
-});
-
-const sanitizeStored = (section: StoredHomeSection): StoredHomeSection => ({
-    id: section.id,
-    title: section.title,
-    subtitle: section.subtitle,
-    view: section.view,
-    columns: section.columns,
-    rows: section.rows,
-    infinite: section.infinite,
-    rowHeight: section.rowHeight,
-    columnWidth: section.columnWidth,
-    cardSize: section.cardSize,
-    clampUnit: section.clampUnit,
-    wideColumns: section.wideColumns,
-});
-
-const mergeLayout = (
-    saved: StoredHomeSection[] | undefined
-): MediaSectionState[] => {
-    const defaults = buildHomeSections();
-    if (!saved?.length) return defaults;
-
-    const byId = new Map(defaults.map((section) => [section.id, section]));
-    const merged: MediaSectionState[] = [];
-
-    saved
-        .filter(
-            (stored): stored is StoredHomeSection =>
-                !!stored && typeof stored.id === 'string'
-        )
-        .map((stored) => sanitizeStored(stored))
-        .forEach((stored) => {
-            const base = byId.get(stored.id);
-            if (!base) return;
-            merged.push({ ...base, ...stored, items: [] });
-            byId.delete(stored.id);
-        });
-
-    byId.forEach((section) => merged.push(section));
-    return merged;
-};
-
-type HomeViewHeaderProps = {
-    heading: { title: string; subtitle: string };
-    headingLoading: boolean;
-    editing: boolean;
-    isEditable: boolean;
-    isSearching: boolean;
-    availableHomeSections: MediaSectionState[];
-    onEditingChange: (next: boolean) => void;
-    onAddSection: (id: string) => void;
-    onRestore: () => void;
-};
-
-function HomeViewHeader({
-    heading,
-    headingLoading,
-    editing,
-    isEditable,
-    isSearching,
-    availableHomeSections,
-    onEditingChange,
-    onAddSection,
-    onRestore,
-}: HomeViewHeaderProps) {
-    return (
-        <Flex
-            justify="between"
-            direction="column"
-            className={clsx('relative min-w-0', isEditable && 'bg-background')}
-            ml="-3"
-            mr="-1"
-            pl="3"
-            pr="1"
-            py="1"
-            mb={isEditable ? '4' : undefined}
-        >
-            <Flex>
-                {!editing && (
-                    <SkeletonText
-                        loading={headingLoading}
-                        preset="media-row"
-                        variant="title"
-                        fullWidth={false}
-                        className="inline-flex"
-                    >
-                        <Text size="3" weight="bold">
-                            {heading.title}
-                        </Text>
-                    </SkeletonText>
-                )}
-
-                {isEditable && (
-                    <Flex align="center" gap="2" className="relative">
-                        <DropdownMenu.Root>
-                            <DropdownMenu.Trigger
-                                onKeyDown={handleMenuTriggerKeyDown}
-                            >
-                                <IconButton
-                                    size="1"
-                                    variant="soft"
-                                    color="green"
-                                    radius="full"
-                                    aria-label="Add section"
-                                    disabled={availableHomeSections.length === 0}
-                                >
-                                    <PlusIcon />
-                                </IconButton>
-                            </DropdownMenu.Trigger>
-                            <DropdownMenu.Content size="1">
-                                {availableHomeSections.length === 0 && (
-                                    <DropdownMenu.Item disabled>
-                                        All sections added
-                                    </DropdownMenu.Item>
-                                )}
-                                {availableHomeSections.map((section) => (
-                                    <DropdownMenu.Item
-                                        key={section.id}
-                                        onSelect={() => onAddSection(section.id)}
-                                    >
-                                        {section.title}
-                                    </DropdownMenu.Item>
-                                ))}
-                            </DropdownMenu.Content>
-                        </DropdownMenu.Root>
-
-                        <AlertDialog.Root>
-                            <AlertDialog.Trigger>
-                                <Button size="1" variant="soft" color="red">
-                                    Restore
-                                </Button>
-                            </AlertDialog.Trigger>
-                            <AlertDialog.Content maxWidth="260px" size="1">
-                                <AlertDialog.Title size="3">
-                                    Revert home layout?
-                                </AlertDialog.Title>
-                                <AlertDialog.Description size="2">
-                                    Restore the default shelves.
-                                </AlertDialog.Description>
-                                <Flex mt="3" justify="end" gap="2">
-                                    <AlertDialog.Cancel>
-                                        <Button variant="soft" size="1">
-                                            Cancel
-                                        </Button>
-                                    </AlertDialog.Cancel>
-                                    <AlertDialog.Action>
-                                        <Button
-                                            variant="soft"
-                                            color="red"
-                                            size="1"
-                                            onClick={onRestore}
-                                            autoFocus
-                                        >
-                                            Revert
-                                        </Button>
-                                    </AlertDialog.Action>
-                                </Flex>
-                            </AlertDialog.Content>
-                        </AlertDialog.Root>
-                    </Flex>
-                )}
-
-                {!isSearching && (
-                    <Flex align="center" gap="1" ml="auto">
-                        <Text size="1" color="gray">
-                            Edit
-                        </Text>
-                        <Switch
-                            size="1"
-                            checked={isEditable}
-                            onCheckedChange={onEditingChange}
-                            aria-label="Toggle customise mode"
-                        />
-                    </Flex>
-                )}
-
-                {isEditable && (
-                    <div className="pointer-events-none absolute top-full right-0 left-0 z-0 h-4 bg-linear-to-b from-background to-transparent" />
-                )}
-            </Flex>
-
-            {!isEditable && (
-                <SkeletonText
-                    loading={headingLoading}
-                    preset="media-row"
-                    variant="subtitle"
-                    fullWidth={false}
-                    className="inline-flex"
-                >
-                    <Text size="1" color="gray">
-                        {heading.subtitle}
-                    </Text>
-                </SkeletonText>
-            )}
-        </Flex>
-    );
-}
 
 export function HomeView({ searchQuery, filters }: Props) {
     const [homeSections, setHomeSections] = useState<MediaSectionState[]>(() =>
@@ -369,12 +99,10 @@ export function HomeView({ searchQuery, filters }: Props) {
         let cancelled = false;
 
         void (async () => {
-            const saved = await getFromStorage<StoredHomeSection[]>(
-                HOME_LAYOUT_KEY
-            );
+            const nextSections = await readHomeLayout();
             if (cancelled) return;
 
-            setHomeSections(mergeLayout(saved ?? undefined));
+            setHomeSections(nextSections);
         })();
 
         return () => {
@@ -461,8 +189,7 @@ export function HomeView({ searchQuery, filters }: Props) {
 
     useEffect(() => {
         if (isSearching) return;
-        const payload = homeSections.map(stripSection);
-        void setInStorage(HOME_LAYOUT_KEY, payload);
+        void saveHomeLayout(homeSections);
     }, [homeSections, isSearching]);
 
     const availableHomeSections = useMemo(() => {
@@ -689,37 +416,33 @@ export function HomeView({ searchQuery, filters }: Props) {
                         };
                     })
                 );
-                updateStatuses(
-                    'search',
-                    () =>
-                        nextSections.reduce<Record<string, SectionStatus>>(
-                            (acc, section) => {
-                                acc[section.id] = {
-                                    loading: false,
-                                    error: null,
-                                };
-                                return acc;
-                            },
-                            {}
-                        )
+                updateStatuses('search', () =>
+                    nextSections.reduce<Record<string, SectionStatus>>(
+                        (acc, section) => {
+                            acc[section.id] = {
+                                loading: false,
+                                error: null,
+                            };
+                            return acc;
+                        },
+                        {}
+                    )
                 );
             } catch (error) {
                 if (searchLoadSeqRef.current !== seq) return;
                 logError(logger, 'Search failed', error);
                 const message = describeRpcError(error);
-                updateStatuses(
-                    'search',
-                    () =>
-                        nextSections.reduce<Record<string, SectionStatus>>(
-                            (acc, section) => {
-                                acc[section.id] = {
-                                    loading: false,
-                                    error: message,
-                                };
-                                return acc;
-                            },
-                            {}
-                        )
+                updateStatuses('search', () =>
+                    nextSections.reduce<Record<string, SectionStatus>>(
+                        (acc, section) => {
+                            acc[section.id] = {
+                                loading: false,
+                                error: message,
+                            };
+                            return acc;
+                        },
+                        {}
+                    )
                 );
             }
         })();
@@ -783,7 +506,7 @@ export function HomeView({ searchQuery, filters }: Props) {
                 : activeSections.filter(
                       (section) =>
                           section.items.length > 0 ||
-                          ALWAYS_VISIBLE_SECTIONS.has(section.id) ||
+                          ALWAYS_VISIBLE_HOME_SECTIONS.has(section.id) ||
                           Boolean(statusById[section.id]?.error)
                   ),
         [activeSections, isEditable, isLoading, statusById]
@@ -791,7 +514,7 @@ export function HomeView({ searchQuery, filters }: Props) {
 
     return (
         <StickyLayout.Root className="no-overflow-anchor scrollbar-gutter-stable relative flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
-            <div className="z-30 h-2 shrink-0 bg-background" />
+            <div className="bg-background z-30 h-2 shrink-0" />
             <StickyLayout.Sticky
                 order={0}
                 className="z-30 pr-1 pl-3"
@@ -812,126 +535,19 @@ export function HomeView({ searchQuery, filters }: Props) {
             </StickyLayout.Sticky>
 
             <StickyLayout.Body>
-                <Flex
-                    pl="3"
-                    pr="1"
-                    pb="2"
-                    direction="column"
-                    gap="1"
-                    className="min-w-0"
-                >
-                    <DragDropContext
-                        onDragEnd={onSectionDragEnd}
-                        ignoreSizeLimits
-                        disableSecondaryAxisScroll
-                        zIndexOptions={{
-                            dragging: 20,
-                            dropAnimating: 20,
-                        }}
-                        lockSecondaryAxisMovement
-                        clampToVisibleBounds
-                    >
-                        <Droppable
-                            droppableId="home-sections"
-                            direction="vertical"
-                            isDropDisabled={!isEditable}
-                        >
-                            {(dropProvided) => (
-                                <Flex
-                                    direction="column"
-                                    className="min-w-0"
-                                    gap="2"
-                                    ref={dropProvided.innerRef}
-                                    {...dropProvided.droppableProps}
-                                >
-                                    {visibleSections.map((section, index) => {
-                                        const status =
-                                            statusById[section.id] ?? null;
-                                        const isSectionLoading =
-                                            status?.loading ?? false;
-                                        const errorMessage =
-                                            status?.error ?? null;
-                                        return (
-                                            <Draggable
-                                                key={section.id}
-                                                draggableId={section.id}
-                                                index={index}
-                                                isDragDisabled={!isEditable}
-                                            >
-                                                {(
-                                                    dragProvided,
-                                                    dragSnapshot
-                                                ) => (
-                                                    <div
-                                                        ref={(node) => {
-                                                            dragProvided.innerRef(
-                                                                node
-                                                            );
-                                                            if (node)
-                                                                sectionRefs.current.set(
-                                                                    section.id,
-                                                                    node
-                                                                );
-                                                            else
-                                                                sectionRefs.current.delete(
-                                                                    section.id
-                                                                );
-                                                        }}
-                                                        {...dragProvided.draggableProps}
-                                                        {...dragProvided.dragHandleProps}
-                                                        style={{
-                                                            ...dragProvided
-                                                                .draggableProps
-                                                                .style,
-                                                        }}
-                                                    >
-                                                        <MediaSection
-                                                            section={section}
-                                                            editing={isEditable}
-                                                            stickyHeader={
-                                                                !isEditable
-                                                            }
-                                                            loading={
-                                                                isSectionLoading
-                                                            }
-                                                            headerLoading={
-                                                                false
-                                                            }
-                                                            errorMessage={
-                                                                errorMessage
-                                                            }
-                                                            onRetry={
-                                                                handleSectionRetry
-                                                            }
-                                                            dragging={
-                                                                dragSnapshot.isDragging
-                                                            }
-                                                            onChange={
-                                                                updateSection
-                                                            }
-                                                            onDelete={
-                                                                removeSection
-                                                            }
-                                                            onReorderItems={
-                                                                updateItems
-                                                            }
-                                                            onLoadMore={
-                                                                isSearching
-                                                                    ? loadMoreSearch
-                                                                    : undefined
-                                                            }
-                                                        />
-                                                    </div>
-                                                )}
-                                            </Draggable>
-                                        );
-                                    })}
-                                    {dropProvided.placeholder}
-                                </Flex>
-                            )}
-                        </Droppable>
-                    </DragDropContext>
-                </Flex>
+                <HomeSectionList
+                    editing={isEditable}
+                    isSearching={isSearching}
+                    onChange={updateSection}
+                    onDelete={removeSection}
+                    onDragEnd={onSectionDragEnd}
+                    onLoadMoreSearch={loadMoreSearch}
+                    onReorderItems={updateItems}
+                    onRetry={handleSectionRetry}
+                    sectionRefs={sectionRefs}
+                    sections={visibleSections}
+                    statusById={statusById}
+                />
             </StickyLayout.Body>
         </StickyLayout.Root>
     );

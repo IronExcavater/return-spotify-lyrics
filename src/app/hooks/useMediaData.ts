@@ -13,14 +13,14 @@ import {
     dedupeAlbums,
     loadMediaContextData,
     mergeDiscographyEntries,
-} from '../mediaData/loaders';
+    type MediaDataState,
+} from '../features/media/data';
 import {
     isMediaContextRoute,
     isTrackOrEpisodeRoute,
     resolveFromLoadedMediaData,
     resolveMediaContextFromApi,
-} from '../mediaData/routeResolution';
-import type { MediaDataState } from '../mediaData/types';
+} from '../features/media/routing/contextResolution';
 import { buildEpisodeLookup, sumDurationMs } from '../utils/mediaLookup';
 import type { MediaRouteState } from './useMediaRoute';
 

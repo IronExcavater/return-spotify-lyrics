@@ -11,6 +11,7 @@ export const SPOTIFY_SCOPES = [
     'playlist-read-collaborative',
     'playlist-modify-private',
     'playlist-modify-public',
+    'ugc-image-upload',
 ];
 
 export const SPOTIFY_REDIRECT = 'oauth-complete';

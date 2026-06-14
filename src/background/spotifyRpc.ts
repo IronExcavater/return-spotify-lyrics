@@ -566,6 +566,41 @@ export const spotifyRpc = {
             collaborative,
         });
     },
+    createPlaylist: async ({
+        userId,
+        name,
+        description,
+        public: isPublic = false,
+    }: {
+        userId: string;
+        name: string;
+        description?: string;
+        public?: boolean;
+    }) => {
+        const client = await requireClient();
+        return client.playlists.createPlaylist(userId, {
+            name,
+            description,
+            public: isPublic,
+        });
+    },
+    unfollowPlaylist: async ({ id }: { id: string }) => {
+        const client = await requireClient();
+        return client.currentUser.playlists.unfollow(id);
+    },
+    uploadPlaylistCover: async ({
+        id,
+        base64Jpeg,
+    }: {
+        id: string;
+        base64Jpeg: string;
+    }) => {
+        const client = await requireClient();
+        return client.playlists.addCustomPlaylistCoverImageFromBase64String(
+            id,
+            base64Jpeg
+        );
+    },
     movePlaylistItems: async ({
         id,
         rangeStart,
