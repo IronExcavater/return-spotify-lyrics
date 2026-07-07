@@ -1,17 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { DropResult } from '@hello-pangea/dnd';
-import type { ItemTypes, SearchResults } from '@spotify/web-api-ts-sdk';
 
 import { resolveLocale } from '../../shared/locale';
 import { createLogger, logError } from '../../shared/logging';
-import { sendSpotifyMessage } from '../../shared/messaging';
 import {
     DEFAULT_SEARCH_TYPES,
-    SEARCH_LIMIT,
     buildSearchContext,
     type SearchType,
 } from '../../shared/search';
-import type { SearchFilter } from '../../shared/types';
 import type { MediaSectionState } from '../components/media/MediaSection';
 import { StickyLayout } from '../components/StickyLayout';
 import { HomeSectionList } from '../features/home/HomeSectionList';
@@ -25,6 +21,10 @@ import {
     HOME_SECTION_LOADERS,
     type HomeSectionId,
 } from '../features/home/loaders';
+import {
+    loadSearchResults,
+    loadSearchResultsPage,
+} from '../features/home/searchResults';
 import { buildSearchSections } from '../features/home/searchSections';
 import { buildHomeSections } from '../features/home/sections';
 import {
@@ -36,22 +36,17 @@ import {
     type StatusByMode,
 } from '../features/home/state';
 import { usePersonalisation } from '../hooks/usePersonalisation';
+import type { SearchState } from '../hooks/useSearch';
 import { useSettings } from '../hooks/useSettings';
 import type { MediaShelfItem } from '../types/mediaShelf';
-import {
-    buildSearchOffsets,
-    mapSearchPage,
-    mapSearchResults,
-} from '../utils/searchMapping';
 
 interface Props {
-    searchQuery: string;
-    filters: SearchFilter[];
+    search: SearchState;
 }
 
 const logger = createLogger('home');
 
-export function HomeView({ searchQuery, filters }: Props) {
+export function HomeView({ search }: Props) {
     const [homeSections, setHomeSections] = useState<MediaSectionState[]>(() =>
         buildHomeSections()
     );
@@ -77,15 +72,9 @@ export function HomeView({ searchQuery, filters }: Props) {
         createSearchOffsets()
     );
 
-    const { heading, loading: headingLoading } = usePersonalisation({
-        searchQuery,
-        filters,
-    });
+    const { heading, loading: headingLoading } = usePersonalisation(search);
 
-    const searchContext = useMemo(
-        () => buildSearchContext(searchQuery, filters),
-        [filters, searchQuery]
-    );
+    const searchContext = useMemo(() => buildSearchContext(search), [search]);
 
     const isSearching = searchContext.active;
     const activeMode: SectionMode = isSearching ? 'search' : 'home';
@@ -232,18 +221,13 @@ export function HomeView({ searchQuery, filters }: Props) {
             );
 
             try {
-                const result = (await sendSpotifyMessage('search', {
-                    query: searchContext.query,
-                    types: [type] as ItemTypes[],
-                    limit: SEARCH_LIMIT,
-                    offset,
-                })) as SearchResults<[ItemTypes]>;
-
-                const { items, hasMore, nextOffset } = mapSearchPage(
-                    type,
-                    result,
-                    locale
-                );
+                const { items, hasMore, nextOffset } =
+                    await loadSearchResultsPage({
+                        query: searchContext.query,
+                        type,
+                        offset,
+                        locale,
+                    });
                 searchOffsetsRef.current[type] = nextOffset;
 
                 setSearchSections((prev) =>
@@ -268,7 +252,7 @@ export function HomeView({ searchQuery, filters }: Props) {
                 );
             }
         },
-        [isSearching, resolveSearchType, searchContext.query]
+        [isSearching, locale, resolveSearchType, searchContext.query]
     );
 
     const loadHomeSection = useCallback(
@@ -377,32 +361,15 @@ export function HomeView({ searchQuery, filters }: Props) {
 
         void (async () => {
             try {
-                const result = (await sendSpotifyMessage('search', {
-                    query: searchContext.query,
-                    types: searchContext.types as ItemTypes[],
-                    limit: SEARCH_LIMIT,
-                })) as SearchResults<
-                    [
-                        'track',
-                        'album',
-                        'artist',
-                        'playlist',
-                        'show',
-                        'episode',
-                        'audiobook',
-                    ]
-                >;
+                const { itemsByType, hasMoreByType, offsets } =
+                    await loadSearchResults({
+                        context: searchContext,
+                        locale,
+                    });
 
                 if (searchLoadSeqRef.current !== seq) return;
 
-                const { itemsByType, hasMoreByType } = mapSearchResults(
-                    result,
-                    locale
-                );
-                searchOffsetsRef.current = buildSearchOffsets(
-                    result,
-                    SEARCH_LIMIT
-                );
+                searchOffsetsRef.current = offsets;
 
                 setSearchSections((prev) =>
                     prev.map((section) => {

@@ -1,15 +1,23 @@
-import { loadAlbumData } from './album';
-import { loadArtistData } from './artist';
-import type { MediaDataLoadContext } from './loadContext';
-import { loadShowData } from './show';
-import type { MediaContextRouteState } from './types';
+import { loadAlbumView } from './album';
+import { loadArtistView } from './artist';
+import type { MediaDataLoadRequest } from './loadContext';
+import { loadShowView } from './show';
 
 export {
     ARTIST_DISCOGRAPHY_PAGE_SIZE,
-    buildDiscographyEntries,
-    dedupeAlbums,
-    mergeDiscographyEntries,
+    loadDiscographyEntries,
+    mergeDiscographyByAlbumId,
+    uniqueAlbumsById,
 } from './discography';
+export {
+    appendDiscographyPage,
+    loadArtistDiscographyPage,
+    loadShowEpisodePage,
+    type ArtistDiscographyPageRequest,
+    type LoadedArtistDiscographyPage,
+    type LoadedShowEpisodePage,
+    type ShowEpisodePageRequest,
+} from './pagination';
 export { SHOW_EPISODE_PAGE_SIZE } from './show';
 export type {
     AlbumViewData,
@@ -18,52 +26,18 @@ export type {
     MediaDataState,
     ShowViewData,
     TrackOrEpisodeRouteState,
-} from './types';
+} from '../model/types';
 
-export async function loadMediaContextData(
-    routeState: MediaContextRouteState,
-    context: MediaDataLoadContext
-) {
-    const {
-        market,
-        locale,
-        discographyTrackCount,
-        setData,
-        isStale,
-        logSearchError,
-    } = context;
-
-    if (routeState.kind === 'album') {
-        await loadAlbumData({
-            id: routeState.id,
-            selectedId: routeState.selectedId,
-            market,
-            setData,
-            isStale,
-            logSearchError,
-        });
+export async function loadMediaData({ route, context }: MediaDataLoadRequest) {
+    if (route.kind === 'album') {
+        await loadAlbumView({ route, context });
         return;
     }
 
-    if (routeState.kind === 'show') {
-        await loadShowData({
-            id: routeState.id,
-            selectedId: routeState.selectedId,
-            market,
-            locale,
-            setData,
-            isStale,
-            logSearchError,
-        });
+    if (route.kind === 'show') {
+        await loadShowView({ route, context });
         return;
     }
 
-    await loadArtistData({
-        id: routeState.id,
-        market,
-        discographyTrackCount,
-        setData,
-        isStale,
-        logSearchError,
-    });
+    await loadArtistView({ route, context });
 }

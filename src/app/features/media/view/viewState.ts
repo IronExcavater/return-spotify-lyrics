@@ -1,4 +1,5 @@
 import type { MediaRouteState } from '../../../hooks/useMediaRoute';
+import { findByMediaId } from '../../../utils/mediaLookup';
 import type { MediaDataState } from '../data';
 
 export function matchesMediaState(
@@ -19,39 +20,20 @@ export function matchesMediaState(
     return false;
 }
 
-function selectFromLookup<T>(
-    lookup: Record<string, T>,
-    selectedId?: string,
-    resolvedSelectedId?: string
-): T | null {
-    if (!resolvedSelectedId) return null;
-    return lookup[resolvedSelectedId] ?? lookup[selectedId ?? ''] ?? null;
-}
-
 export function findSelectedTrack(
     viewData: MediaDataState | null,
-    selectedId?: string,
-    resolvedSelectedId?: string
+    selectedId?: string
 ) {
     if (!viewData || viewData.kind !== 'album') return null;
-    return selectFromLookup(
-        viewData.trackLookup,
-        selectedId,
-        resolvedSelectedId
-    );
+    return findByMediaId(viewData.trackLookup, selectedId);
 }
 
 export function findSelectedEpisode(
     viewData: MediaDataState | null,
-    selectedId?: string,
-    resolvedSelectedId?: string
+    selectedId?: string
 ) {
     if (!viewData || viewData.kind !== 'show') return null;
-    return selectFromLookup(
-        viewData.episodeLookup,
-        selectedId,
-        resolvedSelectedId
-    );
+    return findByMediaId(viewData.episodeLookup, selectedId);
 }
 
 export function getActiveMediaKind(

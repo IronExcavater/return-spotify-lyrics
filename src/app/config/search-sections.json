@@ -4,8 +4,7 @@
         "title": "Tracks",
         "view": "list",
         "infinite": "columns",
-        "rows": 3,
-        "wideColumns": true
+        "rows": 3
     },
     "album": {
         "id": "search-albums",
@@ -40,8 +39,7 @@
         "title": "Episodes",
         "view": "list",
         "infinite": "columns",
-        "rows": 3,
-        "wideColumns": true
+        "rows": 3
     },
     "audiobook": {
         "id": "search-audiobooks",

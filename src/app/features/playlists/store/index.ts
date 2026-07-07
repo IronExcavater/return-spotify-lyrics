@@ -7,6 +7,7 @@ export {
 export {
     ensurePlaylistContentStateLoaded,
     getCachedPlaylistContentState,
+    loadPlaylistItemsPage,
     loadPlaylistContentState,
     storePlaylistContentState,
 } from './contentState';

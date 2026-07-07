@@ -6,8 +6,8 @@ import type {
     SimplifiedTrack,
 } from '@spotify/web-api-ts-sdk';
 
+import type { AlbumTrackGroup } from '../../../../shared/media';
 import type { MediaItem } from '../../../../shared/types';
-import type { DiscographyEntry } from '../../../components/media/DiscographyShelf';
 import type { MediaRouteState } from '../../../hooks/useMediaRoute';
 
 export type MediaDataState =
@@ -45,7 +45,7 @@ export type MediaDataState =
           kind: 'artist';
           artist: Artist;
           topTracks: MediaItem[];
-          discography: DiscographyEntry[];
+          discography: AlbumTrackGroup[];
           discographyOffset: number;
           discographyHasMore: boolean;
           discographyLoadingMore: boolean;
@@ -58,9 +58,10 @@ export type MediaDataState =
 export type AlbumViewData = Extract<MediaDataState, { kind: 'album' }>;
 export type ShowViewData = Extract<MediaDataState, { kind: 'show' }>;
 export type ArtistViewData = Extract<MediaDataState, { kind: 'artist' }>;
-export type TrackOrEpisodeRouteState = MediaRouteState & {
-    kind: 'track' | 'episode';
-};
-export type MediaContextRouteState = MediaRouteState & {
-    kind: 'album' | 'show' | 'artist';
-};
+export type TrackOrEpisodeRouteState =
+    | (MediaRouteState & { kind: 'track' })
+    | (MediaRouteState & { kind: 'episode' });
+export type MediaContextRouteState =
+    | (MediaRouteState & { kind: 'album' })
+    | (MediaRouteState & { kind: 'show' })
+    | (MediaRouteState & { kind: 'artist' });

@@ -1,4 +1,8 @@
 export default {
-    content: ['**/*.{ts,tsx,js,jsx,html}'],
+    content: [
+        './popup.html',
+        './sidepanel.html',
+        './src/**/*.{ts,tsx,js,jsx,html}',
+    ],
     theme: { extend: {} },
 };

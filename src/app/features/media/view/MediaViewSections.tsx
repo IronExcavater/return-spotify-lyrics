@@ -115,7 +115,7 @@ function buildArtistRecommendedSection(
     };
 }
 
-type AlbumSectionsProps = {
+export type AlbumSectionsProps = {
     albumData: AlbumViewData | null;
     isLoadingView: boolean;
     onTitleClick?: () => void;
@@ -172,7 +172,7 @@ export function AlbumSections({
     );
 }
 
-type ShowSectionsProps = {
+export type ShowSectionsProps = {
     isLoadingView: boolean;
     onLoadMore: () => Promise<void>;
     recommendedLoading: boolean;
@@ -211,14 +211,16 @@ export function ShowSections({
     );
 }
 
-type ArtistSectionsProps = {
+export type ArtistSectionsProps = {
     artistData: ArtistViewData | null;
     discographySort: 'newest' | 'oldest';
+    discographyShowAppearances: boolean;
     discographyTrackCount: number;
     isLoadingView: boolean;
     locale: string;
     onAlbumClick: (album: { id?: string | null }) => void;
     onLoadMore: () => Promise<void>;
+    onShowAppearancesChange: (showAppearances: boolean) => void;
     onSortChange: (sort: 'newest' | 'oldest') => void;
     onTrackClick: (track: { id?: string | null }) => void;
     recommendedLoading: boolean;
@@ -227,11 +229,13 @@ type ArtistSectionsProps = {
 export function ArtistSections({
     artistData,
     discographySort,
+    discographyShowAppearances,
     discographyTrackCount,
     isLoadingView,
     locale,
     onAlbumClick,
     onLoadMore,
+    onShowAppearancesChange,
     onSortChange,
     onTrackClick,
     recommendedLoading,
@@ -279,6 +283,8 @@ export function ArtistSections({
                     onSortChange={onSortChange}
                     trackCount={discographyTrackCount}
                     locale={locale}
+                    showAppearances={discographyShowAppearances}
+                    onShowAppearancesChange={onShowAppearancesChange}
                     loading={isLoadingView}
                     hasMore={artistData?.discographyHasMore}
                     loadingMore={artistData?.discographyLoadingMore}

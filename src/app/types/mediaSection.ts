@@ -16,7 +16,6 @@ export type MediaSectionState = {
     totalCount?: number;
     hasMore?: boolean;
     loadingMore?: boolean;
-    wideColumns?: boolean;
     showImage?: boolean;
     trackSubtitleMode?: 'artist' | 'artist-album' | 'artists';
 };

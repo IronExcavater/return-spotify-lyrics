@@ -43,7 +43,7 @@ export type LocaleOption = (typeof LOCALE_OPTIONS)[number];
 
 export const DEFAULT_LOCALE_OPTION = LOCALE_OPTIONS[0];
 
-export const findLocaleOption = (locale: string) =>
+export const findLocaleOption = (locale?: string) =>
     LOCALE_OPTIONS.find((option) => option.locale === locale) ??
     DEFAULT_LOCALE_OPTION;
 

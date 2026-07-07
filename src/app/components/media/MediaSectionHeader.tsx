@@ -18,7 +18,7 @@ type Props = {
     headerFade: boolean;
     headerFadeBleedPx: number;
     headerFadeEdgeMask: string | null;
-    headerRef: RefObject<HTMLDivElement | null>;
+    headerRef: RefObject<HTMLDivElement>;
 };
 
 export function MediaSectionHeader({

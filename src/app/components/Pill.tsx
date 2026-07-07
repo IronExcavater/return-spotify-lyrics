@@ -267,13 +267,12 @@ export function Pill({
 
     useEffect(() => {
         if (!isEditing || !editable) return;
-        const handleOutside = (
-            event: PointerEvent | MouseEvent | TouchEvent
-        ) => {
+        const handleOutside: EventListener = (event) => {
             const node = containerRef.current;
             const menuNode = dropdownContentRef.current;
             if (!node) return;
-            const target = event.target as Node;
+            const { target } = event;
+            if (!(target instanceof Node)) return;
             if (node.contains(target)) return;
             if (menuNode && menuNode.contains(target)) return;
             commitDraft();

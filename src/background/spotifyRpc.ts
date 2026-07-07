@@ -1,4 +1,9 @@
 import type { ItemTypes, MaxInt, Market } from '@spotify/web-api-ts-sdk';
+import { resolveArtistAlbumIncludeGroups } from '../shared/spotifyArtistAlbums.ts';
+import {
+    buildQueueSyncPlan,
+    shouldPlayAfterDeviceTransfer,
+} from './playbackPlan.ts';
 import { getSpotifySdk } from './spotifyAuth.ts';
 import {
     addTracksToSpotifyPlaylist,
@@ -255,7 +260,11 @@ export const spotifyRpc = {
     },
     transferPlayback: async ({ deviceId }: { deviceId: string }) => {
         const client = await requireClient();
-        return client.player.transferPlayback([deviceId], true);
+        const playback = await client.player.getPlaybackState();
+        return client.player.transferPlayback(
+            [deviceId],
+            shouldPlayAfterDeviceTransfer(playback ?? null)
+        );
     },
 
     getQueue: async () => {
@@ -302,24 +311,26 @@ export const spotifyRpc = {
         const client = await requireClient();
         return withActiveDevice(client, async (deviceId) => {
             const playback = await client.player.getPlaybackState();
-            const resolvedCurrentUri =
-                playback?.item?.uri ?? currentUri ?? null;
-            const queueUris = upcomingUris.filter((uri) => Boolean(uri));
-            const nextUris = resolvedCurrentUri
-                ? [resolvedCurrentUri, ...queueUris]
-                : queueUris;
+            const plan = buildQueueSyncPlan({
+                playback: playback ?? null,
+                currentUri,
+                upcomingUris,
+            });
 
-            if (nextUris.length === 0) return;
+            if (!plan) return;
 
             // Rebuild the queue in one request. Mixing play + queue endpoints is not stable.
             await startPlaybackRequest(client, deviceId, {
-                uris: nextUris,
-                positionMs:
-                    resolvedCurrentUri &&
-                    playback?.item?.uri === resolvedCurrentUri
-                        ? (playback.progress_ms ?? undefined)
-                        : undefined,
+                uris: plan.uris,
+                positionMs: plan.positionMs,
             });
+
+            if (plan.shouldPauseAfterStart) {
+                await client.makeRequest(
+                    'PUT',
+                    `me/player/pause${withDeviceQuery(deviceId)}`
+                );
+            }
         });
     },
 
@@ -455,16 +466,20 @@ export const spotifyRpc = {
         market,
         limit = 20,
         offset = 0,
+        includeAppearances = false,
     }: {
         id: string;
         market?: Market;
         limit?: MaxInt<50>;
         offset?: number;
+        includeAppearances?: boolean;
     }) => {
         const client = await requireClient();
+        const includeGroups =
+            resolveArtistAlbumIncludeGroups(includeAppearances);
         return client.artists.albums(
             id,
-            undefined,
+            includeGroups,
             resolveMarket(market),
             limit,
             offset

@@ -5,11 +5,15 @@ import { ANALYTICS_EVENTS, createAnalyticsTracker } from '../shared/analytics';
 import { AppShell } from './appShell/AppShell';
 import { useAppRoutes } from './appShell/routes';
 import {
+    fromHomeRouteState,
+    isHomeRouteState,
     toHomeRouteState,
     useHomeSearchRouteSync,
     useLastContentPath,
 } from './appShell/searchRouteState';
 import { useAppBarPortals } from './appShell/useAppBarPortals';
+import { ReauthDialog } from './components/ReauthDialog';
+import { getSpotifyAuthNotices } from './features/auth/spotifyAuthNotices';
 import { primeTrackPlaylistCatalogCache } from './features/playlists/store';
 import {
     MEDIA_CACHE_KEYS,
@@ -42,7 +46,8 @@ export default function App({ surface = 'popup' }: AppProps) {
     const location = useLocation();
     const surfaceConfig = getSurfaceConfig(surface);
 
-    const { authed, profile, login, logout, connection } = useAuth();
+    const { authed, profile, login, logout, connection, authStatus } =
+        useAuth();
     const {
         hasPlayback,
         playbackKnown,
@@ -51,7 +56,7 @@ export default function App({ surface = 'popup' }: AppProps) {
         canSetVolume,
     } = usePlayerShortcutState();
     const controls = usePlayerShortcutControls();
-    const { needsReauth, missingScopes } = useReauthGate();
+    const { missingScopes } = useReauthGate();
     const appState = useAppState({
         fallbackWidth: WIDTH_BOUNDS.min,
         fallbackHeight: HEIGHT_BOUNDS.min,
@@ -66,6 +71,10 @@ export default function App({ surface = 'popup' }: AppProps) {
     );
     const search = useSearch();
     const trackSearch = useMemo(() => createAnalyticsTracker('search'), []);
+    const authNotices = useMemo(
+        () => getSpotifyAuthNotices({ authStatus, missingScopes }),
+        [authStatus, missingScopes]
+    );
     const searchInputRef = useRef<HTMLInputElement | null>(null);
     const canShowPlaybackBar = hasPlayback || !playbackKnown;
     const profileImage = profile?.images?.[0]?.url ?? cachedProfile?.imageUrl;
@@ -86,7 +95,7 @@ export default function App({ surface = 'popup' }: AppProps) {
     // Auth semantics
     const mustLogin = authed === false && authed !== undefined;
     const mustLogout = authed === true;
-    const mustReauth = authed === true && needsReauth;
+    const mustReauth = authed === true && authNotices.length > 0;
 
     const handleReauth = useCallback(() => {
         logout();
@@ -134,49 +143,37 @@ export default function App({ surface = 'popup' }: AppProps) {
     );
 
     const handleSearchClear = useCallback(() => {
-        if (search.query.trim()) {
+        if (search.state.query.trim()) {
             void trackSearch(ANALYTICS_EVENTS.searchClear, {
                 reason: 'search query cleared',
             });
         }
 
-        search.setQuery('');
-    }, [search.query, search.setQuery, trackSearch]);
+        search.setQueryText('');
+    }, [search.setQueryText, search.state.query, trackSearch]);
 
     const handleSearchSubmit = useCallback(() => {
         void trackSearch(ANALYTICS_EVENTS.searchSubmit, {
             reason: 'search submitted',
             data: {
-                query: search.query.trim(),
-                filters: search.filters.map((filter) => filter.kind),
+                query: search.state.query.trim(),
+                filters: search.state.filters.map((filter) => filter.kind),
             },
         });
 
-        routeHistory.goTo(
-            '/home',
-            toHomeRouteState(search.query, search.filters)
-        );
-    }, [routeHistory.goTo, search.filters, search.query, trackSearch]);
+        routeHistory.goTo('/home', toHomeRouteState(search.state));
+    }, [routeHistory.goTo, search.state, trackSearch]);
 
     const handleGoBack = useCallback(() => {
         const previous = routeHistory.goBack();
         if (previous?.path !== '/home') return;
 
-        const homeState = toHomeRouteState(
-            previous.state && 'searchQuery' in previous.state
-                ? (previous.state.searchQuery ?? '')
-                : '',
-            previous.state && 'searchFilters' in previous.state
-                ? (previous.state.searchFilters ?? [])
-                : []
+        search.replaceState(
+            fromHomeRouteState(
+                isHomeRouteState(previous.state) ? previous.state : undefined
+            )
         );
-        if (!homeState) return;
-
-        search.setSearchState({
-            query: homeState.searchQuery ?? '',
-            filters: homeState.searchFilters ?? [],
-        });
-    }, [routeHistory.goBack, search.setSearchState]);
+    }, [routeHistory.goBack, search.replaceState]);
 
     const appRoutes = useAppRoutes({
         mustLogin,
@@ -185,52 +182,54 @@ export default function App({ surface = 'popup' }: AppProps) {
         logout,
         profile,
         connection,
-        searchQuery: search.debouncedQuery,
-        searchFilters: search.debouncedFilters,
+        authNotices,
+        searchState: search.debouncedState,
     });
 
     const appContent = (
-        <AppShell
-            showBars={appState.showBars}
-            activeBar={appState.activeBar}
-            appRoutes={appRoutes}
-            profileSlot={{
-                home: appBarPortals.profileAnchors.home,
-                playback: appBarPortals.profileAnchors.playback,
-            }}
-            navSlot={{
-                home: appBarPortals.navAnchors.home,
-                playback: appBarPortals.navAnchors.playback,
-            }}
-            search={{
-                query: search.query,
-                filters: search.filters,
-                availableFilters: search.available,
-                onChange: search.setQuery,
-                onClear: handleSearchClear,
-                onSubmit: handleSearchSubmit,
-                onAddFilter: search.addFilter,
-                onUpdateFilter: search.updateFilter,
-                onRemoveFilter: search.removeFilter,
-                onClearFilters: search.clearFilters,
-                inputRef: searchInputRef,
-            }}
-            history={{
-                canGoBack: routeHistory.canGoBack,
-                onGoBack: handleGoBack,
-            }}
-            playback={{
-                expanded: appState.playbackExpanded,
-                onExpandedChange: appState.setPlaybackExpanded,
-                onOpenMediaRoute: handleOpenMediaFromPlayback,
-            }}
-            reauth={{
-                open: mustReauth,
-                missingScopes,
-                onReconnect: handleReauth,
-            }}
-            portals={appBarPortals.portals}
-        />
+        <>
+            <AppShell
+                showBars={appState.showBars}
+                activeBar={appState.activeBar}
+                appRoutes={appRoutes}
+                profileSlot={{
+                    home: appBarPortals.profileAnchors.home,
+                    playback: appBarPortals.profileAnchors.playback,
+                }}
+                navSlot={{
+                    home: appBarPortals.navAnchors.home,
+                    playback: appBarPortals.navAnchors.playback,
+                }}
+                search={{
+                    query: search.state.query,
+                    filters: search.state.filters,
+                    availableFilters: search.available,
+                    onChange: search.setQueryText,
+                    onClear: handleSearchClear,
+                    onSubmit: handleSearchSubmit,
+                    onAddFilter: search.addFilter,
+                    onUpdateFilter: search.updateFilter,
+                    onRemoveFilter: search.removeFilter,
+                    onClearFilters: search.clearFilters,
+                    inputRef: searchInputRef,
+                }}
+                history={{
+                    canGoBack: routeHistory.canGoBack,
+                    onGoBack: handleGoBack,
+                }}
+                playback={{
+                    expanded: appState.playbackExpanded,
+                    onExpandedChange: appState.setPlaybackExpanded,
+                    onOpenMediaRoute: handleOpenMediaFromPlayback,
+                }}
+                portals={appBarPortals.portals}
+            />
+            <ReauthDialog
+                open={mustReauth}
+                notices={authNotices}
+                onReconnect={handleReauth}
+            />
+        </>
     );
 
     if (!surfaceConfig.resizer) {

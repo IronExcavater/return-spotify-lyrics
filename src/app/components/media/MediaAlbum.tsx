@@ -1,15 +1,17 @@
 import { useRef } from 'react';
 import { DotsHorizontalIcon } from '@radix-ui/react-icons';
 import { DropdownMenu, Flex, IconButton, Text } from '@radix-ui/themes';
-import type { SimplifiedAlbum, SimplifiedTrack } from '@spotify/web-api-ts-sdk';
 import clsx from 'clsx';
 import { MdMusicNote } from 'react-icons/md';
 
 import { formatDurationShort } from '../../../shared/date';
 import {
+    type AlbumTrackGroup,
+    type AlbumMediaSource,
     albumToItem,
     albumTrackToItem,
     formatAlbumType,
+    type TrackMediaSource,
 } from '../../../shared/media';
 import { usePremiumPlaybackBlocked } from '../../data/playbackAccess';
 import { handleMenuTriggerKeyDown } from '../../hooks/useActions';
@@ -23,17 +25,14 @@ import { TextButton } from '../TextButton';
 import { MediaActionsMenu } from './MediaActionsMenu';
 import { MediaRow } from './MediaRow';
 
-export type MediaAlbumEntry = {
-    album: SimplifiedAlbum;
-    tracks: SimplifiedTrack[];
-};
+export type MediaAlbumEntry = AlbumTrackGroup;
 
 type Props = {
     entry: MediaAlbumEntry;
     trackCount: number;
     loading?: boolean;
-    onAlbumClick: (album: SimplifiedAlbum) => void;
-    onTrackClick: (track: SimplifiedTrack, album: SimplifiedAlbum) => void;
+    onAlbumClick: (album: AlbumMediaSource) => void;
+    onTrackClick: (track: TrackMediaSource, album: AlbumMediaSource) => void;
 };
 
 export function MediaAlbum({
@@ -73,7 +72,7 @@ export function MediaAlbum({
         round: 1,
     });
 
-    const renderTrackRow = (track: SimplifiedTrack) => {
+    const renderTrackRow = (track: TrackMediaSource) => {
         const item = albumTrackToItem(track, album);
         const duration = formatDurationShort(track.duration_ms);
         const canClick = !!track.id;

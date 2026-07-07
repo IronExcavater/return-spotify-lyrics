@@ -5,38 +5,18 @@ import {
     type Dispatch,
     type SetStateAction,
 } from 'react';
-import type {
-    Episode,
-    Market,
-    Page,
-    PlaylistedTrack,
-    Track,
-} from '@spotify/web-api-ts-sdk';
+import type { Market } from '@spotify/web-api-ts-sdk';
 
-import { safeRequest } from '../../../shared/async';
 import { createLogger, logError } from '../../../shared/logging';
-import { sendSpotifyMessage } from '../../../shared/messaging';
-import { sumDurationMs } from '../../utils/mediaLookup';
 import {
     getCachedPlaylistContentState,
+    loadPlaylistItemsPage,
     loadPlaylistContentState,
-    mapPlaylistContentItems,
-    PLAYLIST_PAGE_SIZE,
     storePlaylistContentState,
     type PlaylistContentState,
 } from './store';
 
 const logger = createLogger('playlist');
-
-const emptyPlaylistPage = (offset = 0): Page<PlaylistedTrack<Track>> => ({
-    href: '',
-    items: [],
-    limit: PLAYLIST_PAGE_SIZE,
-    next: null,
-    offset,
-    previous: null,
-    total: 0,
-});
 
 export function usePlaylistContent({
     active,
@@ -133,38 +113,18 @@ export function usePlaylistContent({
         );
 
         try {
-            const page = await safeRequest(
-                () =>
-                    sendSpotifyMessage('getPlaylistItems', {
-                        id: playlistId,
-                        market,
-                        limit: PLAYLIST_PAGE_SIZE,
-                        offset,
-                    }),
-                emptyPlaylistPage(offset),
-                (error) =>
-                    logError(
-                        logger,
-                        'Failed to load more playlist items',
-                        error
-                    )
-            );
-            const pageItems = page?.items ?? [];
-            const tracks = pageItems
-                .map((entry) => entry.track)
-                .filter(Boolean) as Array<Track | Episode>;
-            const nextOffset = offset + pageItems.length;
-            const hasMore = nextOffset < (page?.total ?? nextOffset);
+            const page = await loadPlaylistItemsPage({
+                playlistId,
+                market,
+                locale,
+                offset,
+            });
             const nextData = await storePlaylistContentState({
                 playlist: currentData.playlist,
-                items: [
-                    ...currentData.items,
-                    ...mapPlaylistContentItems(pageItems, locale, offset),
-                ],
-                totalDurationMs:
-                    currentData.totalDurationMs + sumDurationMs(tracks),
-                itemsOffset: nextOffset,
-                itemsHasMore: hasMore,
+                items: [...currentData.items, ...page.items],
+                totalDurationMs: currentData.totalDurationMs + page.durationMs,
+                itemsOffset: page.nextOffset,
+                itemsHasMore: page.hasMore,
                 itemsLoadingMore: false,
                 snapshotId: snapshotId ?? currentData.snapshotId,
             });

@@ -39,7 +39,7 @@ export function buildPlaybackActions(
     if (item.kind === 'track' || item.kind === 'episode' || !item.kind) {
         function playItem() {
             updateCachedAssumedNowPlaying(item);
-            void sendSpotifyMessage('startPlayback', { uris: [uri] });
+            void sendSpotifyMessage('startPlayback', { uris: [uri!] });
         }
 
         function addItemToQueue() {

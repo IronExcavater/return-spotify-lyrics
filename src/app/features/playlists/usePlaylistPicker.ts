@@ -189,8 +189,8 @@ export function usePlaylistPicker(item?: MediaItem | null) {
         async function loadMenu() {
             try {
                 const initialData = await loadTrackPlaylists({
-                    trackId: targetTrackId,
-                    trackUri: targetTrackUri,
+                    trackId: targetTrackId!,
+                    trackUri: targetTrackUri!,
                 });
                 if (cancelled) return;
 
@@ -205,7 +205,7 @@ export function usePlaylistPicker(item?: MediaItem | null) {
                         setError,
                         setLoadingById,
                         setMembership,
-                        trackId: targetTrackId,
+                        trackId: targetTrackId!,
                         userId: initialData.userId,
                     });
                 }
@@ -290,7 +290,7 @@ export function usePlaylistPicker(item?: MediaItem | null) {
                     if (cancelled) return;
                     setMembership((previous) => ({
                         ...previous,
-                        [playlist.id]: index.trackIds.includes(targetTrackId),
+                        [playlist.id]: index.trackIds.includes(targetTrackId!),
                     }));
                 } catch (nextError) {
                     if (!cancelled) {

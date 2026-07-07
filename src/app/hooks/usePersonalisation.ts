@@ -7,7 +7,7 @@ import {
     buildPersonalisationSnapshot,
     type PersonalisationSnapshot,
 } from '../../shared/personalisation';
-import type { SearchFilter } from '../../shared/types';
+import type { SearchInput } from '../../shared/search';
 import {
     readPersonalisationSnapshot,
     writePersonalisationSnapshot,
@@ -25,17 +25,19 @@ const LOADING_SNAPSHOT: PersonalisationSnapshot = {
     },
 };
 
+const EMPTY_SEARCH: SearchInput = {
+    query: '',
+    filters: [],
+};
+
 export type PersonalisationState = PersonalisationSnapshot & {
     loading: boolean;
 };
 
-export function usePersonalisation({
-    searchQuery = '',
-    filters = [],
-}: {
-    searchQuery?: string;
-    filters?: SearchFilter[];
-} = {}): PersonalisationState {
+export function usePersonalisation(
+    search: SearchInput = EMPTY_SEARCH
+): PersonalisationState {
+    const { query, filters } = search;
     const { knowledge, hydrated } = useAnalyticsKnowledge();
     const trackPersonalisation = useMemo(
         () => createAnalyticsTracker('personalisation'),
@@ -52,18 +54,18 @@ export function usePersonalisation({
         void trackPersonalisation(ANALYTICS_EVENTS.personalisationView, {
             reason: 'personalisation snapshot requested',
             data: {
-                hasQuery: !!searchQuery.trim(),
+                hasQuery: !!query.trim(),
                 filterCount: filters.length,
             },
         });
-    }, [filters.length, searchQuery, trackPersonalisation]);
+    }, [filters.length, query, trackPersonalisation]);
 
     useEffect(() => {
         if (!hydrated || snapshot) return;
         const next = buildPersonalisationSnapshot(knowledge);
         writePersonalisationSnapshot(next);
         setSnapshot(next);
-    }, [filters.length, hydrated, knowledge, searchQuery, snapshot]);
+    }, [filters.length, hydrated, knowledge, query, snapshot]);
 
     if (!hydrated || !snapshot) {
         return {

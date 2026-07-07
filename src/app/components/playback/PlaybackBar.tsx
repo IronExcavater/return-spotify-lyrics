@@ -40,13 +40,13 @@ import { PlaybackDevicePicker } from './PlaybackDevicePicker';
 import { SeekSlider } from './SeekSlider';
 import { VolumeSlider } from './VolumeSlider';
 
-interface Props {
+export type PlaybackBarProps = {
     profileSlot?: ReactNode;
     navSlot?: ReactNode;
     expanded: boolean;
     onExpandedChange: (value: boolean) => void;
     onOpenMediaRoute?: (route: MediaRouteState) => void;
-}
+};
 
 export function PlaybackBar({
     profileSlot,
@@ -54,7 +54,7 @@ export function PlaybackBar({
     expanded,
     onExpandedChange,
     onOpenMediaRoute,
-}: Props) {
+}: PlaybackBarProps) {
     const {
         playback,
         isPlaying,

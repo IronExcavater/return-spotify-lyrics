@@ -64,7 +64,6 @@ function renderSectionContent(
             variant={editor.variant === 'tile' ? 'tile' : 'list'}
             orientation={editor.orientation}
             itemsPerColumn={editor.itemsPerColumn}
-            wideColumns={section.wideColumns}
             columnWidth={editor.columnWidth}
             maxVisible={editor.maxVisible}
             fixedHeight={editor.fixedHeight}

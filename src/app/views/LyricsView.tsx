@@ -1,38 +1,61 @@
-import { Flex, Text } from '@radix-ui/themes';
+import { Flex, Tabs, Text } from '@radix-ui/themes';
 
-const FALLBACK_LYRICS = [
-    'Falling into midnight lines,',
-    'Chasing echoes in neon skies,',
-    'Heartbeat drums and whispered rhymes,',
-    'Hold your breath, this moment shines.',
-];
+import { LiveLyricsPanel } from '../features/lyrics/components/LiveLyricsPanel';
+import { LyricsDraftList } from '../features/lyrics/components/LyricsDraftList';
+import { LyricsEditor } from '../features/lyrics/components/LyricsEditor';
+import type { LyricsMode } from '../features/lyrics/model';
+import { useLyricsWorkspace } from '../features/lyrics/useLyricsWorkspace';
 
 export function LyricsView() {
-    const averageColor = false;
+    const {
+        headerTitle,
+        headerSubtitle,
+        mode,
+        setMode,
+        livePanel,
+        draftList,
+        editor,
+    } = useLyricsWorkspace();
 
     return (
         <Flex
             direction="column"
             flexGrow="1"
-            className="min-h-70 text-white select-none"
+            className="no-overflow-anchor scrollbar-gutter-stable min-h-70 overflow-y-auto text-white"
             p="4"
-            style={{
-                background: averageColor
-                    ? `radial-gradient(circle at top, rgba(255,255,255,0.15), transparent 45%), ${averageColor}`
-                    : 'var(--gray-12)',
-            }}
+            gap="3"
         >
-            <Flex
-                direction="column"
-                gap="1"
-                className="text-lg leading-relaxed"
-            >
-                {FALLBACK_LYRICS.map((line, index) => (
-                    <Text key={`${line}-${index}`} size="4" weight="medium">
-                        {line}
-                    </Text>
-                ))}
+            <Flex direction="column" gap="1">
+                <Text size="5" weight="bold">
+                    {headerTitle}
+                </Text>
+                <Text size="2" color="gray">
+                    {headerSubtitle}
+                </Text>
             </Flex>
+
+            <Tabs.Root
+                value={mode}
+                onValueChange={(value) => setMode(value as LyricsMode)}
+            >
+                <Tabs.List size="1">
+                    <Tabs.Trigger value="live">Live</Tabs.Trigger>
+                    <Tabs.Trigger value="drafts">Drafts</Tabs.Trigger>
+                    <Tabs.Trigger value="editor">Editor</Tabs.Trigger>
+                </Tabs.List>
+
+                <Tabs.Content value="live">
+                    <LiveLyricsPanel {...livePanel} />
+                </Tabs.Content>
+
+                <Tabs.Content value="drafts">
+                    <LyricsDraftList {...draftList} />
+                </Tabs.Content>
+
+                <Tabs.Content value="editor">
+                    <LyricsEditor {...editor} />
+                </Tabs.Content>
+            </Tabs.Root>
         </Flex>
     );
 }

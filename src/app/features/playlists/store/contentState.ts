@@ -30,6 +30,62 @@ import {
 } from './model';
 import { buildTrackPlaylistIndexFromState } from './trackIndex';
 
+type LoadedPlaylistItemsPage = {
+    items: PlaylistContentState['items'];
+    durationMs: number;
+    nextOffset: number;
+    hasMore: boolean;
+    sourceItemCount: number;
+};
+
+async function fetchPlaylistItemsPage({
+    playlistId,
+    market,
+    offset,
+}: {
+    playlistId: string;
+    market: Market;
+    offset: number;
+}) {
+    return sendSpotifyMessage('getPlaylistItems', {
+        id: playlistId,
+        market,
+        limit: PLAYLIST_PAGE_SIZE,
+        offset,
+    });
+}
+
+export async function loadPlaylistItemsPage({
+    playlistId,
+    market,
+    locale,
+    offset,
+}: {
+    playlistId: string;
+    market: Market;
+    locale: string;
+    offset: number;
+}): Promise<LoadedPlaylistItemsPage> {
+    const page = await fetchPlaylistItemsPage({
+        playlistId,
+        market,
+        offset,
+    });
+    const pageItems = page.items ?? [];
+    const tracks = pageItems
+        .map((entry) => entry.track)
+        .filter(Boolean) as Array<Track | Episode>;
+    const nextOffset = offset + pageItems.length;
+
+    return {
+        items: mapPlaylistContentItems(pageItems, locale, offset),
+        durationMs: sumDurationMs(tracks),
+        nextOffset,
+        hasMore: nextOffset < (page.total ?? nextOffset),
+        sourceItemCount: pageItems.length,
+    };
+}
+
 async function persistPlaylistContentState({
     state,
     userId,
@@ -213,24 +269,17 @@ export async function ensurePlaylistContentStateLoaded({
     let hasMore: boolean = working.itemsHasMore;
 
     while (hasMore) {
-        const page = await sendSpotifyMessage('getPlaylistItems', {
-            id: playlistId,
+        const page = await loadPlaylistItemsPage({
+            playlistId,
             market,
-            limit: PLAYLIST_PAGE_SIZE,
+            locale,
             offset,
         });
-        const pageItems = page.items ?? [];
-        const tracks = pageItems
-            .map((entry) => entry.track)
-            .filter(Boolean) as Array<Track | Episode>;
-        items = [
-            ...items,
-            ...mapPlaylistContentItems(pageItems, locale, offset),
-        ];
-        totalDurationMs += sumDurationMs(tracks);
-        offset += pageItems.length;
-        hasMore = offset < (page.total ?? offset);
-        if (pageItems.length === 0) break;
+        items = [...items, ...page.items];
+        totalDurationMs += page.durationMs;
+        offset = page.nextOffset;
+        hasMore = page.hasMore;
+        if (page.sourceItemCount === 0) break;
 
         working = await persistPlaylistContentState({
             state: {

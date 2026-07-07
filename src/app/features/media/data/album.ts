@@ -1,36 +1,34 @@
-import type { Market, Track } from '@spotify/web-api-ts-sdk';
+import type { Track } from '@spotify/web-api-ts-sdk';
 
-import { safeRequest } from '../../../../shared/async';
 import { albumTrackToItem, trackToItem } from '../../../../shared/media';
 import { sendSpotifyMessage } from '../../../../shared/messaging';
-import { buildTrackLookup, sumDurationMs } from '../../../utils/mediaLookup';
 import {
-    buildTrackRecommendationQuery,
-    searchItems,
+    buildTrackLookup,
+    findByMediaId,
+    sumDurationMs,
+} from '../../../utils/mediaLookup';
+import {
+    createTrackSearchQuery,
+    isSearchResultItem,
+    searchMediaItems,
 } from '../../../utils/mediaSearch';
+import type { MediaContextRouteState } from '../model/types';
 import {
-    logOptionalError,
     patchByKind,
+    requestOptional,
     setIfFresh,
-    type IsStale,
-    type SetMediaData,
+    type MediaDataLoadContext,
 } from './loadContext';
 
-export async function loadAlbumData({
-    id,
-    selectedId,
-    market,
-    setData,
-    isStale,
-    logSearchError,
-}: {
-    id: string;
-    selectedId?: string;
-    market: Market;
-    setData: SetMediaData;
-    isStale: IsStale;
-    logSearchError: (error: unknown) => void;
-}) {
+type AlbumLoadRequest = {
+    route: Extract<MediaContextRouteState, { kind: 'album' }>;
+    context: MediaDataLoadContext;
+};
+
+export async function loadAlbumView({ route, context }: AlbumLoadRequest) {
+    const { id, selectedId } = route;
+    const { market, setData, isStale } = context;
+
     const [album, tracksPage] = await Promise.all([
         sendSpotifyMessage('getAlbum', { id, market }),
         sendSpotifyMessage('getAlbumTracks', {
@@ -45,7 +43,7 @@ export async function loadAlbumData({
         albumTrackToItem(track, album)
     );
     const trackLookup = buildTrackLookup(tracksPage.items);
-    const selectedTrack = selectedId ? (trackLookup[selectedId] ?? null) : null;
+    const selectedTrack = findByMediaId(trackLookup, selectedId);
     const mainArtistId =
         selectedTrack?.artists?.[0]?.id ?? album.artists?.[0]?.id;
     const mainArtistName =
@@ -68,11 +66,9 @@ export async function loadAlbumData({
     });
 
     if (mainArtistId) {
-        void loadAlbumArtistTopTracks({
+        void loadAlbumPopularTracks({
             artistId: mainArtistId,
-            market,
-            setData,
-            isStale,
+            context,
         });
     }
 
@@ -84,37 +80,29 @@ export async function loadAlbumData({
             trackIds: tracksPage.items
                 .map((track) => track.id)
                 .filter((trackId): trackId is string => Boolean(trackId)),
-            setData,
-            isStale,
-            logSearchError,
+            context,
         });
     }
 }
 
-async function loadAlbumArtistTopTracks({
+async function loadAlbumPopularTracks({
     artistId,
-    market,
-    setData,
-    isStale,
+    context,
 }: {
     artistId: string;
-    market: Market;
-    setData: SetMediaData;
-    isStale: IsStale;
+    context: MediaDataLoadContext;
 }) {
-    const topTracks = await safeRequest(
-        () =>
-            sendSpotifyMessage('getArtistTopTracks', {
-                id: artistId,
-                market,
-            }),
-        { tracks: [] },
-        logOptionalError
+    const { market, setData, isStale } = context;
+    const topTracks = await requestOptional(() =>
+        sendSpotifyMessage('getArtistTopTracks', {
+            id: artistId,
+            market,
+        })
     );
 
     patchByKind(isStale, setData, 'album', (prev) => ({
         ...prev,
-        artistTopTracks: topTracks.tracks.map(trackToItem),
+        artistTopTracks: topTracks?.tracks.map(trackToItem) ?? [],
         popularLoading: false,
     }));
 }
@@ -124,38 +112,32 @@ async function loadAlbumRecommendations({
     artistName,
     selectedTrackName,
     trackIds,
-    setData,
-    isStale,
-    logSearchError,
+    context,
 }: {
     albumName: string;
     artistName: string;
     selectedTrackName?: string;
     trackIds: string[];
-    setData: SetMediaData;
-    isStale: IsStale;
-    logSearchError: (error: unknown) => void;
+    context: MediaDataLoadContext;
 }) {
+    const { setData, isStale, logSearchError } = context;
     const knownTrackIds = new Set(trackIds);
-    const query = buildTrackRecommendationQuery({
+    const query = createTrackSearchQuery({
         artistName,
         trackName: selectedTrackName,
         albumName,
     });
 
-    const recommended = await searchItems(
+    const recommended = await searchMediaItems({
         query,
-        ['track'],
-        (results) =>
+        types: ['track'],
+        select: (results) =>
             (results.tracks?.items ?? [])
-                .filter(
-                    (item): item is Track =>
-                        typeof item === 'object' && item !== null
-                )
+                .filter(isSearchResultItem<Track>)
                 .filter((item) => item.id && !knownTrackIds.has(item.id))
                 .map(trackToItem),
-        logSearchError
-    );
+        onError: logSearchError,
+    });
 
     patchByKind(isStale, setData, 'album', (prev) => ({
         ...prev,

@@ -1,17 +1,13 @@
-import { sendSpotifyMessage } from '../../../shared/messaging';
+import { sendSpotifyMessage } from '../../../../shared/messaging';
 import type {
     MediaAction,
     MediaActionGroup,
     MediaItem,
-} from '../../../shared/types';
-import type {
-    AlbumViewData,
-    ArtistViewData,
-    ShowViewData,
-} from '../../features/media/data';
-import { duplicateAsPlaylistAndNotify } from '../../features/playlists/management';
-import { updateCachedAssumedNowPlaying } from '../../hooks/mediaCacheEntries';
-import { buildMediaActions } from '../../mediaActions';
+} from '../../../../shared/types';
+import { updateCachedAssumedNowPlaying } from '../../../hooks/mediaCacheEntries';
+import { buildMediaActions } from '../../../mediaActions';
+import { duplicateAsPlaylistAndNotify } from '../../playlists/management';
+import type { AlbumViewData, ArtistViewData, ShowViewData } from '../data';
 import {
     buildMediaPlaybackRequest,
     playMediaHero,

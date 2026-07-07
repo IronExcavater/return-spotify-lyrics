@@ -5,51 +5,47 @@ import type {
     SimplifiedAlbum,
 } from '@spotify/web-api-ts-sdk';
 
-import { safeRequest } from '../../../../shared/async';
+import type {
+    AlbumMediaSource,
+    AlbumTrackGroup,
+} from '../../../../shared/media';
 import { sendSpotifyMessage } from '../../../../shared/messaging';
-import type { DiscographyEntry } from '../../../components/media/DiscographyShelf';
-import { logOptionalError } from './loadContext';
 
 export const ARTIST_DISCOGRAPHY_PAGE_SIZE = 20;
 
-export async function buildDiscographyEntries(
-    albums: Array<SimplifiedAlbum | Album>,
-    market: Market,
-    trackCount: number
-): Promise<DiscographyEntry[]> {
+type DiscographyEntriesRequest = {
+    albums: DiscographyAlbum[];
+    market: Market;
+    trackCount: number;
+};
+
+type DiscographyAlbum = (SimplifiedAlbum | Album) & { id: string };
+
+export async function loadDiscographyEntries({
+    albums,
+    market,
+    trackCount,
+}: DiscographyEntriesRequest): Promise<AlbumTrackGroup[]> {
     const limit = Math.min(trackCount, 10) as MaxInt<50>;
-    const entries = await Promise.all(
+    return Promise.all(
         albums.map(async (album) => {
-            if (!album.id) return null;
-
-            const tracksPage = await safeRequest(
-                () =>
-                    sendSpotifyMessage('getAlbumTracks', {
-                        id: album.id,
-                        market,
-                        limit,
-                    }),
-                null,
-                logOptionalError
-            );
-            if (!tracksPage) return null;
-
-            const albumWithGroup =
-                'album_group' in album
-                    ? album
-                    : { ...album, album_group: album.album_type };
+            const tracksPage = await sendSpotifyMessage('getAlbumTracks', {
+                id: album.id,
+                market,
+                limit,
+            });
 
             return {
-                album: albumWithGroup as SimplifiedAlbum,
+                album: toAlbumMediaSource(album),
                 tracks: tracksPage.items,
             };
         })
     );
-
-    return entries.filter(Boolean) as DiscographyEntry[];
 }
 
-export function dedupeAlbums<T extends SimplifiedAlbum | Album>(albums: T[]) {
+export function uniqueAlbumsById<T extends SimplifiedAlbum | Album>(
+    albums: T[]
+) {
     return Array.from(
         new Map(
             albums
@@ -61,9 +57,25 @@ export function dedupeAlbums<T extends SimplifiedAlbum | Album>(albums: T[]) {
     );
 }
 
-export function mergeDiscographyEntries(
-    current: DiscographyEntry[],
-    next: DiscographyEntry[]
+function toAlbumMediaSource(album: SimplifiedAlbum | Album): AlbumMediaSource {
+    return {
+        album_group:
+            'album_group' in album ? album.album_group : album.album_type,
+        album_type: album.album_type,
+        artists: album.artists,
+        external_urls: album.external_urls,
+        id: album.id,
+        images: album.images,
+        name: album.name,
+        release_date: album.release_date,
+        total_tracks: album.total_tracks,
+        uri: album.uri,
+    };
+}
+
+export function mergeDiscographyByAlbumId(
+    current: AlbumTrackGroup[],
+    next: AlbumTrackGroup[]
 ) {
     return Array.from(
         new Map(

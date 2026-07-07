@@ -3,9 +3,12 @@ import {
     ANALYTICS_EVENTS,
     createAnalyticsTracker,
 } from '../../shared/analytics';
+import type { SearchInput } from '../../shared/search';
 import type { FilterKind, PillValue, SearchFilter } from '../../shared/types';
 
 const SEARCH_DEBOUNCE_MS = 150;
+
+export type SearchState = SearchInput;
 
 const FILTER_META: Record<
     FilterKind,
@@ -49,6 +52,14 @@ export function useSearch() {
     const [debouncedQuery, setDebouncedQuery] = useState(query);
     const [debouncedFilters, setDebouncedFilters] = useState(filters);
     const trackSearch = useMemo(() => createAnalyticsTracker('search'), []);
+    const state = useMemo<SearchState>(
+        () => ({ query, filters }),
+        [filters, query]
+    );
+    const debouncedState = useMemo<SearchState>(
+        () => ({ query: debouncedQuery, filters: debouncedFilters }),
+        [debouncedFilters, debouncedQuery]
+    );
 
     const available = useMemo(() => {
         const active = new Set(filters.map((filter) => filter.kind));
@@ -56,6 +67,10 @@ export function useSearch() {
             (kind) => !active.has(kind)
         );
     }, [filters]);
+
+    const setQueryText = useCallback((nextQuery: string) => {
+        setQuery(nextQuery);
+    }, []);
 
     const addFilter = useCallback(
         (kind: FilterKind) => {
@@ -119,21 +134,16 @@ export function useSearch() {
         return () => window.clearTimeout(timeout);
     }, [filters, query]);
 
-    const setSearchState = useCallback(
-        (next: { query: string; filters: SearchFilter[] }) => {
-            setQuery(next.query);
-            setFilters(next.filters);
-        },
-        []
-    );
+    const replaceState = useCallback((next: SearchState) => {
+        setQuery(next.query);
+        setFilters(next.filters);
+    }, []);
 
     return {
-        query,
-        setQuery,
-        filters,
-        debouncedQuery,
-        debouncedFilters,
-        setSearchState,
+        state,
+        debouncedState,
+        setQueryText,
+        replaceState,
         addFilter,
         updateFilter,
         removeFilter,

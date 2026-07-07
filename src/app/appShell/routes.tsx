@@ -1,14 +1,24 @@
 import { useMemo, type ReactNode } from 'react';
 import type { UserProfile } from '@spotify/web-api-ts-sdk';
 
+import type { SpotifyAuthNotice } from '../features/auth/spotifyAuthNotices';
 import type { SpotifyConnectionMeta } from '../hooks/useAuth';
-import { HomeView } from '../views/HomeView';
-import { LoginView } from '../views/LoginView';
-import { LyricsView } from '../views/LyricsView';
-import { MediaView } from '../views/MediaView';
-import { PlaylistView } from '../views/PlaylistView';
-import { ProfileView } from '../views/ProfileView';
-import { QueueView } from '../views/QueueView';
+import type { SearchState } from '../hooks/useSearch';
+import { lazyNamed } from './lazyNamed';
+
+const HomeView = lazyNamed(() => import('../views/HomeView'), 'HomeView');
+const LyricsView = lazyNamed(() => import('../views/LyricsView'), 'LyricsView');
+const ProfileView = lazyNamed(
+    () => import('../views/ProfileView'),
+    'ProfileView'
+);
+const QueueView = lazyNamed(() => import('../views/QueueView'), 'QueueView');
+const MediaView = lazyNamed(() => import('../views/MediaView'), 'MediaView');
+const PlaylistView = lazyNamed(
+    () => import('../views/PlaylistView'),
+    'PlaylistView'
+);
+const LoginView = lazyNamed(() => import('../views/LoginView'), 'LoginView');
 
 export type AppRouteDefinition = {
     path: string;
@@ -24,8 +34,8 @@ type UseAppRoutesOptions = {
     logout: () => void;
     profile?: UserProfile;
     connection?: SpotifyConnectionMeta;
-    searchQuery: string;
-    searchFilters: Parameters<typeof HomeView>[0]['filters'];
+    authNotices: SpotifyAuthNotice[];
+    searchState: SearchState;
 };
 
 export function useAppRoutes({
@@ -35,8 +45,8 @@ export function useAppRoutes({
     logout,
     profile,
     connection,
-    searchQuery,
-    searchFilters,
+    authNotices,
+    searchState,
 }: UseAppRoutesOptions) {
     return useMemo<AppRouteDefinition[]>(
         () => [
@@ -48,12 +58,7 @@ export function useAppRoutes({
             },
             {
                 path: '/home',
-                element: (
-                    <HomeView
-                        searchQuery={searchQuery}
-                        filters={searchFilters}
-                    />
-                ),
+                element: <HomeView search={searchState} />,
                 when: mustLogin,
                 redirectTo: '/login',
             },
@@ -95,7 +100,9 @@ export function useAppRoutes({
             },
             {
                 path: '/login',
-                element: <LoginView onLogin={login} />,
+                element: (
+                    <LoginView authNotices={authNotices} onLogin={login} />
+                ),
                 when: mustLogout,
                 redirectTo: '/home',
             },
@@ -107,8 +114,8 @@ export function useAppRoutes({
             mustLogin,
             mustLogout,
             profile,
-            searchFilters,
-            searchQuery,
+            authNotices,
+            searchState,
         ]
     );
 }

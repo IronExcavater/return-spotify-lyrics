@@ -27,7 +27,7 @@ const getDateFormatter = (
 };
 
 export const formatIsoDate = (
-    iso?: string,
+    iso?: string | null,
     options: Intl.DateTimeFormatOptions = { dateStyle: 'medium' },
     locale?: string
 ) => {

@@ -30,7 +30,7 @@ export function DatePillEditor({
     placeholder,
 }: {
     dateDraft: DateDraft;
-    dateInputRef: RefObject<HTMLInputElement | null>;
+    dateInputRef: RefObject<HTMLInputElement>;
     dateWidths: DateWidths;
     editPattern: DateEditPattern;
     isRangeMode: boolean;

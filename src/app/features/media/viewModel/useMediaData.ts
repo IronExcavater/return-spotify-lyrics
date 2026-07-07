@@ -1,28 +1,23 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Market } from '@spotify/web-api-ts-sdk';
 
-import { createLogger, logError } from '../../shared/logging';
-
-export { resolveSpotifyMediaId as resolveMediaDataId } from '../../shared/media';
-import { showEpisodeToItem } from '../../shared/media';
-import { sendSpotifyMessage } from '../../shared/messaging';
+import { createLogger, logError } from '../../../../shared/logging';
+import type { MediaRouteState } from '../../../hooks/useMediaRoute';
 import {
-    ARTIST_DISCOGRAPHY_PAGE_SIZE,
-    SHOW_EPISODE_PAGE_SIZE,
-    buildDiscographyEntries,
-    dedupeAlbums,
-    loadMediaContextData,
-    mergeDiscographyEntries,
+    appendDiscographyPage,
+    loadArtistDiscographyPage,
+    loadMediaData,
+    loadShowEpisodePage,
+    type ArtistViewData,
     type MediaDataState,
-} from '../features/media/data';
+    type ShowViewData,
+} from '../data';
 import {
     isMediaContextRoute,
     isTrackOrEpisodeRoute,
     resolveFromLoadedMediaData,
     resolveMediaContextFromApi,
-} from '../features/media/routing/contextResolution';
-import { buildEpisodeLookup, sumDurationMs } from '../utils/mediaLookup';
-import type { MediaRouteState } from './useMediaRoute';
+} from '../routing/contextResolution';
 
 export type { MediaDataState };
 
@@ -40,6 +35,17 @@ type UseMediaDataOptions = {
     locale: string;
     goTo: GoToMedia;
     discographyTrackCount?: number;
+    discographyIncludeAppearances?: boolean;
+};
+
+type ShowEpisodeCursor = {
+    show: ShowViewData['show'];
+    offset: number;
+};
+
+type ArtistDiscographyCursor = {
+    artist: ArtistViewData['artist'];
+    offset: number;
 };
 
 export function useMediaData({
@@ -48,6 +54,7 @@ export function useMediaData({
     locale,
     goTo,
     discographyTrackCount = 5,
+    discographyIncludeAppearances = false,
 }: UseMediaDataOptions) {
     const [data, setData] = useState<MediaDataState | null>(null);
     const [loading, setLoading] = useState(true);
@@ -117,13 +124,19 @@ export function useMediaData({
 
         void (async () => {
             try {
-                await loadMediaContextData(state, {
-                    market,
-                    locale,
-                    discographyTrackCount,
-                    setData,
-                    isStale,
-                    logSearchError,
+                await loadMediaData({
+                    route: state,
+                    context: {
+                        market,
+                        locale,
+                        discography: {
+                            trackCount: discographyTrackCount,
+                            includeAppearances: discographyIncludeAppearances,
+                        },
+                        setData,
+                        isStale,
+                        logSearchError,
+                    },
                 });
             } finally {
                 if (!isStale()) setLoading(false);
@@ -135,54 +148,69 @@ export function useMediaData({
         };
     }, [
         discographyTrackCount,
+        discographyIncludeAppearances,
         locale,
         logSearchError,
         market,
         state?.id,
         state?.kind,
+        state?.selectedId,
     ]);
 
     const loadMoreEpisodes = useCallback(async () => {
-        let offset: number | null = null;
+        const current = dataRef.current;
+        if (
+            !current ||
+            current.kind !== 'show' ||
+            current.episodesLoadingMore ||
+            !current.episodesHasMore
+        ) {
+            return;
+        }
+
+        const cursor: ShowEpisodeCursor = {
+            show: current.show,
+            offset: current.episodesOffset,
+        };
 
         setData((prev) => {
             if (!prev || prev.kind !== 'show') return prev;
-            if (prev.episodesLoadingMore || !prev.episodesHasMore) return prev;
-            offset = prev.episodesOffset;
+            if (
+                prev.show.id !== cursor.show.id ||
+                prev.episodesOffset !== cursor.offset ||
+                prev.episodesLoadingMore ||
+                !prev.episodesHasMore
+            ) {
+                return prev;
+            }
             return { ...prev, episodesLoadingMore: true };
         });
 
-        if (offset == null || !state?.id) return;
-
         try {
-            const page = await sendSpotifyMessage('getShowEpisodes', {
-                id: state.id,
+            const page = await loadShowEpisodePage({
+                show: cursor.show,
+                offset: cursor.offset,
                 market,
-                limit: SHOW_EPISODE_PAGE_SIZE,
-                offset,
+                locale,
             });
 
-            const addedDuration = sumDurationMs(page.items);
             setData((prev) => {
                 if (!prev || prev.kind !== 'show') return prev;
-                if (prev.episodesOffset !== offset) {
+                if (prev.show.id !== cursor.show.id) return prev;
+                if (prev.episodesOffset !== cursor.offset) {
                     return { ...prev, episodesLoadingMore: false };
                 }
 
-                const episodes = page.items.map((episode) =>
-                    showEpisodeToItem(episode, prev.show, locale)
-                );
-                const lookup = buildEpisodeLookup(page.items);
-                const nextOffset = offset + page.items.length;
-                const hasMore = nextOffset < (page.total ?? nextOffset);
-
                 return {
                     ...prev,
-                    episodes: [...prev.episodes, ...episodes],
-                    episodeLookup: { ...prev.episodeLookup, ...lookup },
-                    totalDurationMs: prev.totalDurationMs + addedDuration,
-                    episodesOffset: nextOffset,
-                    episodesHasMore: hasMore,
+                    episodes: [...prev.episodes, ...page.episodes],
+                    episodeLookup: {
+                        ...prev.episodeLookup,
+                        ...page.episodeLookup,
+                    },
+                    totalDurationMs: prev.totalDurationMs + page.durationMs,
+                    episodesOffset: page.nextOffset,
+                    episodesHasMore: page.hasMore,
                     episodesLoadingMore: false,
                 };
             });
@@ -193,53 +221,58 @@ export function useMediaData({
                 return { ...prev, episodesLoadingMore: false };
             });
         }
-    }, [locale, market, state?.id]);
+    }, [locale, market]);
 
     const loadMoreDiscography = useCallback(async () => {
-        let offset: number | null = null;
+        const current = dataRef.current;
+        if (
+            !current ||
+            current.kind !== 'artist' ||
+            current.discographyLoadingMore ||
+            !current.discographyHasMore
+        ) {
+            return;
+        }
+
+        const cursor: ArtistDiscographyCursor = {
+            artist: current.artist,
+            offset: current.discographyOffset,
+        };
 
         setData((prev) => {
             if (!prev || prev.kind !== 'artist') return prev;
-            if (prev.discographyLoadingMore || !prev.discographyHasMore) {
+            if (
+                prev.artist.id !== cursor.artist.id ||
+                prev.discographyOffset !== cursor.offset ||
+                prev.discographyLoadingMore ||
+                !prev.discographyHasMore
+            ) {
                 return prev;
             }
-            offset = prev.discographyOffset;
             return { ...prev, discographyLoadingMore: true };
         });
 
-        if (offset == null || !state?.id) return;
-
         try {
-            const page = await sendSpotifyMessage('getArtistAlbums', {
-                id: state.id,
+            const page = await loadArtistDiscographyPage({
+                artistId: cursor.artist.id,
+                offset: cursor.offset,
                 market,
-                limit: ARTIST_DISCOGRAPHY_PAGE_SIZE,
-                offset,
+                trackCount: discographyTrackCount,
+                includeAppearances: discographyIncludeAppearances,
             });
-
-            const albums = dedupeAlbums(page.items ?? []);
-            const discography = await buildDiscographyEntries(
-                albums,
-                market,
-                discographyTrackCount
-            );
-            const nextOffset = offset + (page.items?.length ?? 0);
-            const hasMore = nextOffset < (page.total ?? nextOffset);
 
             setData((prev) => {
                 if (!prev || prev.kind !== 'artist') return prev;
-                if (prev.discographyOffset !== offset) {
+                if (prev.artist.id !== cursor.artist.id) return prev;
+                if (prev.discographyOffset !== cursor.offset) {
                     return { ...prev, discographyLoadingMore: false };
                 }
 
                 return {
                     ...prev,
-                    discography: mergeDiscographyEntries(
-                        prev.discography,
-                        discography
-                    ),
-                    discographyOffset: nextOffset,
-                    discographyHasMore: hasMore,
+                    discography: appendDiscographyPage(prev.discography, page),
+                    discographyOffset: page.nextOffset,
+                    discographyHasMore: page.hasMore,
                     discographyLoadingMore: false,
                 };
             });
@@ -250,7 +283,7 @@ export function useMediaData({
                 return { ...prev, discographyLoadingMore: false };
             });
         }
-    }, [discographyTrackCount, market, state?.id]);
+    }, [discographyIncludeAppearances, discographyTrackCount, market]);
 
     return {
         data,

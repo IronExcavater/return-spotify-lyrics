@@ -14,7 +14,6 @@ export interface MediaShelfProps {
     orientation?: MediaShelfOrientation;
     variant?: MediaShelfVariant;
     itemsPerColumn?: number;
-    wideColumns?: boolean;
     columnWidth?: number;
     maxVisible?: number;
     fixedHeight?: number;

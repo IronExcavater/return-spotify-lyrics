@@ -99,13 +99,21 @@ export const mapSearchResults = (
     return { itemsByType, hasMoreByType };
 };
 
-export const mapSearchPage = (
-    type: SearchType,
-    result: SearchResults<[ItemTypes]>,
-    locale: string
-) => {
+export const mapSearchPage = ({
+    type,
+    result,
+    locale,
+    offset,
+    limit = SEARCH_LIMIT,
+}: {
+    type: SearchType;
+    result: SearchResults<[ItemTypes]>;
+    locale: string;
+    offset: number;
+    limit?: number;
+}) => {
     const mapped = SEARCH_TYPE_MAPPERS[type](result, locale);
     const { items, hasMore } = mapped;
 
-    return { items, hasMore, nextOffset: hasMore ? SEARCH_LIMIT : null };
+    return { items, hasMore, nextOffset: hasMore ? offset + limit : null };
 };

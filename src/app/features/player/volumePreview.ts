@@ -67,7 +67,7 @@ export function createVolumePreviewController({
             return muted ? lastNonZeroVolume || 50 : 0;
         },
 
-        settleServerVolume(serverVolume?: number) {
+        settleServerVolume(serverVolume?: number | null) {
             if (serverVolume == null || state.value == null) return;
 
             const matchesPreview = Math.abs(serverVolume - state.value) <= 1;

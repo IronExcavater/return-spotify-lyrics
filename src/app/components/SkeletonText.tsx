@@ -11,7 +11,10 @@ type WidthOptions = {
 };
 type Preset = 'media-card' | 'media-row';
 
-const PRESETS: Record<Preset, { salts: number[]; options: WidthOptions }> = {
+const PRESETS: Record<
+    Preset,
+    { salts: number[]; options: Required<WidthOptions> }
+> = {
     'media-card': {
         salts: [13, 17, 23],
         options: {

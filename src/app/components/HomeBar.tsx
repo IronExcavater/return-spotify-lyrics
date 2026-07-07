@@ -21,7 +21,7 @@ const FILTER_LABELS: Record<FilterKind, string> = {
     year: 'Released',
 };
 
-interface Props {
+export type HomeBarProps = {
     profileSlot?: ReactNode;
     navSlot?: ReactNode;
     searchQuery: string;
@@ -37,7 +37,7 @@ interface Props {
     onUpdateFilter: (id: string, value: PillValue) => void;
     onRemoveFilter: (id: string) => void;
     onClearFilters: () => void;
-}
+};
 
 export function HomeBar({
     profileSlot,
@@ -55,7 +55,7 @@ export function HomeBar({
     onUpdateFilter,
     onRemoveFilter,
     onClearFilters,
-}: Props) {
+}: HomeBarProps) {
     const hasQuery = searchQuery.trim().length > 0;
     const hasFilters = filters.length > 0;
     const { scrollRef: filterScrollRef, fade: filterFade } = useScrollFade(
@@ -224,14 +224,14 @@ export function HomeBar({
                     </Flex>
                     <div
                         className={clsx(
-                            'pointer-events-none absolute top-2 left-0 h-[calc(100%-0.5rem)] w-2 bg-linear-to-r from-background via-background/60 to-transparent transition-opacity',
+                            'from-background via-background/60 pointer-events-none absolute top-2 left-0 h-[calc(100%-0.5rem)] w-2 bg-linear-to-r to-transparent transition-opacity',
                             filterFade.start ? 'opacity-100' : 'opacity-0'
                         )}
                         aria-hidden
                     />
                     <div
                         className={clsx(
-                            'pointer-events-none absolute top-2 right-0 h-[calc(100%-0.5rem)] w-2 bg-linear-to-l from-background via-background/60 to-transparent transition-opacity',
+                            'from-background via-background/60 pointer-events-none absolute top-2 right-0 h-[calc(100%-0.5rem)] w-2 bg-linear-to-l to-transparent transition-opacity',
                             filterFade.end ? 'opacity-100' : 'opacity-0'
                         )}
                         aria-hidden

@@ -1,0 +1,10 @@
+{
+    "appDescription": {
+        "message": "A modern Spotify mini-player to unblock Spotify free restrictions",
+        "description": "Extension description shown in Chrome."
+    },
+    "appName": {
+        "message": "Return Spotify Lyrics",
+        "description": "Extension name shown in Chrome."
+    }
+}

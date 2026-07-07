@@ -5,7 +5,7 @@ import {
     createLogger,
     createOptionalRequestLogger,
 } from '../../../../shared/logging';
-import type { MediaDataState } from './types';
+import type { MediaContextRouteState, MediaDataState } from '../model/types';
 
 export const mediaDataLogger = createLogger('media');
 export const logOptionalError = createOptionalRequestLogger(mediaDataLogger);
@@ -23,13 +23,23 @@ export type MediaDataByKind<K extends MediaDataKind> = Extract<
     { kind: K }
 >;
 
+export type DiscographyLoadOptions = {
+    trackCount: number;
+    includeAppearances: boolean;
+};
+
 export type MediaDataLoadContext = {
     market: Market;
     locale: string;
-    discographyTrackCount: number;
+    discography: DiscographyLoadOptions;
     setData: SetMediaData;
     isStale: IsStale;
     logSearchError: (error: unknown) => void;
+};
+
+export type MediaDataLoadRequest = {
+    route: MediaContextRouteState;
+    context: MediaDataLoadContext;
 };
 
 export function setIfFresh(
@@ -51,4 +61,16 @@ export function patchByKind<K extends MediaDataKind>(
         if (!prev || prev.kind !== kind) return prev;
         return patch(prev as MediaDataByKind<K>);
     });
+}
+
+export async function requestOptional<T>(
+    request: () => Promise<T>,
+    onError: (error: unknown) => void = logOptionalError
+) {
+    try {
+        return await request();
+    } catch (error) {
+        onError(error);
+        return null;
+    }
 }

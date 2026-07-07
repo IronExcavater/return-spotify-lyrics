@@ -1,10 +1,8 @@
 import type {
-    Album,
     Artist,
     Episode,
     Playlist,
     Show,
-    SimplifiedAlbum,
     SimplifiedArtist,
     SimplifiedAudiobook,
     SimplifiedEpisode,
@@ -16,7 +14,7 @@ import type {
 import { formatIsoDate, formatDurationShort } from './date';
 import type { MediaArtist, MediaItem } from './types';
 
-type SpotifyImage = {
+export type SpotifyImage = {
     url: string;
 };
 
@@ -26,9 +24,29 @@ type AlbumTypeSource = {
     total_tracks?: number;
 };
 
+export type AlbumMediaSource = AlbumTypeSource & {
+    artists?: Array<Pick<SimplifiedArtist, 'id' | 'name'>> | null;
+    external_urls?: { spotify?: string } | null;
+    id?: string | null;
+    images?: SpotifyImage[] | null;
+    name: string;
+    release_date?: string | null;
+    uri?: string | null;
+};
+
+export type TrackMediaSource = Pick<
+    SimplifiedTrack,
+    'artists' | 'duration_ms' | 'external_urls' | 'id' | 'name' | 'uri'
+>;
+
+export type AlbumTrackGroup = {
+    album: AlbumMediaSource;
+    tracks: TrackMediaSource[];
+};
+
 type AlbumContext = Pick<
-    Album,
-    'id' | 'images' | 'external_urls' | 'name' | 'total_tracks'
+    AlbumMediaSource,
+    'external_urls' | 'id' | 'images' | 'name' | 'total_tracks'
 >;
 
 type ShowContext = Pick<Show, 'id' | 'images' | 'external_urls'>;
@@ -98,10 +116,7 @@ const resolveEpisodeParentId = (
 };
 
 const createTrackMediaItem = (
-    track: Pick<
-        SimplifiedTrack,
-        'id' | 'uri' | 'name' | 'artists' | 'external_urls'
-    >,
+    track: TrackMediaSource,
     album?: AlbumContext
 ): MediaItem => ({
     id: track.id ?? track.uri ?? track.name,
@@ -113,7 +128,7 @@ const createTrackMediaItem = (
     externalUrl: track.external_urls?.spotify,
     kind: 'track',
     parentKind: album?.id ? 'album' : undefined,
-    parentId: album?.id,
+    parentId: album?.id ?? undefined,
     parentTitle: album?.name,
     parentIsSingle: album?.total_tracks === 1,
 });
@@ -218,11 +233,11 @@ export const trackToItem = (track: Track): MediaItem =>
     createTrackMediaItem(track, track.album);
 
 export const albumTrackToItem = (
-    track: SimplifiedTrack,
+    track: TrackMediaSource,
     album: AlbumContext
 ): MediaItem => createTrackMediaItem(track, album);
 
-export const albumToItem = (album: SimplifiedAlbum | Album): MediaItem =>
+export const albumToItem = (album: AlbumMediaSource): MediaItem =>
     createCollectionMediaItem({
         id: album.id,
         uri: album.uri,

@@ -3,6 +3,8 @@ import type {
     SimplifiedTrack,
 } from '@spotify/web-api-ts-sdk';
 
+import { resolveSpotifyMediaId } from '../../shared/media';
+
 export const sumDurationMs = (
     items: Array<{ duration_ms?: number | null | undefined }>
 ) => items.reduce((acc, item) => acc + (item?.duration_ms ?? 0), 0);
@@ -26,3 +28,12 @@ export const buildEpisodeLookup = (episodes: SimplifiedEpisode[]) =>
         },
         {} as Record<string, SimplifiedEpisode>
     );
+
+export function findByMediaId<T>(
+    lookup: Record<string, T>,
+    selectedId?: string
+): T | null {
+    if (!selectedId) return null;
+    const resolvedId = resolveSpotifyMediaId(selectedId);
+    return lookup[resolvedId] ?? lookup[selectedId] ?? null;
+}

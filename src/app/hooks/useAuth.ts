@@ -10,6 +10,12 @@ import {
     logError,
 } from '../../shared/logging';
 import { Msg, sendMessage, sendSpotifyMessage } from '../../shared/messaging';
+import {
+    isSpotifyAuthStatus,
+    SPOTIFY_AUTH_STATUS_KEY,
+    SPOTIFY_TOKEN_KEY,
+    type SpotifyAuthStatus,
+} from '../../shared/spotifyAuthState';
 import { getFromStorage, setInStorage } from '../../shared/storage';
 import {
     resetPremiumPlaybackBlocked,
@@ -38,6 +44,9 @@ export function useAuth() {
     const [connection, setConnection] = useState<
         SpotifyConnectionMeta | undefined
     >(undefined);
+    const [authStatus, setAuthStatus] = useState<SpotifyAuthStatus | undefined>(
+        undefined
+    );
     const connectionRef = useRef<SpotifyConnectionMeta | undefined>(undefined);
     const sessionActiveRef = useRef(false);
     const trackAuth = useMemo(() => createAnalyticsTracker('auth'), []);
@@ -118,7 +127,14 @@ export function useAuth() {
             changes: Record<string, chrome.storage.StorageChange>,
             area: string
         ) => {
-            if (area === 'local' && changes.spotifyToken) {
+            if (area !== 'local') return;
+
+            if (changes[SPOTIFY_AUTH_STATUS_KEY]) {
+                const next = changes[SPOTIFY_AUTH_STATUS_KEY].newValue;
+                setAuthStatus(isSpotifyAuthStatus(next) ? next : undefined);
+            }
+
+            if (changes[SPOTIFY_TOKEN_KEY]) {
                 void sync();
             }
         };
@@ -132,10 +148,14 @@ export function useAuth() {
         let cancelled = false;
 
         void (async () => {
-            const [storedUser, storedConnection] = await Promise.all([
-                getFromStorage<UserProfile>(SPOTIFY_USER_KEY),
-                getFromStorage<SpotifyConnectionMeta>(SPOTIFY_CONNECTION_KEY),
-            ]);
+            const [storedUser, storedConnection, storedAuthStatus] =
+                await Promise.all([
+                    getFromStorage<UserProfile>(SPOTIFY_USER_KEY),
+                    getFromStorage<SpotifyConnectionMeta>(
+                        SPOTIFY_CONNECTION_KEY
+                    ),
+                    getFromStorage<unknown>(SPOTIFY_AUTH_STATUS_KEY),
+                ]);
             if (cancelled) return;
 
             if (storedUser) {
@@ -149,6 +169,11 @@ export function useAuth() {
 
             connectionRef.current = storedConnection;
             setConnection(storedConnection);
+            setAuthStatus(
+                isSpotifyAuthStatus(storedAuthStatus)
+                    ? storedAuthStatus
+                    : undefined
+            );
         })();
 
         void sync();
@@ -171,5 +196,5 @@ export function useAuth() {
     }, [authed, trackAuth]);
 
     const profile = authed === false ? undefined : (user ?? cachedUser);
-    return { authed, profile, login, logout, connection };
+    return { authed, profile, login, logout, connection, authStatus };
 }

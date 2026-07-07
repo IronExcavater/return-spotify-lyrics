@@ -1,17 +1,24 @@
 import { useEffect, useMemo, useRef } from 'react';
 
 import type { RouteState, HomeRouteState } from '../hooks/useHistory';
-import { useSearch } from '../hooks/useSearch';
+import { type SearchState, useSearch } from '../hooks/useSearch';
 
-const isHomeRouteState = (
+export const isHomeRouteState = (
     state: RouteState | null | undefined
 ): state is HomeRouteState =>
     !!state && ('searchQuery' in state || 'searchFilters' in state);
 
-export const toHomeRouteState = (
-    query: string,
-    filters: HomeRouteState['searchFilters'] = []
-): HomeRouteState | undefined => {
+export const fromHomeRouteState = (
+    state: HomeRouteState | null | undefined
+): SearchState => ({
+    query: state?.searchQuery ?? '',
+    filters: state?.searchFilters ?? [],
+});
+
+export const toHomeRouteState = ({
+    query,
+    filters,
+}: SearchState): HomeRouteState | undefined => {
     const nextFilters = filters && filters.length > 0 ? filters : undefined;
     if (!query.trim() && !nextFilters) return undefined;
 
@@ -36,25 +43,23 @@ export function useHomeSearchRouteSync({
 }) {
     const lastHomeStateRef = useRef<HomeRouteState | null>(null);
     const currentHomeState = useMemo(
-        () => toHomeRouteState(search.query, search.filters) ?? null,
-        [search.filters, search.query]
+        () => toHomeRouteState(search.state) ?? null,
+        [search.state]
     );
     const debouncedHomeState = useMemo(
-        () =>
-            toHomeRouteState(search.debouncedQuery, search.debouncedFilters) ??
-            null,
-        [search.debouncedFilters, search.debouncedQuery]
+        () => toHomeRouteState(search.debouncedState) ?? null,
+        [search.debouncedState]
     );
 
     useEffect(() => {
         if (pathname !== '/home') return;
-        if (!isHomeRouteState(locationState)) return;
 
-        search.setSearchState({
-            query: locationState.searchQuery ?? '',
-            filters: locationState.searchFilters ?? [],
-        });
-    }, [locationState, pathname, search.setSearchState]);
+        search.replaceState(
+            fromHomeRouteState(
+                isHomeRouteState(locationState) ? locationState : undefined
+            )
+        );
+    }, [locationState, pathname, search.replaceState]);
 
     useEffect(() => {
         if (pathname !== '/home') return;

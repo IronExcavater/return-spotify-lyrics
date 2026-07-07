@@ -1,15 +1,12 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { SPOTIFY_SCOPES } from '../../shared/config';
+import { SPOTIFY_TOKEN_KEY } from '../../shared/spotifyAuthState';
 import { getFromStorage, onStorageChange } from '../../shared/storage';
 
 type StoredToken = {
     scope?: string;
 };
-
-type ReauthReason = 'missing-scopes';
-
-const TOKEN_KEY = 'spotifyToken';
 
 const parseScopes = (scope?: string) =>
     new Set((scope ?? '').split(' ').filter(Boolean));
@@ -31,12 +28,15 @@ export function useReauthGate() {
         };
 
         let cancelled = false;
-        const unsubscribe = onStorageChange<StoredToken>(TOKEN_KEY, (next) => {
-            updateFromToken(next);
-        });
+        const unsubscribe = onStorageChange<StoredToken>(
+            SPOTIFY_TOKEN_KEY,
+            (next) => {
+                updateFromToken(next);
+            }
+        );
 
         void (async () => {
-            const token = await getFromStorage<StoredToken>(TOKEN_KEY);
+            const token = await getFromStorage<StoredToken>(SPOTIFY_TOKEN_KEY);
             if (cancelled) return;
 
             updateFromToken(token);
@@ -48,11 +48,5 @@ export function useReauthGate() {
         };
     }, []);
 
-    const reasons = useMemo<ReauthReason[]>(
-        () => (missingScopes.length > 0 ? ['missing-scopes'] : []),
-        [missingScopes]
-    );
-    const needsReauth = reasons.length > 0;
-
-    return { needsReauth, reasons, missingScopes };
+    return { missingScopes };
 }

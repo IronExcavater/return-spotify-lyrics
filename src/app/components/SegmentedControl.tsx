@@ -1,4 +1,4 @@
-import { ReactNode, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { ReactNode, useLayoutEffect, useRef, useState } from 'react';
 import { IconButton } from '@radix-ui/themes';
 
 export interface SegmentedControlItem<Key extends string> {
@@ -23,11 +23,7 @@ export function SegmentedControl<Key extends string>({
     orientation = 'vertical',
     disabled = false,
 }: Props<Key>) {
-    const current = useMemo(
-        () =>
-            items.some((item) => item.key === active) ? active : items[0]?.key,
-        [items, active]
-    );
+    const current = active;
     const itemRefs = useRef(new Map<Key, HTMLButtonElement | null>());
     const [indicatorPos, setIndicatorPos] = useState({ x: 0, y: 0 });
     const [hasMeasured, setHasMeasured] = useState(false);
@@ -47,12 +43,11 @@ export function SegmentedControl<Key extends string>({
     };
     return (
         <>
-            {' '}
             {items.length > 0 && hasMeasured && (
                 <span
                     aria-hidden="true"
                     data-orientation={orientation}
-                    className="pointer-events-none absolute rounded-full bg-accentA-4 transition-transform"
+                    className="bg-accentA-4 pointer-events-none absolute rounded-full transition-transform"
                     style={{
                         top: 0,
                         left: 0,
@@ -61,27 +56,28 @@ export function SegmentedControl<Key extends string>({
                         transform: `translate(${indicatorPos.x - indicatorSize / 2}px, ${indicatorPos.y - indicatorSize / 2}px)`,
                     }}
                 />
-            )}{' '}
-            {items.map((item) => (
-                <IconButton
-                    key={item.key}
-                    size="1"
-                    radius="full"
-                    variant="ghost"
-                    disabled={disabled || item.disabled}
-                    aria-label={item.label}
-                    aria-selected={item.key === current}
-                    aria-disabled={disabled || item.disabled}
-                    ref={setItemRef(item.key)}
-                    onClick={() => {
-                        if (disabled || item.disabled) return;
-                        onSelect(item.key);
-                    }}
-                >
-                    {' '}
-                    {item.icon}{' '}
-                </IconButton>
-            ))}{' '}
+            )}
+            {items.map((item) => {
+                const itemDisabled = disabled || item.disabled;
+                return (
+                    <IconButton
+                        key={item.key}
+                        size="1"
+                        radius="full"
+                        variant="ghost"
+                        disabled={itemDisabled}
+                        aria-label={item.label}
+                        aria-selected={item.key === current}
+                        ref={setItemRef(item.key)}
+                        onClick={() => {
+                            if (itemDisabled) return;
+                            onSelect(item.key);
+                        }}
+                    >
+                        {item.icon}
+                    </IconButton>
+                );
+            })}
         </>
     );
 }

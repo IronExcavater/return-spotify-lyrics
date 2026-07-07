@@ -1,39 +1,37 @@
-import type { Market, Show } from '@spotify/web-api-ts-sdk';
+import type { Show } from '@spotify/web-api-ts-sdk';
 
 import { formatIsoDate } from '../../../../shared/date';
 import { showEpisodeToItem, showToItem } from '../../../../shared/media';
 import { sendSpotifyMessage } from '../../../../shared/messaging';
-import { buildEpisodeLookup, sumDurationMs } from '../../../utils/mediaLookup';
 import {
-    buildShowRecommendationQuery,
-    searchItems,
+    buildEpisodeLookup,
+    findByMediaId,
+    sumDurationMs,
+} from '../../../utils/mediaLookup';
+import {
+    createShowSearchQuery,
+    isSearchResultItem,
+    searchMediaItems,
 } from '../../../utils/mediaSearch';
+import type { MediaContextRouteState } from '../model/types';
 import {
     patchByKind,
     setIfFresh,
-    type IsStale,
-    type SetMediaData,
+    type MediaDataLoadContext,
 } from './loadContext';
+import { getPageProgress } from './page';
 
 export const SHOW_EPISODE_PAGE_SIZE = 30;
 
-export async function loadShowData({
-    id,
-    selectedId,
-    market,
-    locale,
-    setData,
-    isStale,
-    logSearchError,
-}: {
-    id: string;
-    selectedId?: string;
-    market: Market;
-    locale: string;
-    setData: SetMediaData;
-    isStale: IsStale;
-    logSearchError: (error: unknown) => void;
-}) {
+type ShowLoadRequest = {
+    route: Extract<MediaContextRouteState, { kind: 'show' }>;
+    context: MediaDataLoadContext;
+};
+
+export async function loadShowView({ route, context }: ShowLoadRequest) {
+    const { id, selectedId } = route;
+    const { market, locale, setData, isStale } = context;
+
     const [show, episodesPage] = await Promise.all([
         sendSpotifyMessage('getShow', { id, market }),
         sendSpotifyMessage('getShowEpisodes', {
@@ -45,11 +43,12 @@ export async function loadShowData({
     if (isStale()) return;
 
     const episodeLookup = buildEpisodeLookup(episodesPage.items);
-    const selectedEpisode = selectedId
-        ? (episodeLookup[selectedId] ?? null)
-        : null;
-    const nextOffset = episodesPage.items.length;
-    const episodesHasMore = nextOffset < (episodesPage.total ?? nextOffset);
+    const selectedEpisode = findByMediaId(episodeLookup, selectedId);
+    const { hasMore: episodesHasMore, nextOffset } = getPageProgress({
+        itemCount: episodesPage.items.length,
+        offset: 0,
+        total: episodesPage.total,
+    });
 
     setIfFresh(isStale, setData, {
         kind: 'show',
@@ -75,41 +74,33 @@ export async function loadShowData({
 
     void loadShowRecommendations({
         show,
-        setData,
-        isStale,
-        logSearchError,
+        context,
     });
 }
 
 async function loadShowRecommendations({
     show,
-    setData,
-    isStale,
-    logSearchError,
+    context,
 }: {
     show: Show;
-    setData: SetMediaData;
-    isStale: IsStale;
-    logSearchError: (error: unknown) => void;
+    context: MediaDataLoadContext;
 }) {
-    const query = buildShowRecommendationQuery({
+    const { setData, isStale, logSearchError } = context;
+    const query = createShowSearchQuery({
         showName: show.name,
         publisher: show.publisher,
     });
 
-    const recommended = await searchItems(
+    const recommended = await searchMediaItems({
         query,
-        ['show'],
-        (results) =>
+        types: ['show'],
+        select: (results) =>
             (results.shows?.items ?? [])
-                .filter(
-                    (item): item is Show =>
-                        typeof item === 'object' && item !== null
-                )
+                .filter(isSearchResultItem<Show>)
                 .filter((item) => item.id && item.id !== show.id)
                 .map(showToItem),
-        logSearchError
-    );
+        onError: logSearchError,
+    });
 
     patchByKind(isStale, setData, 'show', (prev) => ({
         ...prev,

@@ -109,7 +109,6 @@ const emitSpotifyRpcDispatch = <N extends SpotifyRpcName>(
     op: N,
     args?: SpotifyRpcArgs<N>
 ) => {
-    if (typeof window === 'undefined') return;
     window.dispatchEvent(
         new CustomEvent<SpotifyRpcDispatchEventDetail>(
             SPOTIFY_RPC_DISPATCH_EVENT,
@@ -124,7 +123,6 @@ const emitSpotifyRpcResult = <N extends SpotifyRpcName>(
     op: N,
     detail: Omit<SpotifyRpcResultEventDetail, 'op'>
 ) => {
-    if (typeof window === 'undefined') return;
     window.dispatchEvent(
         new CustomEvent<SpotifyRpcResultEventDetail>(SPOTIFY_RPC_RESULT_EVENT, {
             detail: {

@@ -13,6 +13,13 @@ import {
 import { createLogger, logError } from '../shared/logging';
 import { createPkcePair } from '../shared/pkce.ts';
 import {
+    createSpotifyAuthStatus,
+    isInvalidGrantResponse,
+    SPOTIFY_AUTH_STATUS_KEY,
+    SPOTIFY_TOKEN_KEY,
+    type SpotifyAuthRequiredReason,
+} from '../shared/spotifyAuthState.ts';
+import {
     getFromStorage,
     mustGetFromStorage,
     removeInStorage,
@@ -20,7 +27,6 @@ import {
 } from '../shared/storage.ts';
 
 const PKCE_VERIFIER_KEY = 'pkceVerifier';
-const SPOTIFY_TOKEN_KEY = 'spotifyToken';
 const EXPIRY_BUFFER_MS = 60_000;
 const SPOTIFY_SCOPE_STRING = SPOTIFY_SCOPES.join(' ');
 
@@ -31,6 +37,7 @@ let refreshInFlight: Promise<SpotifyToken> | null = null;
 const logger = createLogger('spotifyAuth');
 
 export interface SpotifyToken extends AccessToken {
+    expires: number;
     expires_by: number;
     scope: string;
 }
@@ -116,6 +123,7 @@ export async function requestAccessToken(code: string): Promise<SpotifyToken> {
     const token = withExpiry(raw);
 
     await removeInStorage(PKCE_VERIFIER_KEY);
+    await removeInStorage(SPOTIFY_AUTH_STATUS_KEY);
     await setInStorage(SPOTIFY_TOKEN_KEY, token);
     refreshSoon(token);
     sdk = SpotifyApi.withAccessToken(SPOTIFY_CLIENT_ID, token);
@@ -156,8 +164,8 @@ export async function refreshAccessToken(
             const errorCode =
                 raw && 'error' in raw ? raw.error : 'token exchange failed';
 
-            if (errorCode === 'invalid_grant') {
-                await clearSpotifySession();
+            if (isInvalidGrantResponse({ error: errorCode })) {
+                await clearSpotifySession(['refresh-token-invalid']);
             }
 
             throw new Error(
@@ -194,7 +202,6 @@ export async function getAccessToken(): Promise<SpotifyToken | undefined> {
             token = await refreshAccessToken(token.refresh_token);
         } catch (err) {
             logError(logger, 'Token refresh failed', err);
-            await clearSpotifySession();
             return undefined;
         }
     } else if (token) {
@@ -260,8 +267,18 @@ export async function authenticate(): Promise<AuthenticationResponse> {
     };
 }
 
-export async function clearSpotifySession() {
+export async function clearSpotifySession(
+    reasons?: SpotifyAuthRequiredReason[]
+) {
     refreshClear();
     sdk = null;
     await removeInStorage(SPOTIFY_TOKEN_KEY);
+    if (reasons?.length) {
+        await setInStorage(
+            SPOTIFY_AUTH_STATUS_KEY,
+            createSpotifyAuthStatus(reasons)
+        );
+    } else {
+        await removeInStorage(SPOTIFY_AUTH_STATUS_KEY);
+    }
 }

@@ -11,6 +11,7 @@ import { Fade } from '../Fade';
 import { Marquee } from '../Marquee';
 import { SkeletonText } from '../SkeletonText';
 import { TextButton } from '../TextButton';
+import { getAvatarFallback, getAvatarRadius } from './mediaAvatar';
 
 interface Props {
     title?: string;
@@ -47,7 +48,8 @@ export function MediaCard({
     seed = 0,
     cardSize = 2,
 }: Props) {
-    const radius = imageShape === 'round' ? 'full' : 'small';
+    const radius = getAvatarRadius(imageShape);
+    const avatarFallback = getAvatarFallback(icon, title);
     const sizeConfig: Record<
         1 | 2 | 3,
         { avatar: '5' | '6' | '7'; width: number }
@@ -122,7 +124,7 @@ export function MediaCard({
                 <AvatarButton
                     avatar={{
                         src: imageUrl,
-                        fallback: icon,
+                        fallback: avatarFallback,
                         radius,
                         size: resolvedSize.avatar,
                     }}

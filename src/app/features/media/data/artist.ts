@@ -1,55 +1,44 @@
-import type { Artist, Market, Track } from '@spotify/web-api-ts-sdk';
+import type { Artist, Track } from '@spotify/web-api-ts-sdk';
 
-import { safeRequest } from '../../../../shared/async';
 import { artistToItem, trackToItem } from '../../../../shared/media';
 import { sendSpotifyMessage } from '../../../../shared/messaging';
 import {
-    buildGenreRecommendationQuery,
-    buildTrackRecommendationQuery,
-    searchItems,
+    createGenreSearchQuery,
+    createTrackSearchQuery,
+    isSearchResultItem,
+    searchMediaItems,
 } from '../../../utils/mediaSearch';
+import type { MediaContextRouteState } from '../model/types';
 import {
-    ARTIST_DISCOGRAPHY_PAGE_SIZE,
-    buildDiscographyEntries,
-    dedupeAlbums,
-} from './discography';
-import {
-    logOptionalError,
     logOptionalNotFound,
     patchByKind,
+    requestOptional,
     setIfFresh,
-    type IsStale,
-    type SetMediaData,
+    type MediaDataLoadContext,
 } from './loadContext';
+import { loadArtistDiscographyPage } from './pagination';
 
-export async function loadArtistData({
-    id,
-    market,
-    discographyTrackCount,
-    setData,
-    isStale,
-    logSearchError,
-}: {
-    id: string;
-    market: Market;
-    discographyTrackCount: number;
-    setData: SetMediaData;
-    isStale: IsStale;
-    logSearchError: (error: unknown) => void;
-}) {
+type ArtistLoadRequest = {
+    route: Extract<MediaContextRouteState, { kind: 'artist' }>;
+    context: MediaDataLoadContext;
+};
+
+export async function loadArtistView({ route, context }: ArtistLoadRequest) {
+    const { id } = route;
+    const { market, setData, isStale } = context;
+
     const [artist, topTracks, relatedArtists] = await Promise.all([
         sendSpotifyMessage('getArtist', { id }),
         sendSpotifyMessage('getArtistTopTracks', { id, market }),
-        safeRequest(
+        requestOptional(
             () => sendSpotifyMessage('getArtistRelatedArtists', { id }),
-            { artists: [] },
             logOptionalNotFound
         ),
     ]);
     if (isStale()) return;
 
     const fansAlsoLike = rankRelatedArtists(
-        relatedArtists.artists.filter(
+        (relatedArtists?.artists ?? []).filter(
             (relatedArtist) => relatedArtist.id && relatedArtist.id !== id
         ),
         artist.genres
@@ -74,19 +63,14 @@ export async function loadArtistData({
     void loadRelatedArtists({
         artist,
         artistId: id,
-        relatedArtists: relatedArtists.artists,
+        relatedArtists: relatedArtists?.artists ?? [],
         fallbackRelatedItems: fansAlsoLike,
-        setData,
-        isStale,
-        logSearchError,
+        context,
     });
 
     void loadArtistDiscography({
         artistId: id,
-        market,
-        discographyTrackCount,
-        setData,
-        isStale,
+        context,
     });
 
     void loadArtistRecommendations({
@@ -94,9 +78,7 @@ export async function loadArtistData({
         topTrackIds: topTracks.tracks
             .map((track) => track.id)
             .filter((trackId): trackId is string => Boolean(trackId)),
-        setData,
-        isStale,
-        logSearchError,
+        context,
     });
 }
 
@@ -105,51 +87,42 @@ async function loadRelatedArtists({
     artistId,
     relatedArtists,
     fallbackRelatedItems,
-    setData,
-    isStale,
-    logSearchError,
+    context,
 }: {
     artist: Artist;
     artistId: string;
     relatedArtists: Artist[];
     fallbackRelatedItems: ReturnType<typeof artistToItem>[];
-    setData: SetMediaData;
-    isStale: IsStale;
-    logSearchError: (error: unknown) => void;
+    context: MediaDataLoadContext;
 }) {
-    const genreQuery = buildGenreRecommendationQuery(artist.genres);
+    const { setData, isStale, logSearchError } = context;
+    const genreQuery = createGenreSearchQuery({ genres: artist.genres });
     const genreCandidates = genreQuery
-        ? await searchItems(
-              genreQuery,
-              ['artist'],
-              (results) =>
+        ? await searchMediaItems({
+              query: genreQuery,
+              types: ['artist'],
+              select: (results) =>
                   (results.artists?.items ?? [])
-                      .filter(
-                          (item): item is Artist =>
-                              typeof item === 'object' && item !== null
-                      )
+                      .filter(isSearchResultItem<Artist>)
                       .filter((item) => item.id && item.id !== artistId),
-              logSearchError
-          )
+              onError: logSearchError,
+          })
         : [];
 
     const shouldUseNameFallback =
         fallbackRelatedItems.length === 0 && genreCandidates.length === 0;
 
     const nameCandidates = shouldUseNameFallback
-        ? await searchItems(
-              artist.name,
-              ['artist'],
-              (results) =>
+        ? await searchMediaItems({
+              query: artist.name,
+              types: ['artist'],
+              select: (results) =>
                   (results.artists?.items ?? [])
-                      .filter(
-                          (item): item is Artist =>
-                              typeof item === 'object' && item !== null
-                      )
+                      .filter(isSearchResultItem<Artist>)
                       .filter((item) => item.id && item.id !== artistId)
                       .filter((item) => (item.popularity ?? 0) >= 20),
-              logSearchError
-          )
+              onError: logSearchError,
+          })
         : [];
 
     const merged = Array.from(
@@ -173,52 +146,25 @@ async function loadRelatedArtists({
 
 async function loadArtistDiscography({
     artistId,
-    market,
-    discographyTrackCount,
-    setData,
-    isStale,
+    context,
 }: {
     artistId: string;
-    market: Market;
-    discographyTrackCount: number;
-    setData: SetMediaData;
-    isStale: IsStale;
+    context: MediaDataLoadContext;
 }) {
-    const albumsPage = await safeRequest(
-        () =>
-            sendSpotifyMessage('getArtistAlbums', {
-                id: artistId,
-                market,
-                limit: ARTIST_DISCOGRAPHY_PAGE_SIZE,
-            }),
-        null,
-        logOptionalError
-    );
-
-    const discographySeed = albumsPage?.items?.filter((item) => item.id) ?? [];
-    const discographyAlbums = dedupeAlbums(discographySeed);
-    const nextOffset = albumsPage?.offset + albumsPage?.items.length;
-    const hasMore = nextOffset < (albumsPage?.total ?? nextOffset);
-    if (!discographyAlbums.length) {
-        patchByKind(isStale, setData, 'artist', (prev) => ({
-            ...prev,
-            discographyOffset: nextOffset ?? 0,
-            discographyHasMore: hasMore,
-        }));
-        return;
-    }
-
-    const discography = await buildDiscographyEntries(
-        discographyAlbums,
+    const { market, discography, setData, isStale } = context;
+    const page = await loadArtistDiscographyPage({
+        artistId,
+        offset: 0,
         market,
-        discographyTrackCount
-    );
+        trackCount: discography.trackCount,
+        includeAppearances: discography.includeAppearances,
+    });
 
     patchByKind(isStale, setData, 'artist', (prev) => ({
         ...prev,
-        discography,
-        discographyOffset: nextOffset ?? discographyAlbums.length,
-        discographyHasMore: hasMore,
+        discography: page.entries,
+        discographyOffset: page.nextOffset,
+        discographyHasMore: page.hasMore,
         discographyLoadingMore: false,
     }));
 }
@@ -226,34 +172,28 @@ async function loadArtistDiscography({
 async function loadArtistRecommendations({
     artist,
     topTrackIds,
-    setData,
-    isStale,
-    logSearchError,
+    context,
 }: {
     artist: Artist;
     topTrackIds: string[];
-    setData: SetMediaData;
-    isStale: IsStale;
-    logSearchError: (error: unknown) => void;
+    context: MediaDataLoadContext;
 }) {
-    const query = buildTrackRecommendationQuery({
+    const { setData, isStale, logSearchError } = context;
+    const query = createTrackSearchQuery({
         artistName: artist.name,
     });
     const knownTopTrackIds = new Set(topTrackIds);
 
-    const recommended = await searchItems(
+    const recommended = await searchMediaItems({
         query,
-        ['track'],
-        (results) =>
+        types: ['track'],
+        select: (results) =>
             (results.tracks?.items ?? [])
-                .filter(
-                    (item): item is Track =>
-                        typeof item === 'object' && item !== null
-                )
+                .filter(isSearchResultItem<Track>)
                 .filter((item) => item.id && !knownTopTrackIds.has(item.id))
                 .map(trackToItem),
-        logSearchError
-    );
+        onError: logSearchError,
+    });
 
     patchByKind(isStale, setData, 'artist', (prev) => ({
         ...prev,

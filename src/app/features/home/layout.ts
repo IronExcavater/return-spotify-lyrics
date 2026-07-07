@@ -22,7 +22,6 @@ type StoredHomeSection = Pick<
     | 'columnWidth'
     | 'cardSize'
     | 'clampUnit'
-    | 'wideColumns'
 >;
 
 function stripHomeSection(section: MediaSectionState): StoredHomeSection {
@@ -38,7 +37,6 @@ function stripHomeSection(section: MediaSectionState): StoredHomeSection {
         columnWidth: section.columnWidth,
         cardSize: section.cardSize,
         clampUnit: section.clampUnit,
-        wideColumns: section.wideColumns,
     };
 }
 

@@ -7,15 +7,13 @@ import {
     type PointerEvent as ReactPointerEvent,
 } from 'react';
 import clsx from 'clsx';
+
+import { clamp } from '../../../shared/math';
 import { usePlayer } from '../../hooks/usePlayer';
 
 interface Props {
     className?: string;
     disabled?: boolean;
-}
-
-function clamp01(v: number) {
-    return Math.min(1, Math.max(0, v));
 }
 
 function formatTime(ms: number) {
@@ -34,7 +32,7 @@ export function SeekSlider({ className, disabled = false }: Props) {
 
     const progressRatio = useMemo(() => {
         if (durationMs <= 0) return 0;
-        return clamp01(progressMs / durationMs);
+        return clamp(progressMs / durationMs, 0, 1);
     }, [progressMs, durationMs]);
 
     const effectiveRatio = dragRatio ?? progressRatio;
@@ -53,7 +51,7 @@ export function SeekSlider({ className, disabled = false }: Props) {
 
             const rect = track.getBoundingClientRect();
             if (!rect.width) return null;
-            return clamp01((clientX - rect.left) / rect.width);
+            return clamp((clientX - rect.left) / rect.width, 0, 1);
         },
         [durationMs]
     );

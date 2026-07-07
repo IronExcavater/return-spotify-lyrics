@@ -40,7 +40,7 @@ const setPremiumPlaybackBlocked = (next: boolean) => {
 };
 
 const listenForPlaybackResults = () => {
-    if (listening || typeof window === 'undefined') return;
+    if (listening) return;
     listening = true;
 
     window.addEventListener(SPOTIFY_RPC_RESULT_EVENT, (event) => {

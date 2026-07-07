@@ -15,6 +15,11 @@ export type SearchContext = {
     types: SearchType[];
 };
 
+export type SearchInput = {
+    query: string;
+    filters: SearchFilter[];
+};
+
 export const DEFAULT_SEARCH_TYPES: SearchType[] = [
     'track',
     'album',
@@ -33,10 +38,10 @@ const toYear = (iso?: string) => {
     return Number.isFinite(year) ? year : undefined;
 };
 
-export const buildSearchContext = (
-    searchQuery: string,
-    filters: SearchFilter[]
-): SearchContext => {
+export const buildSearchContext = ({
+    query: searchQuery,
+    filters,
+}: SearchInput): SearchContext => {
     const trimmedQuery = searchQuery.trim();
     const parts = new Set<string>();
     const types: SearchType[] = [];

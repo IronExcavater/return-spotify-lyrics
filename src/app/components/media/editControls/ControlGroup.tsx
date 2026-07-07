@@ -19,13 +19,13 @@ export function ControlGroup({
 }: {
     activeGroup: ControlGroupId | null;
     children: ReactNode;
-    controlsRef: RefObject<HTMLDivElement | null>;
+    controlsRef: RefObject<HTMLDivElement>;
     disabled: boolean;
     disableTransition: boolean;
     groupWidth: number;
     id: ControlGroupId;
     label: string;
-    labelRef: RefObject<HTMLButtonElement | null>;
+    labelRef: RefObject<HTMLButtonElement>;
     onToggle: () => void;
 }) {
     const isActive = activeGroup === id;

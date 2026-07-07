@@ -1,13 +1,9 @@
-import type { SpotifyRpcArgs } from '../../../background/spotifyRpc';
-import { sendSpotifyMessage } from '../../../shared/messaging';
-import type { MediaAction, MediaItem } from '../../../shared/types';
-import type {
-    AlbumViewData,
-    ArtistViewData,
-    ShowViewData,
-} from '../../features/media/data';
-import { updateCachedAssumedNowPlaying } from '../../hooks/mediaCacheEntries';
-import { playHeroAction } from '../../mediaActions';
+import type { SpotifyRpcArgs } from '../../../../background/spotifyRpc';
+import { sendSpotifyMessage } from '../../../../shared/messaging';
+import type { MediaAction, MediaItem } from '../../../../shared/types';
+import { updateCachedAssumedNowPlaying } from '../../../hooks/mediaCacheEntries';
+import { playHeroAction } from '../../../mediaActions';
+import type { AlbumViewData, ArtistViewData, ShowViewData } from '../data';
 
 export type MediaPlaybackRequest = SpotifyRpcArgs<'startPlayback'>;
 

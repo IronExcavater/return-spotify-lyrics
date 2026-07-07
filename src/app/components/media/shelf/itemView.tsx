@@ -15,11 +15,11 @@ import { MediaCard } from '../MediaCard';
 import { MediaRow } from '../MediaRow';
 import type { MediaShelfProps, TrackSubtitleMode } from './types';
 
-type ShelfHistory = {
+export type ShelfHistory = {
     goTo: (path: string, state?: RouteState) => void;
 };
 
-type ShelfItemViewInput = {
+export type ShelfItemViewInput = {
     cardSize?: MediaShelfProps['cardSize'];
     effectiveColumnWidth?: number;
     enablePrimaryPlay: boolean;
@@ -36,7 +36,7 @@ type ShelfItemViewInput = {
     variant: MediaShelfProps['variant'];
 };
 
-type ShelfItemView = {
+export type ShelfItemView = {
     canActivate: boolean;
     content: ReactNode;
     handleNavigate: () => void;
@@ -229,7 +229,6 @@ export function buildShelfItemView({
                     imageUrl={item.imageUrl}
                     icon={item.icon ?? <MdMusicNote />}
                     contextMenu={contextMenu}
-                    contextMenuDisabled={false}
                     primaryAction={primaryPlayAction}
                     seed={seed}
                     loading={item.loading}
@@ -248,7 +247,6 @@ export function buildShelfItemView({
                     imageUrl={item.imageUrl}
                     showImage={showImage}
                     contextMenu={contextMenu}
-                    contextMenuDisabled={false}
                     primaryAction={primaryPlayAction}
                     seed={seed}
                     loading={item.loading}

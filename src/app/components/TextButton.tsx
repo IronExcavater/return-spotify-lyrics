@@ -45,6 +45,9 @@ export const TextButton = forwardRef<
     const isInteractive = (interactive ?? hasAction) && !disabled;
     const [isHovered, setIsHovered] = useState(false);
     const isHighlighted = isHovered || forceHover;
+    const anchorStateProps = disabled
+        ? ({ 'aria-disabled': true, tabIndex: -1 } as const)
+        : ({ href } as const);
 
     return (
         <Text
@@ -57,19 +60,22 @@ export const TextButton = forwardRef<
                 className,
                 isInteractive && forceHover && 'text-accent-11',
                 isInteractive &&
-                    'cursor-pointer hover:text-accent-11 focus-visible:text-accent-11'
+                    'hover:text-accent-11 focus-visible:text-accent-11 cursor-pointer'
             )}
             style={style}
         >
             {href ? (
                 <a
-                    href={href}
+                    {...anchorStateProps}
                     target="_blank"
                     rel="noopener noreferrer"
                     onMouseEnter={() => setIsHovered(true)}
                     onMouseLeave={() => setIsHovered(false)}
                     onClick={(event) => {
-                        if (!href || disabled) return;
+                        if (disabled) {
+                            event.preventDefault();
+                            return;
+                        }
                         onClick?.(event);
                         if (event.defaultPrevented) return;
                         event.preventDefault();
@@ -78,10 +84,9 @@ export const TextButton = forwardRef<
                     className={clsx(
                         'no-underline transition-colors',
                         isInteractive &&
-                            'cursor-pointer hover:text-accent-11 focus-visible:text-accent-11 focus-visible:underline focus-visible:underline-offset-2 focus-visible:outline-none',
+                            'hover:text-accent-11 focus-visible:text-accent-11 cursor-pointer focus-visible:underline focus-visible:underline-offset-2 focus-visible:outline-none',
                         buttonClassName
                     )}
-                    aria-disabled={disabled || undefined}
                     ref={ref as Ref<HTMLAnchorElement>}
                 >
                     {children}
@@ -102,7 +107,7 @@ export const TextButton = forwardRef<
                     className={clsx(
                         'no-underline transition-colors',
                         isInteractive &&
-                            'cursor-pointer hover:bg-transparent hover:text-accent-11 focus-visible:text-accent-11 focus-visible:underline focus-visible:underline-offset-2 focus-visible:outline-none',
+                            'hover:text-accent-11 focus-visible:text-accent-11 cursor-pointer hover:bg-transparent focus-visible:underline focus-visible:underline-offset-2 focus-visible:outline-none',
                         buttonClassName,
                         'border-0 bg-transparent p-0'
                     )}
@@ -117,10 +122,9 @@ export const TextButton = forwardRef<
                     className={clsx(
                         'no-underline transition-colors',
                         isInteractive &&
-                            'cursor-pointer hover:text-accent-11 focus-visible:text-accent-11 focus-visible:underline focus-visible:underline-offset-2 focus-visible:outline-none',
+                            'hover:text-accent-11 focus-visible:text-accent-11 cursor-pointer focus-visible:underline focus-visible:underline-offset-2 focus-visible:outline-none',
                         buttonClassName
                     )}
-                    aria-disabled={disabled || undefined}
                     ref={ref as Ref<HTMLSpanElement>}
                 >
                     {children}

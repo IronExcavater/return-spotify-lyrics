@@ -7,6 +7,8 @@ import {
     useRef,
 } from 'react';
 
+import { clamp } from '../../shared/math';
+
 interface WidthConfig {
     value: number;
     min: number;
@@ -33,10 +35,6 @@ type RootSize = {
     width: number;
     height: number;
 };
-
-function clamp(value: number, min: number, max: number) {
-    return Math.min(max, Math.max(min, value));
-}
 
 const getRootElements = () => {
     const root = document.getElementById('root');

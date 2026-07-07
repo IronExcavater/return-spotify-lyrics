@@ -1,16 +1,23 @@
-import { type ReactNode, type RefObject } from 'react';
+import { Suspense, type ReactNode, type RefObject } from 'react';
 import { Flex } from '@radix-ui/themes';
 import { Navigate, Route, Routes } from 'react-router-dom';
 
 import { type SearchFilter } from '../../shared/types';
-import { HomeBar } from '../components/HomeBar';
-import { PlaybackBar } from '../components/playback/PlaybackBar';
+import { DetailViewLoadingState } from '../components/DetailViewState';
+import type { HomeBarProps } from '../components/HomeBar';
+import type { PlaybackBarProps } from '../components/playback/PlaybackBar';
 import { ProtectedLayout } from '../components/ProtectedLayout';
-import { ReauthDialog } from '../components/ReauthDialog';
 import { ToastViewport } from '../components/ToastViewport';
 import { SettingsProvider } from '../context/SettingsContext';
 import { type BarKey } from '../hooks/useAppState';
+import { lazyNamed } from './lazyNamed';
 import { type AppRouteDefinition } from './routes';
+
+const HomeBar = lazyNamed(() => import('../components/HomeBar'), 'HomeBar');
+const PlaybackBar = lazyNamed(
+    () => import('../components/playback/PlaybackBar'),
+    'PlaybackBar'
+);
 
 type AppShellProps = {
     showBars: boolean;
@@ -27,13 +34,13 @@ type AppShellProps = {
     search: {
         query: string;
         filters: SearchFilter[];
-        availableFilters: Parameters<typeof HomeBar>[0]['availableFilters'];
+        availableFilters: HomeBarProps['availableFilters'];
         onChange: (query: string) => void;
         onClear: () => void;
         onSubmit: () => void;
-        onAddFilter: Parameters<typeof HomeBar>[0]['onAddFilter'];
-        onUpdateFilter: Parameters<typeof HomeBar>[0]['onUpdateFilter'];
-        onRemoveFilter: Parameters<typeof HomeBar>[0]['onRemoveFilter'];
+        onAddFilter: HomeBarProps['onAddFilter'];
+        onUpdateFilter: HomeBarProps['onUpdateFilter'];
+        onRemoveFilter: HomeBarProps['onRemoveFilter'];
         onClearFilters: () => void;
         inputRef: RefObject<HTMLInputElement> | undefined;
     };
@@ -44,12 +51,7 @@ type AppShellProps = {
     playback: {
         expanded: boolean;
         onExpandedChange: (value: boolean) => void;
-        onOpenMediaRoute: Parameters<typeof PlaybackBar>[0]['onOpenMediaRoute'];
-    };
-    reauth: {
-        open: boolean;
-        missingScopes: string[];
-        onReconnect: () => void;
+        onOpenMediaRoute: PlaybackBarProps['onOpenMediaRoute'];
     };
     portals: ReactNode;
 };
@@ -63,7 +65,6 @@ export function AppShell({
     search,
     history,
     playback,
-    reauth,
     portals,
 }: AppShellProps) {
     return (
@@ -72,33 +73,41 @@ export function AppShell({
                 {showBars && (
                     <Flex className="border-grayA-6 bg-panel-solid relative z-30 border-b-2">
                         {activeBar === 'playback' && (
-                            <PlaybackBar
-                                profileSlot={profileSlot.playback}
-                                navSlot={navSlot.playback}
-                                expanded={playback.expanded}
-                                onExpandedChange={playback.onExpandedChange}
-                                onOpenMediaRoute={playback.onOpenMediaRoute}
-                            />
+                            <Suspense
+                                fallback={<Flex className="h-14 w-full" />}
+                            >
+                                <PlaybackBar
+                                    profileSlot={profileSlot.playback}
+                                    navSlot={navSlot.playback}
+                                    expanded={playback.expanded}
+                                    onExpandedChange={playback.onExpandedChange}
+                                    onOpenMediaRoute={playback.onOpenMediaRoute}
+                                />
+                            </Suspense>
                         )}
 
                         {activeBar === 'home' && (
-                            <HomeBar
-                                profileSlot={profileSlot.home}
-                                navSlot={navSlot.home}
-                                searchQuery={search.query}
-                                onSearchChange={search.onChange}
-                                onClearSearch={search.onClear}
-                                onSearchSubmit={search.onSubmit}
-                                canGoBack={history.canGoBack}
-                                onGoBack={history.onGoBack}
-                                filters={search.filters}
-                                availableFilters={search.availableFilters}
-                                onAddFilter={search.onAddFilter}
-                                onUpdateFilter={search.onUpdateFilter}
-                                onRemoveFilter={search.onRemoveFilter}
-                                onClearFilters={search.onClearFilters}
-                                searchInputRef={search.inputRef}
-                            />
+                            <Suspense
+                                fallback={<Flex className="h-14 w-full" />}
+                            >
+                                <HomeBar
+                                    profileSlot={profileSlot.home}
+                                    navSlot={navSlot.home}
+                                    searchQuery={search.query}
+                                    onSearchChange={search.onChange}
+                                    onClearSearch={search.onClear}
+                                    onSearchSubmit={search.onSubmit}
+                                    canGoBack={history.canGoBack}
+                                    onGoBack={history.onGoBack}
+                                    filters={search.filters}
+                                    availableFilters={search.availableFilters}
+                                    onAddFilter={search.onAddFilter}
+                                    onUpdateFilter={search.onUpdateFilter}
+                                    onRemoveFilter={search.onRemoveFilter}
+                                    onClearFilters={search.onClearFilters}
+                                    searchInputRef={search.inputRef}
+                                />
+                            </Suspense>
                         )}
                     </Flex>
                 )}
@@ -113,20 +122,17 @@ export function AppShell({
                                     when={route.when}
                                     redirectTo={route.redirectTo}
                                 >
-                                    {route.element}
+                                    <Suspense
+                                        fallback={<DetailViewLoadingState />}
+                                    >
+                                        {route.element}
+                                    </Suspense>
                                 </ProtectedLayout>
                             }
                         />
                     ))}
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
-
-                <ReauthDialog
-                    open={reauth.open}
-                    reasons={reauth.open ? ['missing-scopes'] : []}
-                    missingScopes={reauth.missingScopes}
-                    onReconnect={reauth.onReconnect}
-                />
 
                 <ToastViewport />
                 {portals}

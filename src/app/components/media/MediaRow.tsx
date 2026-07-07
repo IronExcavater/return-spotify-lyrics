@@ -22,6 +22,7 @@ import { Fade } from '../Fade';
 import { Marquee } from '../Marquee';
 import { SkeletonText } from '../SkeletonText';
 import { TextButton } from '../TextButton';
+import { getAvatarFallback, getAvatarRadius } from './mediaAvatar';
 
 export interface MediaRowProps {
     title?: string;
@@ -180,7 +181,8 @@ export function MediaRow({
     position,
     selection,
 }: MediaRowProps) {
-    const radius = imageShape === 'round' ? 'full' : 'small';
+    const radius = getAvatarRadius(imageShape);
+    const avatarFallback = getAvatarFallback(icon, title);
     const subtitleText = typeof subtitle === 'string' ? subtitle : undefined;
     const resolvedSubtitleStyle =
         subtitleHeight != null
@@ -277,7 +279,7 @@ export function MediaRow({
                     <AvatarButton
                         avatar={{
                             src: imageUrl,
-                            fallback: icon,
+                            fallback: avatarFallback,
                             radius,
                             size: '3',
                         }}

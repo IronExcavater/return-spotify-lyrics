@@ -1,11 +1,15 @@
 import { CheckIcon } from '@radix-ui/react-icons';
 import { Button, Flex, Text } from '@radix-ui/themes';
 
+import { SpotifyAuthNoticeList } from '../features/auth/SpotifyAuthNoticeList';
+import type { SpotifyAuthNotice } from '../features/auth/spotifyAuthNotices';
+
 interface Props {
+    authNotices: SpotifyAuthNotice[];
     onLogin: () => void;
 }
 
-export function LoginView({ onLogin }: Props) {
+export function LoginView({ authNotices, onLogin }: Props) {
     const features = [
         'Unblocks lyrics for free accounts',
         'Modern mini player controls',
@@ -31,6 +35,7 @@ export function LoginView({ onLogin }: Props) {
                     the music keeps its voice even when Spotify free loses the
                     lyric button.
                 </Text>
+                <SpotifyAuthNoticeList notices={authNotices} tone="dark" />
                 <div className="flex flex-col gap-2 text-white/70">
                     {features.map((feature) => (
                         <div
