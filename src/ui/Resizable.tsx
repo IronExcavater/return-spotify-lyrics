@@ -56,11 +56,17 @@ function usesHeight(handle: ResizeHandle) {
 }
 
 function fromLeft(handle: ResizeHandle) {
-    return handle === 'left' || handle === 'top-left' || handle === 'bottom-left';
+    return (
+        handle === 'left' || handle === 'top-left' || handle === 'bottom-left'
+    );
 }
 
 function fromRight(handle: ResizeHandle) {
-    return handle === 'right' || handle === 'top-right' || handle === 'bottom-right';
+    return (
+        handle === 'right' ||
+        handle === 'top-right' ||
+        handle === 'bottom-right'
+    );
 }
 
 function fromTop(handle: ResizeHandle) {
@@ -90,7 +96,10 @@ export function resolveResizeHandles(
     handles: readonly ResizeHandle[] = RESIZE_HANDLES
 ): ResizeHandle[] {
     return handles.filter((handle) => {
-        if (usesWidth(handle) && (!resizesWidth(resize) || typeof width !== 'number')) {
+        if (
+            usesWidth(handle) &&
+            (!resizesWidth(resize) || typeof width !== 'number')
+        ) {
             return false;
         }
 
