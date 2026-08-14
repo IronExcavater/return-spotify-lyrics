@@ -2,9 +2,11 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
 import {
+    mergePersistedSize,
     RESIZE_EDGES,
     Resizable,
     resizeSize,
+    resolveResizeEdges,
     type ResizeEdge,
 } from './Resizable';
 
@@ -67,15 +69,51 @@ describe('resizeSize', () => {
     });
 });
 
+describe('resolveResizeEdges', () => {
+    it('uses all edges and corners when both dimensions can resize', () => {
+        expect(
+            resolveResizeEdges(
+                { width: 400, height: 520 },
+                { width: true, height: true }
+            )
+        ).toEqual(RESIZE_EDGES);
+    });
+
+    it('uses only horizontal edges when only width can resize', () => {
+        expect(
+            resolveResizeEdges(
+                { width: 400, height: 520 },
+                { width: true, height: false }
+            )
+        ).toEqual(['right', 'left']);
+    });
+
+    it('removes handles that need a non-numeric dimension', () => {
+        expect(
+            resolveResizeEdges(
+                { width: 400, height: 'auto' },
+                { width: true, height: true }
+            )
+        ).toEqual(['right', 'left']);
+    });
+});
+
+describe('mergePersistedSize', () => {
+    it('persists only the dimensions enabled by the caller', () => {
+        expect(
+            mergePersistedSize(
+                { width: 400, height: 520 },
+                { width: 460, height: 600 },
+                { width: true, height: false }
+            )
+        ).toEqual({ width: 460, height: 520 });
+    });
+});
+
 describe('Resizable', () => {
-    it('renders all requested edge and corner handles', () => {
+    it('renders all edge and corner handles by default', () => {
         const markup = renderToStaticMarkup(
-            <Resizable
-                size={{ width: 400, height: 520 }}
-                range={range}
-                edges={RESIZE_EDGES}
-                onResize={() => {}}
-            >
+            <Resizable size={{ width: 400, height: 520 }} range={range}>
                 <div>Content</div>
             </Resizable>
         );
@@ -85,13 +123,12 @@ describe('Resizable', () => {
         }
     });
 
-    it('omits corner and vertical handles when height is non-numeric', () => {
+    it('renders only the dimensions enabled by resize', () => {
         const markup = renderToStaticMarkup(
             <Resizable
-                size={{ width: 400, height: 'auto' }}
+                size={{ width: 400, height: 520 }}
                 range={range}
-                edges={RESIZE_EDGES}
-                onResize={() => {}}
+                resize={{ width: true, height: false }}
             >
                 <div>Content</div>
             </Resizable>
@@ -102,6 +139,5 @@ describe('Resizable', () => {
         expect(markup).not.toContain('data-resize-edge="top"');
         expect(markup).not.toContain('data-resize-edge="bottom"');
         expect(markup).not.toContain('data-resize-edge="top-left"');
-        expect(markup).not.toContain('data-resize-edge="bottom-right"');
     });
 });
