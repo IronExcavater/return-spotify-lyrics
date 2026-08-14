@@ -4,9 +4,6 @@ on:
     push:
     pull_request:
 
-permissions:
-    contents: write
-
 jobs:
     verify:
         runs-on: ubuntu-latest
@@ -26,18 +23,6 @@ jobs:
 
             - name: Install dependencies
               run: pnpm install --frozen-lockfile
-
-            - name: Format once
-              if: github.event_name == 'push'
-              run: |
-                  pnpm exec prettier src/ui/Resizable.tsx --write
-                  if ! git diff --quiet -- src/ui/Resizable.tsx; then
-                      git config user.name "github-actions[bot]"
-                      git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-                      git add src/ui/Resizable.tsx
-                      git commit -m "style: format simplified resizable"
-                      git push
-                  fi
 
             - name: Check
               run: pnpm check
