@@ -27,9 +27,13 @@ export function ErrorPage({
         <main className="flex min-h-full flex-col items-start justify-center gap-4 p-5">
             <div className="space-y-1">
                 <h1 className="text-xl font-semibold">{title}</h1>
-                <p className="max-w-md text-sm text-text-muted">{appError.message}</p>
+                <p className="max-w-md text-sm text-text-muted">
+                    {appError.message}
+                </p>
                 {import.meta.env.DEV && (
-                    <code className="block text-xs text-text-muted/70">{appError.code}</code>
+                    <code className="block text-xs text-text-muted/70">
+                        {appError.code}
+                    </code>
                 )}
             </div>
 
@@ -42,7 +46,10 @@ export function ErrorPage({
                 )}
 
                 {showBack && (
-                    <Button variant="ghost" onClick={() => window.history.back()}>
+                    <Button
+                        variant="ghost"
+                        onClick={() => window.history.back()}
+                    >
                         <ArrowLeft size={16} />
                         Back
                     </Button>
@@ -61,7 +68,10 @@ export function ErrorPage({
                 )}
 
                 {showReload && (
-                    <Button variant="ghost" onClick={() => window.location.reload()}>
+                    <Button
+                        variant="ghost"
+                        onClick={() => window.location.reload()}
+                    >
                         <RefreshCw size={16} />
                         Reload
                     </Button>

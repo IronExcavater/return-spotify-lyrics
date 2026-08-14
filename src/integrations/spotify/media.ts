@@ -9,7 +9,11 @@ type RawTrack = {
     album: {
         id: string;
         name: string;
-        images: Array<{ url: string; width?: number | null; height?: number | null }>;
+        images: Array<{
+            url: string;
+            width?: number | null;
+            height?: number | null;
+        }>;
     };
 };
 
@@ -18,7 +22,11 @@ type RawProfile = {
     id: string;
     display_name: string | null;
     email?: string | null;
-    images?: Array<{ url: string; width?: number | null; height?: number | null }>;
+    images?: Array<{
+        url: string;
+        width?: number | null;
+        height?: number | null;
+    }>;
 };
 
 function mapTrack(track: RawTrack): PlaybackTrack {
@@ -43,7 +51,11 @@ export async function getProfile(accessToken: string): Promise<SpotifyProfile> {
     };
 }
 
-export async function searchTracks(accessToken: string, query: string, limit = 5) {
+export async function searchTracks(
+    accessToken: string,
+    query: string,
+    limit = 5
+) {
     const search = new URLSearchParams({
         q: query,
         type: 'track',

@@ -64,7 +64,9 @@ describe('Skeleton', () => {
 
 describe('form primitives', () => {
     it('renders accessible checkbox and switch labels', () => {
-        const checkbox = renderToStaticMarkup(<Checkbox label="Explicit content" />);
+        const checkbox = renderToStaticMarkup(
+            <Checkbox label="Explicit content" />
+        );
         const toggle = renderToStaticMarkup(<Switch label="Compact media" />);
 
         expect(checkbox).toContain('Explicit content');

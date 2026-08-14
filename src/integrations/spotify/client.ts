@@ -17,11 +17,20 @@ export function spotifyErrorFromResponse(response: Response) {
                 'This Spotify action is not available for this account.'
             );
         case 404:
-            return new AppError('spotify.not_found', 'Spotify could not find that resource.');
+            return new AppError(
+                'spotify.not_found',
+                'Spotify could not find that resource.'
+            );
         case 429:
-            return new AppError('spotify.rate_limited', 'Spotify is receiving too many requests.', {
-                retryAfter: Number.isFinite(retryAfter) ? retryAfter : undefined,
-            });
+            return new AppError(
+                'spotify.rate_limited',
+                'Spotify is receiving too many requests.',
+                {
+                    retryAfter: Number.isFinite(retryAfter)
+                        ? retryAfter
+                        : undefined,
+                }
+            );
         default:
             return new AppError(
                 'spotify.request_failed',
@@ -51,7 +60,9 @@ export async function spotifyFetch<T>(
             },
         });
     } catch (error) {
-        throw new AppError('network.offline', 'Spotify could not be reached.', { cause: error });
+        throw new AppError('network.offline', 'Spotify could not be reached.', {
+            cause: error,
+        });
     }
 
     if (!response.ok) throw spotifyErrorFromResponse(response);

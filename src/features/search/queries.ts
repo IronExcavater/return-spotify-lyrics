@@ -12,7 +12,8 @@ export function trackSearchQueryOptions(query: string) {
 
     return queryOptions({
         queryKey: searchKeys.tracks(normalized),
-        queryFn: () => sendMessage('spotifySearch', { query: normalized, limit: 5 }),
+        queryFn: () =>
+            sendMessage('spotifySearch', { query: normalized, limit: 5 }),
         enabled: normalized.length > 0,
         staleTime: 60_000,
         retry: false,

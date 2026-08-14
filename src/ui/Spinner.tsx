@@ -14,7 +14,12 @@ const sizePixels = {
     lg: 28,
 };
 
-export function Spinner({ size = 'md', label = 'Loading', className, ...props }: SpinnerProps) {
+export function Spinner({
+    size = 'md',
+    label = 'Loading',
+    className,
+    ...props
+}: SpinnerProps) {
     const pixels = typeof size === 'number' ? size : sizePixels[size];
 
     return (

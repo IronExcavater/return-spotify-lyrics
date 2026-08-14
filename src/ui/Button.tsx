@@ -24,7 +24,8 @@ export type ButtonProps = BaseButtonProps & {
 const variantClass = {
     solid: 'bg-accent text-black hover:brightness-105',
     ghost: 'bg-transparent text-text-muted hover:bg-surface-hover hover:text-text',
-    outline: 'border border-border bg-transparent text-text hover:bg-surface-hover',
+    outline:
+        'border border-border bg-transparent text-text hover:bg-surface-hover',
     danger: 'bg-danger text-white hover:brightness-105',
 } satisfies Record<NonNullable<ButtonProps['variant']>, string>;
 
@@ -66,7 +67,8 @@ export function Button({
     ...props
 }: ButtonProps) {
     const resolvedLabel =
-        ariaLabel ?? (iconOnly && typeof tooltip === 'string' ? tooltip : undefined);
+        ariaLabel ??
+        (iconOnly && typeof tooltip === 'string' ? tooltip : undefined);
 
     let control: ReactNode = (
         <BaseButton
@@ -81,13 +83,22 @@ export function Button({
                 className
             )}
         >
-            {loading ? <LoaderCircle aria-hidden="true" className="size-4 animate-spin" /> : icon}
+            {loading ? (
+                <LoaderCircle
+                    aria-hidden="true"
+                    className="size-4 animate-spin"
+                />
+            ) : (
+                icon
+            )}
             {children}
         </BaseButton>
     );
 
     if (tooltip) {
-        control = <Tooltip content={tooltip}>{control as React.ReactElement}</Tooltip>;
+        control = (
+            <Tooltip content={tooltip}>{control as React.ReactElement}</Tooltip>
+        );
     }
 
     if (badge !== undefined && badge !== null && badge !== false) {

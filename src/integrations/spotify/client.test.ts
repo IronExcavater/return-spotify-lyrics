@@ -16,14 +16,14 @@ describe('spotifyErrorFromResponse', () => {
     });
 
     it('maps authentication failures', () => {
-        expect(spotifyErrorFromResponse(new Response(null, { status: 401 })).code).toBe(
-            'auth.reauthorization_required'
-        );
+        expect(
+            spotifyErrorFromResponse(new Response(null, { status: 401 })).code
+        ).toBe('auth.reauthorization_required');
     });
 
     it('maps missing resources', () => {
-        expect(spotifyErrorFromResponse(new Response(null, { status: 404 })).code).toBe(
-            'spotify.not_found'
-        );
+        expect(
+            spotifyErrorFromResponse(new Response(null, { status: 404 })).code
+        ).toBe('spotify.not_found');
     });
 });

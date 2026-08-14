@@ -1,8 +1,4 @@
-import {
-    MutationCache,
-    QueryCache,
-    QueryClient,
-} from '@tanstack/react-query';
+import { MutationCache, QueryCache, QueryClient } from '@tanstack/react-query';
 
 import { asAppError } from '@/errors/AppError';
 import { logger } from '@/platform/logger';

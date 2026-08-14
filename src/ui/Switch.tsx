@@ -2,7 +2,10 @@ import type { ComponentProps, ReactNode } from 'react';
 import { Switch as BaseSwitch } from '@base-ui/react/switch';
 import clsx from 'clsx';
 
-type RootProps = Omit<ComponentProps<typeof BaseSwitch.Root>, 'children' | 'className'>;
+type RootProps = Omit<
+    ComponentProps<typeof BaseSwitch.Root>,
+    'children' | 'className'
+>;
 
 export type SwitchProps = RootProps & {
     label?: ReactNode;
@@ -10,12 +13,17 @@ export type SwitchProps = RootProps & {
     className?: string;
 };
 
-export function Switch({ label, description, className, ...props }: SwitchProps) {
+export function Switch({
+    label,
+    description,
+    className,
+    ...props
+}: SwitchProps) {
     const control = (
         <BaseSwitch.Root
             {...props}
             className={clsx(
-                'group relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border border-border bg-surface-raised outline-none transition data-[checked]:border-accent data-[checked]:bg-accent focus-visible:ring-2 focus-visible:ring-white/70 disabled:opacity-50',
+                'group relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border border-border bg-surface-raised transition outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:opacity-50 data-[checked]:border-accent data-[checked]:bg-accent',
                 !label && className
             )}
         >
@@ -26,11 +34,18 @@ export function Switch({ label, description, className, ...props }: SwitchProps)
     if (!label) return control;
 
     return (
-        <label className={clsx('flex cursor-pointer items-center justify-between gap-3 text-sm', className)}>
+        <label
+            className={clsx(
+                'flex cursor-pointer items-center justify-between gap-3 text-sm',
+                className
+            )}
+        >
             <span className="min-w-0">
                 <span className="block text-text">{label}</span>
                 {description && (
-                    <span className="mt-0.5 block text-xs text-text-muted">{description}</span>
+                    <span className="mt-0.5 block text-xs text-text-muted">
+                        {description}
+                    </span>
                 )}
             </span>
             {control}

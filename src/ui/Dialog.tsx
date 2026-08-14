@@ -3,7 +3,10 @@ import { Dialog as BaseDialog } from '@base-ui/react/dialog';
 import { X } from 'lucide-react';
 import clsx from 'clsx';
 
-type ContentProps = Omit<ComponentProps<typeof BaseDialog.Popup>, 'children' | 'title'> & {
+type ContentProps = Omit<
+    ComponentProps<typeof BaseDialog.Popup>,
+    'children' | 'title'
+> & {
     children: ReactNode;
     title?: ReactNode;
     description?: ReactNode;
@@ -49,7 +52,7 @@ function Content({
                     {showClose && (
                         <BaseDialog.Close
                             aria-label="Close"
-                            className="absolute top-3 right-3 inline-flex size-8 items-center justify-center rounded-full text-text-muted outline-none transition hover:bg-surface-hover hover:text-text focus-visible:ring-2 focus-visible:ring-white/70"
+                            className="absolute top-3 right-3 inline-flex size-8 items-center justify-center rounded-full text-text-muted transition outline-none hover:bg-surface-hover hover:text-text focus-visible:ring-2 focus-visible:ring-white/70"
                         >
                             <X aria-hidden="true" size={16} />
                         </BaseDialog.Close>

@@ -22,7 +22,12 @@ export function getFirebaseApp() {
         messagingSenderId: import.meta.env.WXT_FIREBASE_MESSAGING_SENDER_ID,
     };
 
-    if (!config.apiKey || !config.authDomain || !config.projectId || !config.appId) {
+    if (
+        !config.apiKey ||
+        !config.authDomain ||
+        !config.projectId ||
+        !config.appId
+    ) {
         throw new AppError(
             'auth.not_configured',
             'Firebase authentication has not been configured for this build.'

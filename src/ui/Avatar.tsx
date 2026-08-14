@@ -79,7 +79,12 @@ export function Avatar({
 
     const interactive = typeof onClick === 'function';
     const resolvedLabel =
-        ariaLabel ?? (typeof tooltip === 'string' ? tooltip : typeof fallback === 'string' ? fallback : undefined);
+        ariaLabel ??
+        (typeof tooltip === 'string'
+            ? tooltip
+            : typeof fallback === 'string'
+              ? fallback
+              : undefined);
 
     let control: ReactElement = interactive ? (
         <BaseButton
@@ -89,7 +94,7 @@ export function Avatar({
             disabled={disabled}
             onClick={onClick}
             className={clsx(
-                'inline-flex shrink-0 cursor-pointer rounded-full outline-none transition focus-visible:ring-2 focus-visible:ring-white/70 disabled:pointer-events-none disabled:opacity-50',
+                'inline-flex shrink-0 cursor-pointer rounded-full transition outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:pointer-events-none disabled:opacity-50',
                 selected && 'ring-2 ring-accent'
             )}
         >

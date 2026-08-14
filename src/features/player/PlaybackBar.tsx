@@ -25,7 +25,9 @@ export function PlaybackBar() {
             }
         },
         onSuccess: () => {
-            void queryClient.invalidateQueries({ queryKey: playerKeys.playback() });
+            void queryClient.invalidateQueries({
+                queryKey: playerKeys.playback(),
+            });
         },
     });
 
@@ -61,7 +63,9 @@ export function PlaybackBar() {
                     tooltip={playback.data?.isPlaying ? 'Pause' : 'Play'}
                     disabled={!track || control.isPending}
                     onClick={() =>
-                        control.mutate(playback.data?.isPlaying ? 'pause' : 'play')
+                        control.mutate(
+                            playback.data?.isPlaying ? 'pause' : 'play'
+                        )
                     }
                 >
                     {playback.data?.isPlaying ? (

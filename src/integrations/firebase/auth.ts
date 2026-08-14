@@ -36,15 +36,23 @@ export function getAuthSession(): AuthSession | null {
 
 export async function loginWithCustomToken(customToken: string) {
     if (!customToken.trim()) {
-        throw new AppError('auth.invalid_token', 'A sign-in token is required.');
+        throw new AppError(
+            'auth.invalid_token',
+            'A sign-in token is required.'
+        );
     }
 
     try {
-        const credential = await signInWithCustomToken(getFirebaseAuth(), customToken);
+        const credential = await signInWithCustomToken(
+            getFirebaseAuth(),
+            customToken
+        );
         return toSession(credential.user);
     } catch (error) {
         if (error instanceof AppError) throw error;
-        throw new AppError('auth.login_failed', 'Could not sign in.', { cause: error });
+        throw new AppError('auth.login_failed', 'Could not sign in.', {
+            cause: error,
+        });
     }
 }
 

@@ -36,7 +36,7 @@ export function Card({
                 variantClass[variant],
                 paddingClass[padding],
                 interactive &&
-                    'transition hover:bg-surface-hover focus-within:ring-2 focus-within:ring-white/60',
+                    'transition focus-within:ring-2 focus-within:ring-white/60 hover:bg-surface-hover',
                 className
             )}
         />

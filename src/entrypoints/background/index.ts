@@ -24,7 +24,10 @@ import {
 async function requireSpotifyAccessToken() {
     const token = await getSpotifyAccessToken();
     if (!token) {
-        throw new AppError('auth.required', 'Connect Spotify before using Spotify features.');
+        throw new AppError(
+            'auth.required',
+            'Connect Spotify before using Spotify features.'
+        );
     }
     return token;
 }
@@ -34,7 +37,11 @@ export default defineBackground(() => {
         try {
             return getAuthSession();
         } catch (error) {
-            if (error instanceof AppError && error.code === 'auth.not_configured') return null;
+            if (
+                error instanceof AppError &&
+                error.code === 'auth.not_configured'
+            )
+                return null;
             throw error;
         }
     });
@@ -46,7 +53,8 @@ export default defineBackground(() => {
             await spotifyAccessTokenStorage.setValue({
                 value: data.spotifyAccessToken,
                 expiresAt:
-                    data.spotifyAccessTokenExpiresAt ?? Date.now() + 55 * 60 * 1000,
+                    data.spotifyAccessTokenExpiresAt ??
+                    Date.now() + 55 * 60 * 1000,
             });
         }
 
@@ -57,21 +65,34 @@ export default defineBackground(() => {
         await Promise.all([logout(), spotifyAccessTokenStorage.removeValue()]);
     });
 
-    onMessage('spotifyProfile', async () => getProfile(await requireSpotifyAccessToken()));
+    onMessage('spotifyProfile', async () =>
+        getProfile(await requireSpotifyAccessToken())
+    );
     onMessage('spotifySearch', async ({ data }) =>
         searchTracks(await requireSpotifyAccessToken(), data.query, data.limit)
     );
-    onMessage('spotifyPlayback', async () => getPlayback(await requireSpotifyAccessToken()));
-    onMessage('spotifyPlay', async () => resumePlayback(await requireSpotifyAccessToken()));
-    onMessage('spotifyPause', async () => pausePlayback(await requireSpotifyAccessToken()));
-    onMessage('spotifyNext', async () => nextTrack(await requireSpotifyAccessToken()));
-    onMessage('spotifyPrevious', async () => previousTrack(await requireSpotifyAccessToken()));
+    onMessage('spotifyPlayback', async () =>
+        getPlayback(await requireSpotifyAccessToken())
+    );
+    onMessage('spotifyPlay', async () =>
+        resumePlayback(await requireSpotifyAccessToken())
+    );
+    onMessage('spotifyPause', async () =>
+        pausePlayback(await requireSpotifyAccessToken())
+    );
+    onMessage('spotifyNext', async () =>
+        nextTrack(await requireSpotifyAccessToken())
+    );
+    onMessage('spotifyPrevious', async () =>
+        previousTrack(await requireSpotifyAccessToken())
+    );
 
     onMessage('lyricsGet', async ({ data }) => {
         try {
             return await getLyrics(data);
         } catch (error) {
-            if (error instanceof AppError && error.code === 'lyrics.not_found') return null;
+            if (error instanceof AppError && error.code === 'lyrics.not_found')
+                return null;
             throw error;
         }
     });

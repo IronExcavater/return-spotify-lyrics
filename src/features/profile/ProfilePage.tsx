@@ -24,10 +24,19 @@ export function ProfilePage() {
             </div>
 
             <Card variant="raised" className="flex items-center gap-3">
-                <Skeleton loading={spotify.isPending} hash="profile:avatar" size={48} radius={999}>
+                <Skeleton
+                    loading={spotify.isPending}
+                    hash="profile:avatar"
+                    size={48}
+                    radius={999}
+                >
                     <Avatar
                         src={profile?.images[0]?.url ?? session?.photoURL}
-                        fallback={(profile?.displayName ?? session?.displayName ?? 'U').slice(0, 2)}
+                        fallback={(
+                            profile?.displayName ??
+                            session?.displayName ??
+                            'U'
+                        ).slice(0, 2)}
                         size="lg"
                     />
                 </Skeleton>
@@ -35,17 +44,23 @@ export function ProfilePage() {
                 <div className="min-w-0 flex-1">
                     <Skeleton loading={spotify.isPending} hash="profile:name">
                         <div className="truncate font-medium">
-                            {profile?.displayName ?? session?.displayName ?? 'Connected account'}
+                            {profile?.displayName ??
+                                session?.displayName ??
+                                'Connected account'}
                         </div>
                     </Skeleton>
                     <div className="truncate text-sm text-text-muted">
-                        {profile?.email ?? session?.email ?? 'No email available'}
+                        {profile?.email ??
+                            session?.email ??
+                            'No email available'}
                     </div>
                 </div>
             </Card>
 
             {spotify.error && (
-                <p className="text-sm text-danger">{asAppError(spotify.error).message}</p>
+                <p className="text-sm text-danger">
+                    {asAppError(spotify.error).message}
+                </p>
             )}
 
             <Button

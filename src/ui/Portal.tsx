@@ -80,6 +80,8 @@ export function usePortal<Key extends string>({
     return {
         slots: anchors,
         content:
-            enabled && hostRef.current ? createPortal(children, hostRef.current) : null,
+            enabled && hostRef.current
+                ? createPortal(children, hostRef.current)
+                : null,
     };
 }

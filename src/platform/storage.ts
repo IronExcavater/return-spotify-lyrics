@@ -5,23 +5,27 @@ export type Preferences = {
     showExplicitBadge: boolean;
 };
 
-export const preferencesStorage = storage.defineItem<Preferences>('local:preferences', {
-    fallback: {
-        compactMedia: false,
-        showExplicitBadge: true,
-    },
-    version: 1,
-});
+export const preferencesStorage = storage.defineItem<Preferences>(
+    'local:preferences',
+    {
+        fallback: {
+            compactMedia: false,
+            showExplicitBadge: true,
+        },
+        version: 1,
+    }
+);
 
 type SpotifyAccessToken = {
     value: string;
     expiresAt: number;
 };
 
-export const spotifyAccessTokenStorage = storage.defineItem<SpotifyAccessToken | null>(
-    'session:spotify-access-token',
-    { fallback: null }
-);
+export const spotifyAccessTokenStorage =
+    storage.defineItem<SpotifyAccessToken | null>(
+        'session:spotify-access-token',
+        { fallback: null }
+    );
 
 export async function getSpotifyAccessToken() {
     const token = await spotifyAccessTokenStorage.getValue();

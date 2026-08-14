@@ -1,8 +1,4 @@
-import {
-    isValidElement,
-    type CSSProperties,
-    type ReactNode,
-} from 'react';
+import { isValidElement, type CSSProperties, type ReactNode } from 'react';
 import clsx from 'clsx';
 
 import './skeleton.css';
@@ -34,7 +30,11 @@ export function hashUnit(value: string | number) {
     return (hash >>> 0) / 4294967295;
 }
 
-function fromRange(value: SkeletonValue | undefined, hash: string | number, salt: string) {
+function fromRange(
+    value: SkeletonValue | undefined,
+    hash: string | number,
+    salt: string
+) {
     if (!Array.isArray(value)) return value;
 
     const [min, max] = value;
@@ -83,7 +83,9 @@ export function Skeleton({
     const resolvedWidth =
         fromRange(width, hash, 'width') ??
         resolvedSize ??
-        (hasText(children) ? `${Math.round(68 + hashUnit(`${hash}:text-width`) * 26)}%` : undefined);
+        (hasText(children)
+            ? `${Math.round(68 + hashUnit(`${hash}:text-width`) * 26)}%`
+            : undefined);
     const resolvedHeight = fromRange(height, hash, 'height') ?? resolvedSize;
     const resolvedRadius = fromRange(radius, hash, 'radius');
     const childRadiusClasses = roundedClasses(children);
@@ -92,7 +94,10 @@ export function Skeleton({
         <span
             data-skeleton="true"
             aria-busy="true"
-            className={clsx('relative inline-grid min-w-0 align-middle', className)}
+            className={clsx(
+                'relative inline-grid min-w-0 align-middle',
+                className
+            )}
             style={{
                 width: cssValue(resolvedWidth),
                 height: cssValue(resolvedHeight),
@@ -108,7 +113,9 @@ export function Skeleton({
                 className={clsx(
                     'skeleton-shape col-start-1 row-start-1 size-full min-h-[1em]',
                     childRadiusClasses,
-                    resolvedRadius == null && !childRadiusClasses && 'rounded-control'
+                    resolvedRadius == null &&
+                        !childRadiusClasses &&
+                        'rounded-control'
                 )}
                 style={{ borderRadius: cssValue(resolvedRadius) }}
             >

@@ -44,14 +44,17 @@ function Item({ className, ...props }: ComponentProps<typeof BaseMenu.Item>) {
         <BaseMenu.Item
             {...props}
             className={clsx(
-                'flex min-h-8 cursor-default items-center gap-2 rounded-control px-2 outline-none data-[highlighted]:bg-surface-hover data-[disabled]:opacity-45',
+                'flex min-h-8 cursor-default items-center gap-2 rounded-control px-2 outline-none data-[disabled]:opacity-45 data-[highlighted]:bg-surface-hover',
                 className
             )}
         />
     );
 }
 
-function Separator({ className, ...props }: ComponentProps<typeof BaseMenu.Separator>) {
+function Separator({
+    className,
+    ...props
+}: ComponentProps<typeof BaseMenu.Separator>) {
     return (
         <BaseMenu.Separator
             {...props}

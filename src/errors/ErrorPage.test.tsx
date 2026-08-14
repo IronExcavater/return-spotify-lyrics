@@ -8,7 +8,9 @@ describe('ErrorPage', () => {
     it('renders a useful message and available recovery actions', () => {
         const markup = renderToStaticMarkup(
             <ErrorPage
-                error={new AppError('network.offline', 'You appear to be offline')}
+                error={
+                    new AppError('network.offline', 'You appear to be offline')
+                }
                 onRetry={() => undefined}
                 showHome
                 showReload

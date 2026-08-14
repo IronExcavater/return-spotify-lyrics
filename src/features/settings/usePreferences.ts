@@ -1,9 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import {
-    preferencesStorage,
-    type Preferences,
-} from '@/platform/storage';
+import { preferencesStorage, type Preferences } from '@/platform/storage';
 
 const fallback: Preferences = {
     compactMedia: false,

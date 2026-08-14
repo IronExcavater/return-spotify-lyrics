@@ -2,7 +2,10 @@ import type { ComponentProps, ReactNode } from 'react';
 import { Popover as BasePopover } from '@base-ui/react/popover';
 import clsx from 'clsx';
 
-type ContentProps = Omit<ComponentProps<typeof BasePopover.Popup>, 'children'> & {
+type ContentProps = Omit<
+    ComponentProps<typeof BasePopover.Popup>,
+    'children'
+> & {
     children: ReactNode;
     side?: ComponentProps<typeof BasePopover.Positioner>['side'];
     align?: ComponentProps<typeof BasePopover.Positioner>['align'];

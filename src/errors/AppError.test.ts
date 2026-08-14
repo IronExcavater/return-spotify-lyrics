@@ -4,7 +4,10 @@ import { AppError, asAppError } from './AppError';
 
 describe('AppError', () => {
     it('preserves an existing AppError', () => {
-        const error = new AppError('spotify.no_active_device', 'No active device');
+        const error = new AppError(
+            'spotify.no_active_device',
+            'No active device'
+        );
 
         expect(asAppError(error)).toBe(error);
     });

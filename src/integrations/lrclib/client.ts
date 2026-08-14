@@ -19,14 +19,22 @@ async function lrclibFetch<T>(path: string): Promise<T> {
             headers: { Accept: 'application/json' },
         });
     } catch (error) {
-        throw new AppError('network.offline', 'Lyrics could not be reached.', { cause: error });
+        throw new AppError('network.offline', 'Lyrics could not be reached.', {
+            cause: error,
+        });
     }
 
     if (response.status === 404) {
-        throw new AppError('lyrics.not_found', 'No matching lyrics were found.');
+        throw new AppError(
+            'lyrics.not_found',
+            'No matching lyrics were found.'
+        );
     }
     if (!response.ok) {
-        throw new AppError('lyrics.request_failed', `Lyrics request failed (${response.status}).`);
+        throw new AppError(
+            'lyrics.request_failed',
+            `Lyrics request failed (${response.status}).`
+        );
     }
 
     return (await response.json()) as T;

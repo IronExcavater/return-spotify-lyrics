@@ -26,7 +26,11 @@ export type ListItemProps = ComponentPropsWithoutRef<'div'> & {
     interactive?: boolean;
 };
 
-export function ListItem({ interactive = false, className, ...props }: ListItemProps) {
+export function ListItem({
+    interactive = false,
+    className,
+    ...props
+}: ListItemProps) {
     return (
         <div
             role="listitem"

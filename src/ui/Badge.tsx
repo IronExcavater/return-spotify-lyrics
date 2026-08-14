@@ -29,7 +29,7 @@ export function Badge({
             data-badge="true"
             aria-hidden={dot || content == null ? true : undefined}
             className={clsx(
-                'inline-flex shrink-0 items-center justify-center rounded-full font-semibold leading-none',
+                'inline-flex shrink-0 items-center justify-center rounded-full leading-none font-semibold',
                 dot ? 'size-2.5' : 'min-w-4 px-1 py-0.5 text-[10px]',
                 toneClass[tone],
                 children && 'absolute -top-1 -right-1 z-10',

@@ -20,7 +20,9 @@ export function lyricsQueryOptions(input: LyricsLookup) {
 
 export function lyricsSearchQueryOptions(input: LyricsSearch) {
     const enabled = Boolean(
-        input.query?.trim() || input.trackName?.trim() || input.artistName?.trim()
+        input.query?.trim() ||
+        input.trackName?.trim() ||
+        input.artistName?.trim()
     );
 
     return queryOptions({

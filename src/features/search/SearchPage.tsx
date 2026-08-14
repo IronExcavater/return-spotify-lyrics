@@ -20,7 +20,8 @@ export function SearchPage() {
             <div>
                 <h1 className="text-2xl font-semibold">Search</h1>
                 <p className="mt-1 text-sm text-text-muted">
-                    A minimal Spotify track search to exercise the integration boundary.
+                    A minimal Spotify track search to exercise the integration
+                    boundary.
                 </p>
             </div>
 
@@ -38,45 +39,68 @@ export function SearchPage() {
             </Card>
 
             {search.error && (
-                <p className="text-sm text-danger">{asAppError(search.error).message}</p>
+                <p className="text-sm text-danger">
+                    {asAppError(search.error).message}
+                </p>
             )}
 
             {deferredQuery.trim() && (
                 <List>
-                    {(search.isPending ? Array.from({ length: 4 }, (_, index) => index) : search.data ?? []).map(
-                        (track) => {
-                            const loading = typeof track === 'number';
-                            const key = loading ? `loading-${track}` : track.id;
-                            const image = loading ? null : track.album.images[0]?.url;
-                            const title = loading ? 'Loading track' : track.name;
-                            const subtitle = loading
-                                ? 'Loading artist'
-                                : track.artists.map((artist) => artist.name).join(', ');
+                    {(search.isPending
+                        ? Array.from({ length: 4 }, (_, index) => index)
+                        : (search.data ?? [])
+                    ).map((track) => {
+                        const loading = typeof track === 'number';
+                        const key = loading ? `loading-${track}` : track.id;
+                        const image = loading
+                            ? null
+                            : track.album.images[0]?.url;
+                        const title = loading ? 'Loading track' : track.name;
+                        const subtitle = loading
+                            ? 'Loading artist'
+                            : track.artists
+                                  .map((artist) => artist.name)
+                                  .join(', ');
 
-                            return (
-                                <ListItem key={key} className="flex items-center gap-3 p-2">
-                                    <Skeleton loading={loading} hash={`${key}:art`} size={40} radius={6}>
-                                        <Avatar
-                                            src={image}
-                                            fallback="♪"
-                                            size="md"
-                                            radius="md"
-                                        />
+                        return (
+                            <ListItem
+                                key={key}
+                                className="flex items-center gap-3 p-2"
+                            >
+                                <Skeleton
+                                    loading={loading}
+                                    hash={`${key}:art`}
+                                    size={40}
+                                    radius={6}
+                                >
+                                    <Avatar
+                                        src={image}
+                                        fallback="♪"
+                                        size="md"
+                                        radius="md"
+                                    />
+                                </Skeleton>
+                                <div className="min-w-0 flex-1">
+                                    <Skeleton
+                                        loading={loading}
+                                        hash={`${key}:title`}
+                                    >
+                                        <div className="truncate text-sm font-medium">
+                                            {title}
+                                        </div>
                                     </Skeleton>
-                                    <div className="min-w-0 flex-1">
-                                        <Skeleton loading={loading} hash={`${key}:title`}>
-                                            <div className="truncate text-sm font-medium">{title}</div>
-                                        </Skeleton>
-                                        <Skeleton loading={loading} hash={`${key}:artist`}>
-                                            <div className="truncate text-xs text-text-muted">
-                                                {subtitle}
-                                            </div>
-                                        </Skeleton>
-                                    </div>
-                                </ListItem>
-                            );
-                        }
-                    )}
+                                    <Skeleton
+                                        loading={loading}
+                                        hash={`${key}:artist`}
+                                    >
+                                        <div className="truncate text-xs text-text-muted">
+                                            {subtitle}
+                                        </div>
+                                    </Skeleton>
+                                </div>
+                            </ListItem>
+                        );
+                    })}
                 </List>
             )}
         </section>

@@ -19,7 +19,11 @@ type SpotifyPlayback = {
         album?: {
             id?: string;
             name?: string;
-            images?: Array<{ url: string; width?: number | null; height?: number | null }>;
+            images?: Array<{
+                url: string;
+                width?: number | null;
+                height?: number | null;
+            }>;
         };
     } | null;
 };
@@ -27,7 +31,11 @@ type SpotifyPlayback = {
 function mapPlayback(value: SpotifyPlayback): PlaybackSnapshot {
     const item = value.item;
     const track =
-        item?.type === 'track' && item.id && item.name && item.album?.id && item.album.name
+        item?.type === 'track' &&
+        item.id &&
+        item.name &&
+        item.album?.id &&
+        item.album.name
             ? {
                   id: item.id,
                   name: item.name,
@@ -60,24 +68,39 @@ function mapPlayback(value: SpotifyPlayback): PlaybackSnapshot {
 }
 
 export async function getPlayback(accessToken: string) {
-    const value = await spotifyFetch<SpotifyPlayback | undefined>('/me/player', {
-        accessToken,
-    });
+    const value = await spotifyFetch<SpotifyPlayback | undefined>(
+        '/me/player',
+        {
+            accessToken,
+        }
+    );
     return value ? mapPlayback(value) : null;
 }
 
 export function resumePlayback(accessToken: string) {
-    return spotifyFetch<void>('/me/player/play', { accessToken, method: 'PUT' });
+    return spotifyFetch<void>('/me/player/play', {
+        accessToken,
+        method: 'PUT',
+    });
 }
 
 export function pausePlayback(accessToken: string) {
-    return spotifyFetch<void>('/me/player/pause', { accessToken, method: 'PUT' });
+    return spotifyFetch<void>('/me/player/pause', {
+        accessToken,
+        method: 'PUT',
+    });
 }
 
 export function nextTrack(accessToken: string) {
-    return spotifyFetch<void>('/me/player/next', { accessToken, method: 'POST' });
+    return spotifyFetch<void>('/me/player/next', {
+        accessToken,
+        method: 'POST',
+    });
 }
 
 export function previousTrack(accessToken: string) {
-    return spotifyFetch<void>('/me/player/previous', { accessToken, method: 'POST' });
+    return spotifyFetch<void>('/me/player/previous', {
+        accessToken,
+        method: 'POST',
+    });
 }
