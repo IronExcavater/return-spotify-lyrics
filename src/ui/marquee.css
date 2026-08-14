@@ -1,0 +1,64 @@
+@keyframes marquee-left {
+    from {
+        transform: translateX(0);
+    }
+
+    to {
+        transform: translateX(var(--marquee-distance));
+    }
+}
+
+@keyframes marquee-right {
+    from {
+        transform: translateX(var(--marquee-distance));
+    }
+
+    to {
+        transform: translateX(0);
+    }
+}
+
+@keyframes marquee-bounce {
+    0%,
+    100% {
+        transform: translateX(0);
+    }
+
+    50% {
+        transform: translateX(var(--marquee-distance));
+    }
+}
+
+.marquee-left {
+    animation-name: marquee-left;
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
+}
+
+.marquee-right {
+    animation-name: marquee-right;
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
+}
+
+.marquee-bounce {
+    animation-name: marquee-bounce;
+    animation-timing-function: ease-in-out;
+    animation-iteration-count: infinite;
+}
+
+.marquee-reset {
+    transform: translateX(0);
+    transition: transform 300ms ease-out;
+}
+
+.marquee-play-on-hover {
+    animation-play-state: paused;
+}
+
+.marquee-play-on-hover:hover,
+.marquee-play-on-hover:focus-within,
+.group:hover .marquee-play-on-hover,
+.group:focus-within .marquee-play-on-hover {
+    animation-play-state: running;
+}
