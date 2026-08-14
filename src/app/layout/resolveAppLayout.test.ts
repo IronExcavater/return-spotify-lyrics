@@ -11,13 +11,14 @@ describe('resolveAppLayout', () => {
 
         expect(layout.viewport).toEqual({
             kind: 'popup',
-            size: { width: 520, height: 320 },
-            range: {
-                width: { min: 350, max: 520 },
-                height: { min: 320, max: 700 },
-            },
-            resize: { width: true, height: true },
-            persist: { width: true, height: true },
+            width: 520,
+            height: 320,
+            minWidth: 350,
+            maxWidth: 520,
+            minHeight: 320,
+            maxHeight: 700,
+            resize: 'both',
+            remember: 'both',
         });
     });
 
@@ -27,8 +28,9 @@ describe('resolveAppLayout', () => {
             rememberedPopupSize: { width: 400, height: 520 },
             routeLayout: {
                 popup: {
-                    size: { width: 320, height: 'auto' },
-                    resize: { width: false, height: false },
+                    width: 320,
+                    height: 'auto',
+                    resize: false,
                 },
             },
         });
@@ -36,22 +38,20 @@ describe('resolveAppLayout', () => {
         expect(layout.viewport.kind).toBe('popup');
         if (layout.viewport.kind !== 'popup') return;
 
-        expect(layout.viewport.size).toEqual({ width: 320, height: 'auto' });
-        expect(layout.viewport.persist).toEqual({
-            width: false,
-            height: false,
-        });
+        expect(layout.viewport.width).toBe(320);
+        expect(layout.viewport.height).toBe('auto');
+        expect(layout.viewport.resize).toBe(false);
+        expect(layout.viewport.remember).toBe(false);
     });
 
-    it('uses route-specific ranges without persisting them as the normal size', () => {
+    it('uses route-specific bounds without remembering them as the normal size', () => {
         const layout = resolveAppLayout({
             surface: 'popup',
             rememberedPopupSize: { width: 500, height: 650 },
             routeLayout: {
                 popup: {
-                    range: {
-                        width: { min: 380, max: 440 },
-                    },
+                    minWidth: 380,
+                    maxWidth: 440,
                 },
             },
         });
@@ -59,9 +59,8 @@ describe('resolveAppLayout', () => {
         expect(layout.viewport.kind).toBe('popup');
         if (layout.viewport.kind !== 'popup') return;
 
-        expect(layout.viewport.size.width).toBe(440);
-        expect(layout.viewport.persist.width).toBe(false);
-        expect(layout.viewport.persist.height).toBe(true);
+        expect(layout.viewport.width).toBe(440);
+        expect(layout.viewport.remember).toBe('vertical');
     });
 
     it('lets the browser own sidepanel dimensions', () => {
