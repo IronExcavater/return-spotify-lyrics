@@ -18,6 +18,19 @@ describe('AppError', () => {
         expect(error.cause).toBe(cause);
     });
 
+    it('preserves serialized app error metadata', () => {
+        const cause = Object.assign(new Error('Reconnect Spotify'), {
+            code: 'auth.reauthorization_required',
+            retryAfter: 3,
+        });
+        const error = asAppError(cause);
+
+        expect(error.code).toBe('auth.reauthorization_required');
+        expect(error.message).toBe('Reconnect Spotify');
+        expect(error.retryAfter).toBe(3);
+        expect(error.cause).toBe(cause);
+    });
+
     it('normalizes unknown thrown values to a stable error', () => {
         const error = asAppError({ broken: true });
 
