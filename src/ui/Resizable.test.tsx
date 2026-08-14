@@ -2,7 +2,6 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
 import {
-    mergeStoredDimensions,
     RESIZE_HANDLES,
     Resizable,
     resizeDimensions,
@@ -90,22 +89,26 @@ describe('resolveResizeHandles', () => {
             'left',
         ]);
     });
-});
 
-describe('mergeStoredDimensions', () => {
-    it('remembers only the requested dimensions', () => {
+    it('can disable any individual edge or corner', () => {
         expect(
-            mergeStoredDimensions(
-                { width: 400, height: 520 },
-                { width: 460, height: 600 },
-                'horizontal'
-            )
-        ).toEqual({ width: 460, height: 520 });
+            resolveResizeHandles(400, 520, 'both', RESIZE_HANDLES, [
+                'top',
+                'bottom-right',
+                'left',
+            ])
+        ).toEqual([
+            'right',
+            'bottom',
+            'top-left',
+            'top-right',
+            'bottom-left',
+        ]);
     });
 });
 
 describe('Resizable', () => {
-    it('renders all handles by default', () => {
+    it('renders all handles and their visual indicators by default', () => {
         const markup = renderToStaticMarkup(
             <Resizable
                 width={400}
@@ -122,6 +125,7 @@ describe('Resizable', () => {
         for (const handle of RESIZE_HANDLES) {
             expect(markup).toContain(`data-resize-handle="${handle}"`);
         }
+        expect(markup.match(/data-resize-indicator="true"/g)).toHaveLength(8);
     });
 
     it('renders only horizontal handles when requested', () => {
@@ -136,5 +140,34 @@ describe('Resizable', () => {
         expect(markup).not.toContain('data-resize-handle="top"');
         expect(markup).not.toContain('data-resize-handle="bottom"');
         expect(markup).not.toContain('data-resize-handle="top-left"');
+    });
+
+    it('can disable selected handles without changing the resize axis', () => {
+        const markup = renderToStaticMarkup(
+            <Resizable
+                width={400}
+                height={520}
+                disabledHandles={['left', 'top-left', 'bottom-left']}
+            >
+                <div>Content</div>
+            </Resizable>
+        );
+
+        expect(markup).not.toContain('data-resize-handle="left"');
+        expect(markup).not.toContain('data-resize-handle="top-left"');
+        expect(markup).not.toContain('data-resize-handle="bottom-left"');
+        expect(markup).toContain('data-resize-handle="right"');
+        expect(markup).toContain('data-resize-handle="top-right"');
+    });
+
+    it('can hide the visual indicator without removing the hit area', () => {
+        const markup = renderToStaticMarkup(
+            <Resizable width={400} height={520} showIndicators={false}>
+                <div>Content</div>
+            </Resizable>
+        );
+
+        expect(markup).toContain('data-resize-handle="left"');
+        expect(markup).not.toContain('data-resize-indicator="true"');
     });
 });
