@@ -1,0 +1,40 @@
+@keyframes skeleton-glint {
+    from {
+        transform: translateX(-140%) skewX(-18deg);
+    }
+
+    to {
+        transform: translateX(240%) skewX(-18deg);
+    }
+}
+
+.skeleton-shape {
+    position: relative;
+    overflow: hidden;
+    background: color-mix(in srgb, var(--color-surface-raised) 82%, white 18%);
+}
+
+.skeleton-glint {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: -45%;
+    width: 45%;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        color-mix(in srgb, white 22%, transparent),
+        transparent
+    );
+    animation: skeleton-glint 1.55s ease-in-out infinite;
+    will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .skeleton-glint {
+        animation: none;
+        left: 30%;
+        opacity: 0.2;
+        transform: skewX(-18deg);
+    }
+}
