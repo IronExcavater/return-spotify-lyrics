@@ -1,16 +1,16 @@
 import { defineExtensionMessaging } from '@webext-core/messaging';
 
-import type { AuthSession } from '@/integrations/firebase/auth';
+import type { AuthSession } from '../integrations/firebase/auth';
 import type {
     LyricsLookup,
     LyricsSearch,
     LyricsTrack,
-} from '@/integrations/lrclib/types';
+} from '../integrations/lrclib/types';
 import type {
     PlaybackSnapshot,
     PlaybackTrack,
     SpotifyProfile,
-} from '@/integrations/spotify/types';
+} from '../integrations/spotify/types';
 
 export type AuthLoginInput = {
     customToken: string;
