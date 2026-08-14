@@ -1,8 +1,13 @@
 import { defineBackground } from 'wxt/utils/define-background';
 
 import { AppError } from '@/errors/AppError';
-import { getAuthSession, loginWithCustomToken, logout } from '@/integrations/firebase/auth';
+import {
+    getAuthSession,
+    loginWithCustomToken,
+    logout,
+} from '@/integrations/firebase/auth';
 import { getLyrics, searchLyrics } from '@/integrations/lrclib/client';
+import { getProfile, searchTracks } from '@/integrations/spotify/media';
 import {
     getPlayback,
     nextTrack,
@@ -11,12 +16,15 @@ import {
     resumePlayback,
 } from '@/integrations/spotify/player';
 import { onMessage } from '@/platform/messaging';
-import { getSpotifyAccessToken, spotifyAccessTokenStorage } from '@/platform/storage';
+import {
+    getSpotifyAccessToken,
+    spotifyAccessTokenStorage,
+} from '@/platform/storage';
 
 async function requireSpotifyAccessToken() {
     const token = await getSpotifyAccessToken();
     if (!token) {
-        throw new AppError('auth.required', 'Connect Spotify before using playback controls.');
+        throw new AppError('auth.required', 'Connect Spotify before using Spotify features.');
     }
     return token;
 }
@@ -49,6 +57,10 @@ export default defineBackground(() => {
         await Promise.all([logout(), spotifyAccessTokenStorage.removeValue()]);
     });
 
+    onMessage('spotifyProfile', async () => getProfile(await requireSpotifyAccessToken()));
+    onMessage('spotifySearch', async ({ data }) =>
+        searchTracks(await requireSpotifyAccessToken(), data.query, data.limit)
+    );
     onMessage('spotifyPlayback', async () => getPlayback(await requireSpotifyAccessToken()));
     onMessage('spotifyPlay', async () => resumePlayback(await requireSpotifyAccessToken()));
     onMessage('spotifyPause', async () => pausePlayback(await requireSpotifyAccessToken()));
