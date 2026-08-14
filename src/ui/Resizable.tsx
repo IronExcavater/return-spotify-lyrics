@@ -160,7 +160,8 @@ export function mergePersistedSize(
 }
 
 function applyDocumentSize(size: ResizableSize) {
-    const width = typeof size.width === 'number' ? `${size.width}px` : size.width;
+    const width =
+        typeof size.width === 'number' ? `${size.width}px` : size.width;
     const height =
         typeof size.height === 'number' ? `${size.height}px` : size.height;
 
@@ -190,7 +191,11 @@ function ResizeHandle({
     onResize,
     onResizeEnd,
 }: ResizeHandleProps) {
-    const drag = useRef<{ pointerId: number; x: number; y: number } | null>(null);
+    const drag = useRef<{
+        pointerId: number;
+        x: number;
+        y: number;
+    } | null>(null);
 
     const finish = (event: ReactPointerEvent<HTMLDivElement>) => {
         if (!drag.current || drag.current.pointerId !== event.pointerId) return;
@@ -236,7 +241,10 @@ function ResizeHandle({
     );
 }
 
-export type ResizableProps = Omit<ComponentPropsWithoutRef<'div'>, 'onResize'> & {
+export type ResizableProps = Omit<
+    ComponentPropsWithoutRef<'div'>,
+    'onResize'
+> & {
     size: ResizableSize;
     range?: Partial<Size<MinMax<number>>>;
     resize?: ResizeAxes;
