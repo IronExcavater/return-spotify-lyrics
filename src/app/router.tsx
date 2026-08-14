@@ -36,8 +36,9 @@ export const router = createHashRouter([
                     layout: {
                         bar: 'playback',
                         popup: {
-                            size: { width: 420, height: 600 },
-                            resize: { width: false, height: false },
+                            width: 420,
+                            height: 600,
+                            resize: false,
                         },
                     },
                 } satisfies AppRouteHandle,
@@ -49,8 +50,9 @@ export const router = createHashRouter([
                     layout: {
                         bar: 'playback',
                         popup: {
-                            size: { width: 420, height: 600 },
-                            resize: { width: false, height: false },
+                            width: 420,
+                            height: 600,
+                            resize: false,
                         },
                     },
                 } satisfies AppRouteHandle,
@@ -62,8 +64,9 @@ export const router = createHashRouter([
                     layout: {
                         bar: 'preserve',
                         popup: {
-                            size: { width: 360, height: 'auto' },
-                            resize: { width: false, height: false },
+                            width: 360,
+                            height: 'auto',
+                            resize: false,
                         },
                     },
                 } satisfies AppRouteHandle,
@@ -82,8 +85,9 @@ export const router = createHashRouter([
                     layout: {
                         bar: 'hidden',
                         popup: {
-                            size: { width: 320, height: 'auto' },
-                            resize: { width: false, height: false },
+                            width: 320,
+                            height: 'auto',
+                            resize: false,
                         },
                     },
                 } satisfies AppRouteHandle,
