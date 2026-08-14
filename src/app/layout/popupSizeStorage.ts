@@ -1,5 +1,7 @@
 import { storage } from 'wxt/utils/storage';
 
+import type { ResizeMode } from '@/ui/Resizable';
+
 import { POPUP } from './surfaces';
 
 export const popupSizeStorage = storage.defineItem<{
@@ -12,3 +14,32 @@ export const popupSizeStorage = storage.defineItem<{
     },
     version: 1,
 });
+
+function remembersWidth(mode: ResizeMode) {
+    return mode === 'both' || mode === 'horizontal';
+}
+
+function remembersHeight(mode: ResizeMode) {
+    return mode === 'both' || mode === 'vertical';
+}
+
+export async function savePopupSize(
+    width: number | string,
+    height: number | string,
+    remember: ResizeMode
+) {
+    if (remember === false) return;
+
+    const stored = await popupSizeStorage.getValue();
+
+    await popupSizeStorage.setValue({
+        width:
+            remembersWidth(remember) && typeof width === 'number'
+                ? width
+                : stored.width,
+        height:
+            remembersHeight(remember) && typeof height === 'number'
+                ? height
+                : stored.height,
+    });
+}
