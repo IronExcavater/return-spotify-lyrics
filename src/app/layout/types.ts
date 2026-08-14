@@ -1,15 +1,18 @@
 import type { Surface } from '@/app/surface/types';
-import type { Bounds, Resize, Size } from '@/shared/size';
+import type { ResizeMode } from '@/ui/Resizable';
 
-export type Dimension = number | 'auto';
 export type BarPolicy = 'preserve' | 'home' | 'playback' | 'hidden';
 
 export type RouteLayout = {
     bar?: BarPolicy;
     popup?: {
-        size?: Partial<Size<Dimension>>;
-        bounds?: Partial<Bounds>;
-        resize?: Partial<Resize>;
+        width?: number | 'auto';
+        height?: number | 'auto';
+        minWidth?: number;
+        maxWidth?: number;
+        minHeight?: number;
+        maxHeight?: number;
+        resize?: ResizeMode;
     };
 };
 
@@ -23,10 +26,14 @@ export type AppLayout = {
     viewport:
         | {
               kind: 'popup';
-              size: Size<Dimension>;
-              bounds: Bounds;
-              resize: Resize;
-              persist: Resize;
+              width: number | 'auto';
+              height: number | 'auto';
+              minWidth: number;
+              maxWidth: number;
+              minHeight: number;
+              maxHeight: number;
+              resize: ResizeMode;
+              remember: ResizeMode;
           }
         | {
               kind: 'browser';
