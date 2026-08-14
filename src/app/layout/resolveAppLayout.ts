@@ -1,56 +1,56 @@
 import type { Surface } from '@/app/surface/types';
-import { clamp, type MinMax, type Size } from '@/shared/geometry';
+import { clamp, type MinMax, type Size } from '@/shared/size';
 
-import { POPUP_RANGE, POPUP_RESIZE } from './surfaces';
+import { POPUP_BOUNDS, POPUP_RESIZE } from './surfaces';
 import type { AppLayout, Dimension, RouteLayout } from './types';
 
-type ResolveDimensionArgs = {
+type DimensionOptions = {
     remembered: number;
-    surfaceRange: MinMax<number>;
-    surfaceResizable: boolean;
+    bounds: MinMax;
+    resizable: boolean;
     override?: Dimension;
-    routeRange?: MinMax<number>;
+    routeBounds?: MinMax;
     routeResizable?: boolean;
 };
 
 type ResolvedDimension = {
     value: Dimension;
-    range: MinMax<number>;
+    bounds: MinMax;
     resize: boolean;
     persist: boolean;
 };
 
-export type ResolveAppLayoutArgs = {
+export type ResolveAppLayoutOptions = {
     surface: Surface;
-    rememberedPopupSize: Size<number>;
+    rememberedPopupSize: Size;
     routeLayout?: RouteLayout;
 };
 
 function resolveDimension({
     remembered,
-    surfaceRange,
-    surfaceResizable,
+    bounds,
+    resizable,
     override,
-    routeRange,
+    routeBounds,
     routeResizable,
-}: ResolveDimensionArgs): ResolvedDimension {
-    const range = routeRange ?? surfaceRange;
-    const rememberedValue = clamp(remembered, range);
+}: DimensionOptions): ResolvedDimension {
+    const resolvedBounds = routeBounds ?? bounds;
+    const rememberedValue = clamp(remembered, resolvedBounds);
 
     let value: Dimension = rememberedValue;
     if (override === 'auto') {
         value = 'auto';
     } else if (typeof override === 'number') {
-        value = routeRange ? clamp(override, routeRange) : override;
+        value = routeBounds ? clamp(override, routeBounds) : override;
     }
 
-    const resize = value !== 'auto' && (routeResizable ?? surfaceResizable);
+    const resize = value !== 'auto' && (routeResizable ?? resizable);
 
     return {
         value,
-        range,
+        bounds: resolvedBounds,
         resize,
-        persist: resize && override === undefined && routeRange === undefined,
+        persist: resize && override === undefined && routeBounds === undefined,
     };
 }
 
@@ -58,7 +58,7 @@ export function resolveAppLayout({
     surface,
     rememberedPopupSize,
     routeLayout,
-}: ResolveAppLayoutArgs): AppLayout {
+}: ResolveAppLayoutOptions): AppLayout {
     const bar = routeLayout?.bar ?? 'preserve';
 
     if (surface === 'sidepanel') {
@@ -72,18 +72,18 @@ export function resolveAppLayout({
     const popup = routeLayout?.popup;
     const width = resolveDimension({
         remembered: rememberedPopupSize.width,
-        surfaceRange: POPUP_RANGE.width,
-        surfaceResizable: POPUP_RESIZE.width,
+        bounds: POPUP_BOUNDS.width,
+        resizable: POPUP_RESIZE.width,
         override: popup?.size?.width,
-        routeRange: popup?.range?.width,
+        routeBounds: popup?.bounds?.width,
         routeResizable: popup?.resize?.width,
     });
     const height = resolveDimension({
         remembered: rememberedPopupSize.height,
-        surfaceRange: POPUP_RANGE.height,
-        surfaceResizable: POPUP_RESIZE.height,
+        bounds: POPUP_BOUNDS.height,
+        resizable: POPUP_RESIZE.height,
         override: popup?.size?.height,
-        routeRange: popup?.range?.height,
+        routeBounds: popup?.bounds?.height,
         routeResizable: popup?.resize?.height,
     });
 
@@ -96,9 +96,9 @@ export function resolveAppLayout({
                 width: width.value,
                 height: height.value,
             },
-            range: {
-                width: width.range,
-                height: height.range,
+            bounds: {
+                width: width.bounds,
+                height: height.bounds,
             },
             resize: {
                 width: width.resize,
