@@ -1,6 +1,7 @@
 import clsx from 'clsx';
 import { NavLink, useNavigate } from 'react-router';
 
+import { PlaybackBar as Player } from '@/features/player/PlaybackBar';
 import { setActiveBar, useActiveBar, type AppBarMode } from '@/state/app.store';
 import { Button } from '@/ui/Button';
 
@@ -28,11 +29,11 @@ function HomeBar() {
                 <NavLink to="/home" className={navClass}>
                     Home
                 </NavLink>
+                <NavLink to="/search" className={navClass}>
+                    Search
+                </NavLink>
                 <NavLink to="/settings" className={navClass}>
                     Settings
-                </NavLink>
-                <NavLink to="/profile" className={navClass}>
-                    Profile
                 </NavLink>
                 <Button
                     variant="ghost"
@@ -54,13 +55,8 @@ function PlaybackBar() {
 
     return (
         <>
-            <div className="min-w-0">
-                <div className="truncate text-sm font-medium">
-                    Nothing playing
-                </div>
-                <div className="truncate text-xs text-text-muted">Spotify</div>
-            </div>
-            <nav className="ml-auto flex items-center gap-1">
+            <Player />
+            <nav className="flex shrink-0 items-center gap-1">
                 <NavLink to="/lyrics" className={navClass}>
                     Lyrics
                 </NavLink>
