@@ -25,6 +25,13 @@ export const RESIZE_EDGES = [
 
 export type ResizeEdge = (typeof RESIZE_EDGES)[number];
 
+type ResizableSize = Size<CssDimension>;
+
+export type ResizedSize<T extends ResizableSize> = {
+    width: T['width'] extends number ? number : T['width'];
+    height: T['height'] extends number ? number : T['height'];
+};
+
 const DEFAULT_RANGE = {
     width: { min: 0, max: Number.POSITIVE_INFINITY },
     height: { min: 0, max: Number.POSITIVE_INFINITY },
@@ -65,13 +72,13 @@ function resizesFromBottom(edge: ResizeEdge) {
     return edge === 'bottom' || edge === 'bottom-left' || edge === 'bottom-right';
 }
 
-export function resizeSize<T extends CssDimension>(
-    start: Size<T>,
+export function resizeSize<T extends ResizableSize>(
+    start: T,
     delta: Size<number>,
     edge: ResizeEdge,
     range: Size<MinMax<number>>
-): Size<T> {
-    const next: Size<CssDimension> = { ...start };
+): ResizedSize<T> {
+    const next: ResizableSize = { ...start };
 
     if (typeof start.width === 'number') {
         if (resizesFromLeft(edge)) {
@@ -89,7 +96,7 @@ export function resizeSize<T extends CssDimension>(
         }
     }
 
-    return next as Size<T>;
+    return next as ResizedSize<T>;
 }
 
 type ResizeHandleProps = {
@@ -155,19 +162,19 @@ function ResizeHandle({
     );
 }
 
-export type ResizableProps<T extends CssDimension = CssDimension> = Omit<
+export type ResizableProps<T extends ResizableSize = ResizableSize> = Omit<
     ComponentPropsWithoutRef<'div'>,
     'onResize'
 > & {
-    size: Size<T>;
+    size: T;
     range?: Partial<Size<MinMax<number>>>;
     edges?: readonly ResizeEdge[];
-    onResize: (size: Size<T>, edge: ResizeEdge) => void;
+    onResize: (size: ResizedSize<T>, edge: ResizeEdge) => void;
     onResizeStart?: (edge: ResizeEdge) => void;
-    onResizeEnd?: (size: Size<T>, edge: ResizeEdge) => void;
+    onResizeEnd?: (size: ResizedSize<T>, edge: ResizeEdge) => void;
 };
 
-export function Resizable<T extends CssDimension>({
+export function Resizable<T extends ResizableSize>({
     size,
     range,
     edges = RESIZE_EDGES,
@@ -180,7 +187,7 @@ export function Resizable<T extends CssDimension>({
     ...props
 }: ResizableProps<T>) {
     const startSize = useRef(size);
-    const latestSize = useRef(size);
+    const latestSize = useRef(size as ResizedSize<T>);
     const resolvedRange = {
         width: range?.width ?? DEFAULT_RANGE.width,
         height: range?.height ?? DEFAULT_RANGE.height,
@@ -217,7 +224,7 @@ export function Resizable<T extends CssDimension>({
                     edge={edge}
                     onResizeStart={(activeEdge) => {
                         startSize.current = size;
-                        latestSize.current = size;
+                        latestSize.current = size as ResizedSize<T>;
                         onResizeStart?.(activeEdge);
                     }}
                     onResize={(activeEdge, delta) => {
