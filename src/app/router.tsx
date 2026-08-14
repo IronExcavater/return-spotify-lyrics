@@ -5,6 +5,7 @@ import { HomePage } from '@/features/home/HomePage';
 import { LyricsPage } from '@/features/lyrics/LyricsPage';
 import { ProfilePage } from '@/features/profile/ProfilePage';
 import { QueuePage } from '@/features/queue/QueuePage';
+import { SearchPage } from '@/features/search/SearchPage';
 import { SettingsPage } from '@/features/settings/SettingsPage';
 
 import { AppShell } from './AppShell';
@@ -27,6 +28,13 @@ export const router = createHashRouter([
                 element: <HomePage />,
                 handle: {
                     layout: { bar: 'preserve' },
+                } satisfies AppRouteHandle,
+            },
+            {
+                path: 'search',
+                element: <SearchPage />,
+                handle: {
+                    layout: { bar: 'home' },
                 } satisfies AppRouteHandle,
             },
             {
