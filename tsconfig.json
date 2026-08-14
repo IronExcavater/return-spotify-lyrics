@@ -1,15 +1,9 @@
 {
+    "extends": "./.wxt/tsconfig.json",
     "compilerOptions": {
-        "jsx": "react-jsx",
-        "target": "ES2022",
-        "module": "ESNext",
-        "moduleResolution": "bundler",
-        "esModuleInterop": true,
-        "resolveJsonModule": true,
-        "allowImportingTsExtensions": true,
-        "forceConsistentCasingInFileNames": true,
-        "noEmit": true,
-        "skipLibCheck": true,
-        "types": ["chrome", "vite/client"]
+        "strict": true,
+        "noUncheckedIndexedAccess": true,
+        "noFallthroughCasesInSwitch": true,
+        "useUnknownInCatchVariables": true
     }
 }

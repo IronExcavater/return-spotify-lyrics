@@ -1,3 +1,4 @@
-.husky
-.prettierignore
-.stylelintignore
+.output
+.wxt
+node_modules
+coverage

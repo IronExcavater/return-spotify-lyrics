@@ -1,0 +1,40 @@
+name: Verify
+
+on:
+    push:
+    pull_request:
+
+jobs:
+    verify:
+        runs-on: ubuntu-latest
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: pnpm/action-setup@v4
+              with:
+                  version: 10
+                  run_install: false
+
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 24
+
+            - name: Install dependencies
+              run: pnpm install --no-frozen-lockfile
+
+            - name: Check
+              run: pnpm check
+
+            - name: Test
+              run: pnpm test
+
+            - name: Build
+              run: pnpm build
+
+            - name: Verify extension outputs
+              run: |
+                  test -f .output/chrome-mv3/popup.html
+                  test -f .output/chrome-mv3/sidepanel.html
+                  test -f .output/chrome-mv3/background.js
+                  test -f .output/chrome-mv3/manifest.json

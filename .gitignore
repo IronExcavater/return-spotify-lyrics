@@ -1,12 +1,8 @@
 node_modules/
-dist
-release
-package-lock.json
-
-# IDEs
-.idea
-.vs
-.vscode
-
-# Platform
+.output/
+.wxt/
+coverage/
+.env
+.env.*
+!.env.example
 .DS_Store
