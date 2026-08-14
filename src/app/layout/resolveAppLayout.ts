@@ -1,56 +1,73 @@
 import type { Surface } from '@/app/surface/types';
-import { clamp, type MinMax, type Size } from '@/shared/size';
+import type { ResizeMode } from '@/ui/Resizable';
 
-import { POPUP_BOUNDS, POPUP_RESIZE } from './surfaces';
-import type { AppLayout, Dimension, RouteLayout } from './types';
+import { POPUP } from './surfaces';
+import type { AppLayout, RouteLayout } from './types';
 
-type DimensionOptions = {
+function clamp(value: number, min: number, max: number) {
+    return Math.min(max, Math.max(min, value));
+}
+
+function resizesWidth(mode: ResizeMode) {
+    return mode === 'both' || mode === 'horizontal';
+}
+
+function resizesHeight(mode: ResizeMode) {
+    return mode === 'both' || mode === 'vertical';
+}
+
+function resizeMode(width: boolean, height: boolean): ResizeMode {
+    if (width && height) return 'both';
+    if (width) return 'horizontal';
+    if (height) return 'vertical';
+    return false;
+}
+
+type AxisOptions = {
     remembered: number;
-    bounds: MinMax;
+    min: number;
+    max: number;
     resizable: boolean;
-    override?: Dimension;
-    routeBounds?: MinMax;
-    routeResizable?: boolean;
+    value?: number | 'auto';
+    routeMin?: number;
+    routeMax?: number;
 };
 
-type ResolvedDimension = {
-    value: Dimension;
-    bounds: MinMax;
-    resize: boolean;
-    persist: boolean;
-};
-
-export type ResolveAppLayoutOptions = {
-    surface: Surface;
-    rememberedPopupSize: Size;
-    routeLayout?: RouteLayout;
-};
-
-function resolveDimension({
+function resolveAxis({
     remembered,
-    bounds,
+    min,
+    max,
     resizable,
-    override,
-    routeBounds,
-    routeResizable,
-}: DimensionOptions): ResolvedDimension {
-    const resolvedBounds = routeBounds ?? bounds;
-    const rememberedValue = clamp(remembered, resolvedBounds);
+    value,
+    routeMin,
+    routeMax,
+}: AxisOptions) {
+    const resolvedMin = routeMin ?? min;
+    const resolvedMax = routeMax ?? max;
+    const hasRouteBounds = routeMin !== undefined || routeMax !== undefined;
 
-    let value: Dimension = rememberedValue;
-    if (override === 'auto') {
-        value = 'auto';
-    } else if (typeof override === 'number') {
-        value = routeBounds ? clamp(override, routeBounds) : override;
+    let resolvedValue: number | 'auto' = clamp(
+        remembered,
+        resolvedMin,
+        resolvedMax
+    );
+
+    if (value === 'auto') {
+        resolvedValue = 'auto';
+    } else if (typeof value === 'number') {
+        resolvedValue = hasRouteBounds
+            ? clamp(value, resolvedMin, resolvedMax)
+            : value;
     }
 
-    const resize = value !== 'auto' && (routeResizable ?? resizable);
+    const canResize = resolvedValue !== 'auto' && resizable;
 
     return {
-        value,
-        bounds: resolvedBounds,
-        resize,
-        persist: resize && override === undefined && routeBounds === undefined,
+        value: resolvedValue,
+        min: resolvedMin,
+        max: resolvedMax,
+        resize: canResize,
+        remember: canResize && value === undefined && !hasRouteBounds,
     };
 }
 
@@ -58,7 +75,11 @@ export function resolveAppLayout({
     surface,
     rememberedPopupSize,
     routeLayout,
-}: ResolveAppLayoutOptions): AppLayout {
+}: {
+    surface: Surface;
+    rememberedPopupSize: { width: number; height: number };
+    routeLayout?: RouteLayout;
+}): AppLayout {
     const bar = routeLayout?.bar ?? 'preserve';
 
     if (surface === 'sidepanel') {
@@ -70,21 +91,26 @@ export function resolveAppLayout({
     }
 
     const popup = routeLayout?.popup;
-    const width = resolveDimension({
+    const resize = popup?.resize ?? POPUP.resize;
+
+    const width = resolveAxis({
         remembered: rememberedPopupSize.width,
-        bounds: POPUP_BOUNDS.width,
-        resizable: POPUP_RESIZE.width,
-        override: popup?.size?.width,
-        routeBounds: popup?.bounds?.width,
-        routeResizable: popup?.resize?.width,
+        min: POPUP.minWidth,
+        max: POPUP.maxWidth,
+        resizable: resizesWidth(resize),
+        value: popup?.width,
+        routeMin: popup?.minWidth,
+        routeMax: popup?.maxWidth,
     });
-    const height = resolveDimension({
+
+    const height = resolveAxis({
         remembered: rememberedPopupSize.height,
-        bounds: POPUP_BOUNDS.height,
-        resizable: POPUP_RESIZE.height,
-        override: popup?.size?.height,
-        routeBounds: popup?.bounds?.height,
-        routeResizable: popup?.resize?.height,
+        min: POPUP.minHeight,
+        max: POPUP.maxHeight,
+        resizable: resizesHeight(resize),
+        value: popup?.height,
+        routeMin: popup?.minHeight,
+        routeMax: popup?.maxHeight,
     });
 
     return {
@@ -92,22 +118,14 @@ export function resolveAppLayout({
         bar,
         viewport: {
             kind: 'popup',
-            size: {
-                width: width.value,
-                height: height.value,
-            },
-            bounds: {
-                width: width.bounds,
-                height: height.bounds,
-            },
-            resize: {
-                width: width.resize,
-                height: height.resize,
-            },
-            persist: {
-                width: width.persist,
-                height: height.persist,
-            },
+            width: width.value,
+            height: height.value,
+            minWidth: width.min,
+            maxWidth: width.max,
+            minHeight: height.min,
+            maxHeight: height.max,
+            resize: resizeMode(width.resize, height.resize),
+            remember: resizeMode(width.remember, height.remember),
         },
     };
 }
