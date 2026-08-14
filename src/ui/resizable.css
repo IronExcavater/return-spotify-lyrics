@@ -80,11 +80,6 @@
     bottom: 0;
 }
 
-.resize-handle:hover,
-.resize-handle[data-active='true'] {
-    --resize-current-size: var(--resize-handle-active-size);
-}
-
 .resize-handle[data-resize-handle='top']:hover,
 .resize-handle[data-resize-handle='top'][data-active='true'],
 .resize-handle[data-resize-handle='bottom']:hover,
@@ -117,9 +112,10 @@
     border-radius: 999px;
     background: currentColor;
     opacity: 0.18;
+    scale: 1;
     transition:
         opacity 120ms ease,
-        transform 120ms ease;
+        scale 120ms ease;
 }
 
 .resize-handle:hover .resize-indicator,
@@ -128,7 +124,7 @@
 }
 
 .resize-handle[data-active='true'] .resize-indicator {
-    transform: scale(1.15);
+    scale: 1.15;
 }
 
 .resize-handle[data-resize-handle='top'] .resize-indicator,
