@@ -24,10 +24,14 @@
         "@tanstack/react-query": "^5.101.4",
         "@tanstack/react-store": "^0.11.0",
         "@tanstack/react-virtual": "^3.14.9",
+        "@webext-core/messaging": "^4.0.0",
         "clsx": "^2.1.1",
+        "firebase": "^12.17.1",
         "idb": "^8.0.3",
+        "lucide-react": "^1.31.0",
         "react": "^19.2.8",
         "react-dom": "^19.2.8",
+        "react-error-boundary": "^6.1.2",
         "react-router": "^8.3.0"
     },
     "devDependencies": {
