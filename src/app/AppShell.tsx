@@ -22,14 +22,16 @@ export function AppShell() {
 
     return (
         <Resizable
-            size={layout.viewport.size}
-            range={layout.viewport.range}
+            width={layout.viewport.width}
+            height={layout.viewport.height}
+            minWidth={layout.viewport.minWidth}
+            maxWidth={layout.viewport.maxWidth}
+            minHeight={layout.viewport.minHeight}
+            maxHeight={layout.viewport.maxHeight}
             resize={layout.viewport.resize}
             target="document"
-            persistence={{
-                storage: popupSizeStorage,
-                dimensions: layout.viewport.persist,
-            }}
+            storage={popupSizeStorage}
+            remember={layout.viewport.remember}
         >
             {content}
         </Resizable>
