@@ -1,6 +1,12 @@
+import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
-import { resizeSize, type ResizeEdge } from './resize';
+import {
+    RESIZE_EDGES,
+    Resizable,
+    resizeSize,
+    type ResizeEdge,
+} from './Resizable';
 
 const range = {
     width: { min: 350, max: 520 },
@@ -49,7 +55,7 @@ describe('resizeSize', () => {
         });
     });
 
-    it('does not convert auto dimensions to numbers', () => {
+    it('does not convert non-numeric dimensions to numbers', () => {
         expect(
             resizeSize(
                 { width: 320, height: 'auto' },
@@ -58,5 +64,44 @@ describe('resizeSize', () => {
                 range
             )
         ).toEqual({ width: 320, height: 'auto' });
+    });
+});
+
+describe('Resizable', () => {
+    it('renders all requested edge and corner handles', () => {
+        const markup = renderToStaticMarkup(
+            <Resizable
+                size={{ width: 400, height: 520 }}
+                range={range}
+                edges={RESIZE_EDGES}
+                onResize={() => {}}
+            >
+                <div>Content</div>
+            </Resizable>
+        );
+
+        for (const edge of RESIZE_EDGES) {
+            expect(markup).toContain(`data-resize-edge="${edge}"`);
+        }
+    });
+
+    it('omits corner and vertical handles when height is non-numeric', () => {
+        const markup = renderToStaticMarkup(
+            <Resizable
+                size={{ width: 400, height: 'auto' }}
+                range={range}
+                edges={RESIZE_EDGES}
+                onResize={() => {}}
+            >
+                <div>Content</div>
+            </Resizable>
+        );
+
+        expect(markup).toContain('data-resize-edge="left"');
+        expect(markup).toContain('data-resize-edge="right"');
+        expect(markup).not.toContain('data-resize-edge="top"');
+        expect(markup).not.toContain('data-resize-edge="bottom"');
+        expect(markup).not.toContain('data-resize-edge="top-left"');
+        expect(markup).not.toContain('data-resize-edge="bottom-right"');
     });
 });

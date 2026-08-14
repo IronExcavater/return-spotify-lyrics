@@ -1,7 +1,8 @@
 import type { Surface } from '@/app/surface/types';
+import { clamp, type MinMax, type Size } from '@/shared/geometry';
 
 import { POPUP_RANGE, POPUP_RESIZE } from './surfaces';
-import type { AppLayout, Dimension, MinMax, RouteLayout, Size } from './types';
+import type { AppLayout, Dimension, RouteLayout } from './types';
 
 type ResolveDimensionArgs = {
     remembered: number;
@@ -24,10 +25,6 @@ export type ResolveAppLayoutArgs = {
     rememberedPopupSize: Size<number>;
     routeLayout?: RouteLayout;
 };
-
-export function clamp(value: number, range: MinMax<number>): number {
-    return Math.min(range.max, Math.max(range.min, value));
-}
 
 function resolveDimension({
     remembered,

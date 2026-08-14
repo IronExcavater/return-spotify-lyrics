@@ -1,14 +1,7 @@
+import type { MinMax, Size } from '@/shared/geometry';
 import type { Surface } from '@/app/surface/types';
 
-export type Size<T> = {
-    width: T;
-    height: T;
-};
-
-export type MinMax<T = number> = {
-    min: T;
-    max: T;
-};
+export type { MinMax, Size } from '@/shared/geometry';
 
 export type Dimension = number | 'auto';
 export type BarPolicy = 'preserve' | 'home' | 'playback' | 'hidden';
