@@ -18,20 +18,21 @@ export function AppShell() {
         </div>
     );
 
-    if (layout.viewport.kind !== 'popup') return content;
+    const viewport = layout.viewport;
+    if (viewport.kind !== 'popup') return content;
 
     return (
         <Resizable
-            width={layout.viewport.width}
-            height={layout.viewport.height}
-            minWidth={layout.viewport.minWidth}
-            maxWidth={layout.viewport.maxWidth}
-            minHeight={layout.viewport.minHeight}
-            maxHeight={layout.viewport.maxHeight}
-            resize={layout.viewport.resize}
+            width={viewport.width}
+            height={viewport.height}
+            minWidth={viewport.minWidth}
+            maxWidth={viewport.maxWidth}
+            minHeight={viewport.minHeight}
+            maxHeight={viewport.maxHeight}
+            resize={viewport.resize}
             target="document"
             onChangeEnd={({ width, height }) => {
-                void savePopupSize(width, height, layout.viewport.remember);
+                void savePopupSize(width, height, viewport.remember);
             }}
         >
             {content}
