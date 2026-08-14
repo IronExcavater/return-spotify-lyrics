@@ -15,13 +15,28 @@ export class AppError extends Error {
     }
 }
 
+function serializedMetadata(error: Error) {
+    const value = error as Error & { code?: unknown; retryAfter?: unknown };
+    return {
+        code: typeof value.code === 'string' ? value.code : undefined,
+        retryAfter:
+            typeof value.retryAfter === 'number' ? value.retryAfter : undefined,
+    };
+}
+
 export function asAppError(error: unknown): AppError {
     if (error instanceof AppError) return error;
 
     if (error instanceof Error) {
-        return new AppError('app.unexpected', error.message || 'Something went wrong', {
-            cause: error,
-        });
+        const metadata = serializedMetadata(error);
+        return new AppError(
+            metadata.code ?? 'app.unexpected',
+            error.message || 'Something went wrong',
+            {
+                cause: error,
+                retryAfter: metadata.retryAfter,
+            }
+        );
     }
 
     return new AppError('app.unexpected', 'Something went wrong', {
