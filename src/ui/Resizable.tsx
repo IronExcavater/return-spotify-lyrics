@@ -8,14 +8,7 @@ import {
 } from 'react';
 import clsx from 'clsx';
 
-import {
-    clamp,
-    type CssDimension,
-    type MinMax,
-    type Size,
-} from '@/shared/geometry';
-
-export const RESIZE_EDGES = [
+export const RESIZE_HANDLES = [
     'top',
     'right',
     'bottom',
@@ -26,27 +19,20 @@ export const RESIZE_EDGES = [
     'bottom-right',
 ] as const;
 
-export type ResizeEdge = (typeof RESIZE_EDGES)[number];
-export type ResizableSize = Size<CssDimension>;
-export type ResizeAxes = boolean | Partial<Size<boolean>>;
-export type ResizeTarget = 'self' | 'document';
+export type ResizeHandle = (typeof RESIZE_HANDLES)[number];
+export type ResizeMode = 'both' | 'horizontal' | 'vertical' | false;
 
-export type SizeStorage = {
-    getValue: () => Promise<Size<number>>;
-    setValue: (value: Size<number>) => Promise<void>;
+type Dimensions = {
+    width: number | string;
+    height: number | string;
 };
 
-export type ResizePersistence = {
-    storage: SizeStorage;
-    dimensions?: Partial<Size<boolean>>;
+type StoredDimensions = {
+    width: number;
+    height: number;
 };
 
-const DEFAULT_RANGE = {
-    width: { min: 0, max: Number.POSITIVE_INFINITY },
-    height: { min: 0, max: Number.POSITIVE_INFINITY },
-} satisfies Size<MinMax<number>>;
-
-const edgeClass = {
+const handleClass = {
     top: 'top-0 right-3 left-3 h-1.5 cursor-ns-resize',
     right: 'top-3 right-0 bottom-3 w-1.5 cursor-ew-resize',
     bottom: 'right-3 bottom-0 left-3 h-1.5 cursor-ns-resize',
@@ -55,61 +41,63 @@ const edgeClass = {
     'top-right': 'top-0 right-0 size-3 cursor-nesw-resize',
     'bottom-left': 'bottom-0 left-0 size-3 cursor-nesw-resize',
     'bottom-right': 'right-0 bottom-0 size-3 cursor-nwse-resize',
-} satisfies Record<ResizeEdge, string>;
+} satisfies Record<ResizeHandle, string>;
 
-function resizesWidth(edge: ResizeEdge) {
-    return edge.includes('left') || edge.includes('right');
+function clamp(value: number, min: number, max: number) {
+    return Math.min(max, Math.max(min, value));
 }
 
-function resizesHeight(edge: ResizeEdge) {
-    return edge.includes('top') || edge.includes('bottom');
+function usesWidth(handle: ResizeHandle) {
+    return handle.includes('left') || handle.includes('right');
 }
 
-function resizesFromLeft(edge: ResizeEdge) {
-    return edge === 'left' || edge === 'top-left' || edge === 'bottom-left';
+function usesHeight(handle: ResizeHandle) {
+    return handle.includes('top') || handle.includes('bottom');
 }
 
-function resizesFromRight(edge: ResizeEdge) {
-    return edge === 'right' || edge === 'top-right' || edge === 'bottom-right';
+function fromLeft(handle: ResizeHandle) {
+    return handle === 'left' || handle === 'top-left' || handle === 'bottom-left';
 }
 
-function resizesFromTop(edge: ResizeEdge) {
-    return edge === 'top' || edge === 'top-left' || edge === 'top-right';
+function fromRight(handle: ResizeHandle) {
+    return handle === 'right' || handle === 'top-right' || handle === 'bottom-right';
 }
 
-function resizesFromBottom(edge: ResizeEdge) {
+function fromTop(handle: ResizeHandle) {
+    return handle === 'top' || handle === 'top-left' || handle === 'top-right';
+}
+
+function fromBottom(handle: ResizeHandle) {
     return (
-        edge === 'bottom' || edge === 'bottom-left' || edge === 'bottom-right'
+        handle === 'bottom' ||
+        handle === 'bottom-left' ||
+        handle === 'bottom-right'
     );
 }
 
-function normalizeAxes(resize: ResizeAxes): Size<boolean> {
-    if (typeof resize === 'boolean') {
-        return { width: resize, height: resize };
-    }
-
-    return {
-        width: resize.width ?? false,
-        height: resize.height ?? false,
-    };
+function resizesWidth(mode: ResizeMode) {
+    return mode === 'both' || mode === 'horizontal';
 }
 
-export function resolveResizeEdges(
-    size: ResizableSize,
-    resize: ResizeAxes = true,
-    edges: readonly ResizeEdge[] = RESIZE_EDGES
-): ResizeEdge[] {
-    const axes = normalizeAxes(resize);
+function resizesHeight(mode: ResizeMode) {
+    return mode === 'both' || mode === 'vertical';
+}
 
-    return edges.filter((edge) => {
-        const needsWidth = resizesWidth(edge);
-        const needsHeight = resizesHeight(edge);
-
-        if (needsWidth && (!axes.width || typeof size.width !== 'number')) {
+export function resolveResizeHandles(
+    width: number | string,
+    height: number | string,
+    resize: ResizeMode = 'both',
+    handles: readonly ResizeHandle[] = RESIZE_HANDLES
+): ResizeHandle[] {
+    return handles.filter((handle) => {
+        if (usesWidth(handle) && (!resizesWidth(resize) || typeof width !== 'number')) {
             return false;
         }
 
-        if (needsHeight && (!axes.height || typeof size.height !== 'number')) {
+        if (
+            usesHeight(handle) &&
+            (!resizesHeight(resize) || typeof height !== 'number')
+        ) {
             return false;
         }
 
@@ -117,60 +105,62 @@ export function resolveResizeEdges(
     });
 }
 
-export function resizeSize(
-    start: ResizableSize,
-    delta: Size<number>,
-    edge: ResizeEdge,
-    range: Size<MinMax<number>>
-): ResizableSize {
+export function resizeDimensions(
+    start: Dimensions,
+    deltaX: number,
+    deltaY: number,
+    handle: ResizeHandle,
+    minWidth = 0,
+    maxWidth = Number.POSITIVE_INFINITY,
+    minHeight = 0,
+    maxHeight = Number.POSITIVE_INFINITY
+): Dimensions {
     const next = { ...start };
 
     if (typeof start.width === 'number') {
-        if (resizesFromLeft(edge)) {
-            next.width = clamp(start.width - delta.width, range.width);
-        } else if (resizesFromRight(edge)) {
-            next.width = clamp(start.width + delta.width, range.width);
+        if (fromLeft(handle)) {
+            next.width = clamp(start.width - deltaX, minWidth, maxWidth);
+        } else if (fromRight(handle)) {
+            next.width = clamp(start.width + deltaX, minWidth, maxWidth);
         }
     }
 
     if (typeof start.height === 'number') {
-        if (resizesFromTop(edge)) {
-            next.height = clamp(start.height - delta.height, range.height);
-        } else if (resizesFromBottom(edge)) {
-            next.height = clamp(start.height + delta.height, range.height);
+        if (fromTop(handle)) {
+            next.height = clamp(start.height - deltaY, minHeight, maxHeight);
+        } else if (fromBottom(handle)) {
+            next.height = clamp(start.height + deltaY, minHeight, maxHeight);
         }
     }
 
     return next;
 }
 
-export function mergePersistedSize(
-    remembered: Size<number>,
-    resized: ResizableSize,
-    dimensions: Partial<Size<boolean>> = { width: true, height: true }
-): Size<number> {
+export function mergeStoredDimensions(
+    stored: StoredDimensions,
+    resized: Dimensions,
+    remember: ResizeMode = 'both'
+): StoredDimensions {
     return {
         width:
-            dimensions.width !== false && typeof resized.width === 'number'
+            resizesWidth(remember) && typeof resized.width === 'number'
                 ? resized.width
-                : remembered.width,
+                : stored.width,
         height:
-            dimensions.height !== false && typeof resized.height === 'number'
+            resizesHeight(remember) && typeof resized.height === 'number'
                 ? resized.height
-                : remembered.height,
+                : stored.height,
     };
 }
 
-function applyDocumentSize(size: ResizableSize) {
-    const width =
-        typeof size.width === 'number' ? `${size.width}px` : size.width;
-    const height =
-        typeof size.height === 'number' ? `${size.height}px` : size.height;
+function applyDocumentSize({ width, height }: Dimensions) {
+    const cssWidth = typeof width === 'number' ? `${width}px` : width;
+    const cssHeight = typeof height === 'number' ? `${height}px` : height;
 
-    document.documentElement.style.width = width;
-    document.documentElement.style.height = height;
-    document.body.style.width = width;
-    document.body.style.height = height;
+    document.documentElement.style.width = cssWidth;
+    document.documentElement.style.height = cssHeight;
+    document.body.style.width = cssWidth;
+    document.body.style.height = cssHeight;
 }
 
 function clearDocumentSize() {
@@ -180,19 +170,14 @@ function clearDocumentSize() {
     document.body.style.removeProperty('height');
 }
 
-type ResizeHandleProps = {
-    edge: ResizeEdge;
-    onResizeStart: (edge: ResizeEdge) => void;
-    onResize: (edge: ResizeEdge, delta: Size<number>) => void;
-    onResizeEnd: (edge: ResizeEdge) => void;
+type HandleProps = {
+    handle: ResizeHandle;
+    onStart: (handle: ResizeHandle) => void;
+    onMove: (handle: ResizeHandle, deltaX: number, deltaY: number) => void;
+    onEnd: (handle: ResizeHandle) => void;
 };
 
-function ResizeHandle({
-    edge,
-    onResizeStart,
-    onResize,
-    onResizeEnd,
-}: ResizeHandleProps) {
+function Handle({ handle, onStart, onMove, onEnd }: HandleProps) {
     const drag = useRef<{
         pointerId: number;
         x: number;
@@ -207,16 +192,16 @@ function ResizeHandle({
         }
 
         drag.current = null;
-        onResizeEnd(edge);
+        onEnd(handle);
     };
 
     return (
         <div
             aria-hidden="true"
-            data-resize-edge={edge}
+            data-resize-handle={handle}
             className={clsx(
                 'absolute z-50 touch-none select-none',
-                edgeClass[edge]
+                handleClass[handle]
             )}
             onPointerDown={(event) => {
                 event.preventDefault();
@@ -226,16 +211,17 @@ function ResizeHandle({
                     x: event.clientX,
                     y: event.clientY,
                 };
-                onResizeStart(edge);
+                onStart(handle);
             }}
             onPointerMove={(event) => {
                 const start = drag.current;
                 if (!start || start.pointerId !== event.pointerId) return;
 
-                onResize(edge, {
-                    width: event.clientX - start.x,
-                    height: event.clientY - start.y,
-                });
+                onMove(
+                    handle,
+                    event.clientX - start.x,
+                    event.clientY - start.y
+                );
             }}
             onPointerUp={finish}
             onPointerCancel={finish}
@@ -247,24 +233,37 @@ export type ResizableProps = Omit<
     ComponentPropsWithoutRef<'div'>,
     'onResize'
 > & {
-    size: ResizableSize;
-    range?: Partial<Size<MinMax<number>>>;
-    resize?: ResizeAxes;
-    edges?: readonly ResizeEdge[];
-    target?: ResizeTarget;
-    persistence?: ResizePersistence;
-    onResize?: (size: ResizableSize, edge: ResizeEdge) => void;
-    onResizeStart?: (edge: ResizeEdge) => void;
-    onResizeEnd?: (size: ResizableSize, edge: ResizeEdge) => void;
+    width: number | string;
+    height: number | string;
+    minWidth?: number;
+    maxWidth?: number;
+    minHeight?: number;
+    maxHeight?: number;
+    resize?: ResizeMode;
+    handles?: readonly ResizeHandle[];
+    target?: 'self' | 'document';
+    storage?: {
+        getValue: () => Promise<StoredDimensions>;
+        setValue: (value: StoredDimensions) => Promise<void>;
+    };
+    remember?: ResizeMode;
+    onResize?: (dimensions: Dimensions, handle: ResizeHandle) => void;
+    onResizeStart?: (handle: ResizeHandle) => void;
+    onResizeEnd?: (dimensions: Dimensions, handle: ResizeHandle) => void;
 };
 
 export function Resizable({
-    size,
-    range,
-    resize = true,
-    edges,
+    width,
+    height,
+    minWidth = 0,
+    maxWidth = Number.POSITIVE_INFINITY,
+    minHeight = 0,
+    maxHeight = Number.POSITIVE_INFINITY,
+    resize = 'both',
+    handles,
     target = 'self',
-    persistence,
+    storage,
+    remember = 'both',
     onResize,
     onResizeStart,
     onResizeEnd,
@@ -273,36 +272,35 @@ export function Resizable({
     children,
     ...props
 }: ResizableProps) {
-    const [currentSize, setCurrentSize] = useState<ResizableSize>(size);
-    const startSize = useRef<ResizableSize>(size);
-    const latestSize = useRef<ResizableSize>(size);
-
-    const resolvedRange = {
-        width: range?.width ?? DEFAULT_RANGE.width,
-        height: range?.height ?? DEFAULT_RANGE.height,
-    } satisfies Size<MinMax<number>>;
+    const [dimensions, setDimensions] = useState<Dimensions>({ width, height });
+    const start = useRef<Dimensions>({ width, height });
+    const latest = useRef<Dimensions>({ width, height });
 
     useEffect(() => {
-        setCurrentSize(size);
-        latestSize.current = size;
-    }, [size.height, size.width]);
+        const next = { width, height };
+        setDimensions(next);
+        latest.current = next;
+    }, [height, width]);
 
     useLayoutEffect(() => {
         if (target !== 'document') return;
 
-        applyDocumentSize(currentSize);
+        applyDocumentSize(dimensions);
         return clearDocumentSize;
-    }, [currentSize, target]);
+    }, [dimensions, target]);
 
-    const activeEdges = resolveResizeEdges(currentSize, resize, edges);
+    const activeHandles = resolveResizeHandles(
+        dimensions.width,
+        dimensions.height,
+        resize,
+        handles
+    );
 
-    const persist = async (next: ResizableSize) => {
-        if (!persistence) return;
+    const persist = async (next: Dimensions) => {
+        if (!storage || remember === false) return;
 
-        const remembered = await persistence.storage.getValue();
-        await persistence.storage.setValue(
-            mergePersistedSize(remembered, next, persistence.dimensions)
-        );
+        const stored = await storage.getValue();
+        await storage.setValue(mergeStoredDimensions(stored, next, remember));
     };
 
     return (
@@ -317,38 +315,42 @@ export function Resizable({
                 target === 'self'
                     ? {
                           ...style,
-                          width: currentSize.width,
-                          height: currentSize.height,
+                          width: dimensions.width,
+                          height: dimensions.height,
                       }
                     : style
             }
         >
             {children}
 
-            {activeEdges.map((edge) => (
-                <ResizeHandle
-                    key={edge}
-                    edge={edge}
-                    onResizeStart={(activeEdge) => {
-                        startSize.current = currentSize;
-                        latestSize.current = currentSize;
-                        onResizeStart?.(activeEdge);
+            {activeHandles.map((handle) => (
+                <Handle
+                    key={handle}
+                    handle={handle}
+                    onStart={(activeHandle) => {
+                        start.current = dimensions;
+                        latest.current = dimensions;
+                        onResizeStart?.(activeHandle);
                     }}
-                    onResize={(activeEdge, delta) => {
-                        const next = resizeSize(
-                            startSize.current,
-                            delta,
-                            activeEdge,
-                            resolvedRange
+                    onMove={(activeHandle, deltaX, deltaY) => {
+                        const next = resizeDimensions(
+                            start.current,
+                            deltaX,
+                            deltaY,
+                            activeHandle,
+                            minWidth,
+                            maxWidth,
+                            minHeight,
+                            maxHeight
                         );
-                        latestSize.current = next;
-                        setCurrentSize(next);
-                        onResize?.(next, activeEdge);
+                        latest.current = next;
+                        setDimensions(next);
+                        onResize?.(next, activeHandle);
                     }}
-                    onResizeEnd={(activeEdge) => {
-                        const next = latestSize.current;
+                    onEnd={(activeHandle) => {
+                        const next = latest.current;
                         void persist(next);
-                        onResizeEnd?.(next, activeEdge);
+                        onResizeEnd?.(next, activeHandle);
                     }}
                 />
             ))}
