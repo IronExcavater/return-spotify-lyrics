@@ -61,7 +61,11 @@ function resolveRelatedTarget(
     event: Event
 ) {
     if (event instanceof MouseEvent || event instanceof FocusEvent) {
-        return resolveMirroredTarget(sourceRoot, targetRoot, event.relatedTarget);
+        return resolveMirroredTarget(
+            sourceRoot,
+            targetRoot,
+            event.relatedTarget
+        );
     }
 
     return null;
@@ -137,7 +141,9 @@ export function useMirroredMarqueeEvents({
     useEffect(() => {
         if (!enabled) return;
 
-        const roots = rootsRef.current.slice(0, count).filter(Boolean) as HTMLElement[];
+        const roots = rootsRef.current
+            .slice(0, count)
+            .filter(Boolean) as HTMLElement[];
         if (roots.length < 2) return;
 
         let syncing = false;
@@ -151,7 +157,8 @@ export function useMirroredMarqueeEvents({
                     syncing = true;
                     try {
                         for (const target of roots) {
-                            if (target !== source) mirrorEvent(source, target, event);
+                            if (target !== source)
+                                mirrorEvent(source, target, event);
                         }
                     } finally {
                         syncing = false;
@@ -159,7 +166,9 @@ export function useMirroredMarqueeEvents({
                 };
 
                 source.addEventListener(eventType, handleEvent, true);
-                cleanups.push(() => source.removeEventListener(eventType, handleEvent, true));
+                cleanups.push(() =>
+                    source.removeEventListener(eventType, handleEvent, true)
+                );
             }
         }
 

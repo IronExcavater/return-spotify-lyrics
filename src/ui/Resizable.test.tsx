@@ -97,13 +97,7 @@ describe('resolveResizeHandles', () => {
                 'bottom-right',
                 'left',
             ])
-        ).toEqual([
-            'right',
-            'bottom',
-            'top-left',
-            'top-right',
-            'bottom-left',
-        ]);
+        ).toEqual(['right', 'bottom', 'top-left', 'top-right', 'bottom-left']);
     });
 });
 

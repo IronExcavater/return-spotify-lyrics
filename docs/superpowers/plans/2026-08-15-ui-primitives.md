@@ -22,10 +22,12 @@
 ### Task 1: Fade
 
 **Files:**
+
 - Create: `src/ui/Fade.tsx`
 - Create: `src/ui/Fade.test.tsx`
 
 **Interfaces:**
+
 - Produces: `Fade`, `FadeDirection`.
 
 - [ ] Write tests for each direction, disabled state, numeric/CSS fade size, and rounded class passthrough.
@@ -37,11 +39,13 @@
 ### Task 2: Marquee
 
 **Files:**
+
 - Create: `src/ui/Marquee.tsx`
 - Create: `src/ui/marquee.css`
 - Create: `src/ui/Marquee.test.tsx`
 
 **Interfaces:**
+
 - Produces: `Marquee`, `MarqueeMode`, helper functions for copy count and travel calculation.
 
 - [ ] Write failing tests for overflow/force decisions, automatic copy count, continuous travel distance and static rendered structure.
@@ -54,12 +58,14 @@
 ### Task 3: Resizable
 
 **Files:**
+
 - Modify: `src/ui/Resizable.tsx`
 - Modify: `src/ui/Resizable.test.tsx`
 - Modify: `src/app/AppShell.tsx`
 - Modify: `src/app/layout/popupSizeStorage.ts`
 
 **Interfaces:**
+
 - `Resizable` produces `onChange`, `onChangeStart`, `onChangeEnd` callbacks and accepts `disabledHandles`.
 - `popupSizeStorage.ts` owns the persistence helper used by `AppShell`.
 
@@ -74,6 +80,7 @@
 ### Task 4: Verification
 
 **Files:**
+
 - No product-code changes unless verification exposes a defect.
 
 - [ ] Run `pnpm check`.

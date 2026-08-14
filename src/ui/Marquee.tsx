@@ -149,8 +149,8 @@ export function Marquee({
             const separatorWidth =
                 mode === 'bounce'
                     ? 0
-                    : (separatorMeasureRef.current?.getBoundingClientRect().width ??
-                      gap);
+                    : (separatorMeasureRef.current?.getBoundingClientRect()
+                          .width ?? gap);
             const travel = canScroll
                 ? getMarqueeDistance(
                       mode,
@@ -181,8 +181,7 @@ export function Marquee({
                 setAnimationKey((key) => key + 1);
             }
 
-            const sample =
-                original.querySelector<HTMLElement>('*') ?? original;
+            const sample = original.querySelector<HTMLElement>('*') ?? original;
             const computed = getComputedStyle(sample);
             setSeparatorStyle((previous) => {
                 if (
