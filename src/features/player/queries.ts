@@ -1,6 +1,6 @@
 import { queryOptions } from '@tanstack/react-query';
 
-import { sendMessage } from '@/platform/messaging';
+import { sendMessage } from '../../platform/messaging';
 
 export const playerKeys = {
     all: ['spotify'] as const,
