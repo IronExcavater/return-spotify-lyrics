@@ -1,11 +1,7 @@
 import clsx from 'clsx';
 import { NavLink, useNavigate } from 'react-router';
 
-import {
-    setActiveBar,
-    useActiveBar,
-    type AppBarMode,
-} from '@/state/app.store';
+import { setActiveBar, useActiveBar, type AppBarMode } from '@/state/app.store';
 import { Button } from '@/ui/Button';
 
 import type { BarPolicy } from './layout/types';
@@ -59,7 +55,9 @@ function PlaybackBar() {
     return (
         <>
             <div className="min-w-0">
-                <div className="truncate text-sm font-medium">Nothing playing</div>
+                <div className="truncate text-sm font-medium">
+                    Nothing playing
+                </div>
                 <div className="truncate text-xs text-text-muted">Spotify</div>
             </div>
             <nav className="ml-auto flex items-center gap-1">
@@ -84,7 +82,10 @@ function PlaybackBar() {
     );
 }
 
-function resolveBar(policy: BarPolicy, activeBar: AppBarMode): AppBarMode | null {
+function resolveBar(
+    policy: BarPolicy,
+    activeBar: AppBarMode
+): AppBarMode | null {
     if (policy === 'hidden') return null;
     if (policy === 'home' || policy === 'playback') return policy;
     return activeBar;

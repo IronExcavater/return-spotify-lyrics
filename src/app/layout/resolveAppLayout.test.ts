@@ -37,7 +37,10 @@ describe('resolveAppLayout', () => {
         if (layout.viewport.kind !== 'popup') return;
 
         expect(layout.viewport.size).toEqual({ width: 320, height: 'auto' });
-        expect(layout.viewport.persist).toEqual({ width: false, height: false });
+        expect(layout.viewport.persist).toEqual({
+            width: false,
+            height: false,
+        });
     });
 
     it('uses route-specific ranges without persisting them as the normal size', () => {

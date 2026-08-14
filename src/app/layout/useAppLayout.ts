@@ -12,7 +12,9 @@ function isAppRouteHandle(handle: unknown): handle is AppRouteHandle {
     return typeof handle === 'object' && handle !== null && 'layout' in handle;
 }
 
-function findRouteLayout(matches: ReturnType<typeof useMatches>): RouteLayout | undefined {
+function findRouteLayout(
+    matches: ReturnType<typeof useMatches>
+): RouteLayout | undefined {
     for (let index = matches.length - 1; index >= 0; index -= 1) {
         const match = matches[index];
         if (match && isAppRouteHandle(match.handle) && match.handle.layout) {

@@ -1,13 +1,7 @@
 import type { Surface } from '@/app/surface/types';
 
 import { POPUP_RANGE, POPUP_RESIZE } from './surfaces';
-import type {
-    AppLayout,
-    Dimension,
-    MinMax,
-    RouteLayout,
-    Size,
-} from './types';
+import type { AppLayout, Dimension, MinMax, RouteLayout, Size } from './types';
 
 type ResolveDimensionArgs = {
     remembered: number;
@@ -53,15 +47,13 @@ function resolveDimension({
         value = routeRange ? clamp(override, routeRange) : override;
     }
 
-    const resize =
-        value !== 'auto' && (routeResizable ?? surfaceResizable);
+    const resize = value !== 'auto' && (routeResizable ?? surfaceResizable);
 
     return {
         value,
         range,
         resize,
-        persist:
-            resize && override === undefined && routeRange === undefined,
+        persist: resize && override === undefined && routeRange === undefined,
     };
 }
 

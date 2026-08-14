@@ -31,7 +31,7 @@ export function Button({
         <BaseButton
             {...props}
             className={clsx(
-                'inline-flex cursor-pointer items-center justify-center gap-2 rounded-control font-medium outline-none transition focus-visible:ring-2 focus-visible:ring-white/70 disabled:pointer-events-none disabled:opacity-50',
+                'inline-flex cursor-pointer items-center justify-center gap-2 rounded-control font-medium transition outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:pointer-events-none disabled:opacity-50',
                 variantClass[variant],
                 sizeClass[size],
                 className

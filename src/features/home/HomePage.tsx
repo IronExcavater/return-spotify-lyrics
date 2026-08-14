@@ -18,7 +18,8 @@ export function HomePage() {
             <div className="rounded-panel border border-border bg-surface p-4">
                 <h2 className="font-medium">Foundation</h2>
                 <p className="mt-1 text-sm text-text-muted">
-                    Routing, surface layout, persistence, TanStack state and Base UI are ready for feature work.
+                    Routing, surface layout, persistence, TanStack state and
+                    Base UI are ready for feature work.
                 </p>
             </div>
 

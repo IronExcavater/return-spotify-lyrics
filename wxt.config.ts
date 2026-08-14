@@ -15,7 +15,8 @@ export default defineConfig({
     modules: ['@wxt-dev/module-react'],
     manifest: {
         name: 'Return Spotify Lyrics',
-        description: 'A Spotify companion extension for playback and synchronized lyrics.',
+        description:
+            'A Spotify companion extension for playback and synchronized lyrics.',
         permissions: ['identity', 'storage', 'sidePanel'],
         icons,
         action: {

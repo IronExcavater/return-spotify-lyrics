@@ -24,6 +24,7 @@
 ### Task 1: Replace build/tooling foundation
 
 **Files:**
+
 - Modify: `package.json`
 - Modify: `tsconfig.json`
 - Create: `wxt.config.ts`
@@ -31,6 +32,7 @@
 - Remove obsolete CRXJS/Vite/Radix/ESLint/Stylelint configuration files after the WXT build passes.
 
 **Interfaces:**
+
 - Produces WXT scripts (`dev`, `build`, `zip`, `typecheck`, `lint`, `format`, `check`) and dependencies used by all later tasks.
 
 - [ ] Replace runtime dependencies with React 19, React Router, Base UI, TanStack Query/Store/Virtual, `clsx`, `idb`.
@@ -42,6 +44,7 @@
 ### Task 2: Add entrypoints and shared mounting
 
 **Files:**
+
 - Create: `src/entrypoints/popup/index.html`
 - Create: `src/entrypoints/popup/main.tsx`
 - Create: `src/entrypoints/sidepanel/index.html`
@@ -51,6 +54,7 @@
 - Create: `src/app/providers.tsx`
 
 **Interfaces:**
+
 - Produces `mountApp(surface: Surface): void`.
 - Consumes the Surface provider and router created in later tasks.
 
@@ -62,6 +66,7 @@
 ### Task 3: Implement declarative surface/layout model
 
 **Files:**
+
 - Create: `src/app/surface/types.ts`
 - Create: `src/app/surface/SurfaceProvider.tsx`
 - Create: `src/app/layout/types.ts`
@@ -71,6 +76,7 @@
 - Test: `src/app/layout/useAppLayout.test.ts`
 
 **Interfaces:**
+
 - Produces `Surface`, `Size<T>`, `MinMax<T>`, `RouteLayout`, `AppLayout`, `useSurface()`, `useAppLayout()` and `popupSizeStorage`.
 
 - [ ] Write resolver tests for normal remembered size, clamping, fixed route size, `auto` height, route resize policy and side-panel behaviour.
@@ -82,6 +88,7 @@
 ### Task 4: Implement typed router metadata
 
 **Files:**
+
 - Create: `src/app/router.tsx`
 - Create: `src/features/home/HomePage.tsx`
 - Create: `src/features/lyrics/LyricsPage.tsx`
@@ -90,6 +97,7 @@
 - Create: `src/features/auth/LoginPage.tsx`
 
 **Interfaces:**
+
 - Produces one module-level hash data router and route `handle.layout` metadata consumed by `useAppLayout()`.
 
 - [ ] Create `createHashRouter()` once at module scope.
@@ -100,12 +108,14 @@
 ### Task 5: Implement app runtime state and shell
 
 **Files:**
+
 - Create: `src/state/app.store.ts`
 - Create: `src/queries/client.ts`
 - Create: `src/app/AppShell.tsx`
 - Create: `src/app/AppBar.tsx`
 
 **Interfaces:**
+
 - Produces `activeBar`, `setActiveBar`, `playbackExpanded`, `setPlaybackExpanded`, and a Query client factory.
 
 - [ ] Create a module-level TanStack Store containing only mutable shared UI state.
@@ -117,11 +127,13 @@
 ### Task 6: Implement popup viewport and resizing
 
 **Files:**
+
 - Create: `src/app/layout/ResizeHandle.tsx`
 - Create: `src/app/layout/SurfaceViewport.tsx`
 - Test: `src/app/layout/resize.test.ts`
 
 **Interfaces:**
+
 - `ResizeHandle` consumes an axis, numeric bounds and resize callbacks.
 - `SurfaceViewport` consumes `useAppLayout()` and persists only normal popup resizing.
 
@@ -134,6 +146,7 @@
 ### Task 7: Add Tailwind theme and Base UI primitives
 
 **Files:**
+
 - Create: `src/assets/app.css`
 - Create: `src/ui/Button.tsx`
 - Create: `src/ui/IconButton.tsx`
@@ -141,6 +154,7 @@
 - Create: `src/ui/Slider.tsx`
 
 **Interfaces:**
+
 - Produces styled application primitives; only these files directly import Base UI for the implemented primitive types.
 
 - [ ] Add Tailwind 4 CSS-first semantic tokens.
@@ -150,11 +164,13 @@
 ### Task 8: Add IndexedDB bootstrap and verification
 
 **Files:**
+
 - Create: `src/platform/database.ts`
 - Modify: `.gitignore`
 - Delete obsolete source/config files from the old CRXJS implementation after successful verification.
 
 **Interfaces:**
+
 - Produces typed IndexedDB stores for future durable cache and lyrics drafts without adding repository abstractions.
 
 - [ ] Create a minimal `idb` schema with cache and lyrics-draft stores.

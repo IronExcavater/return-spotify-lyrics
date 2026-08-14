@@ -20,7 +20,7 @@ export function Slider({ label, className, ...props }: SliderProps) {
                     <BaseSlider.Indicator className="rounded-full bg-text" />
                     <BaseSlider.Thumb
                         aria-label={label}
-                        className="size-3 rounded-full bg-text outline-none transition-transform focus-visible:ring-2 focus-visible:ring-white/70"
+                        className="size-3 rounded-full bg-text transition-transform outline-none focus-visible:ring-2 focus-visible:ring-white/70"
                     />
                 </BaseSlider.Track>
             </BaseSlider.Control>

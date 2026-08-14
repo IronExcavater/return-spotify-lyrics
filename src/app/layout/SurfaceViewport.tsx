@@ -9,12 +9,7 @@ import {
 import { popupSizeStorage } from './popupSizeStorage';
 import { ResizeHandle } from './ResizeHandle';
 import { resizeSize, type ResizeEdge } from './resize';
-import type {
-    AppLayout,
-    Dimension,
-    PopupViewportLayout,
-    Size,
-} from './types';
+import type { AppLayout, Dimension, PopupViewportLayout, Size } from './types';
 
 type SurfaceViewportProps = {
     layout: AppLayout;
@@ -65,11 +60,13 @@ function PopupViewport({ viewport, children }: PopupViewportProps) {
         void popupSizeStorage.getValue().then((remembered) =>
             popupSizeStorage.setValue({
                 width:
-                    viewport.persist.width && typeof finalSize.width === 'number'
+                    viewport.persist.width &&
+                    typeof finalSize.width === 'number'
                         ? finalSize.width
                         : remembered.width,
                 height:
-                    viewport.persist.height && typeof finalSize.height === 'number'
+                    viewport.persist.height &&
+                    typeof finalSize.height === 'number'
                         ? finalSize.height
                         : remembered.height,
             })
@@ -132,7 +129,5 @@ export function SurfaceViewport({ layout, children }: SurfaceViewportProps) {
         return children;
     }
 
-    return (
-        <PopupViewport viewport={layout.viewport}>{children}</PopupViewport>
-    );
+    return <PopupViewport viewport={layout.viewport}>{children}</PopupViewport>;
 }
