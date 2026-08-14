@@ -2,42 +2,41 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
 import {
-    mergePersistedSize,
-    RESIZE_EDGES,
+    mergeStoredDimensions,
+    RESIZE_HANDLES,
     Resizable,
-    resizeSize,
-    resolveResizeEdges,
-    type ResizeEdge,
+    resizeDimensions,
+    resolveResizeHandles,
+    type ResizeHandle,
 } from './Resizable';
 
-const range = {
-    width: { min: 350, max: 520 },
-    height: { min: 320, max: 700 },
-};
-
-function resize(edge: string, width: number, height: number) {
-    return resizeSize(
+function resize(handle: string, deltaX: number, deltaY: number) {
+    return resizeDimensions(
         { width: 400, height: 520 },
-        { width, height },
-        edge as ResizeEdge,
-        range
+        deltaX,
+        deltaY,
+        handle as ResizeHandle,
+        350,
+        520,
+        320,
+        700
     );
 }
 
-describe('resizeSize', () => {
-    it('grows width when the left edge is dragged left', () => {
+describe('resizeDimensions', () => {
+    it('grows width when the left handle is dragged left', () => {
         expect(resize('left', -40, 0)).toEqual({ width: 440, height: 520 });
     });
 
-    it('grows width when the right edge is dragged right', () => {
+    it('grows width when the right handle is dragged right', () => {
         expect(resize('right', 40, 0)).toEqual({ width: 440, height: 520 });
     });
 
-    it('grows height when the top edge is dragged up', () => {
+    it('grows height when the top handle is dragged up', () => {
         expect(resize('top', 0, -40)).toEqual({ width: 400, height: 560 });
     });
 
-    it('grows height when the bottom edge is dragged down', () => {
+    it('grows height when the bottom handle is dragged down', () => {
         expect(resize('bottom', 0, 40)).toEqual({ width: 400, height: 560 });
     });
 
@@ -46,98 +45,96 @@ describe('resizeSize', () => {
         ['top-right', 40, -40, { width: 440, height: 560 }],
         ['bottom-left', -40, 40, { width: 440, height: 560 }],
         ['bottom-right', 40, 40, { width: 440, height: 560 }],
-    ])('resizes from the %s corner', (edge, dx, dy, expected) => {
-        expect(resize(edge, dx, dy)).toEqual(expected);
+    ])('resizes from the %s corner', (handle, deltaX, deltaY, expected) => {
+        expect(resize(handle, deltaX, deltaY)).toEqual(expected);
     });
 
-    it('clamps width and height when resizing a corner', () => {
+    it('clamps width and height', () => {
         expect(resize('bottom-left', -500, 500)).toEqual({
             width: 520,
             height: 700,
         });
     });
 
-    it('does not convert non-numeric dimensions to numbers', () => {
+    it('leaves auto dimensions alone', () => {
         expect(
-            resizeSize(
+            resizeDimensions(
                 { width: 320, height: 'auto' },
-                { width: 20, height: 100 },
+                20,
+                100,
                 'bottom',
-                range
+                300,
+                500,
+                300,
+                700
             )
         ).toEqual({ width: 320, height: 'auto' });
     });
 });
 
-describe('resolveResizeEdges', () => {
-    it('uses all edges and corners when both dimensions can resize', () => {
-        expect(
-            resolveResizeEdges(
-                { width: 400, height: 520 },
-                { width: true, height: true }
-            )
-        ).toEqual(RESIZE_EDGES);
+describe('resolveResizeHandles', () => {
+    it('uses all handles when resizing both dimensions', () => {
+        expect(resolveResizeHandles(400, 520, 'both')).toEqual(RESIZE_HANDLES);
     });
 
-    it('uses only horizontal edges when only width can resize', () => {
-        expect(
-            resolveResizeEdges(
-                { width: 400, height: 520 },
-                { width: true, height: false }
-            )
-        ).toEqual(['right', 'left']);
+    it('uses only left and right for horizontal resizing', () => {
+        expect(resolveResizeHandles(400, 520, 'horizontal')).toEqual([
+            'right',
+            'left',
+        ]);
     });
 
-    it('removes handles that need a non-numeric dimension', () => {
-        expect(
-            resolveResizeEdges(
-                { width: 400, height: 'auto' },
-                { width: true, height: true }
-            )
-        ).toEqual(['right', 'left']);
+    it('removes handles that require an auto dimension', () => {
+        expect(resolveResizeHandles(400, 'auto', 'both')).toEqual([
+            'right',
+            'left',
+        ]);
     });
 });
 
-describe('mergePersistedSize', () => {
-    it('persists only the dimensions enabled by the caller', () => {
+describe('mergeStoredDimensions', () => {
+    it('remembers only the requested dimensions', () => {
         expect(
-            mergePersistedSize(
+            mergeStoredDimensions(
                 { width: 400, height: 520 },
                 { width: 460, height: 600 },
-                { width: true, height: false }
+                'horizontal'
             )
         ).toEqual({ width: 460, height: 520 });
     });
 });
 
 describe('Resizable', () => {
-    it('renders all edge and corner handles by default', () => {
-        const markup = renderToStaticMarkup(
-            <Resizable size={{ width: 400, height: 520 }} range={range}>
-                <div>Content</div>
-            </Resizable>
-        );
-
-        for (const edge of RESIZE_EDGES) {
-            expect(markup).toContain(`data-resize-edge="${edge}"`);
-        }
-    });
-
-    it('renders only the dimensions enabled by resize', () => {
+    it('renders all handles by default', () => {
         const markup = renderToStaticMarkup(
             <Resizable
-                size={{ width: 400, height: 520 }}
-                range={range}
-                resize={{ width: true, height: false }}
+                width={400}
+                height={520}
+                minWidth={350}
+                maxWidth={520}
+                minHeight={320}
+                maxHeight={700}
             >
                 <div>Content</div>
             </Resizable>
         );
 
-        expect(markup).toContain('data-resize-edge="left"');
-        expect(markup).toContain('data-resize-edge="right"');
-        expect(markup).not.toContain('data-resize-edge="top"');
-        expect(markup).not.toContain('data-resize-edge="bottom"');
-        expect(markup).not.toContain('data-resize-edge="top-left"');
+        for (const handle of RESIZE_HANDLES) {
+            expect(markup).toContain(`data-resize-handle="${handle}"`);
+        }
+    });
+
+    it('renders only horizontal handles when requested', () => {
+        const markup = renderToStaticMarkup(
+            <Resizable width={400} height={520} resize="horizontal">
+                <div>Content</div>
+            </Resizable>
+        );
+
+        expect(markup).toContain('data-resize-handle="left"');
+        expect(markup).toContain('data-resize-handle="right"');
+        expect(markup).not.toContain('data-resize-handle="top"');
+        expect(markup).not.toContain('data-resize-handle="bottom"');
+        expect(markup).not.toContain('data-resize-handle="top-left"');
     });
 });
