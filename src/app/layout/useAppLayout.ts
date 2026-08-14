@@ -2,11 +2,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { useMatches } from 'react-router';
 
 import { useSurface } from '@/app/surface/SurfaceProvider';
+import type { Size } from '@/shared/size';
 
 import { popupSizeStorage } from './popupSizeStorage';
 import { resolveAppLayout } from './resolveAppLayout';
 import { POPUP_DEFAULT_SIZE } from './surfaces';
-import type { AppRouteHandle, RouteLayout, Size } from './types';
+import type { AppRouteHandle, RouteLayout } from './types';
 
 function isAppRouteHandle(handle: unknown): handle is AppRouteHandle {
     return typeof handle === 'object' && handle !== null && 'layout' in handle;
@@ -30,7 +31,7 @@ export function useAppLayout() {
     const matches = useMatches();
     const routeLayout = findRouteLayout(matches);
     const [rememberedPopupSize, setRememberedPopupSize] =
-        useState<Size<number>>(POPUP_DEFAULT_SIZE);
+        useState<Size>(POPUP_DEFAULT_SIZE);
 
     useEffect(() => {
         if (surface !== 'popup') return;
