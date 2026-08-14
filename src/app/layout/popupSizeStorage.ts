@@ -1,13 +1,14 @@
 import { storage } from 'wxt/utils/storage';
 
-import type { Size } from '@/shared/size';
+import { POPUP } from './surfaces';
 
-import { POPUP_DEFAULT_SIZE } from './surfaces';
-
-export const popupSizeStorage = storage.defineItem<Size>(
-    'local:layout:popup-size',
-    {
-        fallback: POPUP_DEFAULT_SIZE,
-        version: 1,
-    }
-);
+export const popupSizeStorage = storage.defineItem<{
+    width: number;
+    height: number;
+}>('local:layout:popup-size', {
+    fallback: {
+        width: POPUP.width,
+        height: POPUP.height,
+    },
+    version: 1,
+});
