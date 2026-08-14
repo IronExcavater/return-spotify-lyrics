@@ -1,7 +1,6 @@
 import { ArrowLeft, Home, RefreshCw, RotateCcw } from 'lucide-react';
 
-import { Button } from '@/ui/Button';
-
+import { Button } from '../ui/Button';
 import { asAppError } from './AppError';
 
 type ErrorPageProps = {
