@@ -19,7 +19,7 @@ function getElementPath(root: HTMLElement, target: Element) {
     let current: Element | null = target;
 
     while (current && current !== root) {
-        const parent = current.parentElement;
+        const parent: Element | null = current.parentElement;
         if (!parent) return null;
 
         const index = Array.prototype.indexOf.call(parent.children, current);
