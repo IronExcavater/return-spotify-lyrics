@@ -3,7 +3,7 @@ import { Outlet } from 'react-router';
 import { Resizable } from '@/ui/Resizable';
 
 import { AppBar } from './AppBar';
-import { popupSizeStorage } from './layout/popupSizeStorage';
+import { savePopupSize } from './layout/popupSizeStorage';
 import { useAppLayout } from './layout/useAppLayout';
 
 export function AppShell() {
@@ -30,8 +30,9 @@ export function AppShell() {
             maxHeight={layout.viewport.maxHeight}
             resize={layout.viewport.resize}
             target="document"
-            storage={popupSizeStorage}
-            remember={layout.viewport.remember}
+            onChangeEnd={({ width, height }) => {
+                void savePopupSize(width, height, layout.viewport.remember);
+            }}
         >
             {content}
         </Resizable>
