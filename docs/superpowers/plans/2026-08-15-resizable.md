@@ -22,10 +22,12 @@
 ### Task 1: Generalise resize geometry
 
 **Files:**
+
 - Modify: `src/app/layout/resize.test.ts`
 - Modify: `src/app/layout/resize.ts`
 
 **Interfaces:**
+
 - Produces `ResizeEdge` with eight directions and `resizeSize(start, delta, edge, range)`.
 
 - [ ] Add failing tests for right/top edges and opposite corners.
@@ -36,10 +38,12 @@
 ### Task 2: Add reusable `Resizable`
 
 **Files:**
+
 - Create: `src/ui/Resizable.tsx`
 - Modify: `src/app/layout/ResizeHandle.tsx`
 
 **Interfaces:**
+
 - Produces controlled `Resizable` with `size`, `range`, `edges`, `onResize`, `onResizeStart`, and `onResizeEnd` props.
 
 - [ ] Generalise `ResizeHandle` styling to all eight directions.
@@ -49,10 +53,12 @@
 ### Task 3: Remove `SurfaceViewport`
 
 **Files:**
+
 - Modify: `src/app/AppShell.tsx`
 - Delete: `src/app/layout/SurfaceViewport.tsx`
 
 **Interfaces:**
+
 - `AppShell` consumes `useAppLayout()` and uses `Resizable` only for popup layouts.
 
 - [ ] Move popup document dimension synchronisation and WXT persistence into a small app-shell-local popup wrapper.
