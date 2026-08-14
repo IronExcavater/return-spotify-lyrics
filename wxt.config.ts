@@ -18,6 +18,12 @@ export default defineConfig({
         description:
             'A Spotify companion extension for playback and synchronized lyrics.',
         permissions: ['identity', 'storage', 'sidePanel'],
+        host_permissions: [
+            'https://api.spotify.com/*',
+            'https://lrclib.net/*',
+            'https://identitytoolkit.googleapis.com/*',
+            'https://securetoken.googleapis.com/*',
+        ],
         icons,
         action: {
             default_icon: icons,
