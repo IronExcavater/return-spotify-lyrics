@@ -1,5 +1,8 @@
 import {
+    useEffect,
+    useLayoutEffect,
     useRef,
+    useState,
     type ComponentPropsWithoutRef,
     type PointerEvent as ReactPointerEvent,
 } from 'react';
@@ -24,12 +27,18 @@ export const RESIZE_EDGES = [
 ] as const;
 
 export type ResizeEdge = (typeof RESIZE_EDGES)[number];
+export type ResizableSize = Size<CssDimension>;
+export type ResizeAxes = boolean | Partial<Size<boolean>>;
+export type ResizeTarget = 'self' | 'document';
 
-type ResizableSize = Size<CssDimension>;
+export type SizeStorage = {
+    getValue: () => Promise<Size<number>>;
+    setValue: (value: Size<number>) => Promise<void>;
+};
 
-export type ResizedSize<T extends ResizableSize> = {
-    width: T['width'] extends number ? number : T['width'];
-    height: T['height'] extends number ? number : T['height'];
+export type ResizePersistence = {
+    storage: SizeStorage;
+    dimensions?: Partial<Size<boolean>>;
 };
 
 const DEFAULT_RANGE = {
@@ -49,11 +58,11 @@ const edgeClass = {
 } satisfies Record<ResizeEdge, string>;
 
 function resizesWidth(edge: ResizeEdge) {
-    return edge === 'left' || edge === 'right' || edge.includes('left') || edge.includes('right');
+    return edge.includes('left') || edge.includes('right');
 }
 
 function resizesHeight(edge: ResizeEdge) {
-    return edge === 'top' || edge === 'bottom' || edge.includes('top') || edge.includes('bottom');
+    return edge.includes('top') || edge.includes('bottom');
 }
 
 function resizesFromLeft(edge: ResizeEdge) {
@@ -72,13 +81,47 @@ function resizesFromBottom(edge: ResizeEdge) {
     return edge === 'bottom' || edge === 'bottom-left' || edge === 'bottom-right';
 }
 
-export function resizeSize<T extends ResizableSize>(
-    start: T,
+function normalizeAxes(resize: ResizeAxes): Size<boolean> {
+    if (typeof resize === 'boolean') {
+        return { width: resize, height: resize };
+    }
+
+    return {
+        width: resize.width ?? false,
+        height: resize.height ?? false,
+    };
+}
+
+export function resolveResizeEdges(
+    size: ResizableSize,
+    resize: ResizeAxes = true,
+    edges: readonly ResizeEdge[] = RESIZE_EDGES
+): ResizeEdge[] {
+    const axes = normalizeAxes(resize);
+
+    return edges.filter((edge) => {
+        const needsWidth = resizesWidth(edge);
+        const needsHeight = resizesHeight(edge);
+
+        if (needsWidth && (!axes.width || typeof size.width !== 'number')) {
+            return false;
+        }
+
+        if (needsHeight && (!axes.height || typeof size.height !== 'number')) {
+            return false;
+        }
+
+        return true;
+    });
+}
+
+export function resizeSize(
+    start: ResizableSize,
     delta: Size<number>,
     edge: ResizeEdge,
     range: Size<MinMax<number>>
-): ResizedSize<T> {
-    const next: ResizableSize = { ...start };
+): ResizableSize {
+    const next = { ...start };
 
     if (typeof start.width === 'number') {
         if (resizesFromLeft(edge)) {
@@ -96,7 +139,42 @@ export function resizeSize<T extends ResizableSize>(
         }
     }
 
-    return next as ResizedSize<T>;
+    return next;
+}
+
+export function mergePersistedSize(
+    remembered: Size<number>,
+    resized: ResizableSize,
+    dimensions: Partial<Size<boolean>> = { width: true, height: true }
+): Size<number> {
+    return {
+        width:
+            dimensions.width !== false && typeof resized.width === 'number'
+                ? resized.width
+                : remembered.width,
+        height:
+            dimensions.height !== false && typeof resized.height === 'number'
+                ? resized.height
+                : remembered.height,
+    };
+}
+
+function applyDocumentSize(size: ResizableSize) {
+    const width = typeof size.width === 'number' ? `${size.width}px` : size.width;
+    const height =
+        typeof size.height === 'number' ? `${size.height}px` : size.height;
+
+    document.documentElement.style.width = width;
+    document.documentElement.style.height = height;
+    document.body.style.width = width;
+    document.body.style.height = height;
+}
+
+function clearDocumentSize() {
+    document.documentElement.style.removeProperty('width');
+    document.documentElement.style.removeProperty('height');
+    document.body.style.removeProperty('width');
+    document.body.style.removeProperty('height');
 }
 
 type ResizeHandleProps = {
@@ -112,11 +190,7 @@ function ResizeHandle({
     onResize,
     onResizeEnd,
 }: ResizeHandleProps) {
-    const drag = useRef<{
-        pointerId: number;
-        x: number;
-        y: number;
-    } | null>(null);
+    const drag = useRef<{ pointerId: number; x: number; y: number } | null>(null);
 
     const finish = (event: ReactPointerEvent<HTMLDivElement>) => {
         if (!drag.current || drag.current.pointerId !== event.pointerId) return;
@@ -162,22 +236,25 @@ function ResizeHandle({
     );
 }
 
-export type ResizableProps<T extends ResizableSize = ResizableSize> = Omit<
-    ComponentPropsWithoutRef<'div'>,
-    'onResize'
-> & {
-    size: T;
+export type ResizableProps = Omit<ComponentPropsWithoutRef<'div'>, 'onResize'> & {
+    size: ResizableSize;
     range?: Partial<Size<MinMax<number>>>;
+    resize?: ResizeAxes;
     edges?: readonly ResizeEdge[];
-    onResize: (size: ResizedSize<T>, edge: ResizeEdge) => void;
+    target?: ResizeTarget;
+    persistence?: ResizePersistence;
+    onResize?: (size: ResizableSize, edge: ResizeEdge) => void;
     onResizeStart?: (edge: ResizeEdge) => void;
-    onResizeEnd?: (size: ResizedSize<T>, edge: ResizeEdge) => void;
+    onResizeEnd?: (size: ResizableSize, edge: ResizeEdge) => void;
 };
 
-export function Resizable<T extends ResizableSize>({
+export function Resizable({
     size,
     range,
-    edges = RESIZE_EDGES,
+    resize = true,
+    edges,
+    target = 'self',
+    persistence,
     onResize,
     onResizeStart,
     onResizeEnd,
@@ -185,46 +262,66 @@ export function Resizable<T extends ResizableSize>({
     style,
     children,
     ...props
-}: ResizableProps<T>) {
-    const startSize = useRef(size);
-    const latestSize = useRef(size as ResizedSize<T>);
+}: ResizableProps) {
+    const [currentSize, setCurrentSize] = useState<ResizableSize>(size);
+    const startSize = useRef<ResizableSize>(size);
+    const latestSize = useRef<ResizableSize>(size);
+
     const resolvedRange = {
         width: range?.width ?? DEFAULT_RANGE.width,
         height: range?.height ?? DEFAULT_RANGE.height,
     } satisfies Size<MinMax<number>>;
 
-    const canUseEdge = (edge: ResizeEdge) => {
-        const needsWidth = resizesWidth(edge);
-        const needsHeight = resizesHeight(edge);
+    useEffect(() => {
+        setCurrentSize(size);
+        latestSize.current = size;
+    }, [size.height, size.width]);
 
-        if (needsWidth && needsHeight) {
-            return typeof size.width === 'number' && typeof size.height === 'number';
-        }
+    useLayoutEffect(() => {
+        if (target !== 'document') return;
 
-        if (needsWidth) return typeof size.width === 'number';
-        if (needsHeight) return typeof size.height === 'number';
-        return false;
+        applyDocumentSize(currentSize);
+        return clearDocumentSize;
+    }, [currentSize, target]);
+
+    const activeEdges = resolveResizeEdges(currentSize, resize, edges);
+
+    const persist = async (next: ResizableSize) => {
+        if (!persistence) return;
+
+        const remembered = await persistence.storage.getValue();
+        await persistence.storage.setValue(
+            mergePersistedSize(remembered, next, persistence.dimensions)
+        );
     };
 
     return (
         <div
             {...props}
-            className={clsx('relative', className)}
-            style={{
-                ...style,
-                width: size.width,
-                height: size.height,
-            }}
+            className={clsx(
+                'relative',
+                target === 'document' && 'h-full w-full',
+                className
+            )}
+            style={
+                target === 'self'
+                    ? {
+                          ...style,
+                          width: currentSize.width,
+                          height: currentSize.height,
+                      }
+                    : style
+            }
         >
             {children}
 
-            {edges.filter(canUseEdge).map((edge) => (
+            {activeEdges.map((edge) => (
                 <ResizeHandle
                     key={edge}
                     edge={edge}
                     onResizeStart={(activeEdge) => {
-                        startSize.current = size;
-                        latestSize.current = size as ResizedSize<T>;
+                        startSize.current = currentSize;
+                        latestSize.current = currentSize;
                         onResizeStart?.(activeEdge);
                     }}
                     onResize={(activeEdge, delta) => {
@@ -235,10 +332,13 @@ export function Resizable<T extends ResizableSize>({
                             resolvedRange
                         );
                         latestSize.current = next;
-                        onResize(next, activeEdge);
+                        setCurrentSize(next);
+                        onResize?.(next, activeEdge);
                     }}
                     onResizeEnd={(activeEdge) => {
-                        onResizeEnd?.(latestSize.current, activeEdge);
+                        const next = latestSize.current;
+                        void persist(next);
+                        onResizeEnd?.(next, activeEdge);
                     }}
                 />
             ))}
