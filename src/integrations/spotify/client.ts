@@ -1,4 +1,4 @@
-import { AppError } from '@/errors/AppError';
+import { AppError } from '../../errors/AppError';
 
 const SPOTIFY_API = 'https://api.spotify.com/v1';
 
