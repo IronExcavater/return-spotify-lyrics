@@ -4,9 +4,12 @@ import {
     useRef,
     useState,
     type ComponentPropsWithoutRef,
+    type CSSProperties,
     type PointerEvent as ReactPointerEvent,
 } from 'react';
 import clsx from 'clsx';
+
+import './resizable.css';
 
 export const RESIZE_HANDLES = [
     'top',
@@ -26,22 +29,6 @@ type Dimensions = {
     width: number | string;
     height: number | string;
 };
-
-type StoredDimensions = {
-    width: number;
-    height: number;
-};
-
-const handleClass = {
-    top: 'top-0 right-3 left-3 h-1.5 cursor-ns-resize',
-    right: 'top-3 right-0 bottom-3 w-1.5 cursor-ew-resize',
-    bottom: 'right-3 bottom-0 left-3 h-1.5 cursor-ns-resize',
-    left: 'top-3 bottom-3 left-0 w-1.5 cursor-ew-resize',
-    'top-left': 'top-0 left-0 size-3 cursor-nwse-resize',
-    'top-right': 'top-0 right-0 size-3 cursor-nesw-resize',
-    'bottom-left': 'bottom-0 left-0 size-3 cursor-nesw-resize',
-    'bottom-right': 'right-0 bottom-0 size-3 cursor-nwse-resize',
-} satisfies Record<ResizeHandle, string>;
 
 function clamp(value: number, min: number, max: number) {
     return Math.min(max, Math.max(min, value));
@@ -93,9 +80,14 @@ export function resolveResizeHandles(
     width: number | string,
     height: number | string,
     resize: ResizeMode = 'both',
-    handles: readonly ResizeHandle[] = RESIZE_HANDLES
+    handles: readonly ResizeHandle[] = RESIZE_HANDLES,
+    disabledHandles: readonly ResizeHandle[] = []
 ): ResizeHandle[] {
+    const disabled = new Set(disabledHandles);
+
     return handles.filter((handle) => {
+        if (disabled.has(handle)) return false;
+
         if (
             usesWidth(handle) &&
             (!resizesWidth(resize) || typeof width !== 'number')
@@ -145,23 +137,6 @@ export function resizeDimensions(
     return next;
 }
 
-export function mergeStoredDimensions(
-    stored: StoredDimensions,
-    resized: Dimensions,
-    remember: ResizeMode = 'both'
-): StoredDimensions {
-    return {
-        width:
-            resizesWidth(remember) && typeof resized.width === 'number'
-                ? resized.width
-                : stored.width,
-        height:
-            resizesHeight(remember) && typeof resized.height === 'number'
-                ? resized.height
-                : stored.height,
-    };
-}
-
 function applyDocumentSize({ width, height }: Dimensions) {
     const cssWidth = typeof width === 'number' ? `${width}px` : width;
     const cssHeight = typeof height === 'number' ? `${height}px` : height;
@@ -181,17 +156,25 @@ function clearDocumentSize() {
 
 type HandleProps = {
     handle: ResizeHandle;
+    showIndicator: boolean;
     onStart: (handle: ResizeHandle) => void;
     onMove: (handle: ResizeHandle, deltaX: number, deltaY: number) => void;
     onEnd: (handle: ResizeHandle) => void;
 };
 
-function Handle({ handle, onStart, onMove, onEnd }: HandleProps) {
+function Handle({
+    handle,
+    showIndicator,
+    onStart,
+    onMove,
+    onEnd,
+}: HandleProps) {
     const drag = useRef<{
         pointerId: number;
         x: number;
         y: number;
     } | null>(null);
+    const [active, setActive] = useState(false);
 
     const finish = (event: ReactPointerEvent<HTMLDivElement>) => {
         if (!drag.current || drag.current.pointerId !== event.pointerId) return;
@@ -201,6 +184,7 @@ function Handle({ handle, onStart, onMove, onEnd }: HandleProps) {
         }
 
         drag.current = null;
+        setActive(false);
         onEnd(handle);
     };
 
@@ -208,10 +192,8 @@ function Handle({ handle, onStart, onMove, onEnd }: HandleProps) {
         <div
             aria-hidden="true"
             data-resize-handle={handle}
-            className={clsx(
-                'absolute z-50 touch-none select-none',
-                handleClass[handle]
-            )}
+            data-active={active}
+            className="resize-handle"
             onPointerDown={(event) => {
                 event.preventDefault();
                 event.currentTarget.setPointerCapture(event.pointerId);
@@ -220,6 +202,7 @@ function Handle({ handle, onStart, onMove, onEnd }: HandleProps) {
                     x: event.clientX,
                     y: event.clientY,
                 };
+                setActive(true);
                 onStart(handle);
             }}
             onPointerMove={(event) => {
@@ -234,13 +217,21 @@ function Handle({ handle, onStart, onMove, onEnd }: HandleProps) {
             }}
             onPointerUp={finish}
             onPointerCancel={finish}
-        />
+        >
+            {showIndicator && (
+                <span
+                    aria-hidden="true"
+                    data-resize-indicator="true"
+                    className="resize-indicator"
+                />
+            )}
+        </div>
     );
 }
 
 export type ResizableProps = Omit<
     ComponentPropsWithoutRef<'div'>,
-    'onResize'
+    'onChange'
 > & {
     width: number | string;
     height: number | string;
@@ -250,15 +241,14 @@ export type ResizableProps = Omit<
     maxHeight?: number;
     resize?: ResizeMode;
     handles?: readonly ResizeHandle[];
+    disabledHandles?: readonly ResizeHandle[];
     target?: 'self' | 'document';
-    storage?: {
-        getValue: () => Promise<StoredDimensions>;
-        setValue: (value: StoredDimensions) => Promise<void>;
-    };
-    remember?: ResizeMode;
-    onResize?: (dimensions: Dimensions, handle: ResizeHandle) => void;
-    onResizeStart?: (handle: ResizeHandle) => void;
-    onResizeEnd?: (dimensions: Dimensions, handle: ResizeHandle) => void;
+    handleSize?: number;
+    activeHandleSize?: number;
+    showIndicators?: boolean;
+    onChange?: (dimensions: Dimensions, handle: ResizeHandle) => void;
+    onChangeStart?: (handle: ResizeHandle) => void;
+    onChangeEnd?: (dimensions: Dimensions, handle: ResizeHandle) => void;
 };
 
 export function Resizable({
@@ -270,12 +260,14 @@ export function Resizable({
     maxHeight = Number.POSITIVE_INFINITY,
     resize = 'both',
     handles,
+    disabledHandles,
     target = 'self',
-    storage,
-    remember = 'both',
-    onResize,
-    onResizeStart,
-    onResizeEnd,
+    handleSize = 6,
+    activeHandleSize = 10,
+    showIndicators = true,
+    onChange,
+    onChangeStart,
+    onChangeEnd,
     className,
     style,
     children,
@@ -302,15 +294,24 @@ export function Resizable({
         dimensions.width,
         dimensions.height,
         resize,
-        handles
+        handles,
+        disabledHandles
     );
 
-    const persist = async (next: Dimensions) => {
-        if (!storage || remember === false) return;
-
-        const stored = await storage.getValue();
-        await storage.setValue(mergeStoredDimensions(stored, next, remember));
-    };
+    const resizeStyle = {
+        ...style,
+        '--resize-handle-size': `${Math.max(1, handleSize)}px`,
+        '--resize-handle-active-size': `${Math.max(
+            handleSize,
+            activeHandleSize
+        )}px`,
+        ...(target === 'self'
+            ? {
+                  width: dimensions.width,
+                  height: dimensions.height,
+              }
+            : undefined),
+    } as CSSProperties;
 
     return (
         <div
@@ -320,15 +321,7 @@ export function Resizable({
                 target === 'document' && 'h-full w-full',
                 className
             )}
-            style={
-                target === 'self'
-                    ? {
-                          ...style,
-                          width: dimensions.width,
-                          height: dimensions.height,
-                      }
-                    : style
-            }
+            style={resizeStyle}
         >
             {children}
 
@@ -336,10 +329,11 @@ export function Resizable({
                 <Handle
                     key={handle}
                     handle={handle}
+                    showIndicator={showIndicators}
                     onStart={(activeHandle) => {
                         start.current = dimensions;
                         latest.current = dimensions;
-                        onResizeStart?.(activeHandle);
+                        onChangeStart?.(activeHandle);
                     }}
                     onMove={(activeHandle, deltaX, deltaY) => {
                         const next = resizeDimensions(
@@ -354,12 +348,10 @@ export function Resizable({
                         );
                         latest.current = next;
                         setDimensions(next);
-                        onResize?.(next, activeHandle);
+                        onChange?.(next, activeHandle);
                     }}
                     onEnd={(activeHandle) => {
-                        const next = latest.current;
-                        void persist(next);
-                        onResizeEnd?.(next, activeHandle);
+                        onChangeEnd?.(latest.current, activeHandle);
                     }}
                 />
             ))}
