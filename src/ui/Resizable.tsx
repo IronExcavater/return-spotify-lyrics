@@ -78,7 +78,9 @@ function resizesFromTop(edge: ResizeEdge) {
 }
 
 function resizesFromBottom(edge: ResizeEdge) {
-    return edge === 'bottom' || edge === 'bottom-left' || edge === 'bottom-right';
+    return (
+        edge === 'bottom' || edge === 'bottom-left' || edge === 'bottom-right'
+    );
 }
 
 function normalizeAxes(resize: ResizeAxes): Size<boolean> {
