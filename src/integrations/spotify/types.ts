@@ -4,6 +4,14 @@ export type SpotifyImage = {
     height?: number | null;
 };
 
+export type SpotifyProfile = {
+    accountId: string | null;
+    id: string;
+    displayName: string | null;
+    email: string | null;
+    images: SpotifyImage[];
+};
+
 export type PlaybackTrack = {
     id: string;
     name: string;
