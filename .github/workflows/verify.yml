@@ -4,15 +4,11 @@ on:
     push:
         branches:
             - main
-            - rewrite/wxt-foundation
     pull_request:
 
 concurrency:
     group: verify-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
     cancel-in-progress: true
-
-permissions:
-    contents: write
 
 jobs:
     verify:
@@ -31,20 +27,7 @@ jobs:
                   cache: pnpm
 
             - name: Install dependencies
-              run: pnpm install --no-frozen-lockfile
-
-            - name: Canonicalize workspace
-              if: github.event_name == 'push' && github.ref == 'refs/heads/rewrite/wxt-foundation'
-              run: |
-                  pnpm format:fix
-                  git status --short
-                  git add -A -- .
-                  if ! git diff --cached --quiet; then
-                      git config user.name "github-actions[bot]"
-                      git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-                      git commit -m "chore: sync workspace lockfile and formatting"
-                      git push
-                  fi
+              run: pnpm install --frozen-lockfile
 
             - name: Check
               run: pnpm check
