@@ -19,12 +19,21 @@ const { entry } = Astro.props;
 const { Content } = await render(entry);
 ---
 
-<SiteLayout title={`${entry.data.version} · ${entry.data.title}`} description={entry.data.summary}>
+<SiteLayout
+    title={`${entry.data.version} · ${entry.data.title}`}
+    description={entry.data.summary}
+>
     <article class="prose-page">
         <a class="text-sm text-text-muted" href="/changelog/">← Changelog</a>
-        <p class="mt-8 text-sm font-semibold text-accent">Version {entry.data.version}</p>
+        <p class="mt-8 text-sm font-semibold text-accent">
+            Version {entry.data.version}
+        </p>
         <h1>{entry.data.title}</h1>
-        <time class="text-sm text-text-muted" datetime={entry.data.date.toISOString()}>{entry.data.date.toLocaleDateString('en-AU')}</time>
+        <time
+            class="text-sm text-text-muted"
+            datetime={entry.data.date.toISOString()}
+            >{entry.data.date.toLocaleDateString('en-AU')}</time
+        >
         <div class="mt-8"><Content /></div>
     </article>
 </SiteLayout>

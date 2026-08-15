@@ -9,7 +9,8 @@ const meta = {
     parameters: {
         docs: {
             description: {
-                component: 'A single avatar primitive for static, interactive, selected, loading, tooltip, and badge states.',
+                component:
+                    'A single avatar primitive for static, interactive, selected, loading, tooltip, and badge states.',
             },
         },
     },
@@ -37,7 +38,14 @@ export const Playground: Story = {};
 export const Interactive: Story = {
     render: (args) => {
         const [selected, setSelected] = useState(false);
-        return <Avatar {...args} selected={selected} tooltip="Select profile" onClick={() => setSelected((value) => !value)} />;
+        return (
+            <Avatar
+                {...args}
+                selected={selected}
+                tooltip="Select profile"
+                onClick={() => setSelected((value) => !value)}
+            />
+        );
     },
 };
 

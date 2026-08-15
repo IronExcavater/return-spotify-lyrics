@@ -24,6 +24,7 @@
 ### Task 1: Create workspace orchestration and package ownership
 
 **Files:**
+
 - Create: `pnpm-workspace.yaml`
 - Create: `turbo.json`
 - Modify: root `package.json`
@@ -31,6 +32,7 @@
 - Move: root WXT config, TS config, `src`, and `public` under `apps/extension`
 
 **Interfaces:**
+
 - Produces workspace package `@return-spotify-lyrics/extension`.
 - Root scripts `dev`, `build`, `typecheck`, `lint`, `test`, `check`, `storybook`, `build:storybook`, `site`, `build:site` delegate to Turbo/package filters.
 
@@ -42,6 +44,7 @@
 ### Task 2: Extract reusable UI package
 
 **Files:**
+
 - Create: `packages/ui/package.json`
 - Create: `packages/ui/tsconfig.json`
 - Move: `apps/extension/src/ui/**` to `packages/ui/src/**`
@@ -50,6 +53,7 @@
 - Modify: extension imports using `@/ui/*`
 
 **Interfaces:**
+
 - Produces subpath imports such as `@return-spotify-lyrics/ui/Button` and `@return-spotify-lyrics/ui/Resizable`.
 - React and ReactDOM are peers; Base UI, clsx, and Lucide remain UI implementation dependencies.
 
@@ -61,6 +65,7 @@
 ### Task 3: Add Storybook workshop
 
 **Files:**
+
 - Create: `apps/storybook/package.json`
 - Create: `apps/storybook/tsconfig.json`
 - Create: `apps/storybook/.storybook/main.ts`
@@ -70,6 +75,7 @@
 - Create selected: `apps/extension/src/**/*.stories.tsx`
 
 **Interfaces:**
+
 - Storybook consumes `@return-spotify-lyrics/ui/*` and presentation-only extension components.
 - `pnpm storybook` starts the workshop; `pnpm build:storybook` creates `apps/storybook/storybook-static`.
 
@@ -81,6 +87,7 @@
 ### Task 4: Add Astro public-site stub
 
 **Files:**
+
 - Create: `apps/site/package.json`
 - Create: `apps/site/astro.config.mjs`
 - Create: `apps/site/tsconfig.json`
@@ -95,6 +102,7 @@
 - Create: `apps/site/src/pages/legal/terms.astro`
 
 **Interfaces:**
+
 - Content collection `changelog` has `version`, `title`, `date`, and `summary`.
 - `pnpm site` starts Astro; `pnpm build:site` writes `apps/site/dist`.
 
@@ -108,11 +116,13 @@
 ### Task 5: Workspace CI and verification
 
 **Files:**
+
 - Modify: `.github/workflows/verify.yml`
 - Modify: `.gitignore`
 - Modify: `.prettierignore` if generated outputs need exclusion
 
 **Interfaces:**
+
 - CI uses the root workspace and Turbo commands.
 - Extension output is `apps/extension/.output/chrome-mv3/*`.
 - Storybook output is `apps/storybook/storybook-static`.

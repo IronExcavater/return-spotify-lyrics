@@ -9,7 +9,8 @@ const meta = {
     parameters: {
         docs: {
             description: {
-                component: 'The single button primitive for text, icons, loading states, tooltips, and badges. Use iconOnly instead of a separate IconButton component.',
+                component:
+                    'The single button primitive for text, icons, loading states, tooltips, and badges. Use iconOnly instead of a separate IconButton component.',
             },
         },
     },
@@ -22,7 +23,10 @@ const meta = {
         disabled: false,
     },
     argTypes: {
-        variant: { control: 'select', options: ['solid', 'ghost', 'outline', 'danger'] },
+        variant: {
+            control: 'select',
+            options: ['solid', 'ghost', 'outline', 'danger'],
+        },
         size: { control: 'select', options: ['xs', 'sm', 'md', 'lg'] },
         radius: { control: 'select', options: ['none', 'sm', 'md', 'full'] },
         icon: { control: false },

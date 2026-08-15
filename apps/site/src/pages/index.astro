@@ -3,35 +3,58 @@ import SiteLayout from '../layouts/SiteLayout.astro';
 ---
 
 <SiteLayout title="Return Spotify Lyrics">
-    <section class="grid min-h-[70vh] items-center gap-10 py-16 lg:grid-cols-[1.3fr_0.7fr]">
+    <section
+        class="grid min-h-[70vh] items-center gap-10 py-16 lg:grid-cols-[1.3fr_0.7fr]"
+    >
         <div>
-            <span class="inline-flex rounded-full border border-border bg-surface px-3 py-1 text-xs font-semibold text-text-muted">
+            <span
+                class="inline-flex rounded-full border border-border bg-surface px-3 py-1 text-xs font-semibold text-text-muted"
+            >
                 Browser extension · rebuilding
             </span>
-            <h1 class="mt-5 max-w-4xl text-5xl font-bold tracking-tight sm:text-7xl">
+            <h1
+                class="mt-5 max-w-4xl text-5xl font-bold tracking-tight sm:text-7xl"
+            >
                 Lyrics and playback without losing Spotify.
             </h1>
             <p class="mt-6 max-w-2xl text-lg leading-8 text-text-muted">
-                Return Spotify Lyrics is being rebuilt as a focused Spotify companion extension. This site is the future home for product information, release notes, downloads, and legal pages.
+                Return Spotify Lyrics is being rebuilt as a focused Spotify
+                companion extension. This site is the future home for product
+                information, release notes, downloads, and legal pages.
             </p>
             <div class="mt-8 flex flex-wrap gap-3">
-                <a class="rounded-control bg-accent px-4 py-2.5 text-sm font-semibold text-black" href="/changelog/">View changelog</a>
-                <a class="rounded-control border border-border px-4 py-2.5 text-sm font-semibold" href="/legal/privacy/">Privacy</a>
+                <a
+                    class="rounded-control bg-accent px-4 py-2.5 text-sm font-semibold text-black"
+                    href="/changelog/">View changelog</a
+                >
+                <a
+                    class="rounded-control border border-border px-4 py-2.5 text-sm font-semibold"
+                    href="/legal/privacy/">Privacy</a
+                >
             </div>
         </div>
 
         <div class="grid gap-3">
             <article class="rounded-panel border border-border bg-surface p-5">
                 <strong>Extension</strong>
-                <p class="mt-2 text-sm leading-6 text-text-muted">WXT-based popup and side panel with Spotify playback and synchronized lyrics foundations.</p>
+                <p class="mt-2 text-sm leading-6 text-text-muted">
+                    WXT-based popup and side panel with Spotify playback and
+                    synchronized lyrics foundations.
+                </p>
             </article>
             <article class="rounded-panel border border-border bg-surface p-5">
                 <strong>Component system</strong>
-                <p class="mt-2 text-sm leading-6 text-text-muted">A shared React UI package documented independently in Storybook.</p>
+                <p class="mt-2 text-sm leading-6 text-text-muted">
+                    A shared React UI package documented independently in
+                    Storybook.
+                </p>
             </article>
             <article class="rounded-panel border border-border bg-surface p-5">
                 <strong>Release content</strong>
-                <p class="mt-2 text-sm leading-6 text-text-muted">Typed Markdown changelogs keep public release notes simple and version-controlled.</p>
+                <p class="mt-2 text-sm leading-6 text-text-muted">
+                    Typed Markdown changelogs keep public release notes simple
+                    and version-controlled.
+                </p>
             </article>
         </div>
     </section>

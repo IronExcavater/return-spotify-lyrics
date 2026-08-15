@@ -27,10 +27,23 @@ function HomeBar() {
         <>
             <strong className="truncate text-sm">Return Spotify Lyrics</strong>
             <nav className="ml-auto flex items-center gap-1">
-                <NavLink to="/home" className={navClass}>Home</NavLink>
-                <NavLink to="/search" className={navClass}>Search</NavLink>
-                <NavLink to="/settings" className={navClass}>Settings</NavLink>
-                <Button variant="ghost" size="sm" onClick={() => { setActiveBar('playback'); void navigate('/lyrics'); }}>
+                <NavLink to="/home" className={navClass}>
+                    Home
+                </NavLink>
+                <NavLink to="/search" className={navClass}>
+                    Search
+                </NavLink>
+                <NavLink to="/settings" className={navClass}>
+                    Settings
+                </NavLink>
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                        setActiveBar('playback');
+                        void navigate('/lyrics');
+                    }}
+                >
                     Player
                 </Button>
             </nav>
@@ -45,9 +58,20 @@ function PlaybackBar() {
         <>
             <Player />
             <nav className="flex shrink-0 items-center gap-1">
-                <NavLink to="/lyrics" className={navClass}>Lyrics</NavLink>
-                <NavLink to="/queue" className={navClass}>Queue</NavLink>
-                <Button variant="ghost" size="sm" onClick={() => { setActiveBar('home'); void navigate('/home'); }}>
+                <NavLink to="/lyrics" className={navClass}>
+                    Lyrics
+                </NavLink>
+                <NavLink to="/queue" className={navClass}>
+                    Queue
+                </NavLink>
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                        setActiveBar('home');
+                        void navigate('/home');
+                    }}
+                >
                     Home
                 </Button>
             </nav>
@@ -55,7 +79,10 @@ function PlaybackBar() {
     );
 }
 
-function resolveBar(policy: BarPolicy, activeBar: AppBarMode): AppBarMode | null {
+function resolveBar(
+    policy: BarPolicy,
+    activeBar: AppBarMode
+): AppBarMode | null {
     if (policy === 'hidden') return null;
     if (policy === 'home' || policy === 'playback') return policy;
     return activeBar;
