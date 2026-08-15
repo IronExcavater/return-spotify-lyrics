@@ -1,11 +1,11 @@
 export type AppErrorOptions = {
     cause?: unknown;
-    retryAfter?: number;
+    retryAfter?: number | undefined;
 };
 
 export class AppError extends Error {
     readonly code: string;
-    readonly retryAfter?: number;
+    readonly retryAfter: number | undefined;
 
     constructor(code: string, message: string, options: AppErrorOptions = {}) {
         super(message, { cause: options.cause });

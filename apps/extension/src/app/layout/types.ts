@@ -1,5 +1,6 @@
+import type { ResizeMode } from '@return-spotify-lyrics/ui/Resizable';
+
 import type { Surface } from '@/app/surface/types';
-import type { ResizeMode } from '@/ui/Resizable';
 
 export type BarPolicy = 'preserve' | 'home' | 'playback' | 'hidden';
 

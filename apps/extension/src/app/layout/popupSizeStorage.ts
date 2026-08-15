@@ -1,6 +1,5 @@
+import type { ResizeMode } from '@return-spotify-lyrics/ui/Resizable';
 import { storage } from 'wxt/utils/storage';
-
-import type { ResizeMode } from '@/ui/Resizable';
 
 import { POPUP } from './surfaces';
 

@@ -9,7 +9,8 @@
         "noUncheckedIndexedAccess": true,
         "exactOptionalPropertyTypes": true,
         "noEmit": true,
-        "skipLibCheck": true
+        "skipLibCheck": true,
+        "types": ["vite/client"]
     },
     "include": [".storybook", "stories"]
 }
