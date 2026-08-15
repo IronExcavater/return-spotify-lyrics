@@ -1,0 +1,45 @@
+---
+import '../styles/global.css';
+
+interface Props {
+    title: string;
+    description?: string;
+}
+
+const {
+    title,
+    description = 'Return Spotify Lyrics — a Spotify companion for playback and synchronized lyrics.',
+} = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width" />
+        <meta name="description" content={description} />
+        <meta name="generator" content={Astro.generator} />
+        <title>{title}</title>
+    </head>
+    <body>
+        <div class="site-shell">
+            <header class="site-header">
+                <a class="brand" href="/">Return Spotify Lyrics</a>
+                <nav aria-label="Primary navigation">
+                    <a href="/changelog/">Changelog</a>
+                    <a href="/legal/privacy/">Privacy</a>
+                    <a href="/legal/terms/">Terms</a>
+                </nav>
+            </header>
+
+            <main>
+                <slot />
+            </main>
+
+            <footer class="site-footer">
+                <span>Return Spotify Lyrics</span>
+                <span>Independent Spotify companion project.</span>
+            </footer>
+        </div>
+    </body>
+</html>

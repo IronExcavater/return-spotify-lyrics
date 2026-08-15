@@ -1,0 +1,22 @@
+@import 'tailwindcss' source(none);
+@import '@return-spotify-lyrics/ui/theme.css';
+
+@source '../stories';
+@source '../../../packages/ui/src';
+@source '../../extension/src';
+
+html,
+body,
+#storybook-root {
+    min-height: 100%;
+}
+
+body {
+    margin: 0;
+    background: var(--color-app);
+    color: var(--color-text);
+}
+
+#storybook-root {
+    min-width: 240px;
+}

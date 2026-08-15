@@ -1,6 +1,9 @@
 node_modules/
+.turbo/
 .output/
 .wxt/
+storybook-static/
+dist/
 coverage/
 .env
 .env.*

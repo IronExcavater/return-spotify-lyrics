@@ -1,0 +1,31 @@
+{
+    "name": "@return-spotify-lyrics/storybook",
+    "version": "0.0.0",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "dev": "storybook dev -p 6006",
+        "build": "storybook build -o storybook-static",
+        "typecheck": "tsc --noEmit",
+        "lint": "oxlint .storybook stories"
+    },
+    "dependencies": {
+        "@return-spotify-lyrics/ui": "workspace:*",
+        "lucide-react": "^1.31.0",
+        "react": "^19.2.8",
+        "react-dom": "^19.2.8"
+    },
+    "devDependencies": {
+        "@storybook/addon-a11y": "^10.5.5",
+        "@storybook/addon-docs": "^10.5.5",
+        "@storybook/react-vite": "^10.5.5",
+        "@tailwindcss/vite": "^4.3.3",
+        "@types/react": "^19.2.17",
+        "@types/react-dom": "^19.2.3",
+        "oxlint": "^1.76.0",
+        "storybook": "^10.5.5",
+        "tailwindcss": "^4.3.3",
+        "typescript": "^7.0.2",
+        "vite": "^8.2.1"
+    }
+}
