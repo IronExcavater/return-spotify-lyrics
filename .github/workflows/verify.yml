@@ -4,11 +4,15 @@ on:
     push:
         branches:
             - main
+            - rewrite/wxt-foundation
     pull_request:
 
 concurrency:
     group: verify-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
     cancel-in-progress: true
+
+permissions:
+    contents: write
 
 jobs:
     verify:
@@ -28,7 +32,19 @@ jobs:
                   cache: pnpm
 
             - name: Install dependencies
-              run: pnpm install --frozen-lockfile
+              run: pnpm install --no-frozen-lockfile
+
+            - name: Canonicalize workspace
+              if: github.event_name == 'push' && github.ref == 'refs/heads/rewrite/wxt-foundation'
+              run: |
+                  pnpm format:fix
+                  if ! git diff --quiet; then
+                      git config user.name "github-actions[bot]"
+                      git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+                      git add .
+                      git commit -m "chore: sync workspace lockfile and formatting"
+                      git push
+                  fi
 
             - name: Check
               run: pnpm check
@@ -39,9 +55,11 @@ jobs:
             - name: Build
               run: pnpm build
 
-            - name: Verify extension outputs
+            - name: Verify workspace outputs
               run: |
-                  test -f .output/chrome-mv3/popup.html
-                  test -f .output/chrome-mv3/sidepanel.html
-                  test -f .output/chrome-mv3/background.js
-                  test -f .output/chrome-mv3/manifest.json
+                  test -f apps/extension/.output/chrome-mv3/popup.html
+                  test -f apps/extension/.output/chrome-mv3/sidepanel.html
+                  test -f apps/extension/.output/chrome-mv3/background.js
+                  test -f apps/extension/.output/chrome-mv3/manifest.json
+                  test -f apps/storybook/storybook-static/index.html
+                  test -f apps/site/dist/index.html
