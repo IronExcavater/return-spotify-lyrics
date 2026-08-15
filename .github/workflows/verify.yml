@@ -37,10 +37,11 @@ jobs:
               if: github.event_name == 'push' && github.ref == 'refs/heads/rewrite/wxt-foundation'
               run: |
                   pnpm format:fix
-                  if ! git diff --quiet; then
+                  git status --short
+                  git add -A -- .
+                  if ! git diff --cached --quiet; then
                       git config user.name "github-actions[bot]"
                       git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-                      git add .
                       git commit -m "chore: sync workspace lockfile and formatting"
                       git push
                   fi
