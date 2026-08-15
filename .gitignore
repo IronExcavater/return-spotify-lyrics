@@ -2,6 +2,7 @@ node_modules/
 .turbo/
 .output/
 .wxt/
+.astro/
 storybook-static/
 dist/
 coverage/
