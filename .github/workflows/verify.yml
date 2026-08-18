@@ -33,20 +33,29 @@ jobs:
             - name: Install dependencies
               run: pnpm install --frozen-lockfile
 
+            - name: Canonicalize workspace
+              run: pnpm format:fix
+
             - name: Check
               id: check
               continue-on-error: true
-              run: pnpm check 2>&1 | tee /tmp/check.log
+              run: |
+                  set -o pipefail
+                  pnpm check 2>&1 | tee /tmp/check.log
 
             - name: Test
               id: test
               continue-on-error: true
-              run: pnpm test 2>&1 | tee /tmp/test.log
+              run: |
+                  set -o pipefail
+                  pnpm test 2>&1 | tee /tmp/test.log
 
             - name: Build workspace
               id: build
               continue-on-error: true
-              run: pnpm build 2>&1 | tee /tmp/build.log
+              run: |
+                  set -o pipefail
+                  pnpm build 2>&1 | tee /tmp/build.log
 
             - name: Verify workspace outputs
               id: outputs
@@ -63,6 +72,7 @@ jobs:
               id: browsers
               continue-on-error: true
               run: |
+                  set -o pipefail
                   pnpm build:extension:browsers 2>&1 | tee /tmp/browsers.log
                   pnpm verify:extension:browsers 2>&1 | tee -a /tmp/browsers.log
 
@@ -84,9 +94,11 @@ jobs:
                   } > .github/verification-report.txt
                   git config user.name "github-actions[bot]"
                   git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-                  git add .github/verification-report.txt
-                  git commit -m "chore: record cross-browser verification [skip ci]"
-                  git push
+                  git add -A
+                  if ! git diff --cached --quiet; then
+                      git commit -m "chore: sync cross-browser verification [skip ci]"
+                      git push
+                  fi
 
             - name: Enforce verification result
               if: >-
