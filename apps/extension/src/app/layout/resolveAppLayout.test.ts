@@ -63,15 +63,15 @@ describe('resolveAppLayout', () => {
         expect(layout.viewport.remember).toBe('vertical');
     });
 
-    it('lets the browser own sidepanel dimensions', () => {
+    it('lets the browser own sidebar dimensions', () => {
         const layout = resolveAppLayout({
-            surface: 'sidepanel',
+            surface: 'sidebar',
             rememberedPopupSize: { width: 400, height: 520 },
             routeLayout: { bar: 'playback' },
         });
 
         expect(layout).toEqual({
-            surface: 'sidepanel',
+            surface: 'sidebar',
             bar: 'playback',
             viewport: { kind: 'browser' },
         });
