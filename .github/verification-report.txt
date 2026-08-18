@@ -1,9 +1,0 @@
-run_id=32109360241
-commit=1bebdb82c08bf0b5028a27b513b5d7f5f90cd4f7
-install=success
-check=success
-test=success
-build=success
-outputs=success
-browsers_build=success
-browsers_verify=success
