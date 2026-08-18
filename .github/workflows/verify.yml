@@ -4,6 +4,7 @@ on:
     push:
         branches:
             - main
+            - rewrite/wxt-foundation
     pull_request:
 
 concurrency:
