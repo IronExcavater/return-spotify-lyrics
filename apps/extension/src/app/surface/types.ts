@@ -1,1 +1,1 @@
-export type Surface = 'popup' | 'sidepanel';
+export type Surface = 'popup' | 'sidebar';

@@ -83,7 +83,7 @@ export function resolveAppLayout({
 }): AppLayout {
     const bar = routeLayout?.bar ?? 'preserve';
 
-    if (surface === 'sidepanel') {
+    if (surface === 'sidebar') {
         return {
             surface,
             bar,

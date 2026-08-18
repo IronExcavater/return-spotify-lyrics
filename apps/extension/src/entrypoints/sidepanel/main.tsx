@@ -1,3 +1,3 @@
 import { mountApp } from '@/app/mountApp';
 
-mountApp('sidepanel');
+mountApp('sidebar');
