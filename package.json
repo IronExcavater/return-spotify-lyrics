@@ -12,6 +12,8 @@
         "site": "turbo run dev --filter=@return-spotify-lyrics/site",
         "build": "turbo run build",
         "build:extension": "turbo run build --filter=@return-spotify-lyrics/extension",
+        "build:extension:browsers": "pnpm --filter @return-spotify-lyrics/extension build:browsers",
+        "verify:extension:browsers": "pnpm --filter @return-spotify-lyrics/extension verify:browsers",
         "build:storybook": "turbo run build --filter=@return-spotify-lyrics/storybook",
         "build:site": "turbo run build --filter=@return-spotify-lyrics/site",
         "typecheck": "turbo run typecheck",
