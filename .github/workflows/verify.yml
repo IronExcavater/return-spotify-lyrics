@@ -4,11 +4,15 @@ on:
     push:
         branches:
             - main
+            - rewrite/wxt-foundation
     pull_request:
 
 concurrency:
     group: verify-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
     cancel-in-progress: true
+
+permissions:
+    contents: write
 
 jobs:
     verify:
@@ -27,18 +31,32 @@ jobs:
                   cache: pnpm
 
             - name: Install dependencies
+              id: install
+              continue-on-error: true
               run: pnpm install --frozen-lockfile
 
             - name: Check
+              id: check
+              if: steps.install.outcome == 'success'
+              continue-on-error: true
               run: pnpm check
 
             - name: Test
+              id: test
+              if: steps.install.outcome == 'success'
+              continue-on-error: true
               run: pnpm test
 
             - name: Build workspace
+              id: build
+              if: steps.install.outcome == 'success'
+              continue-on-error: true
               run: pnpm build
 
             - name: Verify workspace outputs
+              id: outputs
+              if: steps.build.outcome == 'success'
+              continue-on-error: true
               run: |
                   test -f apps/extension/.output/chrome-mv3/popup.html
                   test -f apps/extension/.output/chrome-mv3/sidepanel.html
@@ -48,7 +66,44 @@ jobs:
                   test -f apps/site/dist/index.html
 
             - name: Build supported browser targets
+              id: browsers_build
+              if: steps.install.outcome == 'success'
+              continue-on-error: true
               run: pnpm build:extension:browsers
 
             - name: Verify supported browser targets
+              id: browsers_verify
+              if: steps.browsers_build.outcome == 'success'
+              continue-on-error: true
               run: pnpm verify:extension:browsers
+
+            - name: Record verification result
+              if: always() && github.ref == 'refs/heads/rewrite/wxt-foundation'
+              run: |
+                  cat > .github/verification-report.txt <<EOF
+                  run_id=${GITHUB_RUN_ID}
+                  commit=${GITHUB_SHA}
+                  install=${{ steps.install.outcome }}
+                  check=${{ steps.check.outcome }}
+                  test=${{ steps.test.outcome }}
+                  build=${{ steps.build.outcome }}
+                  outputs=${{ steps.outputs.outcome }}
+                  browsers_build=${{ steps.browsers_build.outcome }}
+                  browsers_verify=${{ steps.browsers_verify.outcome }}
+                  EOF
+                  git config user.name "github-actions[bot]"
+                  git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+                  git add .github/verification-report.txt
+                  git commit -m "chore: record verification result [skip ci]"
+                  git push
+
+            - name: Enforce verification result
+              if: >-
+                  steps.install.outcome != 'success' ||
+                  steps.check.outcome != 'success' ||
+                  steps.test.outcome != 'success' ||
+                  steps.build.outcome != 'success' ||
+                  steps.outputs.outcome != 'success' ||
+                  steps.browsers_build.outcome != 'success' ||
+                  steps.browsers_verify.outcome != 'success'
+              run: exit 1
