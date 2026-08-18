@@ -1,0 +1,372 @@
+commit=59299ba0cad60b4703f3a84ab4fb90a6ae9ae5ee
+check=success
+test=success
+build=success
+outputs=success
+browsers=success
+
+--- check (tail) ---
+
+
+   • Packages in scope: @return-spotify-lyrics/extension, @return-spotify-lyrics/site, @return-spotify-lyrics/storybook, @return-spotify-lyrics/ui
+   • Running typecheck in 4 packages
+   • Remote caching disabled
+
+::group::@return-spotify-lyrics/ui:typecheck
+cache miss, executing 0889ea0fe265bcac
+
+> @return-spotify-lyrics/ui@0.0.0 typecheck /home/runner/work/return-spotify-lyrics/return-spotify-lyrics/packages/ui
+> tsc --noEmit
+
+::endgroup::
+::group::@return-spotify-lyrics/storybook:typecheck
+cache miss, executing b805d52e4be32559
+
+> @return-spotify-lyrics/storybook@0.0.0 typecheck /home/runner/work/return-spotify-lyrics/return-spotify-lyrics/apps/storybook
+> tsc --noEmit
+
+::endgroup::
+::group::@return-spotify-lyrics/extension:typecheck
+cache miss, executing 5f78aa1d729605b0
+
+> @return-spotify-lyrics/extension@0.5.0 typecheck /home/runner/work/return-spotify-lyrics/return-spotify-lyrics/apps/extension
+> tsc --noEmit
+
+::endgroup::
+::group::@return-spotify-lyrics/site:typecheck
+cache miss, executing ba1169a3834a2068
+
+> @return-spotify-lyrics/site@0.0.0 typecheck /home/runner/work/return-spotify-lyrics/return-spotify-lyrics/apps/site
+> astro check
+
+[2m04:01:06[22m [34m[content][39m Syncing content
+[2m04:01:07[22m [34m[content][39m Synced content
+[2m04:01:07[22m [34m[types][39m Generated [2m625ms[22m
+[2m04:01:07[22m [34m[check][39m Getting diagnostics for Astro files in /home/runner/work/return-spotify-lyrics/return-spotify-lyrics/apps/site...
+Result (9 files): 
+- 0 errors
+- 0 warnings
+- 0 hints
+
+::endgroup::
+
+ Tasks:    4 successful, 4 total
+Cached:    0 cached, 4 total
+  Time:    5.348s 
+
+
+> return-spotify-lyrics@0.5.0 lint /home/runner/work/return-spotify-lyrics/return-spotify-lyrics
+> turbo run lint
+
+
+   • Packages in scope: @return-spotify-lyrics/extension, @return-spotify-lyrics/site, @return-spotify-lyrics/storybook, @return-spotify-lyrics/ui
+   • Running lint in 4 packages
+   • Remote caching disabled
+
+::group::@return-spotify-lyrics/extension:lint
+cache miss, executing 351490d9e1ffc94c
+
+> @return-spotify-lyrics/extension@0.5.0 lint /home/runner/work/return-spotify-lyrics/return-spotify-lyrics/apps/extension
+> oxlint src
+
+Found 0 warnings and 0 errors.
+Finished in 10ms on 58 files with 96 rules using 4 threads.
+::endgroup::
+::group::@return-spotify-lyrics/storybook:lint
+cache miss, executing ecdd9ddc854eac9b
+
+> @return-spotify-lyrics/storybook@0.0.0 lint /home/runner/work/return-spotify-lyrics/return-spotify-lyrics/apps/storybook
+> oxlint .storybook stories
+
+Found 0 warnings and 0 errors.
+Finished in 15ms on 16 files with 96 rules using 4 threads.
+::endgroup::
+::group::@return-spotify-lyrics/ui:lint
+cache miss, executing 3484c50295fea584
+
+> @return-spotify-lyrics/ui@0.0.0 lint /home/runner/work/return-spotify-lyrics/return-spotify-lyrics/packages/ui
+> oxlint src
+
+Found 0 warnings and 0 errors.
+Finished in 12ms on 26 files with 96 rules using 4 threads.
+::endgroup::
+
+ Tasks:    3 successful, 3 total
+Cached:    0 cached, 3 total
+  Time:    499ms 
+
+
+> return-spotify-lyrics@0.5.0 format /home/runner/work/return-spotify-lyrics/return-spotify-lyrics
+> prettier . --check
+
+Checking formatting...
+[[33mwarn[39m] apps/extension/src/platform/browser/sidebar.ts
+[[33mwarn[39m] docs/superpowers/plans/2026-08-18-cross-browser-extension.md
+[[33mwarn[39m] docs/superpowers/specs/2026-08-18-cross-browser-extension-design.md
+[[33mwarn[39m] Code style issues found in 3 files. Run Prettier with --write to fix.
+ ELIFECYCLE  Command failed with exit code 1.
+ ELIFECYCLE  Command failed with exit code 1.
+
+--- test (tail) ---
+
+> return-spotify-lyrics@0.5.0 test /home/runner/work/return-spotify-lyrics/return-spotify-lyrics
+> turbo run test
+
+
+   • Packages in scope: @return-spotify-lyrics/extension, @return-spotify-lyrics/site, @return-spotify-lyrics/storybook, @return-spotify-lyrics/ui
+   • Running test in 4 packages
+   • Remote caching disabled
+
+::group::@return-spotify-lyrics/extension:test
+cache miss, executing 28c1f7e059877886
+
+> @return-spotify-lyrics/extension@0.5.0 test /home/runner/work/return-spotify-lyrics/return-spotify-lyrics/apps/extension
+> vitest run
+
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.10 [39m[90m/home/runner/work/return-spotify-lyrics/return-spotify-lyrics/apps/extension[39m
+
+ [32m✓[39m src/errors/AppError.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m src/platform/browser/sidebar.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+ [32m✓[39m src/app/layout/resolveAppLayout.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m✓[39m src/platform/browser/capabilities.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m src/integrations/spotify/client.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 68[2mms[22m[39m
+ [32m✓[39m src/features/queryFoundation.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m src/errors/ErrorPage.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 13[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m7 passed[39m[22m[90m (7)[39m
+[2m      Tests [22m [1m[32m26 passed[39m[22m[90m (26)[39m
+[2m   Start at [22m 04:01:13
+[2m   Duration [22m 1.02s[2m (transform 281ms, setup 0ms, import 770ms, tests 126ms, environment 1ms)[22m
+
+::endgroup::
+::group::@return-spotify-lyrics/ui:test
+cache miss, executing 3799badf49df1712
+
+> @return-spotify-lyrics/ui@0.0.0 test /home/runner/work/return-spotify-lyrics/return-spotify-lyrics/packages/ui
+> vitest run
+
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.10 [39m[90m/home/runner/work/return-spotify-lyrics/return-spotify-lyrics/packages/ui[39m
+
+ [32m✓[39m src/Resizable.test.tsx [2m([22m[2m18 tests[22m[2m)[22m[32m 34[2mms[22m[39m
+ [32m✓[39m src/Marquee.test.tsx [2m([22m[2m9 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+ [32m✓[39m src/Fade.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+ [32m✓[39m src/Foundation.test.tsx [2m([22m[2m6 tests[22m[2m)[22m[32m 26[2mms[22m[39m
+ [32m✓[39m src/Primitives.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m5 passed[39m[22m[90m (5)[39m
+[2m      Tests [22m [1m[32m40 passed[39m[22m[90m (40)[39m
+[2m   Start at [22m 04:01:13
+[2m   Duration [22m 1.17s[2m (transform 429ms, setup 0ms, import 1.60s, tests 100ms, environment 1ms)[22m
+
+::endgroup::
+
+ Tasks:    2 successful, 2 total
+Cached:    0 cached, 2 total
+  Time:    1.752s 
+
+
+--- build (tail) ---
+[90m│[39m  storybook-static/assets/chunk-IMSF75WX-CGYlPTyG.js
+[90m│[39m  1.67 kB │ gzip:   0.91 kB
+[90m│[39m  storybook-static/assets/createLucideIcon-VPJN_A46.js
+[90m│[39m  1.85 kB │ gzip:   0.94 kB
+[90m│[39m  storybook-static/assets/LabelableContext-Cwoh3JOf.js
+[90m│[39m  2.06 kB │ gzip:   0.99 kB
+[90m│[39m  storybook-static/assets/Button.stories-GTY2mzSw.js
+[90m│[39m  2.12 kB │ gzip:   1.02 kB
+[90m│[39m  storybook-static/assets/Feedback.stories-Bs-Uwt_e.js
+[90m│[39m  2.15 kB │ gzip:   0.95 kB
+[90m│[39m  storybook-static/assets/useTransitionStatus-C33Ffvlb.js
+[90m│[39m  2.32 kB │ gzip:   1.09 kB
+[90m│[39m  storybook-static/assets/useButton-DUwB3SDV.js
+[90m│[39m  2.76 kB │ gzip:   1.25 kB
+[90m│[39m  storybook-static/assets/DirectionContext-uQvLP5U8.js
+[90m│[39m  3.00 kB │ gzip:   1.30 kB
+[90m│[39m  storybook-static/assets/Button-DjaDIAE5.js
+[90m│[39m  3.21 kB │ gzip:   1.19 kB
+[90m│[39m  storybook-static/assets/Fade.stories-BVMUjWgW.js
+[90m│[39m  3.36 kB │ gzip:   1.36 kB
+[90m│[39m  storybook-static/assets/chunk-DRQKCCAG-DvsmU7ha.js
+[90m│[39m  3.39 kB │ gzip:   1.41 kB
+[90m│[39m  storybook-static/assets/CompositeList-17lESIbF.js
+[90m│[39m  3.55 kB │ gzip:   1.61 kB
+[90m│[39m  storybook-static/assets/react-dom-hw2JqGLO.js
+[90m│[39m  3.58 kB │ gzip:   1.36 kB
+[90m│[39m  storybook-static/assets/Card.stories-DIk7P_ow.js
+[90m│[39m  3.83 kB │ gzip:   1.37 kB
+[90m│[39m  storybook-static/assets/ErrorPage.stories-CMBJBmOY.js
+[90m│[39m  4.03 kB │ gzip:   1.70 kB
+[90m│[39m  storybook-static/assets/Skeleton.stories-DPByRG3R.js
+[90m│[39m  4.25 kB │ gzip:   1.70 kB
+[90m│[39m  storybook-static/assets/Switch.stories-pI3OhgvV.js
+[90m│[39m  4.97 kB │ gzip:   2.37 kB
+[90m│[39m  storybook-static/assets/chunk-5GYAEUAU-BGgO7bU4.js
+[90m│[39m  5.14 kB │ gzip:   1.93 kB
+[90m│[39m  storybook-static/assets/Avatar-Bqv2TP6z.js
+[90m│[39m  5.83 kB │ gzip:   2.23 kB
+[90m│[39m  storybook-static/assets/Checkbox.stories-Bg_4KXFx.js
+[90m│[39m  7.53 kB │ gzip:   3.46 kB
+[90m│[39m  storybook-static/assets/Resizable.stories-CuOV11zF.js
+[90m│[39m  8.19 kB │ gzip:   2.46 kB
+[90m│[39m  storybook-static/assets/Marquee.stories-0dHgId5R.js
+[90m│[39m  9.22 kB │ gzip:   3.40 kB
+[90m│[39m  storybook-static/assets/useBaseUiId-DPY8TAGG.js
+[90m│[39m  9.25 kB │ gzip:   3.93 kB
+[90m│[39m  storybook-static/assets/Slider.stories-BabBwMas.js
+[90m│[39m  18.70 kB │ gzip:   7.82 kB
+[90m│[39m  storybook-static/assets/chunk-W22LQPXL-sS4zbZYx.js
+[90m│[39m  22.74 kB │ gzip:   7.60 kB
+[90m│[39m  storybook-static/vite-inject-mocker-entry.js
+[90m│[39m  27.84 kB │ gzip:   9.66 kB
+[90m│[39m  storybook-static/assets/matchers-JIUQ3HVY-C789_MAK.js
+[90m│[39m  28.79 kB │ gzip:   9.68 kB
+[90m│[39m  storybook-static/assets/Color-6AOWCN3U-BnUnG7Cp.js
+[90m│[39m  30.40 kB │ gzip:  11.50 kB
+[90m│[39m  storybook-static/assets/WithTooltip-7X4HQR7L-De4LkiFQ.js
+[90m│[39m  32.75 kB │ gzip:  11.48 kB
+[90m│[39m  storybook-static/assets/theming-Csw51Uen.js
+[90m│[39m  55.41 kB │ gzip:  21.35 kB
+[90m│[39m  storybook-static/assets/syntaxhighlighter-QEQV7K2Y-B5w1OpPI.js
+[90m│[39m  75.92 kB │ gzip:  27.27 kB
+[90m│[39m  storybook-static/assets/Overlays.stories-KMnpaae2.js
+[90m│[39m  82.10 kB │ gzip:  26.37 kB
+[90m│[39m  storybook-static/assets/Tooltip-Bx8KgBOo.js
+[90m│[39m  84.09 kB │ gzip:  29.79 kB
+[90m│[39m  storybook-static/assets/react-18-CFTRynsl.js
+[90m│[39m  179.09 kB │ gzip:  56.66 kB
+[90m│[39m  storybook-static/assets/axe-_9eNhXQJ.js
+[90m│[39m  587.04 kB │ gzip: 160.26 kB
+[90m│[39m  storybook-static/assets/DocsRenderer-JROSPFPF-CsHtci_8.js
+[90m│[39m  757.98 kB │ gzip: 240.56 kB
+[90m│[39m  storybook-static/assets/iframe-DIWmfQnn.js
+[90m│[39m  1,134.94 kB │ gzip: 323.95 kB
+
+[90m│[39m
+[33m▲[39m  [43mVite[49m [33m[plugin builtin:vite-reporter]
+[90m│[39m  (!) Some chunks are larger than 500 kB after minification. Consider:
+[90m│[39m  - Using dynamic import() to code-split the application
+[90m│[39m  - Use build.rolldownOptions.output.codeSplitting to improve chunking:
+[90m│[39m  ]8;;https://rolldown.rs/reference/OutputOptions.codeSplittinghttps://rolldown.rs/reference/OutputOptions.codeSplitting]8;;
+[90m│[39m  - Adjust chunk size limit for this warning via
+[90m│[39m  build.chunkSizeWarningLimit.[39m
+[90m│[39m  [43mVite[49m [32m✓ built in 2.04s[39m
+[90m│[39m
+[34m●[39m  Storybook collects completely anonymous usage telemetry. We use it to
+[90m│[39m  shape Storybook's roadmap and prioritize features. You can learn more,
+[90m│[39m  including how to opt out, at ]8;;https://storybook.js.org/telemetryhttps://storybook.js.org/telemetry]8;;
+[90m│[39m
+[32m◇[39m  Output directory:
+[90m│[39m  /home/runner/work/return-spotify-lyrics/return-spotify-lyrics/apps/storybook/storybook-static
+[90m│[39m
+[90m└[39m  Storybook build completed successfully
+
+::endgroup::
+
+ Tasks:    3 successful, 3 total
+Cached:    0 cached, 3 total
+  Time:    4.69s 
+
+
+--- browsers (tail) ---
+> wxt build -b edge --mv3
+
+[log] 
+WXT 0.21.4
+[info] Building edge-mv3 for production with Vite 8.2.1
+[?25l⠋ Preparing...[K⠋ [1/2] background[K⠋ [2/2] popup, sidepanel[K⠙ [2/2] popup, sidepanel[K⠹ [2/2] popup, sidepanel[K⠸ [2/2] popup, sidepanel[K⠼ [2/2] popup, sidepanel[K[K[?25h[K[?25h[success] Built extension in 538 ms
+  ├─ .output/edge-mv3/manifest.json                 748 B    
+  ├─ .output/edge-mv3/popup.html                    514 B    
+  ├─ .output/edge-mv3/sidepanel.html                606 B    
+  ├─ .output/edge-mv3/background.js                 95.71 kB 
+  ├─ .output/edge-mv3/chunks/mountApp-BKSGq1xi.js   480.94 kB
+  ├─ .output/edge-mv3/chunks/popup-ezJhAEGe.js      54 B     
+  ├─ .output/edge-mv3/chunks/sidepanel-BTUttDns.js  56 B     
+  ├─ .output/edge-mv3/assets/mountApp-DA5jqapo.css  28.27 kB 
+  ├─ .output/edge-mv3/icon/icon128.png              4.21 kB  
+  ├─ .output/edge-mv3/icon/icon16.png               464 B    
+  ├─ .output/edge-mv3/icon/icon32.png               986 B    
+  └─ .output/edge-mv3/icon/icon48.png               1.50 kB  
+Σ Total size: 614.06 kB                           
+[success] Finished in 673 ms
+
+> @return-spotify-lyrics/extension@0.5.0 build:firefox /home/runner/work/return-spotify-lyrics/return-spotify-lyrics/apps/extension
+> wxt build -b firefox --mv3
+
+[log] 
+WXT 0.21.4
+[info] Building firefox-mv3 for production with Vite 8.2.1
+[?25l⠋ Preparing...[K⠋ [1/2] background[K⠙ [1/2] background[K⠙ [2/2] popup, sidepanel[K⠹ [2/2] popup, sidepanel[K⠸ [2/2] popup, sidepanel[K⠼ [2/2] popup, sidepanel[K⠴ [2/2] popup, sidepanel[K[warn] Firefox requires `data_collection_permissions` for new extensions from November 3, 2025. Existing extensions are exempt for now.
+For more details, see: https://extensionworkshop.com/documentation/develop/firefox-builtin-data-consent/
+To suppress this warning, set `suppressWarnings.firefoxDataCollection` to `true` in your wxt config.
+
+[warn] Firefox requires extension ID for MV3 and recommends it for MV2.
+For more details, see: https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/manifest.json/browser_specific_settings#id
+[K[?25h[K[?25h[success] Built extension in 540 ms
+  ├─ .output/firefox-mv3/manifest.json                 776 B    
+  ├─ .output/firefox-mv3/popup.html                    514 B    
+  ├─ .output/firefox-mv3/sidepanel.html                606 B    
+  ├─ .output/firefox-mv3/background.js                 95.71 kB 
+  ├─ .output/firefox-mv3/chunks/mountApp-BKSGq1xi.js   480.94 kB
+  ├─ .output/firefox-mv3/chunks/popup-ezJhAEGe.js      54 B     
+  ├─ .output/firefox-mv3/chunks/sidepanel-BTUttDns.js  56 B     
+  ├─ .output/firefox-mv3/assets/mountApp-DA5jqapo.css  28.27 kB 
+  ├─ .output/firefox-mv3/icon/icon128.png              4.21 kB  
+  ├─ .output/firefox-mv3/icon/icon16.png               464 B    
+  ├─ .output/firefox-mv3/icon/icon32.png               986 B    
+  └─ .output/firefox-mv3/icon/icon48.png               1.50 kB  
+Σ Total size: 614.09 kB                              
+[success] Finished in 677 ms
+
+> @return-spotify-lyrics/extension@0.5.0 build:opera /home/runner/work/return-spotify-lyrics/return-spotify-lyrics/apps/extension
+> wxt build -b opera --mv3
+
+[log] 
+WXT 0.21.4
+[info] Building opera-mv3 for production with Vite 8.2.1
+[?25l⠋ Preparing...[K⠋ [1/2] background[K⠋ [2/2] popup, sidepanel[K⠙ [2/2] popup, sidepanel[K⠹ [2/2] popup, sidepanel[K⠸ [2/2] popup, sidepanel[K⠼ [2/2] popup, sidepanel[K⠴ [2/2] popup, sidepanel[K[K[?25h[K[?25h[success] Built extension in 545 ms
+  ├─ .output/opera-mv3/manifest.json                 904 B    
+  ├─ .output/opera-mv3/popup.html                    514 B    
+  ├─ .output/opera-mv3/sidepanel.html                606 B    
+  ├─ .output/opera-mv3/background.js                 95.71 kB 
+  ├─ .output/opera-mv3/chunks/mountApp-BKSGq1xi.js   480.94 kB
+  ├─ .output/opera-mv3/chunks/popup-ezJhAEGe.js      54 B     
+  ├─ .output/opera-mv3/chunks/sidepanel-BTUttDns.js  56 B     
+  ├─ .output/opera-mv3/assets/mountApp-DA5jqapo.css  28.27 kB 
+  ├─ .output/opera-mv3/icon/icon128.png              4.21 kB  
+  ├─ .output/opera-mv3/icon/icon16.png               464 B    
+  ├─ .output/opera-mv3/icon/icon32.png               986 B    
+  └─ .output/opera-mv3/icon/icon48.png               1.50 kB  
+Σ Total size: 614.22 kB                            
+[success] Finished in 680 ms
+
+> @return-spotify-lyrics/extension@0.5.0 build:safari /home/runner/work/return-spotify-lyrics/return-spotify-lyrics/apps/extension
+> wxt build -b safari --mv3
+
+[log] 
+WXT 0.21.4
+[info] Building safari-mv3 for production with Vite 8.2.1
+[warn] The following entrypoints have been skipped:
+- sidepanel
+[?25l⠋ Preparing...[K⠋ [1/2] background[K⠋ [2/2] popup[K⠙ [2/2] popup[K⠹ [2/2] popup[K⠸ [2/2] popup[K⠼ [2/2] popup[K[K[?25h[K[?25h[success] Built extension in 522 ms
+  ├─ .output/safari-mv3/manifest.json              678 B    
+  ├─ .output/safari-mv3/popup.html                 430 B    
+  ├─ .output/safari-mv3/background.js              95.71 kB 
+  ├─ .output/safari-mv3/chunks/popup-BY2kbICp.js   480.95 kB
+  ├─ .output/safari-mv3/assets/popup-DA5jqapo.css  28.27 kB 
+  ├─ .output/safari-mv3/icon/icon128.png           4.21 kB  
+  ├─ .output/safari-mv3/icon/icon16.png            464 B    
+  ├─ .output/safari-mv3/icon/icon32.png            986 B    
+  └─ .output/safari-mv3/icon/icon48.png            1.50 kB  
+Σ Total size: 613.20 kB                          
+[success] Finished in 653 ms
+
+> return-spotify-lyrics@0.5.0 verify:extension:browsers /home/runner/work/return-spotify-lyrics/return-spotify-lyrics
+> pnpm --filter @return-spotify-lyrics/extension verify:browsers
+
+
+> @return-spotify-lyrics/extension@0.5.0 verify:browsers /home/runner/work/return-spotify-lyrics/return-spotify-lyrics/apps/extension
+> node scripts/verify-browser-builds.mjs
+
+Verified Chrome, Edge, Firefox, Opera, and Safari MV3 builds.
