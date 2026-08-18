@@ -31,13 +31,13 @@ Document Picture-in-Picture remains a documented future option only. This pass d
 Rename the semantic surface model from:
 
 ```ts
-'popup' | 'sidepanel'
+'popup' | 'sidepanel';
 ```
 
 to:
 
 ```ts
-'popup' | 'sidebar'
+'popup' | 'sidebar';
 ```
 
 `sidebar` describes the product surface, not the browser API that hosts it.

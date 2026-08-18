@@ -28,6 +28,7 @@
 ### Task 1: Rename the semantic sidepanel surface to sidebar
 
 **Files:**
+
 - Modify: `apps/extension/src/app/surface/types.ts`
 - Modify: `apps/extension/src/app/layout/resolveAppLayout.ts`
 - Modify: `apps/extension/src/app/layout/resolveAppLayout.test.ts`
@@ -35,6 +36,7 @@
 - Search/modify any remaining application references to the literal semantic surface `sidepanel`.
 
 **Interfaces:**
+
 - Produces: `export type Surface = 'popup' | 'sidebar'`.
 - Physical WXT entrypoint remains `entrypoints/sidepanel`; it calls `mountApp('sidebar')`.
 
@@ -47,6 +49,7 @@
 ### Task 2: Add pure browser sidebar capability resolution
 
 **Files:**
+
 - Create: `apps/extension/src/platform/browser/sidebar.ts`
 - Create: `apps/extension/src/platform/browser/sidebar.test.ts`
 
@@ -73,12 +76,15 @@ export type SidebarOpenResult =
     | { status: 'unsupported'; implementation: 'none' };
 
 export function resolveSidebarCapability(apis: SidebarApis): SidebarCapability;
-export async function openSidebar(apis?: SidebarApis): Promise<SidebarOpenResult>;
+export async function openSidebar(
+    apis?: SidebarApis
+): Promise<SidebarOpenResult>;
 ```
 
 Runtime `openSidebar()` obtains real APIs only when `apis` is omitted. Tests inject `SidebarApis` so they do not emulate browser chrome.
 
 Resolution priority is:
+
 1. Chromium `sidePanel.open`
 2. Firefox/Gecko `sidebarAction.open`
 3. Opera `sidebarAction` presence without an assumed open method
@@ -93,6 +99,7 @@ Resolution priority is:
 ### Task 3: Expose sidebar capability to the application without browser-brand branching
 
 **Files:**
+
 - Create: `apps/extension/src/platform/browser/capabilities.ts`
 - Create: `apps/extension/src/platform/browser/capabilities.test.ts`
 - Modify: `apps/extension/src/app/AppBar.tsx` only if a current UI location can expose a real sidebar action without inventing new design; otherwise keep the adapter available but do not add UI solely for this task.
@@ -120,10 +127,12 @@ PiP detection is informational only: `documentPictureInPicture` is true only whe
 ### Task 4: Make the WXT sidebar entrypoint target-aware
 
 **Files:**
+
 - Modify: `apps/extension/src/entrypoints/sidepanel/index.html`
 - Modify: `apps/extension/wxt.config.ts`
 
 **Interfaces:**
+
 - WXT sidepanel entrypoint is included for `chrome`, `edge`, `firefox`, and `opera`; excluded from `safari`.
 - The same output document is used by all supported sidebar targets.
 - Chrome/Edge rely on WXT-generated `side_panel`.
@@ -140,6 +149,7 @@ PiP detection is informational only: `documentPictureInPicture` is true only whe
 ### Task 5: Add explicit MV3 cross-browser build scripts
 
 **Files:**
+
 - Modify: `apps/extension/package.json`
 - Modify: root `package.json`
 
@@ -149,13 +159,13 @@ Extension scripts:
 
 ```json
 {
-  "dev:firefox": "wxt -b firefox --mv3",
-  "build:chrome": "wxt build -b chrome --mv3",
-  "build:edge": "wxt build -b edge --mv3",
-  "build:firefox": "wxt build -b firefox --mv3",
-  "build:opera": "wxt build -b opera --mv3",
-  "build:safari": "wxt build -b safari --mv3",
-  "build:browsers": "pnpm build:chrome && pnpm build:edge && pnpm build:firefox && pnpm build:opera && pnpm build:safari"
+    "dev:firefox": "wxt -b firefox --mv3",
+    "build:chrome": "wxt build -b chrome --mv3",
+    "build:edge": "wxt build -b edge --mv3",
+    "build:firefox": "wxt build -b firefox --mv3",
+    "build:opera": "wxt build -b opera --mv3",
+    "build:safari": "wxt build -b safari --mv3",
+    "build:browsers": "pnpm build:chrome && pnpm build:edge && pnpm build:firefox && pnpm build:opera && pnpm build:safari"
 }
 ```
 
@@ -170,6 +180,7 @@ Root adds a convenience `build:extension:browsers` command filtering to the exte
 ### Task 6: Add browser manifest/output verification
 
 **Files:**
+
 - Create: `apps/extension/scripts/verify-browser-builds.mjs`
 - Modify: `apps/extension/package.json`
 
@@ -181,6 +192,7 @@ Root adds a convenience `build:extension:browsers` command filtering to the exte
 ```
 
 Checks:
+
 - Chrome: popup + sidepanel output; `side_panel.default_path` references `sidepanel.html`.
 - Edge: popup + sidepanel output; Chrome-style `side_panel` exists.
 - Firefox: popup + sidepanel output; `sidebar_action.default_panel` references `sidepanel.html`; MV3.
@@ -195,9 +207,11 @@ Checks:
 ### Task 7: Extend CI without restoring feature-branch push spam
 
 **Files:**
+
 - Modify: `.github/workflows/verify.yml`
 
 **Interfaces:**
+
 - Trigger remains exactly `push: branches: [main]` plus `pull_request`.
 - Existing concurrency cancellation remains.
 - Existing default workspace `check`, tests, Turbo build, and output checks remain.
@@ -210,6 +224,7 @@ Checks:
 ### Task 8: Full verification and documentation consistency
 
 **Files:**
+
 - Review: `docs/superpowers/specs/2026-08-18-cross-browser-extension-design.md`
 - Review: `docs/superpowers/plans/2026-08-18-cross-browser-extension.md`
 - Modify only if implementation revealed a documented assumption that is false.

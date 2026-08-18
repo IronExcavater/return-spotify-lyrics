@@ -36,9 +36,7 @@ type RuntimeExtensions = typeof globalThis & {
     };
 };
 
-export function resolveSidebarCapability(
-    apis: SidebarApis
-): SidebarCapability {
+export function resolveSidebarCapability(apis: SidebarApis): SidebarCapability {
     if (apis.sidePanelOpen) {
         return {
             implementation: 'chromium',
@@ -80,7 +78,9 @@ export function getRuntimeSidebarApis(): SidebarApis {
             ? async () => {
                   const currentWindow = await chromeApi.windows!.getCurrent();
                   if (typeof currentWindow.id !== 'number') {
-                      throw new Error('Unable to resolve the current browser window');
+                      throw new Error(
+                          'Unable to resolve the current browser window'
+                      );
                   }
                   await chromeApi.sidePanel!.open({
                       windowId: currentWindow.id,
