@@ -2,7 +2,8 @@ import tailwindcss from '@tailwindcss/vite';
 import { defineConfig, type UserManifest } from 'wxt';
 
 const name = 'Return Spotify Lyrics';
-const description = 'A better Spotify companion experience.';
+const description =
+    'Synced Spotify lyrics and controls, one click from any tab.';
 
 const icons = {
     16: 'icon/16.png',
@@ -12,7 +13,6 @@ const icons = {
     128: 'icon/128.png',
 };
 
-// One page fills the Chrome side panel and the Firefox and Opera sidebars.
 const panel = 'panel.html';
 
 const sidePanel: UserManifest = {
@@ -33,7 +33,6 @@ const firefox: UserManifest = {
     ...sidebar,
     browser_specific_settings: {
         gecko: {
-            // Do not change the ID after the first upload to Firefox Add-ons.
             id: 'return-spotify-lyrics@extension',
             strict_min_version: '142.0',
             data_collection_permissions: { required: ['none'] },
