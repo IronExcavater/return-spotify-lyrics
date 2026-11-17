@@ -1,0 +1,166 @@
+/* Defaults live in @layer components so that a consumer className always wins. */
+@layer components {
+    .resize-box {
+        position: relative;
+        display: grid;
+        /* A 1fr track, not minmax(0, 1fr), keeps the min-content size of the content. */
+        grid-template: 1fr / 1fr;
+        box-sizing: border-box;
+        min-width: min-content;
+        min-height: min-content;
+        max-width: 100%;
+        max-height: 100%;
+
+        /* On a very small box, opposite handles share the space and do not overlap. */
+        --resize-leading: min(
+            var(--handle-thickness),
+            max(0px, calc(100% - var(--handle-thickness)))
+        );
+        --resize-trailing: min(var(--handle-thickness), 100%);
+
+        /* Inset placement adds half a handle of padding on each side with a handle. */
+        &[data-placement='inset'] {
+            &:has(> [data-edge^='top']) {
+                padding-top: calc(var(--handle-thickness) / 2);
+            }
+            &:has(> [data-edge^='bottom']) {
+                padding-bottom: calc(var(--handle-thickness) / 2);
+            }
+            &:has(> [data-edge$='left']) {
+                padding-left: calc(var(--handle-thickness) / 2);
+            }
+            &:has(> [data-edge$='right']) {
+                padding-right: calc(var(--handle-thickness) / 2);
+            }
+        }
+
+        /* An empty cell under the content keeps the box at least one handle in size. */
+        &::before {
+            content: '';
+            grid-area: 1 / 1;
+            width: var(--handle-thickness);
+            height: var(--handle-thickness);
+            pointer-events: none;
+        }
+
+        & > [data-part='content'] {
+            grid-area: 1 / 1;
+            display: grid;
+            grid-template: 1fr / 1fr;
+        }
+
+        & > [data-part='handle'] {
+            position: absolute;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            touch-action: none;
+            user-select: none;
+            outline: none;
+
+            &:focus-visible {
+                box-shadow: inset 0 0 0 2px var(--color-focus, currentColor);
+            }
+
+            /* Side grips move out a quarter handle, and corner grips turn from bottom-right. */
+            &[data-edge='top'] {
+                top: 0;
+                left: var(--resize-leading);
+                right: var(--resize-trailing);
+                height: var(--resize-leading);
+                cursor: ns-resize;
+                --grip-transform: translate(
+                    0,
+                    calc(var(--handle-thickness) / -4)
+                );
+            }
+            &[data-edge='bottom'] {
+                bottom: 0;
+                left: var(--resize-leading);
+                right: var(--resize-trailing);
+                height: var(--resize-trailing);
+                cursor: ns-resize;
+                --grip-transform: translate(
+                    0,
+                    calc(var(--handle-thickness) / 4)
+                );
+            }
+            &[data-edge='left'] {
+                left: 0;
+                top: var(--resize-leading);
+                bottom: var(--resize-trailing);
+                width: var(--resize-leading);
+                cursor: ew-resize;
+                --grip-transform: translate(
+                    calc(var(--handle-thickness) / -4),
+                    0
+                );
+            }
+            &[data-edge='right'] {
+                right: 0;
+                top: var(--resize-leading);
+                bottom: var(--resize-trailing);
+                width: var(--resize-trailing);
+                cursor: ew-resize;
+                --grip-transform: translate(
+                    calc(var(--handle-thickness) / 4),
+                    0
+                );
+            }
+            &[data-edge='top-left'] {
+                top: 0;
+                left: 0;
+                width: var(--resize-leading);
+                height: var(--resize-leading);
+                cursor: nwse-resize;
+                --grip-transform: rotate(180deg);
+            }
+            &[data-edge='top-right'] {
+                top: 0;
+                right: 0;
+                width: var(--resize-trailing);
+                height: var(--resize-leading);
+                cursor: nesw-resize;
+                --grip-transform: rotate(-90deg);
+            }
+            &[data-edge='bottom-left'] {
+                bottom: 0;
+                left: 0;
+                width: var(--resize-leading);
+                height: var(--resize-trailing);
+                cursor: nesw-resize;
+                --grip-transform: rotate(90deg);
+            }
+            &[data-edge='bottom-right'] {
+                bottom: 0;
+                right: 0;
+                width: var(--resize-trailing);
+                height: var(--resize-trailing);
+                cursor: nwse-resize;
+            }
+
+            & > [data-part='grip'] {
+                flex: none;
+                width: var(--handle-thickness);
+                height: var(--handle-thickness);
+                transform: var(--grip-transform, none);
+                pointer-events: none;
+                opacity: 0;
+                transition: opacity 150ms ease;
+            }
+            &:hover > [data-part='grip'] {
+                opacity: 0.6;
+            }
+            &:is([data-dragging], :focus-visible) > [data-part='grip'] {
+                opacity: 1;
+            }
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .resize-box > [data-part='handle'] > [data-part='grip'] {
+            transition: none;
+        }
+    }
+}
