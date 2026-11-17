@@ -1,0 +1,99 @@
+name: CI
+
+on:
+    push:
+        branches: [main]
+    pull_request:
+
+# A new push cancels the old run on a pull request, but each commit on main gets a full run.
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+    contents: read
+
+jobs:
+    check:
+        name: Check
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        steps:
+            - uses: actions/checkout@v7
+            - uses: ./.github/actions/setup
+
+            - name: Typecheck, lint and format
+              run: pnpm check
+
+            - name: Test
+              run: pnpm test
+
+            - name: Build Storybook
+              run: pnpm --filter @return-spotify-lyrics/storybook build
+
+    extension:
+        name: Extension (${{ matrix.browser }})
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        strategy:
+            fail-fast: false
+            matrix:
+                browser: [chrome, edge, firefox, opera]
+        steps:
+            - uses: actions/checkout@v7
+            - uses: ./.github/actions/setup
+
+            - name: Build and zip
+              run: pnpm --filter @return-spotify-lyrics/extension exec wxt zip -b ${{ matrix.browser }}
+
+            - name: Lint for Firefox Add-ons
+              if: matrix.browser == 'firefox'
+              run: pnpm --filter @return-spotify-lyrics/extension lint:firefox
+
+            - uses: actions/upload-artifact@v7
+              with:
+                  name: extension-${{ matrix.browser }}
+                  path: apps/extension/.output/*.zip
+                  if-no-files-found: error
+                  retention-days: 7
+
+    safari:
+        name: Extension (safari)
+        runs-on: macos-latest
+        timeout-minutes: 20
+        steps:
+            - uses: actions/checkout@v7
+            - uses: ./.github/actions/setup
+
+            - name: Build and zip
+              run: pnpm --filter @return-spotify-lyrics/extension zip:safari
+
+            # Older Xcode versions call the packager safari-web-extension-converter.
+            - name: Package as a Safari app
+              shell: bash
+              run: |
+                  tool=safari-web-extension-packager
+                  xcrun --find "$tool" > /dev/null 2>&1 || tool=safari-web-extension-converter
+                  xcrun "$tool" apps/extension/.output/safari-mv3 \
+                      --project-location "$RUNNER_TEMP/safari" \
+                      --app-name "Return Spotify Lyrics" \
+                      --bundle-identifier com.example.return-spotify-lyrics \
+                      --macos-only --swift --copy-resources --no-open --no-prompt --force \
+                      2>&1 | tee "$RUNNER_TEMP/packager.log"
+                  if grep -q "not supported" "$RUNNER_TEMP/packager.log"; then
+                      echo "::error::Safari does not support a key in manifest.json. See the packager output above."
+                      exit 1
+                  fi
+
+            - name: Build the Safari app
+              shell: bash
+              run: |
+                  project=$(find "$RUNNER_TEMP/safari" -maxdepth 2 -name '*.xcodeproj' | head -n 1)
+                  xcodebuild -project "$project" -alltargets CODE_SIGNING_ALLOWED=NO -quiet build
+
+            - uses: actions/upload-artifact@v7
+              with:
+                  name: extension-safari
+                  path: apps/extension/.output/*.zip
+                  if-no-files-found: error
+                  retention-days: 7
