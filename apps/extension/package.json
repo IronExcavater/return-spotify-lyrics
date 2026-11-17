@@ -1,0 +1,44 @@
+{
+    "name": "@return-spotify-lyrics/extension",
+    "private": true,
+    "version": "0.0.0",
+    "type": "module",
+    "scripts": {
+        "dev": "wxt",
+        "dev:firefox": "wxt -b firefox",
+        "build": "wxt build",
+        "build:firefox": "wxt build -b firefox",
+        "build:edge": "wxt build -b edge",
+        "build:opera": "wxt build -b opera",
+        "build:safari": "wxt build -b safari",
+        "zip": "wxt zip",
+        "zip:firefox": "wxt zip -b firefox",
+        "zip:edge": "wxt zip -b edge",
+        "zip:opera": "wxt zip -b opera",
+        "zip:safari": "wxt zip -b safari",
+        "lint:firefox": "web-ext lint --source-dir .output/firefox-mv3",
+        "typecheck": "tsc --noEmit",
+        "lint": "oxlint src",
+        "postinstall": "wxt prepare"
+    },
+    "dependencies": {
+        "@base-ui/react": "^1.7.0",
+        "@return-spotify-lyrics/icons": "workspace:*",
+        "@return-spotify-lyrics/ui": "workspace:*",
+        "clsx": "^2.1.1",
+        "react": "^19.2.4",
+        "react-dom": "^19.2.4",
+        "react-router": "^8.3.0"
+    },
+    "devDependencies": {
+        "@tailwindcss/vite": "^4.3.3",
+        "@types/react": "^19.2.14",
+        "@types/react-dom": "^19.2.3",
+        "@wxt-dev/module-react": "^1.1.5",
+        "oxlint": "^1.78.0",
+        "tailwindcss": "^4.3.3",
+        "typescript": "^5.9.3",
+        "web-ext": "^10.5.0",
+        "wxt": "^0.21.3"
+    }
+}

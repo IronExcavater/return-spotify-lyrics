@@ -1,0 +1,13 @@
+{
+    "extends": "./.wxt/tsconfig.json",
+    "compilerOptions": {
+        "jsx": "react-jsx",
+        "strict": true,
+        "noUncheckedIndexedAccess": true,
+        "noUncheckedSideEffectImports": true,
+        "noFallthroughCasesInSwitch": true,
+        "useUnknownInCatchVariables": true,
+        "allowImportingTsExtensions": true,
+        "forceConsistentCasingInFileNames": true
+    }
+}

@@ -1,0 +1,72 @@
+import { useEffect, useState } from 'react';
+import { Outlet } from 'react-router';
+import clsx from 'clsx';
+
+import ResizeBox from '@return-spotify-lyrics/ui/ResizeBox';
+import type { Size } from '@return-spotify-lyrics/ui/geometry';
+
+import { useSurface } from '../surface/SurfaceProvider';
+import useResize from '../resize/useResize';
+import AppBar from './AppBar';
+import { popupSizeItem } from '@/storage/popup';
+import useStorageState from '@/storage/useStorageState';
+
+const MAX_POPUP_SIZE = { width: 800, height: 600 };
+const MIN_POPUP_SIZE = { width: 320, height: 200 };
+
+function syncPopupSize(width: number, height: number) {
+    document.documentElement.style.width = `${width}px`;
+    document.documentElement.style.height = `${height}px`;
+    document.body.style.width = `${width}px`;
+    document.body.style.height = `${height}px`;
+}
+
+export default function AppShell() {
+    const surface = useSurface();
+    const resize = useResize();
+    const [savedSize, setSavedSize] = useStorageState(
+        popupSizeItem,
+        resize.popup
+    );
+    // Storage saves the size once when a resize ends, not on each pointer move.
+    const [dragSize, setDragSize] = useState<Size | null>(null);
+    const size = dragSize ?? savedSize;
+
+    // The popup window takes the document size. The browser sets the side panel size.
+    useEffect(() => {
+        if (surface !== 'popup') return;
+        syncPopupSize(size.width, size.height);
+    }, [surface, size.width, size.height]);
+
+    const content = (
+        <div
+            className={clsx(
+                'flex h-full min-h-0 flex-col',
+                surface === 'popup' && 'overflow-hidden'
+            )}
+        >
+            <AppBar policy={resize.bar} />
+            <main className="min-h-0 flex-1 overflow-y-auto">
+                <Outlet />
+            </main>
+        </div>
+    );
+
+    if (surface !== 'popup') return content;
+
+    return (
+        <ResizeBox
+            size={size}
+            minSize={MIN_POPUP_SIZE}
+            maxSize={MAX_POPUP_SIZE}
+            direction={['left', 'bottom']}
+            onChange={setDragSize}
+            onChangeEnd={(next) => {
+                setSavedSize(next);
+                setDragSize(null);
+            }}
+        >
+            {content}
+        </ResizeBox>
+    );
+}
