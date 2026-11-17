@@ -1,17 +1,17 @@
 # Return Spotify Lyrics
 
-A better Spotify companion experience.
+Synced Spotify lyrics and controls, one click from any tab.
 
-Control Spotify from any tab 🎧, sing along with lyrics that follow the song 🎤, and write synced lyrics for the songs that don't have them yet ✍️. It works with free and Premium accounts.
+Sing along with lyrics that follow the song 🎤, control Spotify from any tab 🎧, and write synced lyrics for the songs that don't have them yet ✍️. It works with Spotify Free and Premium, in Chrome, Edge, Firefox, Opera and Safari.
 
 ## ✨ Features
 
 ### 🎤 Lyrics in time with the music
 
 - Lyrics appear the moment a song starts.
-- The current line lights up, and the lyrics scroll along with the song.
-- Click any line to jump straight to that part ⏩.
-- Songs with plain lyrics, or no vocals at all, look just as clean.
+- The current line lights up, and the lyrics scroll with the song.
+- Click any line to jump to that part of the song ⏩.
+- Plain lyrics and instrumentals look just as clean.
 
 ### ✍️ Write your own lyrics
 
@@ -22,14 +22,17 @@ Control Spotify from any tab 🎧, sing along with lyrics that follow the song �
 
 ### ▶️ Playback
 
-- Play, pause, skip, seek, change the volume 🔊, shuffle 🔀 and repeat 🔁.
-- Move playback between your Spotify devices 📱💻.
-- See what's up next, add songs to the queue and reorder it.
+- Play, pause, skip and seek, and start any album, playlist or artist.
+- Change the volume 🔊, shuffle 🔀 and repeat 🔁.\*
+- Move playback between your computer, phone and speakers 📱💻.\*
+- See what's up next ⏭️, add songs to the queue and reorder it.\*
 - Keyboard shortcuts ⌨️ for playback, and for any song, album or playlist.
+
+\* Needs Spotify Premium. See Spotify Free and Premium below.
 
 ### 🏠 Your music
 
-- A home page with your recent plays, top tracks and artists, new releases and playlists. Rearrange each section and choose how it looks.
+- A home page with your recent plays, top tracks and artists, new releases and playlists. Rearrange the sections and choose how each one looks.
 - Search tracks, albums, artists, playlists and podcasts 🎙️, and filter by artist, genre, year or type 🔍.
 - A page for every album, artist, playlist and podcast.
 
@@ -42,57 +45,62 @@ Control Spotify from any tab 🎧, sing along with lyrics that follow the song �
 
 ### 🪟 Popup or side panel
 
-Open the player from the toolbar and resize the popup to fit; it remembers the size 📐. Or keep it open in the side panel while you browse.
+Open the player from the toolbar and resize the popup to fit 📐. It keeps that size for next time. Or keep the player open in the side panel while you browse.
 
-## 💎 Free and Premium
+## 💎 Spotify Free and Premium
 
-Spotify lets only Premium accounts control playback through its API. On a free account, **Web Player control** fills the gap: the extension opens a Spotify Web Player tab in the background and controls playback through it. It's on by default, and you can turn it off in Settings ⚙️.
+Spotify lets only Premium accounts control playback through its API. On Spotify Free, you still get the lyrics, your library and the playlist tools, and the extension opens Spotify when you choose something to play.
 
-| Feature                                   | Premium | Free | Free, Web Player control off |
-| ----------------------------------------- | :-----: | :--: | :--------------------------: |
-| Synced lyrics and the lyric editor        |   ✅    |  ✅  |              ✅              |
-| Home, search, library and playlist tools  |   ✅    |  ✅  |              ✅              |
-| Play, pause, skip and seek                |   ✅    |  ✅  |              ❌              |
-| Play an album, playlist or artist         |   ✅    |  ✅  |              ❌              |
-| Volume, shuffle and repeat                |   ✅    |  ❌  |              ❌              |
-| Switch devices                            |   ✅    |  ❌  |              ❌              |
-| Add to, reorder and remove from the queue |   ✅    |  ❌  |              ❌              |
+To play, pause, skip and seek on Spotify Free too, turn on **Web Player control** in Settings ⚙️. The extension then keeps a Spotify Web Player tab open in the background and controls playback through it. You need to be signed in to open.spotify.com in the same browser.
 
-With Web Player control off, the extension still shows what's playing, and opens Spotify when you pick something to play.
+|                                          | Spotify Premium | Spotify Free | Spotify Free + Web Player control |
+| ---------------------------------------- | :-------------: | :----------: | :-------------------------------: |
+| Synced lyrics and the lyric editor       |       ✅        |      ✅      |                ✅                 |
+| Home, search, library and playlist tools |       ✅        |      ✅      |                ✅                 |
+| See what's playing and what's up next    |       ✅        |      ✅      |                ✅                 |
+| Play, pause, skip and seek               |       ✅        |      ❌      |                ✅                 |
+| Start an album, playlist or artist       |       ✅        |      ❌      |                ✅                 |
+| Volume, shuffle and repeat               |       ✅        |      ❌      |                ❌                 |
+| Switch devices                           |       ✅        |      ❌      |                ❌                 |
+| Add to and reorder the queue             |       ✅        |      ❌      |                ❌                 |
 
 ## 🌐 Browsers
 
-| Browser        | Popup | Side panel |
-| -------------- | :---: | :--------: |
-| Chrome         |  ✅   |     ✅     |
-| Edge           |  ✅   |     ✅     |
-| Firefox        |  ✅   |     ✅     |
-| Opera          |  ✅   |     ✅     |
-| Safari for Mac |  ✅   |     ❌     |
+| Browser            | Popup | Side panel | Store                             |
+| ------------------ | :---: | :--------: | --------------------------------- |
+| Chrome             |  ✅   |     ✅     | Chrome Web Store                  |
+| Edge               |  ✅   |     ✅     | Microsoft Edge Add-ons            |
+| Firefox            |  ✅   |     ✅     | Firefox Add-ons                   |
+| Opera and Opera GX |  ✅   |     ✅     | Opera add-ons or Chrome Web Store |
+| Safari for Mac     |  ✅   |     ❌     | App Store                         |
+| Brave              |  ✅   |     ✅     | Chrome Web Store                  |
+| Vivaldi            |  ✅   |     ❌     | Chrome Web Store                  |
 
-- 🦁 Brave, Vivaldi and other Chromium browsers can install it from the Chrome Web Store.
-- 🦊 Firefox needs version 142 or later.
-- 🔄 Sign in on each browser you use, and your settings and lyric drafts follow you, even from Chrome to Firefox.
+## 🚀 Get started
+
+1. Install Return Spotify Lyrics from your browser's extension store 🧩.
+2. Pin it to your toolbar 📌.
+3. Click the icon and sign in with Spotify 🔑.
+
+The stores are coming soon. Until then, you can build the extension yourself: see [Contributing](CONTRIBUTING.md).
+
+## ❓ Questions
+
+**Does the extension play the music?**
+
+No. Spotify plays it, on your computer, phone, speaker or the Web Player. The extension shows the lyrics and controls playback.
+
+**A song has no lyrics. What now?**
+
+Write them in the lyric editor ✍️, then publish them to LRCLIB so the next person can sing along.
+
+**Does it work on my phone?**
+
+The extension runs in desktop browsers. With Spotify Premium, it can control the Spotify app on your phone 📱.
 
 ## 🔒 Privacy
 
-- You sign in on Spotify's own page, so the extension never sees your password 🔑.
-- Your listening habits stay on your device. They're used only to personalise your home page.
-- Your lyric drafts and settings sync only between the browsers you sign in on.
-- Lyrics go to LRCLIB only when you choose to publish them.
-- The extension talks only to Spotify, LRCLIB and its own sync service.
-
-## 🛡️ Permissions
-
-| Permission | Why the extension needs it                                       |
-| ---------- | ---------------------------------------------------------------- |
-| Storage    | Saves your settings, lyric drafts and popup size on your device. |
-| Identity   | Opens the Spotify sign-in page. Safari signs in without it.      |
-| Side panel | Shows the player in the Chrome and Edge side panel.              |
-
-## 🚀 Install
-
-Coming soon to the Chrome, Edge, Firefox, Opera and Safari stores. Until then, you can build it yourself: see [Contributing](CONTRIBUTING.md).
+You sign in on Spotify's own page, so the extension never sees your password 🔑. Your listening history stays on your device and only shapes your home page. Your settings and lyric drafts sync between your own browsers, and your lyrics go to LRCLIB only when you publish them. The extension talks to Spotify, LRCLIB and its own sync service, and nothing else.
 
 ## 💚 Credits
 
