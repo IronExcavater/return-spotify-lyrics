@@ -54,6 +54,7 @@ jobs:
               with:
                   name: extension-${{ matrix.browser }}
                   path: apps/extension/.output/*.zip
+                  include-hidden-files: true
                   if-no-files-found: error
                   retention-days: 7
 
@@ -74,10 +75,11 @@ jobs:
               run: |
                   tool=safari-web-extension-packager
                   xcrun --find "$tool" > /dev/null 2>&1 || tool=safari-web-extension-converter
+                  # The packager takes the app ID from the app name, so the identifier keeps its capitals.
                   xcrun "$tool" apps/extension/.output/safari-mv3 \
                       --project-location "$RUNNER_TEMP/safari" \
                       --app-name "Return Spotify Lyrics" \
-                      --bundle-identifier com.example.return-spotify-lyrics \
+                      --bundle-identifier com.ironbyte.Return-Spotify-Lyrics \
                       --macos-only --swift --copy-resources --no-open --no-prompt --force \
                       2>&1 | tee "$RUNNER_TEMP/packager.log"
                   if grep -q "not supported" "$RUNNER_TEMP/packager.log"; then
@@ -95,5 +97,6 @@ jobs:
               with:
                   name: extension-safari
                   path: apps/extension/.output/*.zip
+                  include-hidden-files: true
                   if-no-files-found: error
                   retention-days: 7
