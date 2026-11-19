@@ -1,5 +1,40 @@
-/* Registered so that the fade size can transition. */
-@property --fade-size {
+/* Each edge has its own registered size, so an edge fades in and out when the direction changes. */
+@property --fade-top-size {
+    syntax: '<length-percentage>';
+    inherits: false;
+    initial-value: 0px;
+}
+@property --fade-right-size {
+    syntax: '<length-percentage>';
+    inherits: false;
+    initial-value: 0px;
+}
+@property --fade-bottom-size {
+    syntax: '<length-percentage>';
+    inherits: false;
+    initial-value: 0px;
+}
+@property --fade-left-size {
+    syntax: '<length-percentage>';
+    inherits: false;
+    initial-value: 0px;
+}
+@property --fade-top-left-size {
+    syntax: '<length-percentage>';
+    inherits: false;
+    initial-value: 0px;
+}
+@property --fade-top-right-size {
+    syntax: '<length-percentage>';
+    inherits: false;
+    initial-value: 0px;
+}
+@property --fade-bottom-right-size {
+    syntax: '<length-percentage>';
+    inherits: false;
+    initial-value: 0px;
+}
+@property --fade-bottom-left-size {
     syntax: '<length-percentage>';
     inherits: false;
     initial-value: 0px;
@@ -8,160 +43,132 @@
 /* Defaults live in @layer components so that a consumer className always wins. */
 @layer components {
     .fade-box {
-        --fade-opaque: linear-gradient(black, black);
-        --fade-inner: calc(100% - 2 * var(--fade-size));
-
-        /* Each edge stays opaque until a data-fade value replaces it. */
-        --fade-top: var(--fade-opaque);
-        --fade-right: var(--fade-opaque);
-        --fade-bottom: var(--fade-opaque);
-        --fade-left: var(--fade-opaque);
-        --fade-top-left: var(--fade-opaque);
-        --fade-top-right: var(--fade-opaque);
-        --fade-bottom-right: var(--fade-opaque);
-        --fade-bottom-left: var(--fade-opaque);
+        /* At a size of 0, each layer is opaque and has no effect. */
+        --fade-top-image: linear-gradient(to bottom, var(--fade-top-stops));
+        --fade-right-image: linear-gradient(to left, var(--fade-right-stops));
+        --fade-bottom-image: linear-gradient(to top, var(--fade-bottom-stops));
+        --fade-left-image: linear-gradient(to right, var(--fade-left-stops));
+        --fade-corner-images:
+            radial-gradient(
+                var(--fade-top-left-size) var(--fade-top-left-size) at 0 0,
+                var(--fade-stops)
+            ),
+            radial-gradient(
+                var(--fade-top-right-size) var(--fade-top-right-size) at 100% 0,
+                var(--fade-stops)
+            ),
+            radial-gradient(
+                var(--fade-bottom-right-size) var(--fade-bottom-right-size) at
+                    100% 100%,
+                var(--fade-stops)
+            ),
+            radial-gradient(
+                var(--fade-bottom-left-size) var(--fade-bottom-left-size) at 0
+                    100%,
+                var(--fade-stops)
+            );
 
         position: relative;
         overflow: hidden;
-        transition: --fade-size 250ms ease;
+        transition-property:
+            --fade-top-size, --fade-right-size, --fade-bottom-size,
+            --fade-left-size, --fade-top-left-size, --fade-top-right-size,
+            --fade-bottom-right-size, --fade-bottom-left-size;
+        transition-duration: var(--transition-duration-default);
 
         &[data-fade~='top'] {
-            --fade-top: linear-gradient(to bottom, var(--fade-stops));
+            --fade-top-size: var(--fade-size);
         }
         &[data-fade~='right'] {
-            --fade-right: linear-gradient(to left, var(--fade-stops));
+            --fade-right-size: var(--fade-size);
         }
         &[data-fade~='bottom'] {
-            --fade-bottom: linear-gradient(to top, var(--fade-stops));
+            --fade-bottom-size: var(--fade-size);
         }
         &[data-fade~='left'] {
-            --fade-left: linear-gradient(to right, var(--fade-stops));
+            --fade-left-size: var(--fade-size);
         }
 
         /* A corner without its two sides fades as a quarter circle. */
-        &[data-fade~='top-left'] {
-            --fade-top-left: radial-gradient(circle at 0 0, var(--fade-stops));
+        &[data-fade~='top-left']:not([data-fade~='top'][data-fade~='left']) {
+            --fade-top-left-size: var(--fade-size);
         }
-        &[data-fade~='top-right'] {
-            --fade-top-right: radial-gradient(
-                circle at 100% 0,
-                var(--fade-stops)
-            );
+        &[data-fade~='top-right']:not([data-fade~='top'][data-fade~='right']) {
+            --fade-top-right-size: var(--fade-size);
         }
-        &[data-fade~='bottom-right'] {
-            --fade-bottom-right: radial-gradient(
-                circle at 100% 100%,
-                var(--fade-stops)
-            );
+        &[data-fade~='bottom-right']:not(
+                [data-fade~='bottom'][data-fade~='right']
+            ) {
+            --fade-bottom-right-size: var(--fade-size);
         }
-        &[data-fade~='bottom-left'] {
-            --fade-bottom-left: radial-gradient(
-                circle at 0 100%,
-                var(--fade-stops)
-            );
+        &[data-fade~='bottom-left']:not(
+                [data-fade~='bottom'][data-fade~='left']
+            ) {
+            --fade-bottom-left-size: var(--fade-size);
         }
     }
 
     /* Square corners: full-size layers multiply where two sides meet. */
     .fade-box[data-corners='square'] {
         mask-image:
-            var(--fade-top), var(--fade-right), var(--fade-bottom),
-            var(--fade-left), var(--fade-top-left), var(--fade-top-right),
-            var(--fade-bottom-right), var(--fade-bottom-left);
+            var(--fade-corner-images), var(--fade-top-image),
+            var(--fade-right-image), var(--fade-bottom-image),
+            var(--fade-left-image);
         mask-composite: intersect;
-
-        /* The two side fades already shape the corner. */
-        &[data-fade~='top'][data-fade~='left'] {
-            --fade-top-left: var(--fade-opaque);
-        }
-        &[data-fade~='top'][data-fade~='right'] {
-            --fade-top-right: var(--fade-opaque);
-        }
-        &[data-fade~='bottom'][data-fade~='right'] {
-            --fade-bottom-right: var(--fade-opaque);
-        }
-        &[data-fade~='bottom'][data-fade~='left'] {
-            --fade-bottom-left: var(--fade-opaque);
-        }
     }
 
-    /* Round corners: nine tiles (centre, four sides, four corners) that touch but do not overlap. */
+    /* Round corners: nine tiles that touch, under the four corner layers. */
     .fade-box[data-corners='round'] {
+        --fade-inner-width: calc(
+            100% - var(--fade-left-size) - var(--fade-right-size)
+        );
+        --fade-inner-height: calc(
+            100% - var(--fade-top-size) - var(--fade-bottom-size)
+        );
+
+        /* The layers are the corner layers, the centre, four sides, then a curve in each inner corner. */
         mask-image:
-            var(--fade-opaque), var(--fade-top), var(--fade-right),
-            var(--fade-bottom), var(--fade-left), var(--fade-top-left),
-            var(--fade-top-right), var(--fade-bottom-right),
-            var(--fade-bottom-left);
+            var(--fade-corner-images), linear-gradient(black, black),
+            var(--fade-top-image), var(--fade-right-image),
+            var(--fade-bottom-image), var(--fade-left-image),
+            radial-gradient(100% 100% at 100% 100%, var(--fade-stops-reverse)),
+            radial-gradient(100% 100% at 0 100%, var(--fade-stops-reverse)),
+            radial-gradient(100% 100% at 0 0, var(--fade-stops-reverse)),
+            radial-gradient(100% 100% at 100% 0, var(--fade-stops-reverse));
+        /* The opaque centre goes 1px under each side, so no seam shows on a part pixel. */
         mask-position:
-            center,
-            top,
-            right,
-            bottom,
-            left,
-            top left,
-            top right,
-            bottom right,
-            bottom left;
+            0 0,
+            0 0,
+            0 0,
+            0 0,
+            calc(var(--fade-left-size) - 1px) calc(var(--fade-top-size) - 1px),
+            var(--fade-left-size) 0,
+            right 0 top var(--fade-top-size),
+            left var(--fade-left-size) bottom 0,
+            0 var(--fade-top-size),
+            left top,
+            right top,
+            right bottom,
+            left bottom;
         mask-size:
-            var(--fade-inner) var(--fade-inner),
-            var(--fade-inner) var(--fade-size),
-            var(--fade-size) var(--fade-inner),
-            var(--fade-inner) var(--fade-size),
-            var(--fade-size) var(--fade-inner),
-            var(--fade-size) var(--fade-size),
-            var(--fade-size) var(--fade-size),
-            var(--fade-size) var(--fade-size),
-            var(--fade-size) var(--fade-size);
+            100% 100%,
+            100% 100%,
+            100% 100%,
+            100% 100%,
+            calc(var(--fade-inner-width) + 2px)
+                calc(var(--fade-inner-height) + 2px),
+            var(--fade-inner-width) var(--fade-top-size),
+            var(--fade-right-size) var(--fade-inner-height),
+            var(--fade-inner-width) var(--fade-bottom-size),
+            var(--fade-left-size) var(--fade-inner-height),
+            var(--fade-left-size) var(--fade-top-size),
+            var(--fade-right-size) var(--fade-top-size),
+            var(--fade-right-size) var(--fade-bottom-size),
+            var(--fade-left-size) var(--fade-bottom-size);
         mask-repeat: no-repeat;
-
-        /* One faded side: its band continues through the corner. */
-        &[data-fade~='top'] {
-            --fade-top-left: var(--fade-top);
-            --fade-top-right: var(--fade-top);
-        }
-        &[data-fade~='right'] {
-            --fade-top-right: var(--fade-right);
-            --fade-bottom-right: var(--fade-right);
-        }
-        &[data-fade~='bottom'] {
-            --fade-bottom-right: var(--fade-bottom);
-            --fade-bottom-left: var(--fade-bottom);
-        }
-        &[data-fade~='left'] {
-            --fade-top-left: var(--fade-left);
-            --fade-bottom-left: var(--fade-left);
-        }
-
-        /* Two faded sides: a curve around the inner corner joins the two bands. */
-        &[data-fade~='top'][data-fade~='left'] {
-            --fade-top-left: radial-gradient(
-                circle at 100% 100%,
-                var(--fade-stops-reverse)
-            );
-        }
-        &[data-fade~='top'][data-fade~='right'] {
-            --fade-top-right: radial-gradient(
-                circle at 0 100%,
-                var(--fade-stops-reverse)
-            );
-        }
-        &[data-fade~='bottom'][data-fade~='right'] {
-            --fade-bottom-right: radial-gradient(
-                circle at 0 0,
-                var(--fade-stops-reverse)
-            );
-        }
-        &[data-fade~='bottom'][data-fade~='left'] {
-            --fade-bottom-left: radial-gradient(
-                circle at 100% 0,
-                var(--fade-stops-reverse)
-            );
-        }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-        .fade-box {
-            transition: none;
-        }
+        /* The corner layers cut into the tiles, and the tiles join. */
+        mask-composite:
+            intersect, intersect, intersect, intersect, add, add, add, add, add,
+            add, add, add, add;
     }
 }

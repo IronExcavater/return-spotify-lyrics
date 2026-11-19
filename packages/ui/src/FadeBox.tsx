@@ -1,8 +1,10 @@
 import type { ComponentPropsWithoutRef } from 'react';
 import clsx from 'clsx';
 import { toCssSize, type CssLength } from './css';
-import { resolveEdges, type Direction } from './geometry';
+import { resolveEdges, type Direction, type Side } from './geometry';
 import { easeStops, reverseEasing, type Easing } from './gradient';
+
+const SIDES: readonly Side[] = ['top', 'right', 'bottom', 'left'];
 
 export type FadeBoxProps = ComponentPropsWithoutRef<'div'> & {
     enabled?: boolean;
@@ -26,10 +28,18 @@ export default function FadeBox({
 }: FadeBoxProps) {
     const edges = resolveEdges(direction).map((edge) => edge.name);
     const fadeSize = enabled ? toCssSize(size) : '0px';
-    const stops = easeStops(`transparent, ${easing}, black var(--fade-size)`);
+    // A square corner multiplies two full-size layers, so each side needs stops at its own size.
+    const sideStops = Object.fromEntries(
+        SIDES.map((side) => [
+            `--fade-${side}-stops`,
+            easeStops(`transparent, ${easing}, black var(--fade-${side}-size)`),
+        ])
+    );
+    // The corner gradients have their own size, so their stops go from 0% to 100%.
+    const stops = easeStops(`transparent, ${easing}, black`);
     // The round corner gradient runs from the inside out, so its curve runs backwards.
     const reverseStops = easeStops(
-        `black, ${reverseEasing(easing)}, transparent var(--fade-size)`
+        `black, ${reverseEasing(easing)}, transparent`
     );
 
     return (
@@ -42,6 +52,7 @@ export default function FadeBox({
                 '--fade-size': fadeSize,
                 '--fade-stops': stops,
                 '--fade-stops-reverse': reverseStops,
+                ...sideStops,
                 ...style,
             }}
         />
