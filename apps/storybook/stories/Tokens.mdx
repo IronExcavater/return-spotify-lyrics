@@ -228,6 +228,76 @@ A control shows this ring when the keyboard moves the focus to it. Press Tab to 
     </Token>
 </Panel>
 
+## States
+
+Each state uses the tokens above, so a component needs no new colours. The keyboard focus has its own section, under [Focus](#focus).
+
+<Panel>
+    <Token name="hover" value="bg-tint" use="A control under the pointer">
+        <button className="rounded-small px-3 py-1 transition-colors duration-fast hover:bg-tint">
+            Hover
+        </button>
+    </Token>
+    <Token name="press" value="bg-shade" use="A control while you press it">
+        <button className="rounded-small bg-raised px-3 py-1 active:bg-shade">
+            Press
+        </button>
+    </Token>
+    <Token
+        name="selected"
+        value="bg-tint-strong"
+        use="The chosen item in a list or menu"
+    >
+        <div className="rounded-small bg-tint-strong px-3 py-1">Chosen</div>
+    </Token>
+    <Token
+        name="disabled"
+        value="opacity-disabled"
+        use="A control that does nothing at the moment"
+    >
+        <button
+            disabled
+            className="rounded-small bg-raised px-3 py-1 opacity-disabled"
+        >
+            Off
+        </button>
+    </Token>
+    <Token
+        name="error"
+        value="border-negative, text-negative"
+        use="A field with an incorrect value, and its message"
+    >
+        <input
+            aria-label="A field with an error"
+            className="w-full rounded-small border border-negative bg-transparent px-2 py-1"
+            defaultValue="2:75"
+        />
+    </Token>
+    <Token
+        name="loading"
+        value="bg-tint, motion-safe:animate-pulse"
+        use="A placeholder in the shape of the content that loads. It pulses only when motion is allowed."
+    >
+        <div className="h-4 w-16 rounded-small bg-tint motion-safe:animate-pulse" />
+    </Token>
+    <Token
+        name="empty"
+        value="text-subdued"
+        use="The message where a list has no items"
+    >
+        <span className="text-small text-subdued">No songs</span>
+    </Token>
+</Panel>
+
+## Surfaces
+
+The popup and the side panel use the same tokens. Only their size is different:
+
+- **Popup:** you resize it from 320 × 200 to 800 × 600 pixels, and it keeps that size the next time it opens.
+- **Side panel:** the browser sets its width, and it fills the height of the window. Safari has no side panel, so it uses only the popup.
+
+Both surfaces are mostly narrower than Tailwind's first breakpoint (`sm`, 640px). So a layout changes at container sizes, like `@xs:` (320px), `@sm:` (384px) and `@md:` (448px), on a parent with the `@container` class.
+
 ## Override a token
 
 Set a variable on `:root` to change it everywhere, or on one element to change it for that element and its children:
