@@ -135,7 +135,8 @@ export default function ResizeBox({
 
         event.preventDefault();
         event.currentTarget.setPointerCapture(event.pointerId);
-        const start = { x: event.clientX, y: event.clientY };
+        // A popup window moves its left edge as it grows, so page coordinates move but screen coordinates do not.
+        const start = { x: event.screenX, y: event.screenY };
         drag.current = {
             edge,
             pointerId: event.pointerId,
@@ -151,8 +152,8 @@ export default function ResizeBox({
         if (active?.pointerId !== event.pointerId) return;
 
         const delta = {
-            x: event.clientX - active.start.x,
-            y: event.clientY - active.start.y,
+            x: event.screenX - active.start.x,
+            y: event.screenY - active.start.y,
         };
         resize(active.edge, active.from, delta);
     };
