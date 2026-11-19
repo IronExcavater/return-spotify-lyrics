@@ -13,7 +13,7 @@ import {
 } from '@return-spotify-lyrics/icons';
 import usePortalSlot from '@return-spotify-lyrics/ui/usePortalSlot';
 
-import { ICON_BUTTON, Surface, TRACKS } from './surface';
+import { ICON_BUTTON, Surface, TRACKS } from './shared';
 
 const ROUTES = ['home', 'search', 'lyrics'] as const;
 
