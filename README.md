@@ -1,6 +1,6 @@
 # Return Spotify Lyrics
 
-Synced Spotify lyrics and controls, one click from any tab.
+Your web companion for synced Spotify lyrics and controls.
 
 Sing along with lyrics that follow the song 🎤, control Spotify from any tab 🎧, and write synced lyrics for the songs that don't have them yet ✍️. It works with Spotify Free and Premium, in Chrome, Edge, Firefox, Opera and Safari.
 
@@ -69,7 +69,7 @@ To play, pause, skip and seek on Spotify Free too, turn on **Web Player control*
 | Browser            | Popup | Side panel | Store                             |
 | ------------------ | :---: | :--------: | --------------------------------- |
 | Chrome             |  ✅   |     ✅     | Chrome Web Store                  |
-| Edge               |  ✅   |     ✅     | Microsoft Edge Add-ons            |
+| Edge               |  ✅   |     ✅     | Edge Add-ons or Chrome Web Store  |
 | Firefox            |  ✅   |     ✅     | Firefox Add-ons                   |
 | Opera and Opera GX |  ✅   |     ✅     | Opera add-ons or Chrome Web Store |
 | Safari for Mac     |  ✅   |     ❌     | App Store                         |
