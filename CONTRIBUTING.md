@@ -21,11 +21,13 @@ pnpm test                                            # unit tests
 pnpm format:fix                                      # format every file
 ```
 
+To develop in another browser, run `dev:chrome`, `dev:edge`, `dev:firefox`, `dev:opera` or `dev:safari` from `apps/extension`. Dev mode opens each browser from its default install path. If yours is somewhere else, set the path in a `web-ext.config.ts` file, as the [WXT docs](https://wxt.dev/guide/essentials/config/browser-startup.html) show. Dev mode can't open Safari, so load `.output/safari-mv3-dev` yourself.
+
 ## Load a build
 
 From `apps/extension`, build for a browser and load the folder that the build writes to `.output`:
 
-- **Chrome:** run `pnpm build`. Open `chrome://extensions`, turn on Developer mode, select Load unpacked and pick `.output/chrome-mv3`.
+- **Chrome:** run `pnpm build` or `pnpm build:chrome`. Open `chrome://extensions`, turn on Developer mode, select Load unpacked and pick `.output/chrome-mv3`.
 - **Edge:** run `pnpm build:edge`. Open `edge://extensions`, turn on Developer mode, select Load unpacked and pick `.output/edge-mv3`.
 - **Opera:** run `pnpm build:opera`. Open `opera://extensions`, turn on Developer mode, select Load unpacked and pick `.output/opera-mv3`.
 - **Firefox:** run `pnpm build:firefox`. Open `about:debugging#/runtime/this-firefox`, select Load Temporary Add-on and pick `.output/firefox-mv3/manifest.json`. Firefox removes it when it closes.
