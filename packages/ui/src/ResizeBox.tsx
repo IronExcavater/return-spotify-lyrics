@@ -15,37 +15,38 @@ import { flushSync } from 'react-dom';
 import clsx from 'clsx';
 import { toCssSize, type CssLength } from './css';
 import {
-    clampSize,
+    axisRange,
+    fitSize,
+    keepsAspectRatio,
     resolveEdges,
+    type Axis,
     type Direction,
     type Edge,
     type EdgeInfo,
     type Point,
     type Size,
+    type SizeLimits,
 } from './geometry';
 
 export type HandlePlacement = 'overlap' | 'inset';
 
-export type ResizeBoxProps = Omit<
-    ComponentPropsWithoutRef<'div'>,
-    'onChange'
-> & {
-    size: Size;
-    minSize?: Partial<Size>;
-    maxSize?: Partial<Size>;
-    direction?: Direction;
-    showIndicator?: boolean;
-    thickness?: CssLength;
-    placement?: HandlePlacement;
-    /** Arrow key step in pixels. Shift moves five steps. */
-    step?: number;
-    /** Accessible name for each handle. */
-    handleLabel?: (edge: Edge) => string;
-    /** Called for each size change during a resize. */
-    onChange?: (size: Size) => void;
-    /** Called once when a resize ends, so the caller can save the size. */
-    onChangeEnd?: (size: Size) => void;
-};
+/** When a resize goes past an aspect ratio, the axis that the handle does not move follows it. */
+export type ResizeBoxProps = Omit<ComponentPropsWithoutRef<'div'>, 'onChange'> &
+    SizeLimits & {
+        size: Size;
+        direction?: Direction;
+        showIndicator?: boolean;
+        thickness?: CssLength;
+        placement?: HandlePlacement;
+        /** Arrow key step in pixels. Shift moves five steps. */
+        step?: number;
+        /** Accessible name for each handle. */
+        handleLabel?: (edge: Edge) => string;
+        /** Called for each size change during a resize. */
+        onChange?: (size: Size) => void;
+        /** Called once when a resize ends, so the caller can save the size. */
+        onChangeEnd?: (size: Size) => void;
+    };
 
 type Drag = {
     edge: EdgeInfo;
@@ -65,8 +66,10 @@ const defaultHandleLabel = (edge: Edge) => `Resize ${edge.replace('-', ' ')}`;
 
 export default function ResizeBox({
     size,
-    minSize = {},
-    maxSize = {},
+    minSize,
+    maxSize,
+    minAspectRatio,
+    maxAspectRatio,
     direction = 'all',
     showIndicator = true,
     thickness = 14,
@@ -91,6 +94,9 @@ export default function ResizeBox({
     );
 
     const edges = resolveEdges(direction);
+    const limits = { minSize, maxSize, minAspectRatio, maxAspectRatio };
+    // The props can change the limits after a resize, so each render fits the size again.
+    const fitted = fitSize(current, 'width', limits);
 
     // Handles exist only while the box is mounted, so the ref is always set here.
     const renderedSize = (): Size => {
@@ -98,13 +104,27 @@ export default function ResizeBox({
         return { width, height };
     };
 
-    // CSS can stop the box before the requested size, so report the size that the browser draws.
-    const resize = ({ x, y }: EdgeInfo, from: Size, delta: Point) => {
+    // Sets a size, then checks that the browser draws it inside the aspect ratios.
+    const tryResize = (size: Size) => {
+        flushSync(() => setCurrent(size));
+        return keepsAspectRatio(renderedSize(), limits);
+    };
+
+    const resize = (edge: EdgeInfo, from: Size, delta: Point) => {
+        const lead = leadAxis(edge, from, delta);
         const requested = {
-            width: from.width + delta.x * x,
-            height: from.height + delta.y * y,
+            width: from.width + delta.x * edge.x,
+            height: from.height + delta.y * edge.y,
         };
-        flushSync(() => setCurrent(clampSize(requested, minSize, maxSize)));
+        // Step 0 is the requested size, and step 1 is the last size, which keeps the ratios.
+        const sizeAt = (step: number) =>
+            fitSize(mixSize(requested, fitted, step), lead, limits);
+
+        // CSS can grow an axis to fit the content, so a size that breaks a ratio moves back.
+        if (!tryResize(sizeAt(0))) {
+            tryResize(sizeAt(findStep((step) => tryResize(sizeAt(step)))));
+        }
+
         onChange?.(renderedSize());
     };
 
@@ -168,7 +188,7 @@ export default function ResizeBox({
             data-placement={placement}
             style={{
                 ...style,
-                ...clampSize(current, minSize, maxSize),
+                ...fitted,
                 '--handle-thickness': toCssSize(thickness),
             }}
         >
@@ -182,7 +202,7 @@ export default function ResizeBox({
                         role="separator"
                         tabIndex={0}
                         aria-label={handleLabel(edge.name)}
-                        {...separatorAria(edge, current, minSize, maxSize)}
+                        {...separatorAria(edge, fitted, limits)}
                         data-part="handle"
                         data-edge={edge.name}
                         data-dragging={dragEdge === edge.name || undefined}
@@ -202,12 +222,7 @@ export default function ResizeBox({
 }
 
 /** Edge handles follow the ARIA window splitter pattern. Corner handles give the size in words. */
-function separatorAria(
-    edge: EdgeInfo,
-    size: Size,
-    min: Partial<Size>,
-    max: Partial<Size>
-) {
+function separatorAria(edge: EdgeInfo, size: Size, limits: SizeLimits) {
     if (edge.x && edge.y) {
         const width = Math.round(size.width);
         const height = Math.round(size.height);
@@ -215,14 +230,42 @@ function separatorAria(
     }
 
     const axis = edge.x ? 'width' : 'height';
-    const maxValue = max[axis];
+    const [min, max] = axisRange(axis, limits);
     return {
         'aria-orientation': edge.x ? 'vertical' : 'horizontal',
         'aria-valuenow': Math.round(size[axis]),
-        'aria-valuemin': Math.round(min[axis] ?? 0),
-        'aria-valuemax':
-            maxValue === undefined ? undefined : Math.round(maxValue),
+        'aria-valuemin': Math.round(min),
+        'aria-valuemax': Number.isFinite(max) ? Math.round(max) : undefined,
     } as const;
+}
+
+// A corner moves both axes, so the axis that moves more, for its size, leads.
+function leadAxis(edge: EdgeInfo, from: Size, delta: Point): Axis {
+    if (!edge.y) return 'width';
+    if (!edge.x) return 'height';
+
+    const widthChange = Math.abs(delta.x / from.width);
+    const heightChange = Math.abs(delta.y / from.height);
+    return widthChange >= heightChange ? 'width' : 'height';
+}
+
+function mixSize(from: Size, to: Size, step: number): Size {
+    return {
+        width: from.width + (to.width - from.width) * step,
+        height: from.height + (to.height - from.height) * step,
+    };
+}
+
+// A binary search for the lowest step that passes, when step 0 fails and step 1 passes.
+function findStep(passes: (step: number) => boolean): number {
+    let fail = 0;
+    let pass = 1;
+    while (pass - fail > 1 / 256) {
+        const middle = (fail + pass) / 2;
+        if (passes(middle)) pass = middle;
+        else fail = middle;
+    }
+    return pass;
 }
 
 function gripIcon(edge: EdgeInfo) {
