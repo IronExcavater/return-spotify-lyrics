@@ -5,7 +5,7 @@ const config: StorybookConfig = {
     framework: '@storybook/react-vite',
     // Storybook reads docs pages from plain .mdx files, not from .stories.mdx files.
     stories: ['../stories/**/*.@(mdx|stories.@(ts|tsx))'],
-    addons: ['@storybook/addon-docs'],
+    addons: ['@storybook/addon-docs', 'storybook-dark-mode'],
     viteFinal: (config) => {
         config.plugins?.push(tailwindcss());
         return config;
