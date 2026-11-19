@@ -1,0 +1,47 @@
+name: Bug
+description: Something does not work as it should.
+title: 'bug: '
+labels: [bug]
+body:
+    - type: textarea
+      id: actual
+      attributes:
+          label: What happens
+          description: What you see. Add a screenshot or a recording if it helps.
+      validations:
+          required: true
+    - type: textarea
+      id: expected
+      attributes:
+          label: What should happen
+      validations:
+          required: true
+    - type: textarea
+      id: steps
+      attributes:
+          label: Steps
+          description: The smallest set of steps that makes it happen.
+          placeholder: |
+              1. Open the popup.
+              2. ...
+      validations:
+          required: true
+    - type: dropdown
+      id: browsers
+      attributes:
+          label: Browsers
+          multiple: true
+          options: [Chrome, Edge, Firefox, Opera, Safari]
+      validations:
+          required: true
+    - type: dropdown
+      id: surfaces
+      attributes:
+          label: Surfaces
+          multiple: true
+          options: [Popup, Side panel, Storybook]
+    - type: input
+      id: version
+      attributes:
+          label: Version
+          description: The extension version from your browser's extensions page, or the commit.

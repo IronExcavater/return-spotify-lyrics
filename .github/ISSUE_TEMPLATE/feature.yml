@@ -1,0 +1,31 @@
+name: Feature
+description: Something new that people can see or use.
+title: 'feat: '
+labels: [enhancement]
+body:
+    - type: textarea
+      id: problem
+      attributes:
+          label: Problem
+          description: What someone wants to do, and what stops them now.
+      validations:
+          required: true
+    - type: textarea
+      id: outcome
+      attributes:
+          label: Outcome
+          description: What they can do when this is done. Describe the result, not the code.
+      validations:
+          required: true
+    - type: textarea
+      id: criteria
+      attributes:
+          label: Acceptance criteria
+          description: Each one is a check that a reviewer can do.
+          placeholder: |
+              - [ ] ...
+    - type: textarea
+      id: notes
+      attributes:
+          label: Notes
+          description: Designs, prior art, other options, and what is out of scope.
