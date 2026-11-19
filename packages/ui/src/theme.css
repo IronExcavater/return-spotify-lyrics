@@ -2,3 +2,130 @@
 @import './fade-box.css';
 @import './resize-box.css';
 @source './**/*.tsx';
+
+/* Static writes every token to :root, so an override works before any class uses it. */
+@theme static {
+    /* The clears come first, because a clear also removes our keys above it. */
+    --color-*: initial;
+    --text-*: initial;
+    --radius-*: initial;
+    --shadow-*: initial;
+    --drop-shadow-*: initial;
+    --inset-shadow-*: initial;
+    --text-shadow-*: initial;
+
+    --background-color-default: #121212;
+    --background-color-raised: #1f1f1f;
+    --background-color-overlay: #282828;
+    --background-color-tint: rgb(255 255 255 / 10%);
+    --background-color-tint-strong: rgb(255 255 255 / 20%);
+    --background-color-shade: rgb(0 0 0 / 30%);
+    --background-color-shade-strong: rgb(0 0 0 / 70%);
+    --background-color-accent: #1ed760;
+    --background-color-accent-strong: #3be477;
+    --background-color-negative: #e91429;
+    --background-color-negative-strong: #f13d4f;
+    --background-color-inverse: #ffffff;
+
+    --text-color-default: #ffffff;
+    --text-color-subdued: #b3b3b3;
+    --text-color-faint: #6a6a6a;
+    --text-color-accent: #1ed760;
+    --text-color-negative: #f3727f;
+    --text-color-warning: #ffa42b;
+    --text-color-info: #3d91f4;
+    --text-color-inverse: #000000;
+
+    --border-color-strong: #ffffff;
+    --border-color-default: #7c7c7c;
+    --border-color-faint: rgb(255 255 255 / 10%);
+    --border-color-accent: var(--text-color-accent);
+    --border-color-negative: var(--text-color-negative);
+
+    --outline-color-focus: #ffffff;
+    --focus-width: 2px;
+    --focus-offset: 2px;
+
+    --font-sans: 'Figtree Variable', ui-sans-serif, system-ui, sans-serif;
+
+    --text-small: 0.75rem;
+    --text-small--line-height: 1rem;
+    --text-small--font-weight: 400;
+    --text-small--letter-spacing: 0;
+    --text-medium: 0.875rem;
+    --text-medium--line-height: 1.25rem;
+    --text-medium--font-weight: 400;
+    --text-medium--letter-spacing: 0;
+    --text-large: 1rem;
+    --text-large--line-height: 1.5rem;
+    --text-large--font-weight: 700;
+    --text-large--letter-spacing: 0;
+    --text-x-large: 1.5rem;
+    --text-x-large--line-height: 2rem;
+    --text-x-large--font-weight: 700;
+    --text-x-large--letter-spacing: -0.01em;
+    --text-xx-large: 2rem;
+    --text-xx-large--line-height: 2.5rem;
+    --text-xx-large--font-weight: 800;
+    --text-xx-large--letter-spacing: -0.02em;
+
+    --radius-small: 4px;
+    --radius-medium: 8px;
+
+    --shadow-overlay: 0 16px 24px rgb(0 0 0 / 30%), 0 6px 8px rgb(0 0 0 / 20%);
+
+    --transition-duration-fast: 100ms;
+    --transition-duration-default: 200ms;
+    --transition-duration-slow: 300ms;
+    --default-transition-duration: var(--transition-duration-default);
+
+    --z-index-sticky: 10;
+    --z-index-overlay: 20;
+    --z-index-modal: 30;
+    --z-index-top: 40;
+
+    --opacity-disabled: 40%;
+}
+
+@layer base {
+    :root {
+        color-scheme: dark;
+        /* Native checkboxes, radio buttons and sliders use the brand green. */
+        accent-color: var(--background-color-accent);
+    }
+
+    body {
+        @apply bg-default text-medium text-default;
+    }
+
+    /* Without this, a border with no colour class takes the text colour. */
+    *,
+    ::before,
+    ::after,
+    ::backdrop,
+    ::file-selector-button {
+        border-color: var(--border-color-default);
+    }
+
+    ::placeholder {
+        color: var(--text-color-faint);
+    }
+
+    :focus-visible {
+        outline: var(--focus-width) solid var(--outline-color-focus);
+        outline-offset: var(--focus-offset);
+    }
+
+    ::selection {
+        background-color: var(--background-color-accent);
+        color: var(--text-color-inverse);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        :root {
+            --transition-duration-fast: 0s;
+            --transition-duration-default: 0s;
+            --transition-duration-slow: 0s;
+        }
+    }
+}

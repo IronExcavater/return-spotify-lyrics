@@ -58,9 +58,11 @@
             touch-action: none;
             user-select: none;
             outline: none;
+            /* A grip moves out a quarter handle, and the clip stops that move from adding to the page size. */
 
             &:focus-visible {
-                box-shadow: inset 0 0 0 2px var(--color-focus, currentColor);
+                box-shadow: inset 0 0 0 var(--focus-width)
+                    var(--outline-color-focus);
             }
 
             /* Side grips move out a quarter handle, and corner grips turn from bottom-right. */
@@ -147,7 +149,7 @@
                 transform: var(--grip-transform, none);
                 pointer-events: none;
                 opacity: 0;
-                transition: opacity 150ms ease;
+                transition: opacity var(--transition-duration-fast) ease;
             }
             &:hover > [data-part='grip'] {
                 opacity: 0.6;
@@ -155,12 +157,6 @@
             &:is([data-dragging], :focus-visible) > [data-part='grip'] {
                 opacity: 1;
             }
-        }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-        .resize-box > [data-part='handle'] > [data-part='grip'] {
-            transition: none;
         }
     }
 }

@@ -24,7 +24,7 @@ const meta = {
     },
     render: (args) => (
         <FadeBox {...args} className="size-50">
-            <div className="grid size-full place-items-center bg-neutral-300 text-sm">
+            <div className="grid size-full place-items-center bg-raised text-medium">
                 Faded content
             </div>
         </FadeBox>

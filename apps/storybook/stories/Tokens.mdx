@@ -1,0 +1,240 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+import { Panel, Swatch, Token, readToken } from './tokens';
+
+<Meta title="Tokens" />
+
+# Tokens
+
+Each token is a CSS variable on `:root`, and its class reads the variable. To change the look, override the variable. The values on this page are live, so they show an override.
+
+The theme removes Tailwind's colours, text sizes, radii and shadows. Tailwind's spacing, font weights and easings stay.
+
+## Background
+
+`bg-*` reads `--background-color-*`. Tint and shade are see-through, so their swatches show them over `bg-raised`.
+
+<Panel>
+    {[
+        ['default', 'The page'],
+        ['raised', 'One level up: cards, inputs'],
+        ['overlay', 'Above the page: popovers, menus, dialogs'],
+        ['tint', 'Lightens any background: hover'],
+        ['tint-strong', 'Lightens more: selected items'],
+        ['shade', 'Darkens any background: press'],
+        ['shade-strong', 'Darkens more: behind dialogs'],
+        ['accent', 'Primary actions, checkboxes and sliders'],
+        ['accent-strong', 'Primary actions on hover'],
+        ['negative', 'Destructive actions'],
+        ['negative-strong', 'Destructive actions on hover'],
+        ['inverse', 'The opposite of default: the play button'],
+    ].map(([name, use]) => (
+        <Token
+            key={name}
+            name={`bg-${name}`}
+            value={readToken(`--background-color-${name}`)}
+            use={use}
+        >
+            <Swatch variable={`--background-color-${name}`} />
+        </Token>
+    ))}
+</Panel>
+
+## Text colour
+
+`text-*` reads `--text-color-*`.
+
+<Panel>
+    {[
+        ['default', 'Most text'],
+        ['subdued', 'Secondary text'],
+        ['faint', 'Placeholders and disabled text'],
+        ['accent', 'Links and active items'],
+        ['negative', 'Errors'],
+        ['warning', 'Warnings'],
+        ['info', 'Information'],
+        ['inverse', 'Text on bg-accent or bg-inverse'],
+    ].map(([name, use]) => (
+        <Token
+            key={name}
+            name={`text-${name}`}
+            value={readToken(`--text-color-${name}`)}
+            use={use}
+        >
+            <span
+                className="rounded-small px-1 text-x-large"
+                style={{
+                    color: `var(--text-color-${name})`,
+                    background:
+                        name === 'inverse'
+                            ? 'var(--background-color-accent)'
+                            : undefined,
+                }}
+            >
+                Aa
+            </span>
+        </Token>
+    ))}
+</Panel>
+
+## Border
+
+`border-*` reads `--border-color-*`. A border without a colour class uses `border-default`.
+
+<Panel>
+    {[
+        ['strong', 'Hovered inputs'],
+        ['default', 'Inputs'],
+        ['faint', 'Dividers'],
+        ['accent', 'Selected items'],
+        ['negative', 'Fields with an error'],
+    ].map(([name, use]) => (
+        <Token
+            key={name}
+            name={`border-${name}`}
+            value={readToken(`--border-color-${name}`)}
+            use={use}
+        >
+            <div
+                className="size-10 rounded-small border-2"
+                style={{ borderColor: `var(--border-color-${name})` }}
+            />
+        </Token>
+    ))}
+</Panel>
+
+## Focus
+
+A control shows this ring when the keyboard moves the focus to it. Press Tab to try it.
+
+<Panel>
+    <Token
+        name="outline-focus"
+        value={`${readToken('--outline-color-focus')}, ${readToken('--focus-width')} wide, ${readToken('--focus-offset')} out`}
+        use="The focus ring. --focus-width and --focus-offset set its size."
+    >
+        <button className="rounded-small bg-raised px-3 py-1">Tab</button>
+    </Token>
+</Panel>
+
+## Text size
+
+`text-*` sizes read `--text-*`, and each one also sets a line height and a weight. A `font-*` class changes the weight.
+
+<Panel>
+    {[
+        ['text-small', 'Metadata and small print'],
+        ['text-medium', 'Most text'],
+        ['text-large', 'Track names and headings'],
+        ['text-x-large', 'Lyric lines'],
+        ['text-xx-large', 'Page titles'],
+    ].map(([name, use]) => (
+        <Token
+            key={name}
+            name={name}
+            value={`${readToken(`--${name}`)} / ${readToken(`--${name}--line-height`)}, ${readToken(`--${name}--font-weight`)}`}
+            use={use}
+        >
+            <span className={name}>Aa</span>
+        </Token>
+    ))}
+</Panel>
+
+## Shape
+
+`rounded-*` reads `--radius-*`, and `shadow-*` reads `--shadow-*`.
+
+<Panel>
+    <Token
+        name="rounded-small"
+        value={readToken('--radius-small')}
+        use="Artwork, inputs and small buttons"
+    >
+        <div className="size-10 rounded-small bg-raised" />
+    </Token>
+    <Token
+        name="rounded-medium"
+        value={readToken('--radius-medium')}
+        use="Cards, menus and dialogs"
+    >
+        <div className="size-10 rounded-medium bg-raised" />
+    </Token>
+    <Token
+        name="shadow-overlay"
+        value={readToken('--shadow-overlay')}
+        use="Anything above the page: popovers, menus and dialogs"
+    >
+        <div className="size-10 rounded-medium bg-overlay shadow-overlay" />
+    </Token>
+</Panel>
+
+## Motion
+
+`duration-*` reads `--transition-duration-*`. Put the pointer on a track to see its speed. Under `prefers-reduced-motion: reduce`, every duration is `0s`.
+
+<Panel>
+    {[
+        ['fast', 'Hover and press'],
+        ['default', 'Menus, and every transition without a duration class'],
+        ['slow', 'Dialogs and panels'],
+    ].map(([name, use]) => (
+        <Token
+            key={name}
+            name={`duration-${name}`}
+            value={readToken(`--transition-duration-${name}`)}
+            use={use}
+        >
+            <div className="group h-6 w-20 rounded-full bg-raised p-1">
+                <div
+                    className="size-4 rounded-full bg-accent transition-transform group-hover:translate-x-14"
+                    style={{
+                        transitionDuration: `var(--transition-duration-${name})`,
+                    }}
+                />
+            </div>
+        </Token>
+    ))}
+</Panel>
+
+## Layer
+
+`z-*` reads `--z-index-*`, from lowest to highest.
+
+<Panel>
+    {[
+        ['sticky', 'Sticky headers'],
+        ['overlay', 'Popovers and menus'],
+        ['modal', 'Dialogs, which block the page'],
+        ['top', 'Toasts and tooltips'],
+    ].map(([name, use]) => (
+        <Token
+            key={name}
+            name={`z-${name}`}
+            value={readToken(`--z-index-${name}`)}
+            use={use}
+        />
+    ))}
+</Panel>
+
+## Opacity
+
+<Panel>
+    <Token
+        name="opacity-disabled"
+        value={readToken('--opacity-disabled')}
+        use="Disabled controls"
+    >
+        <div className="size-10 rounded-small bg-accent opacity-disabled" />
+    </Token>
+</Panel>
+
+## Override a token
+
+Set a variable on `:root` to change it everywhere, or on one element to change it for that element and its children:
+
+```css
+:root {
+    --background-color-accent: #509bf5;
+    --text-color-accent: #509bf5;
+}
+```

@@ -1,6 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 
+import '@return-spotify-lyrics/ui/font';
 import '@/assets/app.css';
 
 import App from './App';
