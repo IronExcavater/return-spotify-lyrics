@@ -7,9 +7,18 @@ import { directionControl } from './controls';
 const meta = {
     title: 'FadeBox',
     component: FadeBox,
-    args: { size: 32 },
+    // The component defaults give every control a value, but the size is larger so that the fade shows.
+    args: {
+        enabled: true,
+        size: 32,
+        direction: ['left', 'right'],
+        corners: true,
+        easing: 'ease-in-out',
+    },
     argTypes: {
         direction: directionControl,
+        // The docs plugin cannot read the imported CssLength type, so it guesses the wrong control.
+        size: { control: 'number' },
         easing: {
             control: 'select',
             options: [
