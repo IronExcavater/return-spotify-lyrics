@@ -4,7 +4,7 @@ import { defineConfig, type UserManifest } from 'wxt';
 
 const name = 'Return Spotify Lyrics';
 const description =
-    'Synced Spotify lyrics and controls, one click from any tab.';
+    'Your web companion for synced Spotify lyrics and controls.';
 
 const icons = {
     16: 'icon/16.png',
