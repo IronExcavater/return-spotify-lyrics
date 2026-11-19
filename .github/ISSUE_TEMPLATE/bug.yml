@@ -1,5 +1,5 @@
-name: Bug
-description: Something does not work as it should.
+name: Bug report
+description: Tell us about something that does not work as it should.
 title: 'bug: '
 labels: [bug]
 body:
@@ -39,9 +39,15 @@ body:
       attributes:
           label: Surfaces
           multiple: true
-          options: [Popup, Side panel, Storybook]
+          options: [Popup, Side panel]
+    - type: dropdown
+      id: account
+      attributes:
+          label: Spotify account
+          description: Some controls need Spotify Premium.
+          options: [Free, Premium]
     - type: input
       id: version
       attributes:
-          label: Version
-          description: The extension version from your browser's extensions page, or the commit.
+          label: Extension version
+          description: You can find it on your browser's extensions page.

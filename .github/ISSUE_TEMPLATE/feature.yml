@@ -1,31 +1,22 @@
-name: Feature
-description: Something new that people can see or use.
+name: Feature request
+description: Ask for something new, or for a change to something that exists.
 title: 'feat: '
 labels: [enhancement]
 body:
     - type: textarea
-      id: problem
+      id: goal
       attributes:
-          label: Problem
-          description: What someone wants to do, and what stops them now.
+          label: What do you want to do?
+          description: Describe what you want to do, not how the extension should do it.
       validations:
           required: true
     - type: textarea
-      id: outcome
+      id: now
       attributes:
-          label: Outcome
-          description: What they can do when this is done. Describe the result, not the code.
-      validations:
-          required: true
-    - type: textarea
-      id: criteria
-      attributes:
-          label: Acceptance criteria
-          description: Each one is a check that a reviewer can do.
-          placeholder: |
-              - [ ] ...
+          label: What do you do now?
+          description: How you do it today, or what stops you.
     - type: textarea
       id: notes
       attributes:
-          label: Notes
-          description: Designs, prior art, other options, and what is out of scope.
+          label: Anything else
+          description: Screenshots, sketches, or another app that does it well.
