@@ -174,6 +174,8 @@ Every story is a test. It runs in Chromium, Firefox and WebKit, and it fails on 
 - Wait for a change with `await waitFor(() => expect(...))`, because `expect` checks once and doesn't wait. Never wait for a fixed time.
 - Keep a story's state in React, with `useState`. Storybook's `useArgs` can't change args in a story test, and it fails when React state changes.
 - Let size and position assertions be 1px out, because browsers round differently.
+- Find an element with no role, like the root of a FadeBox, by a `data-testid` that the story sets.
+- `userEvent` pointers aren't real pointers, so Firefox refuses `setPointerCapture` for them. Before a drag, replace that element's `setPointerCapture` with a function that does nothing.
 - When a test fails in one browser only, fix the component with a feature check. Don't change the test for that browser.
 - Don't turn off an accessibility rule to pass a test. Fix the component. If a rule is wrong for one story, turn off that rule in that story only, with a comment that says why.
 
