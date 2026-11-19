@@ -1,0 +1,36 @@
+name: Spike
+description: A timeboxed piece of research that answers one question.
+title: 'spike: '
+labels: [spike]
+body:
+    - type: textarea
+      id: question
+      attributes:
+          label: Question
+          description: The one question that the spike answers.
+      validations:
+          required: true
+    - type: textarea
+      id: decision
+      attributes:
+          label: Decision
+          description: What the answer lets us decide, and what waits for it.
+      validations:
+          required: true
+    - type: input
+      id: timebox
+      attributes:
+          label: Timebox
+          description: The most time to spend. When it runs out, write up what you know.
+          placeholder: 1 day
+      validations:
+          required: true
+    - type: textarea
+      id: output
+      attributes:
+          label: Output
+          description: What the spike gives back.
+          value: |
+              - [ ] A short write-up: what was tried, what was found, and a recommendation
+              - [ ] Follow-up issues for the work that the recommendation needs
+              - [ ] Prototype code stays on its own branch and does not merge
