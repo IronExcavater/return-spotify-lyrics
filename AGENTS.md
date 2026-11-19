@@ -67,7 +67,8 @@ Every story is a test. It runs in Chromium, Firefox and WebKit, and it fails on 
 - Find elements as a person does, by role and accessible name: `canvas.getByRole('separator', { name: 'Resize left' })`. Never find them by class or `data-part`.
 - Act with `userEvent`, which sends real browser events. Don't call handlers or change state directly.
 - Assert what a person can see or use: text, value, focus, ARIA state and size. Don't assert classes or internal state.
-- Wait for a change with `await expect(...)` or `waitFor`. Never wait for a fixed time.
+- Wait for a change with `await waitFor(() => expect(...))`, because `expect` checks once and doesn't wait. Never wait for a fixed time.
+- Keep a story's state in React, with `useState`. Storybook's `useArgs` can't change args in a story test, and it fails when React state changes.
 - Let size and position assertions be 1px out, because browsers round differently.
 - When a test fails in one browser only, fix the component with a feature check. Don't change the test for that browser.
 - Don't turn off an accessibility rule to pass a test. Fix the component. If a rule is wrong for one story, turn off that rule in that story only, with a comment that says why.
