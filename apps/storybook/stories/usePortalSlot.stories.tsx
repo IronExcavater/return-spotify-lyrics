@@ -1,144 +1,248 @@
-import { useEffect, useId, useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { expect, waitFor, within } from 'storybook/test';
 
+import {
+    ArrowDownUp,
+    House,
+    MicVocal,
+    Pause,
+    Play,
+    Search,
+    Shuffle,
+} from '@return-spotify-lyrics/icons';
 import usePortalSlot from '@return-spotify-lyrics/ui/usePortalSlot';
 
-const PLACES = ['header', 'sidebar', 'footer'] as const;
+import { ICON_BUTTON, Surface, TRACKS } from './shared';
 
-type Place = (typeof PLACES)[number];
-type Option = Place | 'none';
+const ROUTES = ['home', 'search', 'lyrics'] as const;
 
-const LABELS: Record<Option, string> = {
-    header: 'Header',
-    sidebar: 'Sidebar',
-    footer: 'Footer',
-    none: 'Nowhere',
+type Route = (typeof ROUTES)[number];
+
+const NAV = [
+    { route: 'home', label: 'Home', Icon: House },
+    { route: 'search', label: 'Search', Icon: Search },
+    { route: 'lyrics', label: 'Lyrics', Icon: MicVocal },
+] as const;
+
+type ControlsProps = {
+    route: Route;
+    onRouteChange: (route: Route) => void;
 };
 
-type Args = { active: Option };
+// The shuffle state lives here, so a remount would reset it.
+function Controls({ route, onRouteChange }: ControlsProps) {
+    const [shuffle, setShuffle] = useState(false);
 
-function findNext(place: Option): Place {
-    const index = PLACES.indexOf(place as Place);
-    return PLACES[(index + 1) % PLACES.length] ?? 'header';
+    return (
+        <nav aria-label="Main" className="ml-auto flex">
+            {NAV.map(({ route: target, label, Icon }) => (
+                <button
+                    key={target}
+                    aria-label={label}
+                    aria-current={route === target ? 'page' : undefined}
+                    className={ICON_BUTTON}
+                    onClick={() => onRouteChange(target)}
+                >
+                    <Icon aria-hidden className="size-4" />
+                </button>
+            ))}
+            <button
+                aria-label="Shuffle"
+                aria-pressed={shuffle}
+                className={ICON_BUTTON}
+                onClick={() => setShuffle(!shuffle)}
+            >
+                <Shuffle aria-hidden className="size-4" />
+            </button>
+        </nav>
+    );
+}
+
+function SharedControlsDemo() {
+    const [route, setRoute] = useState<Route>('home');
+    const { slots, portal } = usePortalSlot(
+        ROUTES,
+        route,
+        <Controls route={route} onRouteChange={setRoute} />
+    );
+
+    // Each route has its own app bar, and the shared controls move into the one on screen.
+    const bars: Record<Route, ReactNode> = {
+        home: (
+            <>
+                <strong className="text-large">Good evening</strong>
+                {slots.home}
+            </>
+        ),
+        search: (
+            <>
+                <input
+                    aria-label="Search Spotify"
+                    placeholder="Songs, artists, lyrics"
+                    className="min-w-0 flex-1 rounded-full bg-raised px-3 py-1"
+                />
+                {slots.search}
+            </>
+        ),
+        lyrics: (
+            <>
+                <span className="min-w-0 truncate">{TRACKS[0]?.title}</span>
+                {slots.lyrics}
+            </>
+        ),
+    };
+
+    return (
+        <>
+            <Surface bar={bars[route]}>
+                <p className="text-subdued">
+                    The {route} page. The buttons in the app bar keep their
+                    state and focus when the route changes the bar.
+                </p>
+            </Surface>
+            {portal}
+        </>
+    );
+}
+
+const POSITIONS = ['top', 'bottom'] as const;
+
+type Position = (typeof POSITIONS)[number];
+
+type PlayerProps = {
+    position: Position;
+    onMove: () => void;
+};
+
+// The play state lives here, so a remount would stop the track.
+function Player({ position, onMove }: PlayerProps) {
+    const [playing, setPlaying] = useState(false);
+    const PlayIcon = playing ? Pause : Play;
+    const other = position === 'top' ? 'bottom' : 'top';
+
+    return (
+        <div
+            role="group"
+            aria-label="Player"
+            className="flex w-full items-center gap-1"
+        >
+            <button
+                aria-label={playing ? 'Pause' : 'Play'}
+                className={ICON_BUTTON}
+                onClick={() => setPlaying(!playing)}
+            >
+                <PlayIcon aria-hidden className="size-4" />
+            </button>
+            <span className="min-w-0 flex-1 truncate">{TRACKS[1]?.title}</span>
+            <button
+                aria-label={`Move the player to the ${other}`}
+                className={ICON_BUTTON}
+                onClick={onMove}
+            >
+                <ArrowDownUp aria-hidden className="size-4" />
+            </button>
+        </div>
+    );
+}
+
+function PlayerPositionDemo() {
+    const [position, setPosition] = useState<Position>('bottom');
+    const { slots, portal } = usePortalSlot(
+        POSITIONS,
+        position,
+        <Player
+            position={position}
+            onMove={() => setPosition(position === 'top' ? 'bottom' : 'top')}
+        />
+    );
+
+    return (
+        <>
+            <Surface bar={slots.top}>
+                <ul aria-label="Queue" className="divide-y">
+                    {TRACKS.map((track) => (
+                        <li key={track.title} className="py-2">
+                            {track.title}
+                            <div className="text-small text-subdued">
+                                {track.artist}
+                            </div>
+                        </li>
+                    ))}
+                </ul>
+                <div className="sticky bottom-0 bg-default">{slots.bottom}</div>
+            </Surface>
+            {portal}
+        </>
+    );
 }
 
 const meta = {
     title: 'usePortalSlot',
-    args: { active: 'header' },
-    argTypes: {
-        active: { control: 'inline-radio', options: Object.keys(LABELS) },
-    },
-    render: function Render(args) {
-        // Story tests cannot change args, so the story keeps its own state, and the control sets it.
-        const [active, choose] = useState(args.active);
-        useEffect(() => choose(args.active), [args.active]);
-        const name = useId();
-        const place = active === 'none' ? undefined : active;
-
-        const { slots, portal } = usePortalSlot(
-            PLACES,
-            place,
-            <input
-                aria-label="Search"
-                placeholder="Type, then press Enter"
-                className="w-full rounded-small border bg-transparent px-2 py-1"
-                onKeyDown={(event) => {
-                    if (event.key === 'Enter') choose(findNext(active));
-                }}
-            />
-        );
-
-        const area = (place: Place) => (
-            <div
-                role="group"
-                aria-label={LABELS[place]}
-                className="grid content-start gap-1 rounded-medium border border-dashed p-2"
-            >
-                <span className="text-small text-subdued">{LABELS[place]}</span>
-                {slots[place]}
-            </div>
-        );
-
-        return (
-            <div className="grid gap-3 text-medium">
-                <fieldset className="flex flex-wrap gap-3">
-                    <legend className="mb-1">Show the field in</legend>
-                    {Object.entries(LABELS).map(([option, label]) => (
-                        <label key={option} className="flex items-center gap-1">
-                            <input
-                                type="radio"
-                                name={name}
-                                checked={active === option}
-                                onChange={() => choose(option as Option)}
-                            />
-                            {label}
-                        </label>
-                    ))}
-                </fieldset>
-                <div className="grid grid-cols-[10rem_1fr] gap-2">
-                    <div className="col-span-2">{area('header')}</div>
-                    {area('sidebar')}
-                    <div className="rounded-medium bg-raised p-2 text-subdued">
-                        Page content
-                    </div>
-                    <div className="col-span-2">{area('footer')}</div>
-                </div>
-                {portal}
-            </div>
-        );
-    },
-} satisfies Meta<Args>;
+    render: () => <SharedControlsDemo />,
+} satisfies Meta;
 
 export default meta;
 
 type Story = StoryObj<typeof meta>;
 
-export const MoveBetweenSlots: Story = {
+export const SharedControls: Story = {
     play: async ({ canvas, userEvent, step }) => {
-        const field = canvas.getByRole('textbox', { name: 'Search' });
-        const area = (name: string) =>
-            within(canvas.getByRole('group', { name }));
+        const nav = within(canvas.getByRole('navigation', { name: 'Main' }));
+        const shuffle = nav.getByRole('button', { name: 'Shuffle' });
+        const search = nav.getByRole('button', { name: 'Search' });
+
+        await step('A new route moves the controls into its bar', async () => {
+            await userEvent.click(shuffle);
+            await userEvent.click(search);
+            await waitFor(() =>
+                expect(
+                    canvas.getByRole('textbox', { name: 'Search Spotify' })
+                ).toBeInTheDocument()
+            );
+            await expect(search).toHaveAttribute('aria-current', 'page');
+        });
+
+        await step('The controls keep their state and focus', async () => {
+            await expect(shuffle).toHaveAttribute('aria-pressed', 'true');
+            await expect(search).toHaveFocus();
+        });
 
         await step(
-            'Enter moves the field, and it keeps its text and focus',
+            'The keyboard can go on from the moved controls',
             async () => {
-                await userEvent.type(field, 'Lyrics{Enter}');
-                await waitFor(() =>
-                    expect(area('Sidebar').getByRole('textbox')).toBe(field)
-                );
-                await expect(field).toHaveValue('Lyrics');
-                await expect(field).toHaveFocus();
+                await userEvent.keyboard('{Tab}{Enter}');
+                await expect(
+                    nav.getByRole('button', { name: 'Lyrics' })
+                ).toHaveFocus();
+                await expect(
+                    nav.getByRole('button', { name: 'Lyrics' })
+                ).toHaveAttribute('aria-current', 'page');
             }
         );
+    },
+};
 
-        await step(
-            'Keys after the move go on the end of the text',
-            async () => {
-                await userEvent.keyboard(' on');
-                await expect(field).toHaveValue('Lyrics on');
-            }
-        );
+export const PlayerPosition: Story = {
+    render: () => <PlayerPositionDemo />,
+    play: async ({ canvas, userEvent }) => {
+        const player = within(canvas.getByRole('group', { name: 'Player' }));
+        const banner = canvas.getByRole('banner');
 
-        await step(
-            'With no slot, the field leaves the page but keeps its text',
-            async () => {
-                await userEvent.click(
-                    canvas.getByRole('radio', { name: 'Nowhere' })
-                );
-                await waitFor(() =>
-                    expect(
-                        canvas.queryByRole('textbox')
-                    ).not.toBeInTheDocument()
-                );
-                await userEvent.click(
-                    canvas.getByRole('radio', { name: 'Footer' })
-                );
-                await waitFor(() =>
-                    expect(area('Footer').getByRole('textbox')).toBe(field)
-                );
-                await expect(field).toHaveValue('Lyrics on');
-            }
+        await userEvent.click(player.getByRole('button', { name: 'Play' }));
+        const move = player.getByRole('button', {
+            name: 'Move the player to the top',
+        });
+        await userEvent.click(move);
+
+        await waitFor(() =>
+            expect(
+                within(banner).getByRole('group', { name: 'Player' })
+            ).toBeInTheDocument()
         );
+        await expect(
+            player.getByRole('button', { name: 'Pause' })
+        ).toBeInTheDocument();
+        await expect(move).toHaveFocus();
     },
 };

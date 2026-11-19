@@ -27,7 +27,9 @@ export default function usePortalSlot<Name extends string>(
 
     // Each slot runs its effect before this one, so a host still outside the active slot has no slot.
     useLayoutEffect(() => {
-        if (host.parentElement?.dataset.slot !== active) host.remove();
+        if (host.parentElement?.dataset.slot === active) return;
+        host.remove();
+        lostFocus.delete(host);
     }, [host, active]);
 
     const slots = Object.fromEntries(
@@ -56,11 +58,23 @@ function Slot({ name, host, active }: SlotProps) {
 
     useLayoutEffect(() => {
         const slot = ref.current;
-        if (!active || !slot || host.parentElement === slot) return;
-        moveHost(host, slot);
+        if (!active || !slot) return;
+        if (host.parentElement !== slot) moveHost(host, slot);
+        // React removes an old slot, and the host in it, after this cleanup, so the cleanup keeps the focus.
+        return () => keepFocus(host);
     }, [host, active]);
 
     return <div ref={ref} className="portal-slot" data-slot={name} />;
+}
+
+// The element in each host that had focus when its slot went away.
+const lostFocus = new WeakMap<HTMLElement, HTMLElement>();
+
+function keepFocus(host: HTMLElement) {
+    const focused = document.activeElement;
+    if (focused instanceof HTMLElement && host.contains(focused)) {
+        lostFocus.set(host, focused);
+    }
 }
 
 function createHost() {
@@ -75,15 +89,17 @@ type MoveTarget = HTMLElement & {
 };
 
 function moveHost(host: HTMLElement, slot: MoveTarget) {
-    // moveBefore keeps focus and other element state, but it can move only a node that is in the page.
-    if (host.isConnected && slot.moveBefore) {
-        slot.moveBefore(host, null);
-        return;
-    }
+    keepFocus(host);
+    const focused = lostFocus.get(host);
+    lostFocus.delete(host);
 
-    const focused = document.activeElement;
-    slot.append(host);
-    if (focused instanceof HTMLElement && host.contains(focused)) {
+    // moveBefore keeps focus and other element state, but it can move only a node that is in the page.
+    if (host.isConnected && slot.moveBefore) slot.moveBefore(host, null);
+    else slot.append(host);
+
+    // Focus goes back only if nothing else took it in the meantime.
+    const isFree = document.activeElement === document.body;
+    if (focused && isFree && host.contains(focused)) {
         focused.focus({ preventScroll: true });
     }
 }
