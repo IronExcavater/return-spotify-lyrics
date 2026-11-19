@@ -25,15 +25,30 @@ jobs:
             - name: Typecheck, lint and format
               run: pnpm check
 
-            # The story tests run in each engine that the extension supports.
-            - name: Install test browsers
-              run: pnpm --filter @return-spotify-lyrics/storybook exec playwright install --with-deps chromium firefox webkit
-
-            - name: Test
-              run: pnpm test
+            - name: Unit tests
+              run: pnpm --filter @return-spotify-lyrics/ui test
 
             - name: Build Storybook
               run: pnpm --filter @return-spotify-lyrics/storybook build
+
+    stories:
+        name: Story tests
+        runs-on: ubuntu-latest
+        # The image has the system packages that the browsers need, so no slow apt install runs here.
+        container:
+            image: mcr.microsoft.com/playwright:v1.65.1-noble
+            options: --user 1001
+        timeout-minutes: 15
+        steps:
+            - uses: actions/checkout@v7
+            - uses: ./.github/actions/setup
+
+            # This gets the browsers for the installed Playwright, so a version ahead of the image still works.
+            - name: Install test browsers
+              run: pnpm --filter @return-spotify-lyrics/storybook exec playwright install chromium firefox webkit
+
+            - name: Test
+              run: pnpm --filter @return-spotify-lyrics/storybook test
 
     extension:
         name: Extension (${{ matrix.browser }})
