@@ -1,5 +1,6 @@
 @import 'tailwindcss';
 @import './fade-box.css';
+@import './portal-slot.css';
 @import './resize-box.css';
 @source './**/*.tsx';
 
