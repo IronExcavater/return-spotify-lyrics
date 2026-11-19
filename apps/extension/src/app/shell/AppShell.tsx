@@ -46,7 +46,8 @@ export default function AppShell() {
             )}
         >
             <AppBar policy={resize.bar} />
-            <main className="min-h-0 flex-1 overflow-y-auto">
+            {/* Safari can't scroll a region with the keyboard unless the region can take focus. */}
+            <main tabIndex={0} className="min-h-0 flex-1 overflow-y-auto">
                 <Outlet />
             </main>
         </div>
