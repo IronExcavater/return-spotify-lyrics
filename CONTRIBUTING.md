@@ -48,7 +48,7 @@ Use `zip` in place of `build` (`pnpm zip`, `pnpm zip:edge` and so on) to make th
 
 ## Code
 
-Follow [AGENTS.md](AGENTS.md). It covers the project layout, the component rules, the code style, and how to write names and comments.
+Follow [AGENTS.md](AGENTS.md), the coding guide for people and agents. It covers the layout, architecture, TypeScript, React, components, styling, accessibility, tests, code style, and how to write names and comments.
 
 ## Pull requests
 
