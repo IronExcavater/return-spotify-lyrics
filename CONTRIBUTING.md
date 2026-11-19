@@ -16,10 +16,13 @@ Run these from the repository root:
 ```sh
 pnpm --filter @return-spotify-lyrics/extension dev   # open Chrome with the extension, reload on save
 pnpm --filter @return-spotify-lyrics/storybook dev   # component stories on localhost:6006
-pnpm check                                           # typecheck, lint and format check
+pnpm check                                           # typecheck, lint, format check and unused code (Knip)
 pnpm test                                            # unit tests
 pnpm format:fix                                      # format every file
+pnpm clean                                           # delete build output and caches
 ```
+
+`pnpm install` also adds a pre-commit hook. It lints and formats the staged files, then typechecks the workspace.
 
 To develop in another browser, run `dev:chrome`, `dev:edge`, `dev:firefox`, `dev:opera` or `dev:safari` from `apps/extension`. Dev mode opens each browser from its default install path. If yours is somewhere else, set the path in a `web-ext.config.ts` file, as the [WXT docs](https://wxt.dev/guide/essentials/config/browser-startup.html) show. Dev mode can't open Safari, so load `.output/safari-mv3-dev` yourself.
 
