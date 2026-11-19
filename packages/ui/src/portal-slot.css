@@ -1,0 +1,7 @@
+@layer components {
+    /* A slot and its host make no box, so the content lays out as a child of the slot's parent. */
+    .portal-slot,
+    .portal-slot > [data-part='host'] {
+        display: contents;
+    }
+}
