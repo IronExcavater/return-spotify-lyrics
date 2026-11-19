@@ -56,6 +56,8 @@ export default function AppShell() {
 
     return (
         <ResizeBox
+            // The popup window takes its size from this box, so the box must not stop at the body width.
+            className="max-w-none"
             size={size}
             minSize={MIN_POPUP_SIZE}
             maxSize={MAX_POPUP_SIZE}
