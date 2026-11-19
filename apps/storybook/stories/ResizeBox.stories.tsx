@@ -15,7 +15,7 @@ const meta = {
     },
     render: (args) => (
         <ResizeBox {...args}>
-            <div className="grid place-items-center bg-neutral-300 p-4 text-center text-sm">
+            <div className="grid place-items-center bg-raised p-4 text-center text-medium">
                 Drag an edge, or Tab to a handle and use the arrow keys
             </div>
         </ResizeBox>
