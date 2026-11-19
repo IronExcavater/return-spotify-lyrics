@@ -1,4 +1,5 @@
 import tailwindcss from '@tailwindcss/vite';
+import { join } from 'node:path';
 import { defineConfig, type UserManifest } from 'wxt';
 
 const name = 'Return Spotify Lyrics';
@@ -53,12 +54,30 @@ const browserManifests: Record<string, UserManifest> = {
     safari,
 };
 
+// Dev mode finds Chrome and Firefox, but needs the default install path of Edge and Opera.
+const binaries: Record<string, Record<string, string>> = {
+    win32: {
+        edge: 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
+        opera: join(process.env.LOCALAPPDATA ?? '', 'Programs/Opera/opera.exe'),
+    },
+    darwin: {
+        edge: '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge',
+        opera: '/Applications/Opera.app/Contents/MacOS/Opera',
+    },
+    linux: {
+        edge: '/usr/bin/microsoft-edge',
+        opera: '/usr/bin/opera',
+    },
+};
+
 export default defineConfig({
     modules: ['@wxt-dev/module-react'],
     srcDir: 'src',
     imports: false,
     manifestVersion: 3,
     zip: { name: 'return-spotify-lyrics' },
+    // A web-ext.config.ts file in apps/extension or the home folder can give a different path.
+    webExt: { binaries: binaries[process.platform] ?? {} },
     manifest: ({ browser }) => ({
         name,
         description,

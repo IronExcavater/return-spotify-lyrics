@@ -15,6 +15,7 @@ storybook-static
 # Wxt
 .output
 .wxt
+web-ext.config.ts
 
 # Logs
 logs
