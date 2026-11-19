@@ -57,18 +57,80 @@ export function resolveEdges(direction: Direction): readonly EdgeInfo[] {
     });
 }
 
-/** Keeps a size between two limits. A missing limit does not apply. */
-export function clampSize(
-    size: Size,
-    min: Partial<Size>,
-    max: Partial<Size>
-): Size {
-    return {
-        width: clamp(size.width, min.width, max.width),
-        height: clamp(size.height, min.height, max.height),
-    };
+export type Axis = 'width' | 'height';
+
+/** Limits on a size. A missing limit does not apply. */
+export type SizeLimits = {
+    minSize?: Partial<Size> | undefined;
+    maxSize?: Partial<Size> | undefined;
+    /** The lowest width divided by height. */
+    minAspectRatio?: number | undefined;
+    /** The highest width divided by height. */
+    maxAspectRatio?: number | undefined;
+};
+
+/** The range of one axis. The aspect ratios also apply the limits of the other axis to it. */
+export function axisRange(axis: Axis, limits: SizeLimits): [number, number] {
+    const {
+        minSize = {},
+        maxSize = {},
+        minAspectRatio = 0,
+        maxAspectRatio = Infinity,
+    } = limits;
+    const minWidth = minSize.width ?? 0;
+    const minHeight = minSize.height ?? 0;
+    const maxWidth = maxSize.width ?? Infinity;
+    const maxHeight = maxSize.height ?? Infinity;
+
+    if (axis === 'width') {
+        return [
+            Math.max(minWidth, widthFor(minHeight, minAspectRatio)),
+            Math.min(maxWidth, widthFor(maxHeight, maxAspectRatio)),
+        ];
+    }
+    return [
+        Math.max(minHeight, heightFor(minWidth, maxAspectRatio)),
+        Math.min(maxHeight, heightFor(maxWidth, minAspectRatio)),
+    ];
 }
 
-function clamp(value: number, min = -Infinity, max = Infinity): number {
+/** Fits a size inside its limits. The other axis changes first, and the lead axis changes only when it must. */
+export function fitSize(size: Size, lead: Axis, limits: SizeLimits): Size {
+    const follow = lead === 'width' ? 'height' : 'width';
+    const leadValue = clamp(size[lead], ...axisRange(lead, limits));
+
+    // A fixed lead axis leaves the other axis only the values that the aspect ratios allow.
+    const fixed = {
+        ...limits,
+        minSize: { ...limits.minSize, [lead]: leadValue },
+        maxSize: { ...limits.maxSize, [lead]: leadValue },
+    };
+    const followValue = clamp(size[follow], ...axisRange(follow, fixed));
+
+    return lead === 'width'
+        ? { width: leadValue, height: followValue }
+        : { width: followValue, height: leadValue };
+}
+
+/** Checks a drawn size against the aspect ratios. A pixel of rounding is allowed. */
+export function keepsAspectRatio(
+    { width, height }: Size,
+    { minAspectRatio = 0, maxAspectRatio = Infinity }: SizeLimits
+): boolean {
+    const tooTall = width < widthFor(height, minAspectRatio) - 1;
+    const tooWide = width > widthFor(height, maxAspectRatio) + 1;
+    return !tooTall && !tooWide;
+}
+
+// Without these checks, a size of 0 and an open ratio give NaN, not "no limit".
+function widthFor(height: number, ratio: number): number {
+    return ratio === Infinity ? Infinity : height * ratio;
+}
+
+function heightFor(width: number, ratio: number): number {
+    return ratio === 0 ? Infinity : width / ratio;
+}
+
+function clamp(value: number, min: number, max: number): number {
     return Math.min(Math.max(value, min), max);
 }
