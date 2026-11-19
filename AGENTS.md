@@ -37,7 +37,40 @@ Setup, commands and git rules are in [CONTRIBUTING.md](CONTRIBUTING.md). Before 
 - Anything more complex than a simple ternary goes in a named variable.
 - Don't swallow props. Spread the ones you don't use onto the root element, and merge `className`, `style` and event handlers instead of replacing them. Don't accept parameters you don't use.
 - Generalise code once two or more callers need it, not before.
-- Test pure logic with Vitest, in a `*.test.ts` file next to the code. No component or snapshot tests.
+
+## Tests
+
+There are two kinds of test, and `pnpm test` runs both:
+
+| What you test                                         | How                                         | Where                                  |
+| ----------------------------------------------------- | ------------------------------------------- | -------------------------------------- |
+| Pure logic: geometry, gradients, parsers, conversions | Vitest, in Node                             | `*.test.ts` next to the code           |
+| How a component looks and behaves                     | A story, with a `play` function to interact | `apps/storybook/stories/*.stories.tsx` |
+
+Every story is a test. It runs in Chromium, Firefox and WebKit, and it fails on an error or an accessibility violation.
+
+### Unit tests
+
+- Test what a function returns for an input, not how it gets there. Call only exported functions.
+- Write the test name as a sentence about the behaviour, like `it('keeps the ratio when the width reaches its limit')`.
+- Test one behaviour in each test. If the name needs "and", split the test.
+- Use values from the real problem, like a 320 × 200 popup, not `foo` and `1`.
+- Test the limits: an empty input, zero, the limit, one past the limit, and `Infinity` or `NaN` where a number can be missing.
+- Before you fix a bug, write a test that fails because of the bug.
+- Don't mock our own modules. If a function is hard to test without a mock, move its pure part into a function of its own.
+- Don't use snapshots. They record output, not intent, and people update them without reading them.
+
+### Story tests
+
+- Each story shows one state or one prop that matters, and its name says which, like `FixedAspectRatio`.
+- Add a `play` function when the component does something after input: a key, a pointer, a focus change or a new value.
+- Find elements as a person does, by role and accessible name: `canvas.getByRole('separator', { name: 'Resize left' })`. Never find them by class or `data-part`.
+- Act with `userEvent`, which sends real browser events. Don't call handlers or change state directly.
+- Assert what a person can see or use: text, value, focus, ARIA state and size. Don't assert classes or internal state.
+- Wait for a change with `await expect(...)` or `waitFor`. Never wait for a fixed time.
+- Let size and position assertions be 1px out, because browsers round differently.
+- When a test fails in one browser only, fix the component with a feature check. Don't change the test for that browser.
+- Don't turn off an accessibility rule to pass a test. Fix the component. If a rule is wrong for one story, turn off that rule in that story only, with a comment that says why.
 
 ## Names and comments
 

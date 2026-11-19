@@ -7,7 +7,8 @@
         "dev": "storybook dev -p 6006",
         "build": "storybook build",
         "typecheck": "tsc --noEmit",
-        "lint": "oxlint .storybook stories"
+        "lint": "oxlint .storybook stories",
+        "test": "vitest run"
     },
     "dependencies": {
         "@return-spotify-lyrics/ui": "workspace:*",
@@ -15,15 +16,20 @@
         "react-dom": "^19.2.8"
     },
     "devDependencies": {
-        "@storybook/addon-docs": "^10.5.9",
-        "@storybook/react-vite": "^10.5.9",
+        "@storybook/addon-a11y": "^10.6.7",
+        "@storybook/addon-docs": "^10.6.7",
+        "@storybook/addon-vitest": "^10.6.7",
+        "@storybook/react-vite": "^10.6.7",
         "@tailwindcss/vite": "^4.3.3",
         "@types/react": "^19.2.18",
         "@types/react-dom": "^19.2.4",
+        "@vitest/browser-playwright": "^5.1.1",
         "oxlint": "^1.78.0",
-        "storybook": "^10.5.9",
+        "playwright": "^1.65.1",
+        "storybook": "^10.6.7",
         "storybook-dark-mode": "^5.0.0",
         "typescript": "^5.9.3",
-        "vite": "^8.2.1"
+        "vite": "^8.2.1",
+        "vitest": "^5.1.1"
     }
 }

@@ -25,6 +25,10 @@ jobs:
             - name: Typecheck, lint and format
               run: pnpm check
 
+            # The story tests run in each engine that the extension supports.
+            - name: Install test browsers
+              run: pnpm --filter @return-spotify-lyrics/storybook exec playwright install --with-deps chromium firefox webkit
+
             - name: Test
               run: pnpm test
 
