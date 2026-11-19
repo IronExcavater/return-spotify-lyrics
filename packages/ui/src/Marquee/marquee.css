@@ -1,0 +1,59 @@
+/* A loop moves the track by one item, and a bounce moves it by the overflow. */
+@keyframes marquee-move {
+    to {
+        translate: calc(-1 * var(--marquee-distance));
+    }
+}
+
+/* Defaults live in @layer components so that a consumer className always wins. */
+@layer components {
+    .marquee {
+        min-width: 0;
+
+        > [data-part='track'] {
+            display: flex;
+            width: max-content;
+            white-space: nowrap;
+        }
+
+        > [data-part='track'] > [data-part='item'] {
+            display: flex;
+            flex: none;
+            align-items: center;
+        }
+
+        > [data-part='track'] > [data-part='item'] > [data-part='separator'] {
+            padding-inline: calc(var(--marquee-gap) / 2);
+        }
+
+        &[data-moving] > [data-part='track'] {
+            animation: marquee-move var(--marquee-duration)
+                var(--marquee-easing) infinite;
+            will-change: translate;
+        }
+
+        &[data-mode='right'] > [data-part='track'] {
+            animation-direction: reverse;
+        }
+
+        &[data-mode='bounce'] > [data-part='track'] {
+            animation-direction: alternate;
+        }
+
+        /* A person who points at, focuses or selects the content needs it to keep still. */
+        &:is(
+                [data-start='auto']:is(:hover, :focus-within),
+                [data-offscreen],
+                [data-selecting]
+            )
+            > [data-part='track'] {
+            animation-play-state: paused;
+        }
+    }
+
+    /* The copies of a selection look the same as the selection itself. */
+    ::highlight(marquee-selection) {
+        background-color: Highlight;
+        color: HighlightText;
+    }
+}

@@ -129,6 +129,19 @@ describe('theme', () => {
         expect(css).toContain('--z-index-modal:');
     });
 
+    it('lets a Marquee copy share hover and press styles', async () => {
+        const css = (await compileTheme()).build([
+            'hover:underline',
+            'active:underline',
+            'group-hover:underline',
+        ]);
+        expect(css).toContain('.hover\\:underline:is(:hover, [data-hover])');
+        expect(css).toContain('.active\\:underline:is(:active, [data-active])');
+        expect(css).toContain(
+            '.group-hover\\:underline:is(:where(.group):is(:hover, [data-hover]) *)'
+        );
+    });
+
     it('removes motion under prefers-reduced-motion', () => {
         const css = compiler.build([]);
         expect(css).toMatch(
