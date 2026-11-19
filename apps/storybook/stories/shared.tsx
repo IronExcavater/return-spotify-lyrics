@@ -10,6 +10,19 @@ export const TRACKS = [
 export const ICON_BUTTON =
     'grid size-8 shrink-0 place-items-center rounded-full transition-colors duration-fast hover:bg-tint active:bg-shade aria-[current=page]:text-accent aria-pressed:text-accent';
 
+type PlaceholderProps = {
+    children: ReactNode;
+};
+
+/** A panel that stands in for real content inside a layout component. */
+export function Placeholder({ children }: PlaceholderProps) {
+    return (
+        <div className="grid size-full place-items-center bg-raised p-4 text-center text-medium">
+            {children}
+        </div>
+    );
+}
+
 type SurfaceProps = {
     bar: ReactNode;
     children: ReactNode;

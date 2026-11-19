@@ -20,6 +20,7 @@ const preview: Preview = {
         docs: { container: ThemedDocsContainer },
         // An accessibility violation fails the story test, in the Storybook UI and in CI.
         a11y: { test: 'error' },
+        layout: 'centered',
     },
 };
 
