@@ -9,6 +9,12 @@ corepack enable
 pnpm install
 ```
 
+The story tests run in real browsers. Download them once, and again when Playwright updates:
+
+```sh
+pnpm --filter @return-spotify-lyrics/storybook exec playwright install chromium firefox webkit
+```
+
 ## Commands
 
 Run these from the repository root:
@@ -17,10 +23,12 @@ Run these from the repository root:
 pnpm --filter @return-spotify-lyrics/extension dev   # open Chrome with the extension, reload on save
 pnpm --filter @return-spotify-lyrics/storybook dev   # component stories on localhost:6006
 pnpm check                                           # typecheck, lint, format check and unused code (Knip)
-pnpm test                                            # unit tests
+pnpm test                                            # unit tests and story tests
 pnpm format:fix                                      # format every file
 pnpm clean                                           # delete build output and caches
 ```
+
+To rerun the story tests on save, run `pnpm exec vitest` from `apps/storybook`. Add `--project "storybook (chromium)"` to use one browser. You can also run them from the test panel at the bottom of the Storybook sidebar.
 
 `pnpm install` also adds a pre-commit hook. It lints and formats the staged files, then typechecks the workspace.
 

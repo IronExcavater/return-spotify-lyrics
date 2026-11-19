@@ -18,6 +18,8 @@ function ThemedDocsContainer(props: DocsContainerProps) {
 const preview: Preview = {
     parameters: {
         docs: { container: ThemedDocsContainer },
+        // An accessibility violation fails the story test, in the Storybook UI and in CI.
+        a11y: { test: 'error' },
     },
 };
 
