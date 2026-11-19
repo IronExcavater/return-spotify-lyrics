@@ -222,21 +222,20 @@ export default function ResizeBox({
     );
 }
 
-/** Edge handles follow the ARIA window splitter pattern. Corner handles give the size in words. */
+// Handles follow the ARIA window splitter pattern.
 function separatorAria(edge: EdgeInfo, size: Size, limits: SizeLimits) {
-    if (edge.x && edge.y) {
-        const width = Math.round(size.width);
-        const height = Math.round(size.height);
-        return { 'aria-valuetext': `${width} by ${height}` };
-    }
-
     const axis = edge.x ? 'width' : 'height';
     const [min, max] = axisRange(axis, limits);
+    // A separator takes one value, so a corner gives its width as the value and both sides as text.
+    const isCorner = edge.x !== 0 && edge.y !== 0;
     return {
         'aria-orientation': edge.x ? 'vertical' : 'horizontal',
         'aria-valuenow': Math.round(size[axis]),
         'aria-valuemin': Math.round(min),
         'aria-valuemax': Number.isFinite(max) ? Math.round(max) : undefined,
+        'aria-valuetext': isCorner
+            ? `${Math.round(size.width)} by ${Math.round(size.height)}`
+            : undefined,
     } as const;
 }
 
