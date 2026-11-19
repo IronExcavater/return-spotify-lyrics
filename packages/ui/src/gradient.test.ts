@@ -59,6 +59,21 @@ describe('easeGradient', () => {
             'blue 100%',
         ]);
     });
+
+    it('keeps a repeating gradient and its length stops', () => {
+        const gradient = easeGradient(
+            'repeating-linear-gradient(to right, red, ease-in, blue 20px)'
+        );
+        const stops = stopsOf(gradient);
+
+        expect(gradient).toMatch(/^repeating-linear-gradient\(/);
+        expect(stops[1]).toBe('red 0%');
+        expect(stops.at(-1)).toBe('blue 20px');
+        // The first stop is 0%, so the eased stops scale the 20px end.
+        expect(
+            stops.slice(2, -1).every((stop) => stop.includes('calc(20px'))
+        ).toBe(true);
+    });
 });
 
 describe('easeStops', () => {
