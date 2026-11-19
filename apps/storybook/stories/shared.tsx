@@ -35,7 +35,8 @@ export function Surface({ bar, children }: SurfaceProps) {
             <header className="flex h-14 shrink-0 items-center gap-1 border-b border-faint px-3">
                 {bar}
             </header>
-            <main className="min-h-0 flex-1 overflow-y-auto p-3">
+            {/* Safari can't scroll a region with the keyboard unless the region can take focus. */}
+            <main tabIndex={0} className="min-h-0 flex-1 overflow-y-auto p-3">
                 {children}
             </main>
         </div>

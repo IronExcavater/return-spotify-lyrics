@@ -178,7 +178,7 @@ function PlayerPositionDemo() {
 }
 
 const meta = {
-    title: 'usePortalSlot',
+    title: 'Portal/usePortalSlot',
     render: () => <SharedControlsDemo />,
 } satisfies Meta;
 
