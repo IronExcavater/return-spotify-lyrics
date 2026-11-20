@@ -1,7 +1,7 @@
 @import 'tailwindcss';
-@import './fade-box.css';
-@import './portal-slot.css';
-@import './resize-box.css';
+@import './FadeBox/fade-box.css';
+@import './Portal/portal-slot.css';
+@import './ResizeBox/resize-box.css';
 @source './**/*.tsx';
 
 /* Static writes every token to :root, so an override works before any class uses it. */

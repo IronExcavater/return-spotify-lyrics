@@ -88,6 +88,7 @@ In `apps/extension/src`:
 
 ## Components in packages/ui
 
+- **One folder per component.** A component's folder has its name and holds its files: `FadeBox/FadeBox.tsx` and `FadeBox/fade-box.css`. A hook that belongs to a component goes in the same folder, like `Portal/usePortalSlot.tsx`, with its own entry in the package `exports`. Code that two or more components use, like `geometry.ts`, stays at the top of `src`.
 - **One tag first.** A component works as a single element. Named content goes in slot props, like `icon`, `label` or `trigger`, and the main content is `children`. Export parts, like `Menu.Item`, only when one tag can't make a layout.
 - **The root element** has the component name in kebab case as its class, like `.fade-box`.
 - **Don't swallow props.** Spread the props you don't use onto the root element. Merge `className` with `clsx`, call the consumer's event handlers as well as your own, and let the consumer's `style` win, except for values the component must control, like the ResizeBox size.
@@ -100,7 +101,7 @@ In `apps/extension/src`:
 
 ## Styling
 
-- A component's own styles go in its CSS file, like `fade-box.css`, inside `@layer components`, and `theme.css` imports the file. The layer lets a consumer's Tailwind class win without `!important`.
+- A component's own styles go in the CSS file in its folder, like `FadeBox/fade-box.css`, inside `@layer components`, and `theme.css` imports the file. The layer lets a consumer's Tailwind class win without `!important`.
 - Use Tailwind classes in JSX for layout and one-off styles.
 - Use only the theme tokens, like `bg-raised`, `text-subdued` and `rounded-medium`. The theme removes Tailwind's colours, text sizes, radii and shadows, so a class like `text-red-500` makes no CSS. The Tokens page in Storybook lists every token and what it's for.
 - Use `style` only for values that change at run time, and pass them as CSS variables. Never use `!important`.

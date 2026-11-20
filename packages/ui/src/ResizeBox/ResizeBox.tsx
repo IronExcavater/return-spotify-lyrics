@@ -13,7 +13,7 @@ import {
 } from 'react';
 import { flushSync } from 'react-dom';
 import clsx from 'clsx';
-import { toCssSize, type CssLength } from './css';
+import { toCssSize, type CssLength } from '../css';
 import {
     axisRange,
     fitSize,
@@ -26,7 +26,7 @@ import {
     type Point,
     type Size,
     type SizeLimits,
-} from './geometry';
+} from '../geometry';
 
 export type HandlePlacement = 'overlap' | 'inset';
 
