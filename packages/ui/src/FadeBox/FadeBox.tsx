@@ -1,4 +1,4 @@
-import type { ComponentPropsWithoutRef } from 'react';
+import type { ComponentProps } from 'react';
 import clsx from 'clsx';
 import { toCssSize, type CssLength } from '../css';
 import { resolveEdges, type Direction, type Side } from '../geometry';
@@ -6,7 +6,7 @@ import { easeStops, reverseEasing, type Easing } from '../gradient';
 
 const SIDES: readonly Side[] = ['top', 'right', 'bottom', 'left'];
 
-export type FadeBoxProps = ComponentPropsWithoutRef<'div'> & {
+export type FadeBoxProps = ComponentProps<'div'> & {
     enabled?: boolean;
     /** How far the fade goes in from each faded edge. */
     size?: CssLength;
