@@ -4,6 +4,9 @@ import { expect, waitFor } from 'storybook/test';
 import { BadgeCheck, Music } from '@return-spotify-lyrics/icons';
 import Text from '@return-spotify-lyrics/ui/Text';
 
+// The first formatted story loads the formatter chunk, which can take more than a second on a cold server.
+const LAZY_LOAD = { timeout: 5000 };
+
 const BIO = `## About
 
 **The Quiet Hours** make slow, warm songs about night drives and harbour towns.
@@ -162,7 +165,11 @@ export const Markdown: Story = {
     ),
     play: async ({ canvas }) => {
         // The formatter loads lazily, so the formatted text arrives a moment later.
-        const link = await canvas.findByRole('link', { name: /LRCLIB/ });
+        const link = await canvas.findByRole(
+            'link',
+            { name: /LRCLIB/ },
+            LAZY_LOAD
+        );
         await expect(link).toHaveAttribute('target', '_blank');
         await expect(
             canvas.getByRole('heading', { name: 'About' })
@@ -182,7 +189,7 @@ export const Html: Story = {
     ),
     play: async ({ canvas }) => {
         await expect(
-            await canvas.findByRole('link', { name: /Ada Vale/ })
+            await canvas.findByRole('link', { name: /Ada Vale/ }, LAZY_LOAD)
         ).toHaveAttribute('href', 'https://open.spotify.com/artist/1');
         await expect(canvas.getByText(/& friends/)).toBeInTheDocument();
     },
@@ -228,6 +235,8 @@ export const RichContent: Story = {
         />
     ),
     play: async ({ canvas }) => {
-        await expect((await canvas.findByText('water')).tagName).toBe('EM');
+        await expect(
+            (await canvas.findByText('water', {}, LAZY_LOAD)).tagName
+        ).toBe('EM');
     },
 };
