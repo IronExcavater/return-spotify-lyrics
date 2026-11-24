@@ -13,22 +13,22 @@ const ENTITIES: Record<string, string> = {
 const INLINE_PARENTS = new Set(['paragraph', 'heading']);
 
 /** The words of markdown or HTML without the markup, to show while the formatter loads. */
-export function toPlainText(
+export function stripMarkup(
     format: 'markdown' | 'html',
-    source: string
+    markup: string
 ): string {
-    return format === 'html' ? stripHtml(source) : stripMarkdown(source);
+    return format === 'html' ? stripHtml(markup) : stripMarkdown(markup);
 }
 
 /** The words of a Tiptap document, to show while the formatter loads. */
-export function textOfDoc(node: JSONContent): string {
+export function stripDoc(node: JSONContent): string {
     if (node.text !== undefined) return node.text;
     const separator = INLINE_PARENTS.has(node.type ?? '') ? '' : '\n';
-    return (node.content ?? []).map(textOfDoc).join(separator);
+    return (node.content ?? []).map(stripDoc).join(separator);
 }
 
-function stripMarkdown(source: string): string {
-    return source
+function stripMarkdown(markup: string): string {
+    return markup
         .replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1')
         .replace(/^\s{0,3}(#{1,6}\s+|>\s?|[-*+]\s+|\d+[.)]\s+)/gm, '')
         .replace(/\*\*|__|~~|[*_`]/g, '')
@@ -36,8 +36,8 @@ function stripMarkdown(source: string): string {
 }
 
 // One pass decodes each entity once, so `&amp;lt;` becomes `&lt;` and not `<`.
-function stripHtml(source: string): string {
-    return source
+function stripHtml(markup: string): string {
+    return markup
         .replace(/<[^>]*>/g, '')
         .replace(
             /&(amp|lt|gt|quot|#39|nbsp);/g,

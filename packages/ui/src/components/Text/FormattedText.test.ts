@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { parseHtml, parseMarkdown, removeUnsafeLinks } from './format';
+import {
+    flattenDoc,
+    parseHtml,
+    parseMarkdown,
+    removeUnsafeLinks,
+} from './FormattedText';
+import { stripDoc } from './markup';
 
 // The marks of each text node in a document, in order.
 function marksOf(doc: ReturnType<typeof parseMarkdown>) {
@@ -84,5 +90,37 @@ describe('removeUnsafeLinks', () => {
             )
         );
         expect(marksOf(doc)).toHaveLength(4);
+    });
+});
+
+describe('flattenDoc', () => {
+    it('joins paragraphs into one line with a space', () => {
+        const doc = flattenDoc(
+            parseMarkdown('Glass Harbour\n\nPaper Satellites')
+        );
+        expect(doc.content).toHaveLength(1);
+        expect(stripDoc(doc)).toBe('Glass Harbour Paper Satellites');
+    });
+
+    it('joins the items of a list into one line', () => {
+        const doc = flattenDoc(parseMarkdown('- Glass Harbour\n- Slow Orbit'));
+        expect(stripDoc(doc)).toBe('Glass Harbour Slow Orbit');
+    });
+
+    it('keeps bold and italic', () => {
+        const doc = flattenDoc(parseMarkdown('# Out **now** on _vinyl_'));
+        expect(marksOf(doc)).toEqual(['bold', 'italic']);
+    });
+
+    it('turns a link into plain text', () => {
+        const doc = flattenDoc(
+            parseMarkdown('Follow [Daft Punk](https://open.spotify.com)')
+        );
+        expect(marksOf(doc)).toEqual([]);
+        expect(stripDoc(doc)).toBe('Follow Daft Punk');
+    });
+
+    it('gives an empty line for an empty document', () => {
+        expect(stripDoc(flattenDoc(parseMarkdown('')))).toBe('');
     });
 });
