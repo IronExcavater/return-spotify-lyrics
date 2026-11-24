@@ -48,7 +48,23 @@ jobs:
               run: pnpm --filter @return-spotify-lyrics/storybook exec playwright install chromium firefox webkit
 
             - name: Test
-              run: pnpm --filter @return-spotify-lyrics/storybook test
+              run: pnpm --filter @return-spotify-lyrics/storybook test --coverage
+
+            - name: Show coverage
+              run: |
+                  {
+                      echo '### Story test coverage'
+                      echo '```'
+                      cat apps/storybook/coverage/coverage.txt
+                      echo '```'
+                  } >> "$GITHUB_STEP_SUMMARY"
+
+            - uses: actions/upload-artifact@v7
+              with:
+                  name: coverage
+                  path: apps/storybook/coverage
+                  if-no-files-found: error
+                  retention-days: 7
 
     extension:
         name: Extension (${{ matrix.browser }})

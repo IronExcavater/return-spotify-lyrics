@@ -3,7 +3,7 @@ import { globSync, rmSync } from 'node:fs';
 
 const generated = globSync([
     '.turbo',
-    '{apps,packages}/*/{.turbo,.output,.wxt,storybook-static}',
+    '{apps,packages}/*/{.turbo,.output,.wxt,storybook-static,coverage}',
     '{apps,packages}/*/node_modules/{.cache,.vite}',
 ]);
 
