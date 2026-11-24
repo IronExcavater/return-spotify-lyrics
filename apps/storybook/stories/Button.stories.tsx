@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { expect, fn, waitFor } from 'storybook/test';
+import { expect, fn, waitFor, within } from 'storybook/test';
 
-import { Bell, Heart, Play } from '@return-spotify-lyrics/icons';
+import { BadgeCheck, Bell, Heart, Play } from '@return-spotify-lyrics/icons';
 import Button, { type ButtonProps } from '@return-spotify-lyrics/ui/Button';
 
 const meta = {
@@ -171,5 +171,24 @@ export const AsLink: Story = {
     play: async ({ canvas }) => {
         const link = canvas.getByRole('link', { name: 'Open playlist' });
         await expect(link).toHaveAttribute('href', '#playlist');
+    },
+};
+
+export const InlineIcon: Story = {
+    args: {
+        variant: 'tertiary',
+        children: (
+            <>
+                Daft Punk <BadgeCheck data-testid="icon" />
+            </>
+        ),
+    },
+    play: async ({ canvas }) => {
+        const button = canvas.getByRole('button', { name: 'Daft Punk' });
+        const icon = within(button).getByTestId('icon');
+        // The label is Text, so an icon in it takes the size of the text.
+        const fontSize = parseFloat(getComputedStyle(icon).fontSize);
+        const height = icon.getBoundingClientRect().height;
+        await expect(Math.abs(height - fontSize)).toBeLessThanOrEqual(1);
     },
 };

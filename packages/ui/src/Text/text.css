@@ -36,6 +36,12 @@
             color: var(--text-color-subdued);
         }
 
+        /* A label sits in a control, so it takes the colour of the control, and a size keeps it bold. */
+        &[data-variant='label'] {
+            font-weight: 700;
+            color: inherit;
+        }
+
         &[data-size='small'] {
             --text-size: var(--text-small);
             --text-line-height: var(--text-small--line-height);

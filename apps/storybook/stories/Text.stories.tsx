@@ -240,3 +240,19 @@ export const RichContent: Story = {
         ).toBe('EM');
     },
 };
+
+export const Label: Story = {
+    render: () => (
+        <div data-testid="control" className="text-accent">
+            <Text variant="label">Follow</Text>
+        </div>
+    ),
+    play: async ({ canvas }) => {
+        // A label sits in a control, so it takes the colour of the control.
+        const label = canvas.getByText('Follow');
+        await expect(getComputedStyle(label).color).toBe(
+            getComputedStyle(canvas.getByTestId('control')).color
+        );
+        await expect(label).toHaveStyle({ fontWeight: '700' });
+    },
+};

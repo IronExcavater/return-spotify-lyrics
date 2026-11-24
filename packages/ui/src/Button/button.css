@@ -13,9 +13,6 @@
         height: var(--button-height);
         padding-inline: calc(var(--button-height) / 2);
         border-radius: 9999px;
-        font-size: var(--text-medium);
-        line-height: var(--text-medium--line-height);
-        font-weight: 700;
         white-space: nowrap;
         cursor: pointer;
         user-select: none;
@@ -26,15 +23,11 @@
         &[data-size='small'] {
             --button-height: 32px;
             --button-icon-size: 16px;
-            font-size: var(--text-small);
-            line-height: var(--text-small--line-height);
         }
 
         &[data-size='large'] {
             --button-height: 48px;
             --button-icon-size: 24px;
-            font-size: var(--text-large);
-            line-height: var(--text-large--line-height);
         }
 
         /* Each tone sets the colours, and each variant picks which ones it uses. */
@@ -117,6 +110,7 @@
             color: var(--text-color-inverse);
             font-size: 10px;
             line-height: 16px;
+            font-weight: 700;
             translate: 25% -25%;
         }
 

@@ -14,13 +14,13 @@ import { textOfDoc, toPlainText } from './markup';
 // Tiptap is large, so it loads only when a Text has formatted content.
 const FormattedText = lazy(() => import('./FormattedText'));
 
-type TextVariant = 'title' | 'heading' | 'body' | 'caption';
+type TextVariant = 'title' | 'heading' | 'body' | 'caption' | 'label';
 
 type SharedProps = Omit<
     ComponentProps<'p'>,
     'style' | 'children' | 'content'
 > & {
-    /** The role of the text. It sets the default size, weight, tone and element. */
+    /** The role of the text. It sets the default size, weight, tone and element. A `label` names a control, like a button. */
     variant?: TextVariant;
     /** One of the theme's text sizes, in place of the variant's. */
     size?: 'small' | 'medium' | 'large' | 'x-large' | 'xx-large' | undefined;
@@ -72,6 +72,7 @@ const ELEMENTS: Record<TextVariant, 'h1' | 'h2' | 'p' | 'span'> = {
     heading: 'h2',
     body: 'p',
     caption: 'span',
+    label: 'span',
 };
 
 /**
