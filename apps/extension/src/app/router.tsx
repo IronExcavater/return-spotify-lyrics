@@ -1,8 +1,8 @@
 import { Navigate, createHashRouter } from 'react-router';
 
 import HomePage from '@/features/home/HomePage';
-import RouteErrorPage from '@/errors/RouteErrorPage';
 
+import RouteErrorPage from './errors/RouteErrorPage';
 import type { AppRouteHandle } from './resize/types';
 import AppShell from './shell/AppShell';
 

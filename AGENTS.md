@@ -23,19 +23,28 @@ Each rule is a default, with its reason. If a rule makes the code worse in one p
 
 In `apps/extension/src`:
 
-| Folder               | What it holds                                                                     |
-| -------------------- | --------------------------------------------------------------------------------- |
-| `app`                | The shell: providers, the router, the surface and the popup size.                 |
-| `features/<feature>` | One feature, like `lyrics` or `queue`, with its pages, components and hooks.      |
-| `integrations/<api>` | The only code that talks to an outside service, like Spotify or LRCLIB.           |
-| `storage`            | Storage items and the hooks that read them.                                       |
-| `shared`             | Code that two or more features use and that isn't general enough for the library. |
-| `entrypoints`        | The files that WXT builds: background, popup and side panel.                      |
+| Folder               | What it holds                                                                      |
+| -------------------- | ---------------------------------------------------------------------------------- |
+| `app`                | The shell: providers, the router, the surface, the popup size and the error pages. |
+| `features/<feature>` | One feature, like `lyrics` or `queue`, with its pages, components and hooks.       |
+| `integrations/<api>` | The only code that talks to an outside service, like Spotify or LRCLIB.            |
+| `storage`            | Storage items and the hooks that read them.                                        |
+| `shared`             | Code that two or more features use and that isn't general enough for the library.  |
+| `entrypoints`        | The files that WXT builds: background, popup and side panel.                       |
+
+In `packages/ui/src`:
+
+| Folder              | What it holds                                                                 |
+| ------------------- | ----------------------------------------------------------------------------- |
+| `components/<Name>` | One component, with its CSS and the hooks and helpers that only it uses.      |
+| `hooks`             | Hooks that are not about one component, like `useReducedMotion`.              |
+| `helpers`           | Pure functions and types that two or more components use, like `geometry.ts`. |
+| `theme`             | `theme.css`, which imports every component's CSS, and the font.               |
 
 ## Architecture
 
 - Import another package by name, like `@return-spotify-lyrics/ui/FadeBox`, never by a relative path. A package never imports from an app. This keeps each package usable on its own.
-- Put shared code in the lowest package that every user of it can import. That's why `Size` lives in `packages/ui/src/geometry.ts`.
+- Put shared code in the lowest package that every user of it can import. That's why `Size` lives in `packages/ui/src/helpers/geometry.ts`.
 - `packages/ui` knows nothing about Spotify, storage or the extension. It must work in Storybook and on any surface.
 - A feature owns its folder. When a second feature needs some of its code, move that code to `shared`, or to `packages/ui` if it's general.
 - Only `integrations` calls outside services. Components and hooks use its functions, so an API change touches one folder.
@@ -88,7 +97,7 @@ In `apps/extension/src`:
 
 ## Components in packages/ui
 
-- **One folder per component.** A component's folder has its name and holds its files: `FadeBox/FadeBox.tsx` and `FadeBox/fade-box.css`. A hook that belongs to a component goes in the same folder, like `Portal/usePortalSlot.tsx`, with its own entry in the package `exports`. Code that two or more components use, like `geometry.ts`, stays at the top of `src`.
+- **One folder per component.** A component's folder is in `src/components`, has its name and holds its files: `FadeBox/FadeBox.tsx` and `FadeBox/fade-box.css`. A hook that belongs to a component goes in the same folder, like `Portal/usePortalSlot.tsx`, with its own entry in the package `exports`. Code that two or more components use goes in `src/helpers` or `src/hooks`.
 - **One tag first.** A component works as a single element. Named content goes in slot props, like `icon`, `label` or `trigger`, and the main content is `children`. Export parts, like `Menu.Item`, only when one tag can't make a layout.
 - **The root element** has the component name in kebab case as its class, like `.fade-box`.
 - **Don't swallow props.** Spread the props you don't use onto the root element. Merge `className` with `clsx`, call the consumer's event handlers as well as your own, and let the consumer's `style` win, except for values the component must control, like the ResizeBox size.

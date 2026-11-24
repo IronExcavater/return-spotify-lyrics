@@ -7,7 +7,7 @@ import {
     type ReactNode,
 } from 'react';
 import clsx from 'clsx';
-import { toCssSize, type CssLength } from '../css';
+import { toCssSize, type CssLength } from '../../helpers/css';
 import FadeBox from '../FadeBox/FadeBox';
 import {
     clearSelection,
@@ -21,7 +21,7 @@ import {
     toMilliseconds,
     type MarqueeMode,
 } from './motion';
-import useReducedMotion from './useReducedMotion';
+import useReducedMotion from '../../hooks/useReducedMotion';
 
 export type MarqueeProps = ComponentProps<'div'> & {
     /** How the content moves: in a loop to the left or the right, or back and forth. */

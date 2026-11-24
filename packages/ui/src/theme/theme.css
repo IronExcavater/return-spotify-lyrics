@@ -1,13 +1,13 @@
 @import 'tailwindcss';
-@import './Button/button.css';
-@import './FadeBox/fade-box.css';
-@import './Link/link.css';
-@import './Marquee/marquee.css';
-@import './Portal/portal-slot.css';
-@import './ResizeBox/resize-box.css';
-@import './Spinner/spinner.css';
-@import './Text/text.css';
-@source './**/*.tsx';
+@import '../components/Button/button.css';
+@import '../components/FadeBox/fade-box.css';
+@import '../components/Link/link.css';
+@import '../components/Marquee/marquee.css';
+@import '../components/Portal/portal-slot.css';
+@import '../components/ResizeBox/resize-box.css';
+@import '../components/Spinner/spinner.css';
+@import '../components/Text/text.css';
+@source '../**/*.tsx';
 
 /* A Marquee marks the element in each copy that matches the hovered or pressed one, so every copy shares the style. */
 @custom-variant hover {

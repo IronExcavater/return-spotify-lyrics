@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react';
 
-import AppErrorBoundary from '@/errors/AppErrorBoundary';
-
+import AppErrorBoundary from './errors/AppErrorBoundary';
 import SurfaceProvider from './surface/SurfaceProvider';
 import type { Surface } from './surface/types';
 
