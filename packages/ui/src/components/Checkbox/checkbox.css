@@ -1,0 +1,51 @@
+/* Defaults live in @layer components so that a consumer className always wins. */
+@layer components {
+    .checkbox {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        cursor: pointer;
+
+        > [data-part='box'] {
+            display: grid;
+            flex: none;
+            place-items: center;
+            width: 16px;
+            height: 16px;
+            border: 1px solid var(--border-color-default);
+            border-radius: var(--radius-small);
+            color: var(--text-color-inverse);
+            transition-property: background-color, border-color;
+            transition-duration: var(--transition-duration-fast);
+
+            &:is([data-checked], [data-indeterminate]) {
+                border-color: var(--border-color-accent);
+                background-color: var(--background-color-accent);
+            }
+
+            > [data-part='indicator'] > svg {
+                display: block;
+                width: 12px;
+                height: 12px;
+                stroke-width: 3;
+            }
+        }
+
+        /* Hover also matches the mark of a Marquee copy, so a copy shares the style. */
+        &:not(:has(> [data-disabled])):is(:hover, [data-hover])
+            > [data-part='box'] {
+            &[data-unchecked]:not([data-indeterminate]) {
+                border-color: var(--border-color-strong);
+            }
+
+            &:is([data-checked], [data-indeterminate]) {
+                background-color: var(--background-color-accent-strong);
+            }
+        }
+
+        &:has(> [data-disabled]) {
+            cursor: not-allowed;
+            opacity: var(--opacity-disabled);
+        }
+    }
+}

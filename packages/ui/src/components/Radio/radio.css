@@ -1,0 +1,68 @@
+/* Defaults live in @layer components so that a consumer className always wins. */
+@layer components {
+    .radio-group {
+        display: grid;
+        gap: 12px;
+
+        > [data-part='options'] {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        &[data-orientation='horizontal'] > [data-part='options'] {
+            flex-direction: row;
+            flex-wrap: wrap;
+            column-gap: 24px;
+        }
+    }
+
+    .radio {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        cursor: pointer;
+
+        > [data-part='circle'] {
+            display: grid;
+            flex: none;
+            place-items: center;
+            width: 16px;
+            height: 16px;
+            border: 1px solid var(--border-color-default);
+            border-radius: 9999px;
+            color: var(--text-color-inverse);
+            transition-property: background-color, border-color;
+            transition-duration: var(--transition-duration-fast);
+
+            &[data-checked] {
+                border-color: var(--border-color-accent);
+                background-color: var(--background-color-accent);
+            }
+
+            > [data-part='indicator'] {
+                width: 6px;
+                height: 6px;
+                border-radius: 9999px;
+                background-color: currentColor;
+            }
+        }
+
+        /* Hover also matches the mark of a Marquee copy, so a copy shares the style. */
+        &:not(:has(> [data-disabled])):is(:hover, [data-hover])
+            > [data-part='circle'] {
+            &[data-unchecked] {
+                border-color: var(--border-color-strong);
+            }
+
+            &[data-checked] {
+                background-color: var(--background-color-accent-strong);
+            }
+        }
+
+        &:has(> [data-disabled]) {
+            cursor: not-allowed;
+            opacity: var(--opacity-disabled);
+        }
+    }
+}

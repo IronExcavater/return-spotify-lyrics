@@ -10,6 +10,7 @@
         "./font": "./src/theme/font.ts",
         "./usePortalSlot": "./src/components/Portal/usePortalSlot.tsx",
         "./TextProvider": "./src/components/Text/TextProvider.tsx",
+        "./RadioGroup": "./src/components/Radio/RadioGroup.tsx",
         "./*": "./src/components/*/*.tsx"
     },
     "scripts": {
