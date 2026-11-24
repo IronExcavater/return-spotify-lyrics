@@ -16,7 +16,12 @@ const TEXT_EXTENSIONS: Extensions = [
     }),
 ];
 
-const RENDER_OPTIONS = { markMapping: { link: LinkMark } };
+const BLOCK_OPTIONS = { markMapping: { link: LinkMark } };
+// After flattenDoc, the one paragraph renders as its content, so a control holds no block.
+const INLINE_OPTIONS = { nodeMapping: { paragraph: BareParagraph } };
+
+// Text and hard breaks are the inline nodes, and every other node holds blocks.
+const INLINE_NODES = new Set(['text', 'hardBreak']);
 
 const SAFE_PROTOCOLS = new Set(['http:', 'https:', 'mailto:']);
 // A relative address resolves against this base, so it counts as a web address.
@@ -54,9 +59,33 @@ function isSafeHref(href: unknown): boolean {
     return url !== null && SAFE_PROTOCOLS.has(url.protocol);
 }
 
-type FormattedTextProps =
-    | { format: 'markdown' | 'html'; markup: string; content?: undefined }
-    | { content: JSONContent; format?: undefined; markup?: undefined };
+/** Joins the blocks of a document into one paragraph of inline content without links, for the name of a control. */
+export function flattenDoc(doc: JSONContent): JSONContent {
+    const content = collectLines(doc).flatMap((line, index) =>
+        index === 0 ? line : [{ type: 'text', text: ' ' }, ...line]
+    );
+    return { type: 'doc', content: [{ type: 'paragraph', content }] };
+}
+
+// A line is the inline content of one block, like a paragraph, a heading or a list item.
+function collectLines(node: JSONContent): JSONContent[][] {
+    const children = node.content ?? [];
+    const isLine = children.some((child) => INLINE_NODES.has(child.type ?? ''));
+    if (isLine) return [children.map(removeLink)];
+    return children.flatMap(collectLines);
+}
+
+function removeLink(node: JSONContent): JSONContent {
+    const marks = node.marks?.filter((mark) => mark.type !== 'link');
+    return { ...node, ...(marks && { marks }) };
+}
+
+type FormattedTextProps = (
+    | { format: 'markdown' | 'html'; markup: string; doc?: undefined }
+    | { doc: JSONContent; format?: undefined; markup?: undefined }
+) & {
+    inline: boolean;
+};
 
 type LinkMarkProps = {
     mark: { attrs: Record<string, unknown> };
@@ -72,23 +101,33 @@ function LinkMark({ mark, children }: LinkMarkProps) {
     );
 }
 
+type BareParagraphProps = {
+    children?: ReactNode;
+};
+
+function BareParagraph({ children }: BareParagraphProps) {
+    return <>{children}</>;
+}
+
 /** Renders markdown, HTML or a Tiptap document with the static renderer, so no editor loads. Text loads it lazily. */
 export default function FormattedText({
     format,
     markup,
-    content,
+    doc,
+    inline,
 }: FormattedTextProps) {
-    // Parsing takes time, so a new render with the same markup keeps the document.
-    const doc = useMemo(() => {
+    // Parsing takes time, so a new render with the same source keeps the document.
+    const content = useMemo(() => {
         const parsed =
-            content ??
+            doc ??
             (format === 'html' ? parseHtml(markup) : parseMarkdown(markup));
-        return removeUnsafeLinks(parsed);
-    }, [format, markup, content]);
+        const safe = removeUnsafeLinks(parsed);
+        return inline ? flattenDoc(safe) : safe;
+    }, [format, markup, doc, inline]);
 
     return renderToReactElement({
-        content: doc,
+        content,
         extensions: TEXT_EXTENSIONS,
-        options: RENDER_OPTIONS,
+        options: inline ? INLINE_OPTIONS : BLOCK_OPTIONS,
     });
 }

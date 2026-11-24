@@ -3,72 +3,6 @@
     .text {
         overflow-wrap: anywhere;
 
-        /* Each size takes its theme token: the font size, line height, weight and letter spacing. */
-        &[data-size='small'] {
-            @apply text-small;
-        }
-
-        &[data-size='medium'] {
-            @apply text-medium;
-        }
-
-        &[data-size='large'] {
-            @apply text-large;
-        }
-
-        &[data-size='x-large'] {
-            @apply text-x-large;
-        }
-
-        &[data-size='xx-large'] {
-            @apply text-xx-large;
-        }
-
-        /* A weight comes after the sizes, so it replaces the weight of the size. */
-        &[data-weight='regular'] {
-            font-weight: 400;
-        }
-
-        &[data-weight='medium'] {
-            font-weight: 500;
-        }
-
-        &[data-weight='bold'] {
-            font-weight: 700;
-        }
-
-        &[data-weight='black'] {
-            font-weight: 900;
-        }
-
-        &[data-tone='default'] {
-            color: var(--text-color-default);
-        }
-
-        &[data-tone='subdued'] {
-            color: var(--text-color-subdued);
-        }
-
-        &[data-tone='faint'] {
-            color: var(--text-color-faint);
-        }
-
-        &[data-tone='accent'] {
-            color: var(--text-color-accent);
-        }
-
-        &[data-tone='negative'] {
-            color: var(--text-color-negative);
-        }
-
-        &[data-tone='warning'] {
-            color: var(--text-color-warning);
-        }
-
-        &[data-tone='info'] {
-            color: var(--text-color-info);
-        }
-
         /* The clamp only hides lines on screen, so assistive technology still reads all of the text. */
         &[data-clamped] {
             display: -webkit-box;
@@ -80,7 +14,8 @@
 
         /* Tailwind's reset removes block styles, so formatted content gets them back, and :where() keeps them easy to override. */
         &[data-format] {
-            :where(* + *) {
+            /* Only blocks get space, so an inline icon in a sentence stays on its line. */
+            :where(* + :is(p, h1, h2, h3, ul, ol, blockquote, pre, hr)) {
                 margin-block-start: 0.5em;
             }
 

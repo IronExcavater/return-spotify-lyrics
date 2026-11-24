@@ -115,7 +115,7 @@ export const WithIcon: Story = {
 
 export const InText: Story = {
     render: () => (
-        <Text className="w-72 text-subdued">
+        <Text render={<p />} className="w-72 text-subdued">
             Lyrics come from{' '}
             <Link href="https://lrclib.net" underline="always">
                 LRCLIB
