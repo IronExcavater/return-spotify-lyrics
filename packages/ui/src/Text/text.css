@@ -124,6 +124,72 @@
             overflow: hidden;
         }
 
+        /* Tailwind's reset removes block styles, so formatted content gets them back, and :where() keeps them easy to override. */
+        &[data-format] {
+            :where(* + *) {
+                margin-block-start: 0.5em;
+            }
+
+            :where(h1, h2, h3) {
+                font-weight: 700;
+                line-height: 1.25;
+            }
+
+            :where(h1) {
+                font-size: 1.5em;
+            }
+
+            :where(h2) {
+                font-size: 1.25em;
+            }
+
+            :where(ul, ol) {
+                padding-inline-start: 1.5em;
+            }
+
+            :where(ul) {
+                list-style: disc;
+            }
+
+            :where(ol) {
+                list-style: decimal;
+            }
+
+            :where(li + li, li > p) {
+                margin-block-start: 0.25em;
+            }
+
+            :where(blockquote) {
+                padding-inline-start: 1em;
+                border-inline-start: 2px solid var(--border-color-faint);
+                color: var(--text-color-subdued);
+            }
+
+            :where(code) {
+                padding: 0.1em 0.3em;
+                border-radius: var(--radius-small);
+                background-color: var(--background-color-tint);
+                font-family: ui-monospace, monospace;
+                font-size: 0.9em;
+            }
+
+            :where(pre) {
+                padding: 0.75em 1em;
+                border-radius: var(--radius-small);
+                background-color: var(--background-color-tint);
+                overflow-x: auto;
+
+                code {
+                    padding: 0;
+                    background: none;
+                }
+            }
+
+            :where(hr) {
+                border-color: var(--border-color-faint);
+            }
+        }
+
         /* An icon in the text takes its size and colour, and :where() lets a consumer class resize it. */
         :where(svg) {
             display: inline-block;
