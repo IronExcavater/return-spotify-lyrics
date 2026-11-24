@@ -51,9 +51,9 @@
         }
     }
 
-    /* The copies of a selection look the same as the selection itself. */
+    /* The copies of a selection use the theme's selection colours, so they look the same as the selection itself. */
     ::highlight(marquee-selection) {
-        background-color: Highlight;
-        color: HighlightText;
+        background-color: var(--background-color-accent);
+        color: var(--text-color-inverse);
     }
 }
