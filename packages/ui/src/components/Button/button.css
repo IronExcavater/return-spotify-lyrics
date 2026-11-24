@@ -14,6 +14,7 @@
         padding-inline: calc(var(--button-height) / 2);
         border-radius: 9999px;
         white-space: nowrap;
+        @apply text-medium font-bold;
         cursor: pointer;
         user-select: none;
         transition-property:
@@ -23,11 +24,13 @@
         &[data-size='small'] {
             --button-height: 32px;
             --button-icon-size: 16px;
+            @apply text-small font-bold;
         }
 
         &[data-size='large'] {
             --button-height: 48px;
             --button-icon-size: 24px;
+            @apply text-large font-bold;
         }
 
         /* Each tone sets the colours, and each variant picks which ones it uses. */

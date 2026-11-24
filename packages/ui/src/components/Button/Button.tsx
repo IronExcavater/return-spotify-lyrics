@@ -82,7 +82,7 @@ export default function Button({
                     </span>
                 )}
                 {children !== undefined && (
-                    <Text variant="label" size={size} data-part="label">
+                    <Text inline data-part="label">
                         {children}
                     </Text>
                 )}
