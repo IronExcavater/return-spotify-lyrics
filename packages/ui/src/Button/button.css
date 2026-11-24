@@ -1,0 +1,167 @@
+/* Defaults live in @layer components so that a consumer className always wins. */
+@layer components {
+    .button {
+        --button-height: 40px;
+        --button-icon-size: 20px;
+
+        position: relative;
+        display: inline-flex;
+        flex: none;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        height: var(--button-height);
+        padding-inline: calc(var(--button-height) / 2);
+        border-radius: 9999px;
+        font-size: var(--text-medium);
+        line-height: var(--text-medium--line-height);
+        font-weight: 700;
+        white-space: nowrap;
+        cursor: pointer;
+        user-select: none;
+        transition-property:
+            transform, background-color, border-color, color, opacity;
+        transition-duration: var(--transition-duration-fast);
+
+        &[data-size='small'] {
+            --button-height: 32px;
+            --button-icon-size: 16px;
+            font-size: var(--text-small);
+            line-height: var(--text-small--line-height);
+        }
+
+        &[data-size='large'] {
+            --button-height: 48px;
+            --button-icon-size: 24px;
+            font-size: var(--text-large);
+            line-height: var(--text-large--line-height);
+        }
+
+        /* Each tone sets the colours, and each variant picks which ones it uses. */
+        &[data-tone='neutral'] {
+            --button-fill: var(--background-color-inverse);
+            --button-fill-hover: var(--background-color-inverse);
+            --button-on-fill: var(--text-color-inverse);
+            --button-line: var(--border-color-default);
+            --button-line-hover: var(--border-color-strong);
+            --button-ink: var(--text-color-subdued);
+            --button-ink-hover: var(--text-color-default);
+            --button-ink-strong: var(--text-color-default);
+        }
+
+        &[data-tone='accent'] {
+            --button-fill: var(--background-color-accent);
+            --button-fill-hover: var(--background-color-accent-strong);
+            --button-on-fill: var(--text-color-inverse);
+            --button-line: var(--border-color-accent);
+            --button-line-hover: var(--border-color-accent);
+            --button-ink: var(--text-color-accent);
+            --button-ink-hover: var(--text-color-accent);
+            --button-ink-strong: var(--text-color-accent);
+        }
+
+        &[data-tone='negative'] {
+            --button-fill: var(--background-color-negative);
+            --button-fill-hover: var(--background-color-negative-strong);
+            --button-on-fill: var(--text-color-default);
+            --button-line: var(--border-color-negative);
+            --button-line-hover: var(--border-color-negative);
+            --button-ink: var(--text-color-negative);
+            --button-ink-hover: var(--text-color-negative);
+            --button-ink-strong: var(--text-color-negative);
+        }
+
+        &[data-variant='primary'] {
+            background-color: var(--button-fill);
+            color: var(--button-on-fill);
+        }
+
+        &[data-variant='secondary'] {
+            border: 1px solid var(--button-line);
+            color: var(--button-ink-strong);
+        }
+
+        &[data-variant='tertiary'] {
+            padding-inline: 8px;
+            color: var(--button-ink);
+        }
+
+        &[data-variant='icon'] {
+            width: var(--button-height);
+            padding: 0;
+            color: var(--button-ink);
+        }
+
+        > [data-part='icon'] {
+            display: grid;
+            flex: none;
+            place-items: center;
+            width: var(--button-icon-size);
+            height: var(--button-icon-size);
+
+            > svg {
+                width: 100%;
+                height: 100%;
+            }
+        }
+
+        > [data-part='badge'] {
+            position: absolute;
+            top: 0;
+            right: 0;
+            min-width: 16px;
+            height: 16px;
+            padding-inline: 4px;
+            border-radius: 9999px;
+            background-color: var(--background-color-accent);
+            color: var(--text-color-inverse);
+            font-size: 10px;
+            line-height: 16px;
+            translate: 25% -25%;
+        }
+
+        > [data-part='spinner'] {
+            position: absolute;
+            inset: 0;
+            margin: auto;
+            width: var(--button-icon-size);
+            height: var(--button-icon-size);
+        }
+
+        /* Hover and press also match the marks of a Marquee copy, so a copy shares the style. */
+        &:not([data-disabled]):is(:hover, [data-hover]) {
+            transform: scale(1.04);
+
+            &[data-variant='primary'] {
+                background-color: var(--button-fill-hover);
+            }
+
+            &[data-variant='secondary'] {
+                border-color: var(--button-line-hover);
+            }
+
+            &:is([data-variant='tertiary'], [data-variant='icon']) {
+                color: var(--button-ink-hover);
+            }
+        }
+
+        &:not([data-disabled]):is(:active, [data-active]) {
+            transform: scale(1);
+            opacity: 0.7;
+        }
+
+        &[data-disabled]:not([data-loading]) {
+            cursor: not-allowed;
+            opacity: var(--opacity-disabled);
+        }
+
+        /* The content stays in place, so the button keeps its width and its accessible name while it loads. */
+        &[data-loading] {
+            cursor: progress;
+
+            > :not([data-part='spinner']) {
+                opacity: 0;
+            }
+        }
+    }
+}

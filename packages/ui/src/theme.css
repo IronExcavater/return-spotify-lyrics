@@ -1,8 +1,10 @@
 @import 'tailwindcss';
+@import './Button/button.css';
 @import './FadeBox/fade-box.css';
 @import './Marquee/marquee.css';
 @import './Portal/portal-slot.css';
 @import './ResizeBox/resize-box.css';
+@import './Spinner/spinner.css';
 @source './**/*.tsx';
 
 /* A Marquee marks the element in each copy that matches the hovered or pressed one, so every copy shares the style. */
