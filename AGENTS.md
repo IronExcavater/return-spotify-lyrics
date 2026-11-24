@@ -94,6 +94,7 @@ In `apps/extension/src`:
 - **Don't swallow props.** Spread the props you don't use onto the root element. Merge `className` with `clsx`, call the consumer's event handlers as well as your own, and let the consumer's `style` win, except for values the component must control, like the ResizeBox size.
 - **State and variants** are `data-*` attributes, like `data-dragging` or `data-placement`. Inner elements get a `data-part`, like `data-part="handle"`. Settings that CSS uses are CSS variables, like `--fade-size`. Then a consumer can restyle any of them from outside.
 - **Every prop has a default** in the parameter list, so that the docs and the story controls show it.
+- **Text goes through Text.** A component shows its text with `Text`, and a control's label with `<Text variant="label">`. Its CSS sets no font size, line height or weight. Then typography, inline icons and nouns work the same everywhere.
 - **Lengths** take a number for pixels or a string for any CSS length. Use the `CssLength` type and `toCssSize`.
 - **Names describe meaning, not looks:** `tone="negative"`, not `color="red"`.
 - **Write a JSDoc line** for each exported prop whose name doesn't say everything.

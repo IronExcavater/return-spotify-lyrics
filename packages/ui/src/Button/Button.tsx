@@ -8,6 +8,7 @@ import { Button as BaseButton } from '@base-ui/react/button';
 import { useRender } from '@base-ui/react/use-render';
 import clsx from 'clsx';
 import Spinner from '../Spinner/Spinner';
+import Text from '../Text/Text';
 
 type SharedProps = Omit<
     BaseButton.Props,
@@ -81,7 +82,9 @@ export default function Button({
                     </span>
                 )}
                 {children !== undefined && (
-                    <span data-part="label">{children}</span>
+                    <Text variant="label" size={size} data-part="label">
+                        {children}
+                    </Text>
                 )}
                 {badge !== undefined && <span data-part="badge">{badge}</span>}
                 {loading && (
