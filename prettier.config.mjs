@@ -4,5 +4,5 @@ export default {
     tabWidth: 4,
     trailingComma: 'es5',
     plugins: ['prettier-plugin-tailwindcss'],
-    tailwindStylesheet: './packages/ui/src/theme.css',
+    tailwindStylesheet: './packages/ui/src/theme/theme.css',
 };

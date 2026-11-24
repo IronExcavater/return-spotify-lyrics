@@ -5,6 +5,6 @@
         "editor.defaultFormatter": "esbenp.prettier-vscode"
     },
     "tailwindCSS.experimental.configFile": {
-        "packages/ui/src/theme.css": ["apps/**", "packages/**"]
+        "packages/ui/src/theme/theme.css": ["apps/**", "packages/**"]
     }
 }

@@ -1,6 +1,6 @@
 import type { ComponentProps } from 'react';
 import clsx from 'clsx';
-import { toCssSize, type CssLength } from '../css';
+import { toCssSize, type CssLength } from '../../helpers/css';
 
 export type SpinnerProps = ComponentProps<'span'> & {
     /** The width and height. The default follows the font size. */

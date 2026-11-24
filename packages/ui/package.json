@@ -4,13 +4,13 @@
     "private": true,
     "type": "module",
     "exports": {
-        "./theme.css": "./src/theme.css",
-        "./geometry": "./src/geometry.ts",
-        "./gradient": "./src/gradient.ts",
-        "./font": "./src/font.ts",
-        "./usePortalSlot": "./src/Portal/usePortalSlot.tsx",
-        "./TextProvider": "./src/Text/TextProvider.tsx",
-        "./*": "./src/*/*.tsx"
+        "./theme.css": "./src/theme/theme.css",
+        "./geometry": "./src/helpers/geometry.ts",
+        "./gradient": "./src/helpers/gradient.ts",
+        "./font": "./src/theme/font.ts",
+        "./usePortalSlot": "./src/components/Portal/usePortalSlot.tsx",
+        "./TextProvider": "./src/components/Text/TextProvider.tsx",
+        "./*": "./src/components/*/*.tsx"
     },
     "scripts": {
         "typecheck": "tsc --noEmit",
