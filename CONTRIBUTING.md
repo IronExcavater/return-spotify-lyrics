@@ -30,6 +30,8 @@ pnpm clean                                           # delete build output and c
 
 To rerun the story tests on save, run `pnpm exec vitest` from `apps/storybook`. Add `--project "storybook (chromium)"` to use one browser. You can also run them from the test panel at the bottom of the Storybook sidebar.
 
+To see which code in `packages/ui` no story runs, turn on Coverage in that test panel. Or run `pnpm exec vitest run --coverage` from `apps/storybook` and open `coverage/index.html`.
+
 `pnpm install` also adds a pre-commit hook. It lints and formats the staged files, then typechecks the workspace.
 
 To develop in another browser, run `dev:chrome`, `dev:edge`, `dev:firefox`, `dev:opera` or `dev:safari` from `apps/extension`. Dev mode opens each browser from its default install path. If yours is somewhere else, set the path in a `web-ext.config.ts` file, as the [WXT docs](https://wxt.dev/guide/essentials/config/browser-startup.html) show. Dev mode can't open Safari, so load `.output/safari-mv3-dev` yourself.
