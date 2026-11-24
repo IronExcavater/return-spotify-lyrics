@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { Outlet, useNavigate } from 'react-router';
 import clsx from 'clsx';
 
-import LinkProvider from '@return-spotify-lyrics/ui/LinkProvider';
 import ResizeBox from '@return-spotify-lyrics/ui/ResizeBox';
+import TextProvider from '@return-spotify-lyrics/ui/TextProvider';
 import type { Size } from '@return-spotify-lyrics/ui/geometry';
 
 import { useSurface } from '../surface/SurfaceProvider';
@@ -46,7 +46,7 @@ export default function AppShell() {
     }, [surface, size.width, size.height]);
 
     const content = (
-        <LinkProvider navigate={navigate} resolveHref={toHashHref}>
+        <TextProvider navigate={navigate} resolveHref={toHashHref}>
             <div
                 className={clsx(
                     'flex h-full min-h-0 flex-col',
@@ -59,7 +59,7 @@ export default function AppShell() {
                     <Outlet />
                 </main>
             </div>
-        </LinkProvider>
+        </TextProvider>
     );
 
     if (surface !== 'popup') return content;
