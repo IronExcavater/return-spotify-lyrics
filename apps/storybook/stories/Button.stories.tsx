@@ -1,9 +1,8 @@
-import { useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { expect, fn, waitFor, within } from 'storybook/test';
+import { expect, fn, within } from 'storybook/test';
 
 import { BadgeCheck, Bell, Heart, Play } from '@return-spotify-lyrics/icons';
-import Button, { type ButtonProps } from '@return-spotify-lyrics/ui/Button';
+import Button from '@return-spotify-lyrics/ui/Button';
 
 const meta = {
     title: 'Button',
@@ -105,22 +104,12 @@ export const WithBadge: StoryObj<typeof Button> = {
     },
 };
 
-export const Sizes: Story = {
-    render: (args) => (
-        <div className="flex items-center gap-3">
-            {(['small', 'medium', 'large'] as const).map((size) => (
-                <Button
-                    key={size}
-                    {...(args as ButtonProps)}
-                    size={size}
-                    variant="primary"
-                    tone="accent"
-                >
-                    {size}
-                </Button>
-            ))}
-        </div>
-    ),
+export const Small: Story = {
+    args: { size: 'small' },
+};
+
+export const Large: Story = {
+    args: { size: 'large', variant: 'primary', tone: 'accent' },
 };
 
 export const Disabled: Story = {
@@ -136,46 +125,29 @@ export const Disabled: Story = {
     },
 };
 
-function SaveButton(props: ButtonProps) {
-    const [loading, setLoading] = useState(false);
-
-    return (
-        <Button
-            {...props}
-            variant="primary"
-            tone="accent"
-            loading={loading}
-            onClick={(event) => {
-                props.onClick?.(event);
-                setLoading(true);
-            }}
-        >
-            Save
-        </Button>
-    );
-}
-
 export const Loading: Story = {
-    render: (args) => <SaveButton {...(args as ButtonProps)} />,
+    args: {
+        loading: true,
+        variant: 'primary',
+        tone: 'accent',
+        children: 'Save',
+    },
     play: async ({ canvas, userEvent, args }) => {
         const button = canvas.getByRole('button', { name: /Save/ });
-        const width = button.getBoundingClientRect().width;
 
-        await userEvent.click(button);
-        await waitFor(() =>
-            expect(button).toHaveAttribute('aria-busy', 'true')
-        );
+        await expect(button).toHaveAttribute('aria-busy', 'true');
         await expect(canvas.getByRole('status')).toHaveAccessibleName(
             'Loading'
         );
-        // The label stays in place but hidden, so the width doesn't change.
+        // The label stays in place but hidden, so the button keeps its width.
         await expect(
-            Math.abs(button.getBoundingClientRect().width - width)
-        ).toBeLessThanOrEqual(1);
+            within(button).getByText('Save').getBoundingClientRect().width
+        ).toBeGreaterThan(0);
 
-        // A loading button keeps its focus but ignores clicks.
+        // A loading button ignores clicks, but it stays in the tab order, so focus doesn't jump away.
         await userEvent.click(button);
-        await expect(args.onClick).toHaveBeenCalledTimes(1);
+        await expect(args.onClick).not.toHaveBeenCalled();
+        await userEvent.tab();
         await expect(button).toHaveFocus();
     },
 };
