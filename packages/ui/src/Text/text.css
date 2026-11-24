@@ -1,0 +1,135 @@
+/* Defaults live in @layer components so that a consumer className always wins. */
+@layer components {
+    .text {
+        --text-size: var(--text-medium);
+        --text-line-height: var(--text-medium--line-height);
+        --text-weight: var(--text-medium--font-weight);
+        --text-tracking: var(--text-medium--letter-spacing);
+
+        font-size: var(--text-size);
+        line-height: var(--text-line-height);
+        font-weight: var(--text-weight);
+        letter-spacing: var(--text-tracking);
+        color: var(--text-color-default);
+        overflow-wrap: anywhere;
+
+        /* The variant sets the defaults, and a size, weight or tone below replaces them. */
+        &[data-variant='title'] {
+            --text-size: var(--text-xx-large);
+            --text-line-height: var(--text-xx-large--line-height);
+            --text-weight: var(--text-xx-large--font-weight);
+            --text-tracking: var(--text-xx-large--letter-spacing);
+        }
+
+        &[data-variant='heading'] {
+            --text-size: var(--text-x-large);
+            --text-line-height: var(--text-x-large--line-height);
+            --text-weight: var(--text-x-large--font-weight);
+            --text-tracking: var(--text-x-large--letter-spacing);
+        }
+
+        &[data-variant='caption'] {
+            --text-size: var(--text-small);
+            --text-line-height: var(--text-small--line-height);
+            --text-weight: var(--text-small--font-weight);
+            --text-tracking: var(--text-small--letter-spacing);
+            color: var(--text-color-subdued);
+        }
+
+        &[data-size='small'] {
+            --text-size: var(--text-small);
+            --text-line-height: var(--text-small--line-height);
+            --text-weight: var(--text-small--font-weight);
+            --text-tracking: var(--text-small--letter-spacing);
+        }
+
+        &[data-size='medium'] {
+            --text-size: var(--text-medium);
+            --text-line-height: var(--text-medium--line-height);
+            --text-weight: var(--text-medium--font-weight);
+            --text-tracking: var(--text-medium--letter-spacing);
+        }
+
+        &[data-size='large'] {
+            --text-size: var(--text-large);
+            --text-line-height: var(--text-large--line-height);
+            --text-weight: var(--text-large--font-weight);
+            --text-tracking: var(--text-large--letter-spacing);
+        }
+
+        &[data-size='x-large'] {
+            --text-size: var(--text-x-large);
+            --text-line-height: var(--text-x-large--line-height);
+            --text-weight: var(--text-x-large--font-weight);
+            --text-tracking: var(--text-x-large--letter-spacing);
+        }
+
+        &[data-size='xx-large'] {
+            --text-size: var(--text-xx-large);
+            --text-line-height: var(--text-xx-large--line-height);
+            --text-weight: var(--text-xx-large--font-weight);
+            --text-tracking: var(--text-xx-large--letter-spacing);
+        }
+
+        &[data-weight='regular'] {
+            font-weight: 400;
+        }
+
+        &[data-weight='medium'] {
+            font-weight: 500;
+        }
+
+        &[data-weight='bold'] {
+            font-weight: 700;
+        }
+
+        &[data-weight='black'] {
+            font-weight: 900;
+        }
+
+        &[data-tone='default'] {
+            color: var(--text-color-default);
+        }
+
+        &[data-tone='subdued'] {
+            color: var(--text-color-subdued);
+        }
+
+        &[data-tone='faint'] {
+            color: var(--text-color-faint);
+        }
+
+        &[data-tone='accent'] {
+            color: var(--text-color-accent);
+        }
+
+        &[data-tone='negative'] {
+            color: var(--text-color-negative);
+        }
+
+        &[data-tone='warning'] {
+            color: var(--text-color-warning);
+        }
+
+        &[data-tone='info'] {
+            color: var(--text-color-info);
+        }
+
+        /* The clamp only hides lines on screen, so assistive technology still reads all of the text. */
+        &[data-clamped] {
+            display: -webkit-box;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: var(--text-lines);
+            line-clamp: var(--text-lines);
+            overflow: hidden;
+        }
+
+        /* An icon in the text takes its size and colour, and :where() lets a consumer class resize it. */
+        :where(svg) {
+            display: inline-block;
+            width: 1em;
+            height: 1em;
+            vertical-align: -0.125em;
+        }
+    }
+}
