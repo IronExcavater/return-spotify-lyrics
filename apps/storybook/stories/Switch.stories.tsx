@@ -37,8 +37,10 @@ export const Checked: Story = {
     args: { defaultChecked: true },
     play: async ({ canvas }) => {
         const toggle = canvas.getByRole('switch', { name: 'Autoplay' });
-        const thumb = toggle.firstElementChild as HTMLElement;
-        const track = toggle.getBoundingClientRect();
+        // The label comes first, then the track with the thumb in it.
+        const trackElement = toggle.lastElementChild as HTMLElement;
+        const thumb = trackElement.firstElementChild as HTMLElement;
+        const track = trackElement.getBoundingClientRect();
         // The thumb sits at the end of the track when the switch is on.
         await expect(
             track.right - thumb.getBoundingClientRect().right

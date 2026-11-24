@@ -18,15 +18,15 @@
             color: var(--text-color-subdued);
             transition-property: background-color, border-color, color;
             transition-duration: var(--transition-duration-fast);
-
-            &[data-checked] {
-                border-color: var(--border-color-accent);
-                background-color: var(--background-color-accent);
-                color: var(--text-color-inverse);
-            }
         }
 
-        /* The thumb takes the track's colour, and the duration token is 0s when someone asks for reduced motion. */
+        &[data-checked] > [data-part='track'] {
+            border-color: var(--border-color-accent);
+            background-color: var(--background-color-accent);
+            color: var(--text-color-inverse);
+        }
+
+        /* The thumb takes the colour of the track, and the duration token is 0s with reduced motion. */
         [data-part='thumb'] {
             width: 14px;
             height: 14px;
@@ -44,20 +44,29 @@
             }
         }
 
-        /* Hover also matches the mark of a Marquee copy, so a copy shares the style. */
-        &:not(:has(> [data-disabled])):is(:hover, [data-hover])
+        /* The label is part of the control, so the ring goes around the track only. */
+        &:focus-visible {
+            outline: none;
+
             > [data-part='track'] {
-            &[data-unchecked] {
+                outline: var(--focus-width) solid var(--outline-color-focus);
+                outline-offset: var(--focus-offset);
+            }
+        }
+
+        /* Hover also matches the mark of a Marquee copy, so a copy shares the style. */
+        &:not([data-disabled]):is(:hover, [data-hover]) {
+            &[data-unchecked] > [data-part='track'] {
                 border-color: var(--border-color-strong);
                 color: var(--text-color-default);
             }
 
-            &[data-checked] {
+            &[data-checked] > [data-part='track'] {
                 background-color: var(--background-color-accent-strong);
             }
         }
 
-        &:has(> [data-disabled]) {
+        &[data-disabled] {
             cursor: not-allowed;
             opacity: var(--opacity-disabled);
         }

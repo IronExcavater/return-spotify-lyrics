@@ -36,7 +36,7 @@ export default function RadioGroup<Value = string>({
             data-orientation={orientation}
         >
             {hasLabel && (
-                <Text id={labelId} variant="label" data-part="label">
+                <Text id={labelId} data-part="label">
                     {label}
                 </Text>
             )}

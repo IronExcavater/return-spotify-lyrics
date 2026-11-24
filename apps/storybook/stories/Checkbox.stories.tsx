@@ -76,3 +76,14 @@ export const WithoutLabel: StoryObj<typeof Checkbox> = {
         ).toBeInTheDocument();
     },
 };
+
+/** The label is part of the control, so every prop, like a pointer handler, reaches the element a person points at. */
+export const PropsReachTheRoot: Story = {
+    args: { onPointerEnter: fn() },
+    play: async ({ canvas, userEvent, args }) => {
+        await userEvent.hover(
+            canvas.getByText('Show lyrics in the side panel')
+        );
+        await expect(args.onPointerEnter).toHaveBeenCalled();
+    },
+};
