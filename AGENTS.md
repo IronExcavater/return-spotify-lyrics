@@ -11,6 +11,7 @@ Each rule is a default, with its reason. If a rule makes the code worse in one p
 - You tried the change in a browser: its story in Storybook, or the extension in dev mode.
 - The change does one thing. Put an unrelated fix in a pull request of its own, so that each one is easy to review and to revert.
 - Agents: don't commit, push or open a pull request unless someone asks you to.
+- Agents: switch branches in a git worktree, not in the main folder, so that a person's dev server keeps its files.
 
 ## Layout
 
@@ -101,12 +102,13 @@ In `packages/ui/src`:
 - **One tag first.** A component works as a single element. Named content goes in slot props, like `icon`, `label` or `trigger`, and the main content is `children`. Export parts, like `Menu.Item`, only when one tag can't make a layout.
 - **The root element** has the component name in kebab case as its class, like `.fade-box`.
 - **Don't swallow props.** Spread the props you don't use onto the root element. Merge `className` with `clsx`, call the consumer's event handlers as well as your own, and let the consumer's `style` win, except for values the component must control, like the ResizeBox size.
+- **Keep native behaviour.** When a component takes over a native action, like a link click, the native props that change that action still work. Link gives a click with `target` or `download` back to the browser.
 - **State and variants** are `data-*` attributes, like `data-dragging` or `data-placement`. Inner elements get a `data-part`, like `data-part="handle"`. Settings that CSS uses are CSS variables, like `--fade-size`. Then a consumer can restyle any of them from outside.
 - **Every prop has a default** in the parameter list, so that the docs and the story controls show it.
 - **Text goes through Text.** A component shows its text with `Text`, and a control's label with `<Text variant="label">`. Its CSS sets no font size, line height or weight. Then typography, inline icons and nouns work the same everywhere.
 - **Lengths** take a number for pixels or a string for any CSS length. Use the `CssLength` type and `toCssSize`.
 - **Names describe meaning, not looks:** `tone="negative"`, not `color="red"`.
-- **Write a JSDoc line** for each exported prop whose name doesn't say everything.
+- **Write a JSDoc line** for the component, and for each exported prop whose name doesn't say everything. The docs page shows them, so a component without one has an empty page.
 - **Base UI first.** Build on Base UI for anything with keyboard and focus rules: menus, dialogs, lists, sliders and popups. Build your own only for layout, visuals and motion, where Base UI has nothing.
 
 ## Styling
@@ -132,7 +134,8 @@ In `packages/ui/src`:
 
 - The extension supports Chrome, Edge, Opera, Firefox and Safari 26. Check each web API on [MDN](https://developer.mozilla.org/) or [Can I use](https://caniuse.com/) before you use it.
 - When a browser doesn't have an API, check for it and add a fallback, like `moveBefore` in `usePortalSlot`.
-- Story tests run in Chromium, Firefox and WebKit, which is the Safari engine.
+- Story tests run in Chromium, Firefox and WebKit, which is the Safari engine. Run them in all three before you push, because a fix for one browser can break another.
+- Read what a consumer set from the prop or the attribute, not from a DOM property that the browser fills in. For an anchor with no `target`, Firefox gives the page's base target.
 
 ## Performance
 
@@ -189,6 +192,8 @@ Every story is a test. It runs in Chromium, Firefox and WebKit, and it fails on 
 - Keep a story's state in React, with `useState`. Storybook's `useArgs` can't change args in a story test, and it fails when React state changes.
 - Let size and position assertions be 1px out, because browsers round differently.
 - Find an element with no role, like the root of a FadeBox, by a `data-testid` that the story sets.
+- A click that leaves the page, like a new tab or a download, stops the test run. Before the click, add a `click` listener on `window` that calls `preventDefault`, as the Link stories do.
+- A lazy chunk can take more than a second to load on a cold server. Give a `findBy` that waits for one a longer `timeout`, as the Text stories do.
 - `userEvent` pointers aren't real pointers, so Firefox refuses `setPointerCapture` for them. Before a drag, replace that element's `setPointerCapture` with a function that does nothing.
 - When a test fails in one browser only, fix the component with a feature check. Don't change the test for that browser.
 - Don't turn off an accessibility rule to pass a test. Fix the component. If a rule is wrong for one story, turn off that rule in that story only, with a comment that says why.
@@ -202,6 +207,7 @@ Every story is a test. It runs in Chromium, Firefox and WebKit, and it fails on 
 - Generalise code once two or more callers need it, not before.
 - Put constants at the top of the module in `SCREAMING_SNAKE_CASE`, like `MAX_POPUP_SIZE`.
 - Group imports: outside packages first, then workspace packages, then local files, with a blank line between the groups.
+- When you move or rename a file, search the whole repository for its old path. Typecheck doesn't see paths in config files and CSS, like `tailwindStylesheet` in `prettier.config.mjs` or `@source` in `theme.css`.
 - Delete code you don't use. Don't comment it out, because git keeps the history. Knip reports unused files, exports and dependencies.
 
 ## Names and comments
