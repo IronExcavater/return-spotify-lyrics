@@ -3,8 +3,9 @@ import { generateJSON } from '@tiptap/html';
 import { MarkdownManager } from '@tiptap/markdown';
 import { TEXT_EXTENSIONS } from './schema';
 
-const SCHEME = /^[a-z][a-z\d+.-]*:/i;
-const SAFE_SCHEME = /^(https?|mailto):/i;
+const SAFE_PROTOCOLS = new Set(['http:', 'https:', 'mailto:']);
+// A relative address resolves against this base, so it counts as a web address.
+const BASE = 'https://relative.invalid';
 
 // This module loads only with formatted Text, so the parser is built once, on the first formatted Text.
 const markdown = new MarkdownManager({ extensions: TEXT_EXTENSIONS });
@@ -31,9 +32,9 @@ export function removeUnsafeLinks(node: JSONContent): JSONContent {
     };
 }
 
-// Browsers drop tabs, line breaks and leading spaces from an address, so the check drops them first.
+// The URL parser drops tabs, line breaks and leading spaces as a browser does, so a hidden scheme shows.
 function isSafeHref(href: unknown): boolean {
     if (typeof href !== 'string') return false;
-    const address = href.replace(/[\t\n\r]/g, '').replace(/^[\u0000- ]+/, '');
-    return !SCHEME.test(address) || SAFE_SCHEME.test(address);
+    const url = URL.parse(href, BASE);
+    return url !== null && SAFE_PROTOCOLS.has(url.protocol);
 }
