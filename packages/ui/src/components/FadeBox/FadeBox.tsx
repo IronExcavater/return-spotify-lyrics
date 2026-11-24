@@ -14,12 +14,15 @@ export type FadeBoxProps = ComponentProps<'div'> & {
     enabled?: boolean;
     /** How far the fade goes in from each faded edge. */
     size?: CssLength;
+    /** The edges that fade: `all`, `none` or a list of sides and corners. */
     direction?: Direction;
     /** Round the corner where two faded sides meet. */
     corners?: boolean;
+    /** How the fade changes from clear at the edge to solid. */
     easing?: Easing;
 };
 
+/** Fades its content out at the edges with a CSS mask, so that it blends into what is behind it. */
 export default function FadeBox({
     enabled = true,
     size = 4,

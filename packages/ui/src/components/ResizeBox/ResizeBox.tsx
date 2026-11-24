@@ -33,10 +33,15 @@ export type HandlePlacement = 'overlap' | 'inset';
 /** When a resize goes past an aspect ratio, the axis that the handle does not move follows it. */
 export type ResizeBoxProps = Omit<ComponentPropsWithoutRef<'div'>, 'onChange'> &
     SizeLimits & {
+        /** The size in pixels. A new value moves the box to it. */
         size: Size;
+        /** The edges that get a handle: `all`, `none` or a list of sides and corners. */
         direction?: Direction;
+        /** Show a grip icon on each handle. */
         showIndicator?: boolean;
+        /** How wide each handle is. */
         thickness?: CssLength;
+        /** Put the handles over the content, or in a padding around it. */
         placement?: HandlePlacement;
         /** Arrow key step in pixels. Shift moves five steps. */
         step?: number;
@@ -64,6 +69,7 @@ const ARROW_KEYS: Record<string, Point> = {
 
 const defaultHandleLabel = (edge: Edge) => `Resize ${edge.replace('-', ' ')}`;
 
+/** A box that a person resizes from handles on its edges, with a pointer or the arrow keys. */
 export default function ResizeBox({
     size,
     minSize,

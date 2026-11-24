@@ -16,6 +16,8 @@ function ThemedDocsContainer(props: DocsContainerProps) {
 }
 
 const preview: Preview = {
+    // Every component gets a docs page from its JSDoc, prop types and stories.
+    tags: ['autodocs'],
     parameters: {
         docs: { container: ThemedDocsContainer },
         // An accessibility violation fails the story test, in the Storybook UI and in CI.
