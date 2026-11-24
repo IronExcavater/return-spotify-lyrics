@@ -1,38 +1,46 @@
-import type { ComponentProps, MouseEvent } from 'react';
+import type { ComponentProps, MouseEvent, ReactNode } from 'react';
 import clsx from 'clsx';
 import { ExternalLink } from '@return-spotify-lyrics/icons';
 import { findLinkKind } from './href';
-import { useLinkRouter } from './LinkProvider';
+import { useTextSettings } from '../Text/TextProvider';
 
 export type LinkProps = ComponentProps<'a'> & {
     /** A route in the app, like `/album/1`, or a web address. */
     href: string;
     /** When the underline shows. A link in a sentence needs `always`, so it doesn't stand out by colour alone. */
     underline?: 'hover' | 'always';
+    /** An icon before the text, like a noun's. It only decorates, so the link's name stays its text. */
+    icon?: ReactNode;
     /** What a screen reader adds to an external link. */
     externalLabel?: string;
 };
 
 /**
- * One link for routes in the app and for sites on the web. A route goes through the LinkProvider's router, and a
+ * One link for routes in the app and for sites on the web. A route goes through the TextProvider's router, and a
  * web address opens in a new tab with an icon.
  */
 export default function Link({
     href,
     underline = 'hover',
+    icon,
     externalLabel = 'opens in a new tab',
     className,
     children,
     onClick,
     ...props
 }: LinkProps) {
-    const router = useLinkRouter();
+    const router = useTextSettings();
     const kind = findLinkKind(href, location.origin);
     const shared = {
         ...props,
         className: clsx('link', className),
         'data-underline': underline,
     };
+    const iconPart = icon && (
+        <span data-part="icon" aria-hidden>
+            {icon}
+        </span>
+    );
 
     if (kind === 'external') {
         return (
@@ -44,8 +52,9 @@ export default function Link({
                 data-external=""
                 onClick={onClick}
             >
+                {iconPart}
                 {children}
-                <ExternalLink aria-hidden data-part="icon" />
+                <ExternalLink aria-hidden data-part="external-icon" />
                 <span data-part="external-label"> ({externalLabel})</span>
             </a>
         );
@@ -67,6 +76,7 @@ export default function Link({
             href={appRouter ? appRouter.resolveHref(href) : href}
             onClick={route}
         >
+            {iconPart}
             {children}
         </a>
     );

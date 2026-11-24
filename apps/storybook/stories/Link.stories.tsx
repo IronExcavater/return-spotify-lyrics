@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { expect, waitFor } from 'storybook/test';
+import { expect, waitFor, within } from 'storybook/test';
 
+import { MicVocal } from '@return-spotify-lyrics/icons';
 import Link, { type LinkProps } from '@return-spotify-lyrics/ui/Link';
-import LinkProvider from '@return-spotify-lyrics/ui/LinkProvider';
 import Text from '@return-spotify-lyrics/ui/Text';
+import TextProvider from '@return-spotify-lyrics/ui/TextProvider';
 
 const ALBUM = '/album/4aawyAB9vmqN3uQ7FjRGTy';
 
@@ -17,12 +18,12 @@ function RouterDemo(props: LinkProps) {
     const [route, setRoute] = useState('/home');
 
     return (
-        <LinkProvider navigate={setRoute} resolveHref={toHashHref}>
+        <TextProvider navigate={setRoute} resolveHref={toHashHref}>
             <div className="grid gap-2 text-medium text-subdued">
                 <Link {...props} />
                 <p role="status">Route: {route}</p>
             </div>
-        </LinkProvider>
+        </TextProvider>
     );
 }
 
@@ -36,7 +37,7 @@ const meta = {
         underline: 'hover',
         externalLabel: 'opens in a new tab',
     },
-    argTypes: { children: { control: 'text' } },
+    argTypes: { children: { control: 'text' }, icon: { control: false } },
     render: (args) => <RouterDemo {...args} />,
 } satisfies Meta<typeof Link>;
 
@@ -68,6 +69,19 @@ export const External: Story = {
         });
         await expect(link).toHaveAttribute('target', '_blank');
         await expect(link).toHaveAttribute('rel', 'noreferrer');
+    },
+};
+
+export const WithIcon: Story = {
+    args: {
+        href: '/artist/4tZwfgrHOc3mvqYlEYSvVi',
+        children: 'Daft Punk',
+        icon: <MicVocal data-testid="icon" />,
+    },
+    play: async ({ canvas }) => {
+        // The icon only decorates, so the link's name is its text alone.
+        const link = canvas.getByRole('link', { name: 'Daft Punk' });
+        await expect(within(link).getByTestId('icon')).toBeVisible();
     },
 };
 

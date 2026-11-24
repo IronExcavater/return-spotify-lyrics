@@ -18,7 +18,20 @@
             text-decoration-line: underline;
         }
 
+        /* An inline block keeps the underline off the icons, and the icon matches Text's inline icons. */
         > [data-part='icon'] {
+            display: inline-block;
+            margin-inline-end: 0.25em;
+            vertical-align: -0.125em;
+
+            > :where(svg) {
+                display: block;
+                width: 1em;
+                height: 1em;
+            }
+        }
+
+        > [data-part='external-icon'] {
             display: inline-block;
             width: 0.85em;
             height: 0.85em;
