@@ -5,6 +5,7 @@
 @import './Portal/portal-slot.css';
 @import './ResizeBox/resize-box.css';
 @import './Spinner/spinner.css';
+@import './Text/text.css';
 @source './**/*.tsx';
 
 /* A Marquee marks the element in each copy that matches the hovered or pressed one, so every copy shares the style. */
