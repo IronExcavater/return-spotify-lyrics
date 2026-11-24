@@ -82,13 +82,19 @@ export default function Link({
     );
 }
 
-// A middle-click or a click with a modifier key opens a new tab or window, which the browser does itself.
-function opensElsewhere(event: MouseEvent) {
+// A modifier key, a middle-click, another target or a download is for the browser, not the router.
+function opensElsewhere(event: MouseEvent<HTMLAnchorElement>) {
+    const anchor = event.currentTarget;
+    // Firefox gives the page's base target for an anchor with no target, so read the attribute.
+    const hasOtherTarget =
+        (anchor.getAttribute('target') || '_self') !== '_self';
     return (
         event.button !== 0 ||
         event.metaKey ||
         event.ctrlKey ||
         event.shiftKey ||
-        event.altKey
+        event.altKey ||
+        hasOtherTarget ||
+        anchor.hasAttribute('download')
     );
 }

@@ -58,6 +58,34 @@ export const Internal: Story = {
     },
 };
 
+export const NewTabTarget: Story = {
+    args: { target: '_blank' },
+    play: async ({ canvas, userEvent }) => {
+        // The test stops the new tab after the link handles the click, so no window opens.
+        window.addEventListener('click', (event) => event.preventDefault(), {
+            once: true,
+        });
+        await userEvent.click(
+            canvas.getByRole('link', { name: 'Paper Satellites' })
+        );
+        await expect(canvas.getByRole('status')).toHaveTextContent('/home');
+    },
+};
+
+export const Download: Story = {
+    args: { download: true },
+    play: async ({ canvas, userEvent }) => {
+        // The test stops the download after the link handles the click, so no file saves.
+        window.addEventListener('click', (event) => event.preventDefault(), {
+            once: true,
+        });
+        await userEvent.click(
+            canvas.getByRole('link', { name: 'Paper Satellites' })
+        );
+        await expect(canvas.getByRole('status')).toHaveTextContent('/home');
+    },
+};
+
 export const External: Story = {
     args: {
         href: 'https://open.spotify.com/album/4aawyAB9vmqN3uQ7FjRGTy',
