@@ -65,7 +65,7 @@ export const Negative: Story = {
 // An icon-only button has no label, so it doesn't take the labelled args of meta.
 export const IconOnly: StoryObj<typeof Button> = {
     args: {
-        variant: 'icon',
+        variant: 'tertiary',
         icon: <Heart />,
         'aria-label': 'Save to Your Library',
         children: undefined,
@@ -77,9 +77,27 @@ export const IconOnly: StoryObj<typeof Button> = {
     },
 };
 
+/** An icon with no label makes a circle in every variant, like the green play button. */
+export const PlayButton: StoryObj<typeof Button> = {
+    args: {
+        variant: 'primary',
+        tone: 'accent',
+        size: 'large',
+        icon: <Play />,
+        'aria-label': 'Play',
+        children: undefined,
+    },
+    play: async ({ canvas }) => {
+        const { width, height } = canvas
+            .getByRole('button', { name: 'Play' })
+            .getBoundingClientRect();
+        await expect(Math.abs(width - height)).toBeLessThanOrEqual(1);
+    },
+};
+
 export const WithBadge: StoryObj<typeof Button> = {
     args: {
-        variant: 'icon',
+        variant: 'tertiary',
         icon: <Bell />,
         'aria-label': 'Notifications, 3 new',
         badge: 3,

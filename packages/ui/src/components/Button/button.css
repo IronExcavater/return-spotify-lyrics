@@ -79,10 +79,10 @@
             color: var(--button-ink);
         }
 
-        &[data-variant='icon'] {
+        /* An icon with no label makes a circle, so this comes after the padding of each variant. */
+        &[data-icon-only] {
             width: var(--button-height);
             padding: 0;
-            color: var(--button-ink);
         }
 
         > [data-part='icon'] {
@@ -134,7 +134,7 @@
                 border-color: var(--button-line-hover);
             }
 
-            &:is([data-variant='tertiary'], [data-variant='icon']) {
+            &[data-variant='tertiary'] {
                 color: var(--button-ink-hover);
             }
         }
