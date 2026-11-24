@@ -295,8 +295,9 @@ function PlayerPositionDemo() {
 const meta = {
     title: 'Portal',
     component: Portal,
-    // The demos make their own containers, so the stories have no args to set.
+    // Each demo makes its own container and content, so no control could change it.
     args: {},
+    parameters: { controls: { disable: true } },
     render: () => <PageActionsDemo />,
 } satisfies Meta<typeof Portal>;
 
