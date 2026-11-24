@@ -46,6 +46,9 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
+// The docs page takes its controls from the first story, so it uses the args.
+export const Body: Story = {};
+
 export const Variants: Story = {
     render: () => (
         <div className="grid w-72 gap-2">

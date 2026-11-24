@@ -11,6 +11,17 @@ const config: StorybookConfig = {
         '@storybook/addon-vitest',
         'storybook-dark-mode',
     ],
+    // The default docgen can't read imported types or unions with undefined, so controls for them break.
+    typescript: {
+        reactDocgen: 'react-docgen-typescript',
+        reactDocgenTypescriptOptions: {
+            // The components are in the ui package, which this app's tsconfig doesn't include.
+            tsconfigPath: '../../packages/ui/tsconfig.json',
+            include: ['../../packages/ui/src/**/*.tsx'],
+            shouldExtractLiteralValuesFromEnum: true,
+            shouldRemoveUndefinedFromOptional: true,
+        },
+    },
     viteFinal: (config) => {
         config.plugins?.push(tailwindcss());
         return config;

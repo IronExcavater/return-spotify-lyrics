@@ -178,6 +178,8 @@ Every story is a test. It runs in Chromium, Firefox and WebKit, and it fails on 
 ### Story tests
 
 - In a story file, `meta` holds the shared args and the render function, and each story sets only what's different.
+- Every component gets a docs page from its JSDoc, its prop types and its stories. The page takes its controls from the first story, so that story renders from the args.
+- Controls come from the prop types. Set a control in `argTypes` only when a type can't give it, like `CssLength` or `Direction`.
 - Each story shows one state or one prop that matters, and its name says which, like `FixedAspectRatio`.
 - Add a `play` function when the component does something after input: a key, a pointer, a focus change or a new value.
 - Find elements as a person does, by role and accessible name: `canvas.getByRole('separator', { name: 'Resize left' })`. Never find them by class or `data-part`.
