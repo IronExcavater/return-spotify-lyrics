@@ -1,0 +1,52 @@
+/* Defaults live in @layer components so that a consumer className always wins. */
+@layer components {
+    .link {
+        border-radius: 2px;
+        color: inherit;
+        text-decoration-line: none;
+        text-decoration-thickness: from-font;
+        text-underline-offset: 0.15em;
+        transition-property: color;
+        transition-duration: var(--transition-duration-fast);
+
+        &[data-underline='always'] {
+            text-decoration-line: underline;
+        }
+
+        &:is(:hover, [data-hover]) {
+            color: var(--text-color-default);
+            text-decoration-line: underline;
+        }
+
+        /* An inline block keeps the underline off the icons, and the icon matches Text's inline icons. */
+        > [data-part='icon'] {
+            display: inline-block;
+            margin-inline-end: 0.25em;
+            vertical-align: -0.125em;
+
+            > :where(svg) {
+                display: block;
+                width: 1em;
+                height: 1em;
+            }
+        }
+
+        > [data-part='external-icon'] {
+            display: inline-block;
+            width: 0.85em;
+            height: 0.85em;
+            margin-inline-start: 0.2em;
+            vertical-align: -0.05em;
+        }
+
+        /* The label is only for screen readers, because the icon already shows a new tab on screen. */
+        > [data-part='external-label'] {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+            clip-path: inset(50%);
+            white-space: nowrap;
+        }
+    }
+}

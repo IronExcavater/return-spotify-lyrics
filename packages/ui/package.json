@@ -9,6 +9,7 @@
         "./gradient": "./src/gradient.ts",
         "./font": "./src/font.ts",
         "./usePortalSlot": "./src/Portal/usePortalSlot.tsx",
+        "./TextProvider": "./src/Text/TextProvider.tsx",
         "./*": "./src/*/*.tsx"
     },
     "scripts": {

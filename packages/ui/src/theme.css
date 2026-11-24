@@ -1,6 +1,7 @@
 @import 'tailwindcss';
 @import './Button/button.css';
 @import './FadeBox/fade-box.css';
+@import './Link/link.css';
 @import './Marquee/marquee.css';
 @import './Portal/portal-slot.css';
 @import './ResizeBox/resize-box.css';

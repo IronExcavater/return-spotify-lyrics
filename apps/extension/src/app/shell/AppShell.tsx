@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Outlet } from 'react-router';
+import { Outlet, useNavigate } from 'react-router';
 import clsx from 'clsx';
 
 import ResizeBox from '@return-spotify-lyrics/ui/ResizeBox';
+import TextProvider from '@return-spotify-lyrics/ui/TextProvider';
 import type { Size } from '@return-spotify-lyrics/ui/geometry';
 
 import { useSurface } from '../surface/SurfaceProvider';
@@ -14,6 +15,11 @@ import useStorageState from '@/storage/useStorageState';
 const MAX_POPUP_SIZE = { width: 800, height: 600 };
 const MIN_POPUP_SIZE = { width: 320, height: 200 };
 
+// The app uses a hash router, so a link that opens in a new tab needs the route after a hash.
+function toHashHref(to: string) {
+    return `#${to}`;
+}
+
 function syncPopupSize(width: number, height: number) {
     document.documentElement.style.width = `${width}px`;
     document.documentElement.style.height = `${height}px`;
@@ -24,6 +30,7 @@ function syncPopupSize(width: number, height: number) {
 export default function AppShell() {
     const surface = useSurface();
     const resize = useResize();
+    const navigate = useNavigate();
     const [savedSize, setSavedSize] = useStorageState(
         popupSizeItem,
         resize.popup
@@ -39,18 +46,20 @@ export default function AppShell() {
     }, [surface, size.width, size.height]);
 
     const content = (
-        <div
-            className={clsx(
-                'flex h-full min-h-0 flex-col',
-                surface === 'popup' && 'overflow-hidden'
-            )}
-        >
-            <AppBar policy={resize.bar} />
-            {/* Safari can't scroll a region with the keyboard unless the region can take focus. */}
-            <main tabIndex={0} className="min-h-0 flex-1 overflow-y-auto">
-                <Outlet />
-            </main>
-        </div>
+        <TextProvider navigate={navigate} resolveHref={toHashHref}>
+            <div
+                className={clsx(
+                    'flex h-full min-h-0 flex-col',
+                    surface === 'popup' && 'overflow-hidden'
+                )}
+            >
+                <AppBar policy={resize.bar} />
+                {/* Safari can't scroll a region with the keyboard unless the region can take focus. */}
+                <main tabIndex={0} className="min-h-0 flex-1 overflow-y-auto">
+                    <Outlet />
+                </main>
+            </div>
+        </TextProvider>
     );
 
     if (surface !== 'popup') return content;
