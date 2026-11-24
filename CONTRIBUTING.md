@@ -58,5 +58,8 @@ Follow [AGENTS.md](AGENTS.md), the coding guide for people and agents. It covers
 2. Write each commit message as `<reason>: <title>` in lower case, e.g. `feat: add portal component` or `bug: missing resize end handler`. The reason is `feat`, `bug`, `refactor`, `docs`, `test`, `build`, `ci` or `chore`.
 3. Run `pnpm check` and `pnpm test`.
 4. Open the pull request with a title in the same format. The squash merge uses that title as the commit message on `main`.
+5. Answer each review comment: fix it, or reply with the reason you don't. Then resolve its thread, because `main` doesn't take a merge with an open thread.
 
-Keep each pull request to one change. It can merge when CI passes. CI runs the checks and tests, builds Storybook, and builds the extension for each browser. It attaches each build as a zip file, so you can load the pull request in a browser without building it.
+Keep each pull request to one change. It can merge when CI passes and every review thread is resolved.
+
+A pull request can build on another one. When the first one merges, rebase the second with `git rebase --onto origin/main <first branch>`. Then the commits that the squash merge replaced don't come back. CI runs the checks and tests, builds Storybook, and builds the extension for each browser. It attaches each build as a zip file, so you can load the pull request in a browser without building it.
