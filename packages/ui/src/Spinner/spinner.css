@@ -1,0 +1,42 @@
+@keyframes spinner-turn {
+    to {
+        rotate: 1turn;
+    }
+}
+
+/* Defaults live in @layer components so that a consumer className always wins. */
+@layer components {
+    .spinner {
+        display: inline-grid;
+        flex: none;
+        width: var(--spinner-size);
+        height: var(--spinner-size);
+        color: currentColor;
+
+        > [data-part='ring'] {
+            width: 100%;
+            height: 100%;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 3;
+            stroke-linecap: round;
+            animation: spinner-turn 0.8s linear infinite;
+        }
+
+        [data-part='track'] {
+            opacity: 0.25;
+        }
+
+        /* A quarter of the circle shows, so the turn is easy to see. */
+        [data-part='arc'] {
+            stroke-dasharray: 15.7 62.8;
+        }
+    }
+
+    /* The arc stays still, and the label still says that something is loading. */
+    @media (prefers-reduced-motion: reduce) {
+        .spinner > [data-part='ring'] {
+            animation: none;
+        }
+    }
+}
