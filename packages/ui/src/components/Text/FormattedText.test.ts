@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseHtml, parseMarkdown, removeUnsafeLinks } from './format';
+import { parseHtml, parseMarkdown, removeUnsafeLinks } from './FormattedText';
 
 // The marks of each text node in a document, in order.
 function marksOf(doc: ReturnType<typeof parseMarkdown>) {
