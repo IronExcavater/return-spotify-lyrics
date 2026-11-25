@@ -1,0 +1,26 @@
+/* Defaults live in @layer components so that a consumer className always wins. */
+@layer components {
+    .card {
+        display: block;
+        padding: 12px;
+        border-radius: var(--radius-medium);
+        background-color: var(--background-color-raised);
+        color: inherit;
+        text-align: start;
+        transition-property: background-color;
+        transition-duration: var(--transition-duration-fast);
+
+        /* Only a card that does something reacts to a pointer, so a plain card doesn't look clickable. */
+        &:is(a[href], button) {
+            cursor: pointer;
+
+            &:is(:hover, [data-hover]) {
+                background-color: var(--background-color-overlay);
+            }
+
+            &:is(:active, [data-active]) {
+                background-color: var(--background-color-default);
+            }
+        }
+    }
+}

@@ -1,0 +1,113 @@
+/* Defaults live in @layer components so that a consumer className always wins. */
+@layer components {
+    .separator {
+        --separator-size: 4px;
+        --separator-gap: 0.5em;
+        --separator-color: var(--text-color-subdued);
+        --separator-stroke: max(1px, calc(var(--separator-size) / 6));
+
+        display: flex;
+        flex: none;
+        align-items: center;
+        justify-content: center;
+        color: var(--separator-color);
+
+        /* The gap goes across the content that the separator splits, so a row gets space at the sides. */
+        &[data-orientation='horizontal'] {
+            width: 100%;
+            padding-block: var(--separator-gap);
+        }
+
+        &[data-orientation='vertical'] {
+            align-self: stretch;
+            padding-inline: var(--separator-gap);
+        }
+
+        > [data-part='mark'] {
+            position: relative;
+            flex: none;
+            width: var(--separator-size);
+            height: var(--separator-size);
+        }
+
+        /* A custom mark takes its size from the text, like an icon in a sentence. */
+        &[data-variant='custom'] > [data-part='mark'] {
+            width: auto;
+            height: auto;
+            display: flex;
+
+            > :where(svg) {
+                width: 1em;
+                height: 1em;
+            }
+        }
+
+        /* A line runs the whole length of the separator, in the faint border colour. */
+        &[data-variant='line'] {
+            --separator-size: 1px;
+            --separator-gap: 0px;
+            --separator-color: var(--border-color-faint);
+
+            > [data-part='mark'] {
+                background-color: var(--separator-color);
+            }
+
+            &[data-orientation='horizontal'] > [data-part='mark'] {
+                width: 100%;
+            }
+
+            &[data-orientation='vertical'] > [data-part='mark'] {
+                align-self: stretch;
+                height: auto;
+            }
+        }
+
+        &[data-variant='dot'] > [data-part='mark'] {
+            border-radius: 9999px;
+            background-color: var(--separator-color);
+        }
+
+        &[data-variant='cross'] {
+            --separator-size: 8px;
+        }
+
+        &[data-variant='slash'] {
+            --separator-size: 10px;
+        }
+
+        /* A cross is two strokes and a slash is one, so each stroke turns about the centre of the mark. */
+        &:is([data-variant='cross'], [data-variant='slash'])
+            > [data-part='mark'] {
+            &::before,
+            &::after {
+                position: absolute;
+                top: 50%;
+                left: 0;
+                width: 100%;
+                height: var(--separator-stroke);
+                border-radius: 9999px;
+                background-color: var(--separator-color);
+                translate: 0 -50%;
+            }
+
+            &::before {
+                content: '';
+                rotate: 45deg;
+            }
+        }
+
+        &[data-variant='cross'] > [data-part='mark']::after {
+            content: '';
+            rotate: -45deg;
+        }
+
+        &[data-variant='slash'] > [data-part='mark']::before {
+            rotate: -60deg;
+        }
+
+        &[data-variant='space'] > [data-part='mark'] {
+            width: 0;
+            height: 0;
+        }
+    }
+}

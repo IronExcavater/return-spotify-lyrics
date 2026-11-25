@@ -1,8 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { expect, waitFor, within } from 'storybook/test';
 
-import { Music } from '@return-spotify-lyrics/icons';
+import Link from '@return-spotify-lyrics/ui/Link';
 import Marquee from '@return-spotify-lyrics/ui/Marquee';
+import Text from '@return-spotify-lyrics/ui/Text';
 
 import { lengthControl } from './controls';
 
@@ -12,24 +13,34 @@ const meta = {
     // The component defaults give every control a value. The delay and the rest depend on other props, so they start empty.
     args: {
         children: 'Paper Satellites (Northern Static Remix) · The Quiet Hours',
-        direction: 'left',
+        direction: 'start',
         motion: 'loop',
         fill: false,
         play: 'auto',
         speed: 40,
-        gap: 24,
+        separator: { variant: 'dot', gap: 12 },
         fadeDepth: 24,
     },
     argTypes: {
         children: { control: 'text' },
-        separator: { control: false },
-        gap: lengthControl,
+        separator: { control: 'object' },
         fadeDepth: lengthControl,
     },
+    // A marquee shows a title that is too long for its row, like the track in the player.
     render: (args) => (
-        <div className="w-60 rounded-medium bg-raised px-3 py-2 text-medium">
-            {/* A Marquee has no role, so the tests find it by its test ID. */}
-            <Marquee {...args} data-testid="marquee" />
+        <div className="flex w-64 items-center gap-3 rounded-medium bg-raised p-2 text-medium">
+            <div className="size-10 shrink-0 rounded-small bg-overlay" />
+            <div className="min-w-0 flex-1">
+                {/* A Marquee has no role, so the tests find it by its test ID. */}
+                <Marquee
+                    {...args}
+                    className={`font-bold ${args.className ?? ''}`}
+                    data-testid="marquee"
+                />
+                <Text className="block text-small text-subdued">
+                    The Quiet Hours
+                </Text>
+            </div>
         </div>
     ),
 } satisfies Meta<typeof Marquee>;
@@ -50,7 +61,7 @@ function expectToMove(element: HTMLElement) {
     );
 }
 
-export const Overflow: Story = {
+export const NowPlaying: Story = {
     play: async ({ canvas, args }) => {
         // The copy is hidden from assistive technology, so a person hears the text once.
         await waitFor(() =>
@@ -70,8 +81,13 @@ export const Fits: Story = {
     },
 };
 
-export const AlwaysLoop: Story = {
-    args: { children: 'Slow Orbit', fill: true },
+/** Fill loops short content too, with copies and a separator of any variant between them. */
+export const Fill: Story = {
+    args: {
+        children: 'Slow Orbit',
+        fill: true,
+        separator: { variant: 'cross', gap: 16 },
+    },
     play: async ({ canvas, args }) => {
         // Short content needs several copies to fill the box with no gap.
         await waitFor(() =>
@@ -84,8 +100,24 @@ export const AlwaysLoop: Story = {
     },
 };
 
-export const MovesRight: Story = {
-    args: { direction: 'right' },
+/** Right-to-left text reads on to the left, so the loop moves right, and a bounce starts at the right. */
+export const RightToLeft: Story = {
+    args: { children: 'שירים על המים בלילה, ואורות הנמל עד הבוקר' },
+    play: async ({ canvas, args }) => {
+        await waitFor(() =>
+            expect(canvas.getAllByText(String(args.children))).toHaveLength(2)
+        );
+        const [original] = canvas.getAllByText(String(args.children));
+        const start = original!.getBoundingClientRect().x;
+        // The delay before the first pass is a second, so a move can take a little longer than that.
+        await waitFor(
+            () =>
+                expect(original!.getBoundingClientRect().x).toBeGreaterThan(
+                    start + 2
+                ),
+            { timeout: 3000 }
+        );
+    },
 };
 
 /** Up and down move the content through the height of the marquee, like lyrics. */
@@ -112,7 +144,7 @@ export const Bounce: Story = {
     },
 };
 
-export const StartOnHover: Story = {
+export const PlayOnHover: Story = {
     args: { play: 'hover' },
     play: async ({ canvas, userEvent, args }) => {
         const [original] = await canvas.findAllByText(String(args.children));
@@ -121,33 +153,21 @@ export const StartOnHover: Story = {
     },
 };
 
-export const SeparatorNode: Story = {
-    args: {
-        children: 'Slow Orbit',
-        fill: true,
-        separator: <Music aria-hidden className="size-3 text-subdued" />,
-    },
-};
-
 export const SharedStates: Story = {
     args: {
         children: (
             <>
-                {/* A link in text needs more than colour to stand out, so the links have an underline. */}
-                <a
-                    href="#track"
-                    className="underline underline-offset-2 hover:text-accent"
-                >
+                <Link href="#track" underline="always">
                     Paper Satellites
-                </a>{' '}
+                </Link>{' '}
                 <span>(Northern Static Remix)</span>
                 {' · '}
-                <a
-                    href="#artist"
-                    className="text-subdued underline underline-offset-2 hover:text-accent"
-                >
-                    The Quiet Hours
-                </a>
+                {/* The link takes its colour from the span, so a hover can turn it white. */}
+                <span className="text-subdued">
+                    <Link href="#artist" underline="always">
+                        The Quiet Hours
+                    </Link>
+                </span>
             </>
         ),
     },
