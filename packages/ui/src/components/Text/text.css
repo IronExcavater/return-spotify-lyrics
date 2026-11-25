@@ -1,7 +1,8 @@
 /* Defaults live in @layer components so that a consumer className always wins. */
 @layer components {
     .text {
-        overflow-wrap: anywhere;
+        /* A long word breaks only when it would overflow, so a flex row never squeezes words into single letters. */
+        overflow-wrap: break-word;
 
         /* The clamp only hides lines on screen, so assistive technology still reads all of the text. */
         &[data-clamped] {

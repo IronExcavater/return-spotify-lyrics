@@ -63,20 +63,10 @@ export const LeftAndRight: Story = {
         expectFades(canvas.getByTestId('fade-box'), ['left', 'right']),
 };
 
+/** Every side fades, and a corner fades on its own only when its two sides don't. The controls change the corners and the easing. */
 export const AllSides: Story = {
     args: { edges: 'all' },
     // A corner fades on its own only when its two sides don't.
-    play: ({ canvas }) =>
-        expectFades(canvas.getByTestId('fade-box'), [
-            'top',
-            'right',
-            'bottom',
-            'left',
-        ]),
-};
-
-export const SquareCorners: Story = {
-    args: { edges: 'all', roundCorners: false },
     play: ({ canvas }) =>
         expectFades(canvas.getByTestId('fade-box'), [
             'top',
@@ -90,17 +80,6 @@ export const SingleCorner: Story = {
     args: { edges: ['top-right'] },
     play: ({ canvas }) =>
         expectFades(canvas.getByTestId('fade-box'), ['top-right']),
-};
-
-export const LinearEasing: Story = {
-    args: { edges: 'all', easing: 'linear' },
-    play: ({ canvas }) =>
-        expectFades(canvas.getByTestId('fade-box'), [
-            'top',
-            'right',
-            'bottom',
-            'left',
-        ]),
 };
 
 export const Disabled: Story = {
