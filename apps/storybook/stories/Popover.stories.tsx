@@ -47,7 +47,7 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
-/** A click opens the panel and moves focus into it. Escape closes it, and focus goes back to the trigger. */
+/** A click opens the panel and moves focus into it, and Escape closes it. */
 export const ShareTrack: Story = {
     play: async ({ canvas, canvasElement, userEvent, args, step }) => {
         const page = within(canvasElement.ownerDocument.body);
@@ -66,18 +66,18 @@ export const ShareTrack: Story = {
             );
         });
 
-        await step('Escape closes it and focus goes back', async () => {
+        // Safari doesn't focus a button on a click, so focus can go back to the trigger only after a keyboard opens it.
+        await step('Escape closes it', async () => {
             await userEvent.keyboard('{Escape}');
             // The panel stays in the page while it fades out, so the trigger's state shows that it closed.
             await waitFor(() =>
                 expect(trigger).toHaveAttribute('aria-expanded', 'false')
             );
-            await waitFor(() => expect(trigger).toHaveFocus());
         });
     },
 };
 
-/** An icon button opens details at its side, with an arrow that points back at it. Enter opens it from the keyboard. */
+/** From the keyboard, Enter opens details at the side of the icon button, and Escape closes them and gives focus back. */
 export const TrackDetails: Story = {
     args: {
         title: 'About this track',
@@ -98,22 +98,30 @@ export const TrackDetails: Story = {
             </div>
         ),
     },
-    play: async ({ canvas, canvasElement, userEvent, args }) => {
+    play: async ({ canvas, canvasElement, userEvent, args, step }) => {
         const page = within(canvasElement.ownerDocument.body);
-        await userEvent.tab();
-        await expect(
-            canvas.getByRole('button', { name: String(args.title) })
-        ).toHaveFocus();
-        await userEvent.keyboard('{Enter}');
-        const panel = await page.findByRole('dialog', {
-            name: String(args.title),
-        });
         const trigger = canvas.getByRole('button', {
             name: String(args.title),
         });
-        // The panel sits to the right of the trigger.
-        await expect(panel.getBoundingClientRect().left).toBeGreaterThanOrEqual(
-            trigger.getBoundingClientRect().right
-        );
+
+        await step('Enter opens the panel at the side', async () => {
+            await userEvent.tab();
+            await expect(trigger).toHaveFocus();
+            await userEvent.keyboard('{Enter}');
+            const panel = await page.findByRole('dialog', {
+                name: String(args.title),
+            });
+            await expect(
+                panel.getBoundingClientRect().left
+            ).toBeGreaterThanOrEqual(trigger.getBoundingClientRect().right);
+        });
+
+        await step('Escape closes it and focus goes back', async () => {
+            await userEvent.keyboard('{Escape}');
+            await waitFor(() =>
+                expect(trigger).toHaveAttribute('aria-expanded', 'false')
+            );
+            await waitFor(() => expect(trigger).toHaveFocus());
+        });
     },
 };
