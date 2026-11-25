@@ -111,11 +111,13 @@ export const Library: Story = {
         await step(
             'The pill starts under the chosen view, with no slide',
             async () => {
-                const transitions = canvasElement
+                // The pill slides with translate and width. Other controls can fade colours when the theme loads.
+                const slides = canvasElement
                     .getAnimations({ subtree: true })
                     .filter((animation) => animation instanceof CSSTransition)
-                    .map((transition) => transition.transitionProperty);
-                await expect(transitions).toEqual([]);
+                    .map((transition) => transition.transitionProperty)
+                    .filter((name) => name === 'translate' || name === 'width');
+                await expect(slides).toEqual([]);
                 await expect(paintBehind(list)).toBe('rgb(255, 255, 255)');
             }
         );
