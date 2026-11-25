@@ -59,8 +59,8 @@ export const IconButton: Story = {
 };
 
 /**
- * Each player button shows its name through Button's `tooltip` prop. The provider sets the delay for all of them, and
- * after one opens, the next one along the row opens at once.
+ * Each player button sits in a Tooltip with no `label`, so the tooltip shows the button's name. The provider sets the
+ * delay for all of them, and after one opens, the next one along the row opens at once.
  */
 export const PlayerControls: Story = {
     // The scene builds its own buttons, so the controls of meta don't reach it.
@@ -72,30 +72,34 @@ export const PlayerControls: Story = {
                 aria-label="Player"
                 className="flex items-center gap-1"
             >
-                <Button
-                    variant="tertiary"
-                    icon={<Shuffle />}
-                    aria-label="Shuffle"
-                    tooltip
-                />
-                <Button
-                    variant="tertiary"
-                    icon={<SkipBack />}
-                    aria-label="Previous"
-                    tooltip
-                />
-                <Button
-                    variant="tertiary"
-                    icon={<SkipForward />}
-                    aria-label="Next"
-                    tooltip
-                />
-                <Button
-                    variant="tertiary"
-                    icon={<Repeat />}
-                    aria-label="Repeat"
-                    tooltip
-                />
+                <Tooltip>
+                    <Button
+                        variant="tertiary"
+                        icon={<Shuffle />}
+                        aria-label="Shuffle"
+                    />
+                </Tooltip>
+                <Tooltip>
+                    <Button
+                        variant="tertiary"
+                        icon={<SkipBack />}
+                        aria-label="Previous"
+                    />
+                </Tooltip>
+                <Tooltip>
+                    <Button
+                        variant="tertiary"
+                        icon={<SkipForward />}
+                        aria-label="Next"
+                    />
+                </Tooltip>
+                <Tooltip>
+                    <Button
+                        variant="tertiary"
+                        icon={<Repeat />}
+                        aria-label="Repeat"
+                    />
+                </Tooltip>
             </div>
         </TooltipProvider>
     ),
