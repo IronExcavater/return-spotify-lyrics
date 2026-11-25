@@ -204,8 +204,8 @@ export default function Marquee({
             ref={rootRef}
             className={clsx('marquee', className)}
             enabled={!fits || moving}
-            size={fade}
-            direction={moving ? ['left', 'right'] : ['right']}
+            depth={fade}
+            edges={moving ? ['left', 'right'] : ['right']}
             data-mode={mode}
             data-start={start}
             data-moving={moving || undefined}
