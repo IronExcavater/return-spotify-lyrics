@@ -101,19 +101,12 @@
             }
         }
 
+        /* The badge brings its own look, so the button only places it on the corner. */
         > [data-part='badge'] {
             position: absolute;
             top: 0;
             right: 0;
-            min-width: 16px;
-            height: 16px;
-            padding-inline: 4px;
-            border-radius: 9999px;
-            background-color: var(--background-color-accent);
-            color: var(--text-color-inverse);
-            font-size: 10px;
-            line-height: 16px;
-            font-weight: 700;
+            display: flex;
             translate: 25% -25%;
         }
 

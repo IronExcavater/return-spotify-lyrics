@@ -11,6 +11,7 @@
         "./usePortalSlot": "./src/components/Portal/usePortalSlot.tsx",
         "./TextProvider": "./src/components/Text/TextProvider.tsx",
         "./RadioGroup": "./src/components/Radio/RadioGroup.tsx",
+        "./TooltipProvider": "./src/components/Tooltip/TooltipProvider.tsx",
         "./*": "./src/components/*/*.tsx"
     },
     "scripts": {
