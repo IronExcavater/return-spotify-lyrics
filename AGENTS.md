@@ -181,6 +181,7 @@ Every story is a test. It runs in Chromium, Firefox and WebKit, and it fails on 
 ### Story tests
 
 - In a story file, `meta` holds the shared args and the render function, and each story sets only what's different.
+- A story file has no constants at the top. A story keeps its values in its args, and its `play` function reads them from `args`, so a value is written once. Fixtures that many files use go in `shared.tsx`.
 - Storybook has no docs page for each component, because the stories show the component and the Controls panel shows its props.
 - Controls come from the prop types. Set a control in `argTypes` only when a type can't give it, like `CssLength` or `Direction`.
 - Each story shows one state or one prop that matters, and its name says which, like `FixedAspectRatio`.

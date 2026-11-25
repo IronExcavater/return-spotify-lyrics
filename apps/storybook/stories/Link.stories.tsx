@@ -7,8 +7,6 @@ import Link, { type LinkProps } from '@return-spotify-lyrics/ui/Link';
 import Text from '@return-spotify-lyrics/ui/Text';
 import TextProvider from '@return-spotify-lyrics/ui/TextProvider';
 
-const ALBUM = '/album/4aawyAB9vmqN3uQ7FjRGTy';
-
 function toHashHref(to: string) {
     return `#${to}`;
 }
@@ -32,7 +30,7 @@ const meta = {
     component: Link,
     // The component defaults give every control a value.
     args: {
-        href: ALBUM,
+        href: '/album/4aawyAB9vmqN3uQ7FjRGTy',
         children: 'Paper Satellites',
         underline: 'hover',
         externalLabel: 'opens in a new tab',
@@ -46,14 +44,14 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Internal: Story = {
-    play: async ({ canvas, userEvent }) => {
+    play: async ({ canvas, userEvent, args }) => {
         const link = canvas.getByRole('link', { name: 'Paper Satellites' });
         // A new tab opens the route through the hash router.
-        await expect(link).toHaveAttribute('href', `#${ALBUM}`);
+        await expect(link).toHaveAttribute('href', `#${args.href}`);
 
         await userEvent.click(link);
         await waitFor(() =>
-            expect(canvas.getByRole('status')).toHaveTextContent(ALBUM)
+            expect(canvas.getByRole('status')).toHaveTextContent(args.href)
         );
     },
 };
@@ -130,10 +128,10 @@ export const InText: Story = {
 
 export const WithoutProvider: Story = {
     render: (args) => <Link {...args} />,
-    play: async ({ canvas }) => {
+    play: async ({ canvas, args }) => {
         // With no router, a route stays a plain anchor for the browser to follow.
         await expect(
             canvas.getByRole('link', { name: 'Paper Satellites' })
-        ).toHaveAttribute('href', ALBUM);
+        ).toHaveAttribute('href', args.href);
     },
 };

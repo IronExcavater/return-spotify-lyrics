@@ -4,38 +4,6 @@ import { expect, waitFor } from 'storybook/test';
 import { BadgeCheck } from '@return-spotify-lyrics/icons';
 import Text from '@return-spotify-lyrics/ui/Text';
 
-// The first formatted story loads the formatter chunk, which can take more than a second on a cold server.
-const LAZY_LOAD = { timeout: 5000 };
-
-const BIO = `## About
-
-**The Quiet Hours** make slow, warm songs about night drives and harbour towns.
-
-- Debut album *Paper Satellites* out now
-- Lyrics from [LRCLIB](https://lrclib.net)`;
-
-const DESCRIPTION =
-    'New music every Friday.<br>Cover: <a href="https://open.spotify.com/artist/1">Ada Vale</a> &amp; friends.';
-
-const UNSAFE =
-    '<p>Hi<script>document.title = "hacked"</script> <a href="javascript:alert(1)" onclick="alert(1)">there</a></p><img src="x" onerror="alert(1)">';
-
-const LYRIC =
-    'Paper boats in the harbour, lights on the water, and we sail until the morning while the city falls asleep around us';
-
-const DOC = {
-    type: 'doc',
-    content: [
-        {
-            type: 'paragraph',
-            content: [
-                { type: 'text', text: 'Lights on the ' },
-                { type: 'text', text: 'water', marks: [{ type: 'italic' }] },
-            ],
-        },
-    ],
-};
-
 const meta = {
     title: 'Text',
     component: Text,
@@ -92,12 +60,18 @@ export const TakesParentColour: Story = {
 };
 
 export const MaxLines: Story = {
-    args: { children: LYRIC, maxLines: 2, className: 'w-72' },
-    play: async ({ canvas }) => {
-        const text = canvas.getByText(LYRIC);
+    args: {
+        children:
+            'Paper boats in the harbour, lights on the water, and we sail until the morning while the city falls asleep around us',
+        maxLines: 2,
+        className: 'w-72',
+    },
+    play: async ({ canvas, args }) => {
+        const lyric = String(args.children);
+        const text = canvas.getByText(lyric);
         // The text is cut on screen, but the element still holds all of it.
         await expect(text.scrollHeight).toBeGreaterThan(text.clientHeight);
-        await expect(text).toHaveTextContent(LYRIC);
+        await expect(text).toHaveTextContent(lyric);
     },
 };
 
@@ -113,8 +87,7 @@ export const InlineIcons: Story = {
     },
     play: async ({ canvas }) => {
         const icon = canvas.getByLabelText('Verified artist');
-        const text = icon.closest('.text') as HTMLElement;
-        const fontSize = parseFloat(getComputedStyle(text).fontSize);
+        const fontSize = parseFloat(getComputedStyle(icon).fontSize);
         // The icon takes the text's size, so it sits on the line.
         await expect(
             Math.abs(icon.getBoundingClientRect().height - fontSize)
@@ -131,24 +104,32 @@ export const RightToLeft: Story = {
     },
 };
 
-export const LiteralStrings: Story = {
-    args: { children: '*NSYNC, Sunn O))) and **not bold**' },
+/** Plain text is never parsed, so a name that looks like markdown stays as it is. */
+export const LiteralString: Story = {
+    args: { children: '_Hidden Track_' },
     play: async ({ canvas }) => {
-        // Plain text is never parsed, so names with markdown characters stay as they are.
-        await expect(
-            canvas.getByText('*NSYNC, Sunn O))) and **not bold**')
-        ).toBeInTheDocument();
+        const text = canvas.getByText('_Hidden Track_');
+        await expect(text.querySelector('em')).toBeNull();
     },
 };
 
 export const Markdown: Story = {
-    args: { format: 'markdown', children: BIO, className: 'w-72' },
+    args: {
+        format: 'markdown',
+        children: `## About
+
+**The Quiet Hours** make slow, warm songs about night drives and harbour towns.
+
+- Debut album *Paper Satellites* out now
+- Lyrics from [LRCLIB](https://lrclib.net)`,
+        className: 'w-72',
+    },
     play: async ({ canvas }) => {
-        // The formatter loads lazily, so the formatted text arrives a moment later.
+        // The formatter loads lazily, and its first load can take more than a second on a cold server.
         const link = await canvas.findByRole(
             'link',
             { name: /LRCLIB/ },
-            LAZY_LOAD
+            { timeout: 5000 }
         );
         await expect(link).toHaveAttribute('target', '_blank');
         await expect(
@@ -164,19 +145,28 @@ export const Markdown: Story = {
 export const Html: Story = {
     args: {
         format: 'html',
-        children: DESCRIPTION,
+        children:
+            'New music every Friday.<br>Cover: <a href="https://open.spotify.com/artist/1">Ada Vale</a> &amp; friends.',
         className: 'w-72 text-subdued',
     },
     play: async ({ canvas }) => {
         await expect(
-            await canvas.findByRole('link', { name: /Ada Vale/ }, LAZY_LOAD)
+            await canvas.findByRole(
+                'link',
+                { name: /Ada Vale/ },
+                { timeout: 5000 }
+            )
         ).toHaveAttribute('href', 'https://open.spotify.com/artist/1');
         await expect(canvas.getByText(/& friends/)).toBeInTheDocument();
     },
 };
 
 export const UnsafeHtml: Story = {
-    args: { format: 'html', children: UNSAFE },
+    args: {
+        format: 'html',
+        children:
+            '<p>Hi<script>document.title = "hacked"</script> <a href="javascript:alert(1)" onclick="alert(1)">there</a></p><img src="x" onerror="alert(1)">',
+    },
     // The root has no role, so the story gives it a test id.
     render: (args) => <Text {...args} data-testid="unsafe" />,
     play: async ({ canvas }) => {
@@ -192,10 +182,29 @@ export const UnsafeHtml: Story = {
 
 // A document takes the place of the children and the format of meta.
 export const Doc: StoryObj<typeof Text> = {
-    args: { doc: DOC, children: undefined, format: undefined },
+    args: {
+        doc: {
+            type: 'doc',
+            content: [
+                {
+                    type: 'paragraph',
+                    content: [
+                        { type: 'text', text: 'Lights on the ' },
+                        {
+                            type: 'text',
+                            text: 'water',
+                            marks: [{ type: 'italic' }],
+                        },
+                    ],
+                },
+            ],
+        },
+        children: undefined,
+        format: undefined,
+    },
     play: async ({ canvas }) => {
         await expect(
-            (await canvas.findByText('water', {}, LAZY_LOAD)).tagName
+            (await canvas.findByText('water', {}, { timeout: 5000 })).tagName
         ).toBe('EM');
     },
 };
@@ -212,7 +221,11 @@ export const Inline: Story = {
     render: (args) => <Text {...args} data-testid="inline" />,
     play: async ({ canvas }) => {
         // The formatter loads lazily, and the bold text shows that it has.
-        await canvas.findByText('Daft Punk', { selector: 'strong' }, LAZY_LOAD);
+        await canvas.findByText(
+            'Daft Punk',
+            { selector: 'strong' },
+            { timeout: 5000 }
+        );
         const text = canvas.getByTestId('inline');
         await expect(text).toHaveTextContent('Follow Daft Punk on Spotify');
         await expect(text.tagName).toBe('SPAN');

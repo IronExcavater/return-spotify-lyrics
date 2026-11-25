@@ -5,13 +5,7 @@ import { expect } from 'storybook/test';
 import Radio from '@return-spotify-lyrics/ui/Radio';
 import RadioGroup from '@return-spotify-lyrics/ui/RadioGroup';
 
-const SORT_ORDERS = [
-    { value: 'recent', label: 'Recently added' },
-    { value: 'title', label: 'Alphabetical' },
-    { value: 'creator', label: 'Creator' },
-] as const;
-
-type SortOrder = (typeof SORT_ORDERS)[number]['value'];
+type SortOrder = 'recent' | 'title' | 'creator';
 
 const meta = {
     title: 'Radio',
@@ -27,9 +21,9 @@ const meta = {
     },
     render: (args) => (
         <RadioGroup {...args} defaultValue="recent">
-            {SORT_ORDERS.map((order) => (
-                <Radio key={order.value} {...order} />
-            ))}
+            <Radio value="recent" label="Recently added" />
+            <Radio value="title" label="Alphabetical" />
+            <Radio value="creator" label="Creator" />
         </RadioGroup>
     ),
 } satisfies Meta<typeof RadioGroup>;
@@ -94,9 +88,9 @@ function ControlledDemo() {
                 value={order}
                 onValueChange={(value) => setOrder(value)}
             >
-                {SORT_ORDERS.map((option) => (
-                    <Radio key={option.value} {...option} />
-                ))}
+                <Radio value="recent" label="Recently added" />
+                <Radio value="title" label="Alphabetical" />
+                <Radio value="creator" label="Creator" />
             </RadioGroup>
             <p className="text-subdued">Sorted by {order}</p>
         </div>
