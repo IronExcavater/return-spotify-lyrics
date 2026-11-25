@@ -12,6 +12,7 @@ const config: StorybookConfig = {
         'storybook-dark-mode',
     ],
     // The default docgen can't read imported types or unions with undefined, so controls for them break.
+    // This docgen needs the TypeScript JavaScript API, which TypeScript 7 removes, so this app keeps TypeScript 5.
     typescript: {
         reactDocgen: 'react-docgen-typescript',
         reactDocgenTypescriptOptions: {
