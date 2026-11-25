@@ -21,8 +21,6 @@ const meta = {
         align: 'center',
         gap: 8,
         showArrow: false,
-        delay: 500,
-        closeDelay: 0,
         // The tooltip only shows, so the button's name says the same thing.
         children: (
             <Button
@@ -59,14 +57,14 @@ export const IconButton: Story = {
 };
 
 /**
- * Each player button shows its name through Button's `tooltip` prop. The provider groups them, so after one opens, the
- * next one along the row opens at once.
+ * Each player button shows its name through Button's `tooltip` prop. The provider sets the delay for all of them, and
+ * after one opens, the next one along the row opens at once.
  */
 export const PlayerControls: Story = {
     // The scene builds its own buttons, so the controls of meta don't reach it.
     parameters: { controls: { disable: true } },
     render: () => (
-        <TooltipProvider>
+        <TooltipProvider delay={0}>
             <div
                 role="group"
                 aria-label="Player"
@@ -99,14 +97,37 @@ export const PlayerControls: Story = {
             </div>
         </TooltipProvider>
     ),
-    play: async ({ canvasElement, userEvent }) => {
+    play: async ({ canvas, canvasElement, userEvent, step }) => {
         const page = within(canvasElement.ownerDocument.body);
-        await userEvent.tab();
-        await waitFor(() => expect(page.getByText('Shuffle')).toBeVisible());
-        await userEvent.tab();
-        await waitFor(() => expect(page.getByText('Previous')).toBeVisible());
-        await waitFor(() =>
-            expect(page.queryByText('Shuffle')).not.toBeInTheDocument()
-        );
+
+        await step('The provider sets the delay of every tooltip', async () => {
+            await userEvent.hover(
+                canvas.getByRole('button', { name: 'Repeat' })
+            );
+            // The provider asks for no delay, so the tooltip shows well before a tooltip's own delay would end.
+            await waitFor(
+                () => expect(page.getByText('Repeat')).toBeVisible(),
+                {
+                    timeout: 450,
+                }
+            );
+            await userEvent.unhover(
+                canvas.getByRole('button', { name: 'Repeat' })
+            );
+        });
+
+        await step('Focus moves the tooltip along the row', async () => {
+            await userEvent.tab();
+            await waitFor(() =>
+                expect(page.getByText('Shuffle')).toBeVisible()
+            );
+            await userEvent.tab();
+            await waitFor(() =>
+                expect(page.getByText('Previous')).toBeVisible()
+            );
+            await waitFor(() =>
+                expect(page.queryByText('Shuffle')).not.toBeInTheDocument()
+            );
+        });
     },
 };

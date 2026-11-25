@@ -9,10 +9,10 @@ export type TooltipProps = FloatingProps & {
     label: ReactNode;
     /** The element that the tooltip belongs to, like an icon Button. */
     children: ReactElement;
-    /** How long a pointer rests on the trigger before the tooltip opens, in milliseconds. Focus opens it at once. */
-    delay?: number;
-    /** How long the tooltip stays after the pointer leaves, in milliseconds. */
-    closeDelay?: number;
+    /** How long a pointer rests on the trigger before the tooltip opens, in milliseconds. Without it, the TooltipProvider's delay applies. Focus opens it at once. */
+    delay?: number | undefined;
+    /** How long the tooltip stays after the pointer leaves, in milliseconds. Without it, the TooltipProvider's delay applies. */
+    closeDelay?: number | undefined;
     /** Whether the tooltip is open, for a tooltip that the parent controls. */
     open?: boolean | undefined;
     /** Called when the tooltip opens or closes. */
@@ -25,8 +25,9 @@ export type TooltipProps = FloatingProps & {
 export default function Tooltip({
     label,
     children,
-    delay = 500,
-    closeDelay = 0,
+    // The delays have no default here, so a TooltipProvider can set them for every tooltip inside it.
+    delay,
+    closeDelay,
     open,
     onOpenChange,
     side = 'top',
