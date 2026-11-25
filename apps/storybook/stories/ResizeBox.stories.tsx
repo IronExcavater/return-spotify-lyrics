@@ -3,7 +3,7 @@ import { expect, waitFor } from 'storybook/test';
 
 import ResizeBox from '@return-spotify-lyrics/ui/ResizeBox';
 
-import { directionControl, lengthControl } from './controls';
+import { edgesControl, lengthControl } from './controls';
 import { Placeholder } from './shared';
 
 const meta = {
@@ -13,22 +13,22 @@ const meta = {
     parameters: { layout: 'padded' },
     // The component defaults give every control a value, and an empty aspect ratio means no limit.
     args: {
-        size: { width: 320, height: 200 },
+        value: { width: 320, height: 200 },
         minSize: {},
         maxSize: {},
-        direction: directionControl.options,
-        showIndicator: true,
-        thickness: 14,
-        placement: 'overlap',
-        step: 10,
+        edges: edgesControl.options,
+        showGrip: true,
+        handleSize: 14,
+        handlePlacement: 'overlap',
+        keyStep: 10,
     },
     argTypes: {
-        direction: directionControl,
-        thickness: lengthControl,
+        edges: edgesControl,
+        handleSize: lengthControl,
         minAspectRatio: { control: { type: 'number', min: 0, step: 0.1 } },
         maxAspectRatio: { control: { type: 'number', min: 0, step: 0.1 } },
-        onChange: { action: 'change' },
-        onChangeEnd: { action: 'changeEnd' },
+        onValueChange: { action: 'valueChange' },
+        onValueCommitted: { action: 'valueCommitted' },
     },
     render: (args) => (
         <ResizeBox {...args}>
@@ -67,7 +67,7 @@ function expectSize(handle: HTMLElement, width: number, height: number) {
 }
 
 export const RightAndBottom: Story = {
-    args: { direction: ['right', 'bottom'] },
+    args: { edges: ['right', 'bottom'] },
     play: async ({ canvas, userEvent, step }) => {
         const right = await focusHandle({ canvas, userEvent }, 'Resize right');
 
@@ -112,7 +112,7 @@ export const AllEdges: Story = {
 };
 
 export const Inset: Story = {
-    args: { placement: 'inset' },
+    args: { handlePlacement: 'inset' },
 };
 
 export const WithLimits: Story = {
@@ -153,7 +153,7 @@ export const AspectRatioLimits: Story = {
 
 export const FixedAspectRatio: Story = {
     args: {
-        size: { width: 320, height: 180 },
+        value: { width: 320, height: 180 },
         minAspectRatio: 16 / 9,
         maxAspectRatio: 16 / 9,
     },

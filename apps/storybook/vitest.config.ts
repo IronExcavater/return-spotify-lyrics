@@ -4,6 +4,8 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
     plugins: [storybookTest()],
+    // A failed scan leaves a cache without some dependencies, so a later run finds them late and reloads every test.
+    optimizeDeps: { force: true },
     test: {
         name: 'storybook',
         browser: {

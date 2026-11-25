@@ -68,12 +68,12 @@ export default function AppShell() {
         <ResizeBox
             // The popup window takes its size from this box, so the box must not stop at the body width.
             className="max-w-none"
-            size={size}
+            value={size}
             minSize={MIN_POPUP_SIZE}
             maxSize={MAX_POPUP_SIZE}
-            direction={['left', 'bottom']}
-            onChange={setDragSize}
-            onChangeEnd={(next) => {
+            edges={['left', 'bottom']}
+            onValueChange={setDragSize}
+            onValueCommitted={(next) => {
                 setSavedSize(next);
                 setDragSize(null);
             }}
