@@ -65,10 +65,13 @@ export const ShareTrack: Story = {
                 name: String(args.title),
             });
             // The panel fades in, so the test waits until it is fully shown.
-            await waitFor(() =>
-                expect(
-                    within(panel).getByRole('button', { name: 'Copy link' })
-                ).toBeVisible()
+            await waitFor(
+                () =>
+                    expect(
+                        within(panel).getByRole('button', { name: 'Copy link' })
+                    ).toBeVisible(),
+                // A fade can take more than a second in a slow browser.
+                { timeout: 3000 }
             );
         });
 

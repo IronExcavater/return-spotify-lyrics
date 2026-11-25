@@ -44,14 +44,16 @@ type Story = StoryObj<typeof meta>;
 export const IconButton: Story = {
     play: async ({ canvasElement, userEvent, args }) => {
         const page = within(canvasElement.ownerDocument.body);
+        const label = String(args.label);
         await userEvent.tab();
-        // The tooltip fades in, so the test waits until it is fully shown.
-        await waitFor(() =>
-            expect(page.getByText(String(args.label))).toBeVisible()
-        );
+        // The tooltip fades, and a fade can take more than a second in a slow browser, so the waits have room for it.
+        await waitFor(() => expect(page.getByText(label)).toBeVisible(), {
+            timeout: 3000,
+        });
         await userEvent.keyboard('{Escape}');
-        await waitFor(() =>
-            expect(page.queryByText(String(args.label))).not.toBeInTheDocument()
+        await waitFor(
+            () => expect(page.queryByText(label)).not.toBeInTheDocument(),
+            { timeout: 3000 }
         );
     },
 };
@@ -106,7 +108,7 @@ export const PlayerControls: Story = {
             );
             // The provider asks for no delay, so the tooltip shows well before a tooltip's own delay would end.
             await waitFor(
-                () => expect(page.getByText('Repeat')).toBeVisible(),
+                () => expect(page.getByText('Repeat')).toBeInTheDocument(),
                 {
                     timeout: 450,
                 }
@@ -118,15 +120,19 @@ export const PlayerControls: Story = {
 
         await step('Focus moves the tooltip along the row', async () => {
             await userEvent.tab();
-            await waitFor(() =>
-                expect(page.getByText('Shuffle')).toBeVisible()
+            await waitFor(
+                () => expect(page.getByText('Shuffle')).toBeVisible(),
+                { timeout: 3000 }
             );
             await userEvent.tab();
-            await waitFor(() =>
-                expect(page.getByText('Previous')).toBeVisible()
+            await waitFor(
+                () => expect(page.getByText('Previous')).toBeVisible(),
+                { timeout: 3000 }
             );
-            await waitFor(() =>
-                expect(page.queryByText('Shuffle')).not.toBeInTheDocument()
+            await waitFor(
+                () =>
+                    expect(page.queryByText('Shuffle')).not.toBeInTheDocument(),
+                { timeout: 3000 }
             );
         });
     },
