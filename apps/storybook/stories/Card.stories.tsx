@@ -1,7 +1,10 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { expect, fn } from 'storybook/test';
 
+import { Play } from '@return-spotify-lyrics/icons';
+import Button from '@return-spotify-lyrics/ui/Button';
 import Card from '@return-spotify-lyrics/ui/Card';
+import Separator from '@return-spotify-lyrics/ui/Separator';
 import Text from '@return-spotify-lyrics/ui/Text';
 
 const meta = {
@@ -9,15 +12,22 @@ const meta = {
     component: Card,
     args: {
         className: 'w-44',
+        render: <a href="#album" />,
         children: (
             <>
                 <div className="mb-3 aspect-square rounded-small bg-overlay" />
-                <Text render={<p />} className="font-bold">
+                <Text render={<p />} className="font-bold" maxLines={1}>
                     Paper Satellites
                 </Text>
-                <Text render={<p />} className="text-small text-subdued">
-                    The Quiet Hours
-                </Text>
+                <div className="flex items-center text-small text-subdued">
+                    <Text>2026</Text>
+                    <Separator
+                        orientation="vertical"
+                        variant="dot"
+                        decorative
+                    />
+                    <Text>Album</Text>
+                </div>
             </>
         ),
     },
@@ -31,23 +41,45 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
-export const Plain: Story = {
-    play: async ({ canvas }) => {
-        const title = canvas.getByText('Paper Satellites');
-        await expect(getComputedStyle(title).cursor).toBe('auto');
-    },
-};
-
-/** A card that is a link takes the whole card as one target, with a focus ring around it. */
-export const AsLink: Story = {
-    args: { render: <a href="#album" /> },
+/** An album card is one link, with the focus ring around the whole card and the pointer over it. */
+export const Album: Story = {
     play: async ({ canvas, userEvent }) => {
         const link = canvas.getByRole('link', { name: /Paper Satellites/ });
         await userEvent.tab();
         await expect(link).toHaveFocus();
         await expect(getComputedStyle(link).outlineStyle).toBe('solid');
-        // A card that does something shows the pointer, and a plain card keeps the arrow.
         await expect(getComputedStyle(link).cursor).toBe('pointer');
+    },
+};
+
+/** A card that only holds content stays a plain surface, so it can hold its own controls, like a play button. */
+export const WithControls: Story = {
+    args: {
+        render: undefined,
+        children: (
+            <>
+                <Text render={<p />} className="font-bold">
+                    Up next
+                </Text>
+                <Text render={<p />} className="mb-3 text-small text-subdued">
+                    Glass Harbour, by Lumen Fields
+                </Text>
+                <Button
+                    variant="primary"
+                    tone="accent"
+                    icon={<Play />}
+                    aria-label="Play Glass Harbour"
+                />
+            </>
+        ),
+    },
+    play: async ({ canvas, userEvent }) => {
+        const play = canvas.getByRole('button', { name: 'Play Glass Harbour' });
+        await expect(getComputedStyle(canvas.getByText('Up next')).cursor).toBe(
+            'auto'
+        );
+        await userEvent.tab();
+        await expect(play).toHaveFocus();
     },
 };
 

@@ -27,7 +27,7 @@ type SharedProps = Omit<
     loading?: boolean;
     /** What a screen reader says while the button loads. */
     loadingLabel?: string;
-    /** A mark in the top-right corner, like `<Badge dot />`. A number shows as a small count Badge. */
+    /** A mark in the top-right corner, like a Badge. A number shows as a small count Badge. Put a count in the name too. */
     badge?: ReactNode;
     /** Another element to render, like `<a href="…" />` for a link with button styles. A link can't be disabled. */
     render?: ReactElement | undefined;

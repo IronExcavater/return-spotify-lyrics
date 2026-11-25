@@ -24,10 +24,6 @@
             align-items: center;
         }
 
-        > [data-part='track'] > [data-part='item'] > [data-part='separator'] {
-            padding-inline: calc(var(--marquee-gap) / 2);
-        }
-
         /* Up and down stack the copies, and the lines wrap in the width of the marquee. */
         &[data-axis='y'] {
             --marquee-to: 0 calc(-1 * var(--marquee-distance));
@@ -42,13 +38,6 @@
 
             > [data-part='track'] > [data-part='item'] {
                 flex-direction: column;
-            }
-
-            > [data-part='track']
-                > [data-part='item']
-                > [data-part='separator'] {
-                padding-block: calc(var(--marquee-gap) / 2);
-                padding-inline: 0;
             }
         }
 

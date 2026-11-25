@@ -4,15 +4,15 @@ import {
     useRef,
     useState,
     type ComponentProps,
-    type ReactNode,
 } from 'react';
 import clsx from 'clsx';
-import { toCssSize, toMilliseconds, type CssLength } from '../../helpers/css';
+import { toMilliseconds, type CssLength } from '../../helpers/css';
 import type { Side } from '../../helpers/geometry';
 import { countCopies, holdEasing } from '../../helpers/motion';
 import useCopies from '../../hooks/useCopies';
 import useReducedMotion from '../../hooks/useReducedMotion';
 import FadeBox from '../FadeBox/FadeBox';
+import Separator, { type SeparatorProps } from '../Separator/Separator';
 
 export type MarqueeProps = ComponentProps<'div'> & {
     /** The way the content moves. Up and down need a height on the marquee. A bounce starts at the start of the content either way. */
@@ -29,10 +29,8 @@ export type MarqueeProps = ComponentProps<'div'> & {
     delay?: number;
     /** How long the content rests at each end of a bounce, or at the start of each pass of a loop, in milliseconds. */
     rest?: number;
-    /** The node between two copies in a loop. */
-    separator?: ReactNode;
-    /** The space on each side of the separator. */
-    gap?: CssLength;
+    /** The Separator between two copies in a loop, like `{ variant: 'cross', gap: 16 }`. Marquee sets its orientation. */
+    separator?: Omit<SeparatorProps, 'orientation' | 'decorative'>;
     /** How far the edges fade. */
     fadeDepth?: CssLength;
 };
@@ -59,8 +57,7 @@ export default function Marquee({
     speed = 40,
     delay = play === 'hover' ? 0 : 1000,
     rest = motion === 'bounce' ? 1000 : 0,
-    separator = '•',
-    gap = 24,
+    separator = { variant: 'dot', gap: 12 },
     fadeDepth = 24,
     className,
     style,
@@ -186,7 +183,6 @@ export default function Marquee({
                 '--marquee-duration': `${duration}s`,
                 '--marquee-delay': `${delay}ms`,
                 '--marquee-easing': easing,
-                '--marquee-gap': toCssSize(gap),
                 ...style,
             }}
             onPointerEnter={(event) => {
@@ -222,9 +218,14 @@ export default function Marquee({
                     >
                         <div data-part="content">{children}</div>
                         {copies > 0 && (
-                            <div data-part="separator" aria-hidden>
-                                {separator}
-                            </div>
+                            <Separator
+                                {...separator}
+                                decorative
+                                orientation={
+                                    axis === 'y' ? 'horizontal' : 'vertical'
+                                }
+                                data-part="separator"
+                            />
                         )}
                     </div>
                 ))}
