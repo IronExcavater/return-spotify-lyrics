@@ -54,7 +54,7 @@ Follow [AGENTS.md](AGENTS.md), the coding guide for people and agents. It covers
 
 ## Pull requests
 
-1. Branch from `main`, and name the branch `<ticket>/<title>`, e.g. `iro-11/create-portal`.
+1. Branch from `main`. Name the branch `<ticket>/<title>` when the work has a Linear issue, e.g. `iro-11/create-portal`, or `<reason>/<title>` when it doesn't, e.g. `build/minor-updates`. A small fix, an update or a tooling change doesn't need an issue.
 2. Write each commit message as `<reason>: <title>` in lower case, e.g. `feat: add portal component` or `bug: missing resize end handler`. The reason is `feat`, `bug`, `refactor`, `docs`, `test`, `build`, `ci` or `chore`.
 3. Run `pnpm check` and `pnpm test`.
 4. Open the pull request with a title in the same format. The squash merge uses that title as the commit message on `main`.
