@@ -1,8 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { expect, fn, within } from 'storybook/test';
 
-import { BadgeCheck, Bell, Heart, Play } from '@return-spotify-lyrics/icons';
-import Button from '@return-spotify-lyrics/ui/Button';
+import { BadgeCheck, Bell, Ellipsis, Play } from '@return-spotify-lyrics/icons';
+import Button, { type ButtonProps } from '@return-spotify-lyrics/ui/Button';
+import Text from '@return-spotify-lyrics/ui/Text';
 
 const meta = {
     title: 'Button',
@@ -28,72 +29,51 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
-export const Secondary: Story = {
-    play: async ({ canvas, userEvent, args }) => {
-        const button = canvas.getByRole('button', { name: 'Follow' });
+/**
+ * The actions of an artist page: a round play button, a pill with a label, and a round icon button. The Follow button
+ * takes the args, so the controls change it in place.
+ */
+export const ArtistActions: Story = {
+    render: (args) => (
+        <div className="flex items-center gap-4">
+            <Button
+                variant="primary"
+                tone="accent"
+                size="large"
+                icon={<Play />}
+                aria-label="Play The Quiet Hours"
+            />
+            <Button {...(args as ButtonProps)} />
+            <Button
+                variant="tertiary"
+                icon={<Ellipsis />}
+                aria-label="More options for The Quiet Hours"
+            />
+        </div>
+    ),
+    play: async ({ canvas, userEvent, args, step }) => {
+        const play = canvas.getByRole('button', { name: /^Play/ });
+        const follow = canvas.getByRole('button', {
+            name: String(args.children),
+        });
 
-        await userEvent.tab();
-        await expect(button).toHaveFocus();
-        await userEvent.keyboard('{Enter}');
-        await userEvent.keyboard(' ');
-        await expect(args.onClick).toHaveBeenCalledTimes(2);
+        await step('An icon with no label makes a circle', async () => {
+            const { width, height } = play.getBoundingClientRect();
+            await expect(Math.abs(width - height)).toBeLessThanOrEqual(1);
+        });
+
+        await step('Enter and Space press the focused button', async () => {
+            await userEvent.tab();
+            await userEvent.tab();
+            await expect(follow).toHaveFocus();
+            await userEvent.keyboard('{Enter}');
+            await userEvent.keyboard(' ');
+            await expect(args.onClick).toHaveBeenCalledTimes(2);
+        });
     },
 };
 
-export const Primary: Story = {
-    args: { variant: 'primary', children: 'Log in' },
-};
-
-export const PrimaryAccent: Story = {
-    args: {
-        variant: 'primary',
-        tone: 'accent',
-        icon: <Play />,
-        children: 'Play',
-    },
-};
-
-export const Tertiary: Story = {
-    args: { variant: 'tertiary', children: 'Show all' },
-};
-
-export const Negative: Story = {
-    args: { tone: 'negative', children: 'Remove from playlist' },
-};
-
-// An icon-only button has no label, so it doesn't take the labelled args of meta.
-export const IconOnly: StoryObj<typeof Button> = {
-    args: {
-        variant: 'tertiary',
-        icon: <Heart />,
-        'aria-label': 'Save to Your Library',
-        children: undefined,
-    },
-    play: async ({ canvas }) => {
-        await expect(
-            canvas.getByRole('button', { name: 'Save to Your Library' })
-        ).toBeInTheDocument();
-    },
-};
-
-/** An icon with no label makes a circle in every variant, like the green play button. */
-export const PlayButton: StoryObj<typeof Button> = {
-    args: {
-        variant: 'primary',
-        tone: 'accent',
-        size: 'large',
-        icon: <Play />,
-        'aria-label': 'Play',
-        children: undefined,
-    },
-    play: async ({ canvas }) => {
-        const { width, height } = canvas
-            .getByRole('button', { name: 'Play' })
-            .getBoundingClientRect();
-        await expect(Math.abs(width - height)).toBeLessThanOrEqual(1);
-    },
-};
-
+// A badge and an icon-only button take the place of the label of meta.
 export const WithBadge: StoryObj<typeof Button> = {
     args: {
         variant: 'tertiary',
@@ -102,20 +82,71 @@ export const WithBadge: StoryObj<typeof Button> = {
         badge: 3,
         children: undefined,
     },
+    play: async ({ canvas }) => {
+        const button = canvas.getByRole('button', { name: /Notifications/ });
+        await expect(within(button).getByText('3')).toBeVisible();
+    },
 };
 
-export const Small: Story = {
-    args: { size: 'small' },
+/** A verified artist's name with its mark: the label is Text, so the icon takes the size of the text. */
+export const VerifiedArtist: Story = {
+    args: {
+        variant: 'tertiary',
+        children: (
+            <>
+                The Quiet Hours <BadgeCheck data-testid="icon" />
+            </>
+        ),
+    },
+    play: async ({ canvas }) => {
+        const button = canvas.getByRole('button', { name: 'The Quiet Hours' });
+        const icon = within(button).getByTestId('icon');
+        const fontSize = parseFloat(getComputedStyle(icon).fontSize);
+        const height = icon.getBoundingClientRect().height;
+        await expect(Math.abs(height - fontSize)).toBeLessThanOrEqual(1);
+    },
 };
 
-export const Large: Story = {
-    args: { size: 'large', variant: 'primary', tone: 'accent' },
+/** A save that takes a moment: the button keeps its width and its place in the tab order, and it ignores clicks. */
+export const Loading: Story = {
+    args: {
+        loading: true,
+        variant: 'primary',
+        tone: 'accent',
+        children: 'Save',
+    },
+    render: (args) => (
+        <div className="grid w-60 gap-3">
+            <Text className="text-small text-subdued">
+                Saving your lyrics to the draft…
+            </Text>
+            <Button {...(args as ButtonProps)} />
+        </div>
+    ),
+    play: async ({ canvas, userEvent, args }) => {
+        const button = canvas.getByRole('button', { name: /Save/ });
+
+        await expect(button).toHaveAttribute('aria-busy', 'true');
+        await expect(canvas.getByRole('status')).toHaveAccessibleName(
+            'Loading'
+        );
+        await expect(
+            within(button).getByText('Save').getBoundingClientRect().width
+        ).toBeGreaterThan(0);
+
+        await userEvent.click(button);
+        await expect(args.onClick).not.toHaveBeenCalled();
+        await userEvent.tab();
+        await expect(button).toHaveFocus();
+    },
 };
 
 export const Disabled: Story = {
     args: { disabled: true },
     play: async ({ canvas, userEvent, args }) => {
-        const button = canvas.getByRole('button', { name: 'Follow' });
+        const button = canvas.getByRole('button', {
+            name: String(args.children),
+        });
 
         await userEvent.click(button);
         await expect(args.onClick).not.toHaveBeenCalled();
@@ -125,60 +156,15 @@ export const Disabled: Story = {
     },
 };
 
-export const Loading: Story = {
-    args: {
-        loading: true,
-        variant: 'primary',
-        tone: 'accent',
-        children: 'Save',
-    },
-    play: async ({ canvas, userEvent, args }) => {
-        const button = canvas.getByRole('button', { name: /Save/ });
-
-        await expect(button).toHaveAttribute('aria-busy', 'true');
-        await expect(canvas.getByRole('status')).toHaveAccessibleName(
-            'Loading'
-        );
-        // The label stays in place but hidden, so the button keeps its width.
-        await expect(
-            within(button).getByText('Save').getBoundingClientRect().width
-        ).toBeGreaterThan(0);
-
-        // A loading button ignores clicks, but it stays in the tab order, so focus doesn't jump away.
-        await userEvent.click(button);
-        await expect(args.onClick).not.toHaveBeenCalled();
-        await userEvent.tab();
-        await expect(button).toHaveFocus();
-    },
-};
-
+/** A link with the look of a button stays a link, for a person and for assistive technology. */
 export const AsLink: Story = {
     args: {
         variant: 'primary',
         render: <a href="#playlist" />,
         children: 'Open playlist',
     },
-    play: async ({ canvas }) => {
-        const link = canvas.getByRole('link', { name: 'Open playlist' });
+    play: async ({ canvas, args }) => {
+        const link = canvas.getByRole('link', { name: String(args.children) });
         await expect(link).toHaveAttribute('href', '#playlist');
-    },
-};
-
-export const InlineIcon: Story = {
-    args: {
-        variant: 'tertiary',
-        children: (
-            <>
-                Daft Punk <BadgeCheck data-testid="icon" />
-            </>
-        ),
-    },
-    play: async ({ canvas }) => {
-        const button = canvas.getByRole('button', { name: 'Daft Punk' });
-        const icon = within(button).getByTestId('icon');
-        // The label is Text, so an icon in it takes the size of the text.
-        const fontSize = parseFloat(getComputedStyle(icon).fontSize);
-        const height = icon.getBoundingClientRect().height;
-        await expect(Math.abs(height - fontSize)).toBeLessThanOrEqual(1);
     },
 };

@@ -184,7 +184,9 @@ Every story is a test. It runs in Chromium, Firefox and WebKit, and it fails on 
 - A story file has no constants at the top. A story keeps its values in its args, and its `play` function reads them from `args`, so a value is written once. Fixtures that many files use go in `shared.tsx`.
 - Storybook has no docs page for each component, because the stories show the component and the Controls panel shows its props.
 - Controls come from the prop types. Set a control in `argTypes` only when a type can't give it, like `CssLength` or `Direction`.
-- Each story shows one state or one prop that matters, and its name says which, like `FixedAspectRatio`.
+- A component has a few stories, and each is a real scene, like a settings list or a track list, with a name that says what it shows, like `SelectAll`. The Controls panel covers each prop, so a story that only shows another value of one prop adds nothing.
+- Build a scene from the library's components, like Button, Text and Link, not from raw elements, so the stories also show how the parts fit together.
+- A story that checks more than one behaviour names each one with `step`.
 - Add a `play` function when the component does something after input: a key, a pointer, a focus change or a new value.
 - Find elements as a person does, by role and accessible name: `canvas.getByRole('separator', { name: 'Resize left' })`. Never find them by class or `data-part`.
 - Act with `userEvent`, which sends real browser events. Don't call handlers or change state directly.
