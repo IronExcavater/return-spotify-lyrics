@@ -12,6 +12,11 @@
 
         min-width: 0;
 
+        /* Right-to-left text reads on to the left, so the track moves right to show it. */
+        &[data-rtl][data-axis='x'] {
+            --marquee-to: var(--marquee-distance) 0;
+        }
+
         > [data-part='track'] {
             display: flex;
             width: max-content;
@@ -48,7 +53,7 @@
             will-change: translate;
         }
 
-        &:is([data-direction='right'], [data-direction='down'])
+        &:is([data-direction='end'], [data-direction='down'])
             > [data-part='track'] {
             animation-direction: reverse;
         }

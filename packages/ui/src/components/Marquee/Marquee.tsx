@@ -15,8 +15,11 @@ import FadeBox from '../FadeBox/FadeBox';
 import Separator, { type SeparatorProps } from '../Separator/Separator';
 
 export type MarqueeProps = ComponentProps<'div'> & {
-    /** The way the content moves. Up and down need a height on the marquee. A bounce starts at the start of the content either way. */
-    direction?: 'left' | 'right' | 'up' | 'down';
+    /**
+     * The way the content moves: to the start or the end of its text, so right-to-left text moves the other way, or up
+     * or down, which need a height. A bounce starts at the start of the text, so only the axis matters for it.
+     */
+    direction?: 'start' | 'end' | 'up' | 'down';
     /** A loop moves on and on, with copies after the content. A bounce moves back and forth across the overflow. */
     motion?: 'loop' | 'bounce';
     /** Moves a loop even when the content fits, with copies that fill the box. A bounce moves only when the content overflows. */
@@ -35,22 +38,16 @@ export type MarqueeProps = ComponentProps<'div'> & {
     fadeDepth?: CssLength;
 };
 
-type Sizes = { box: number; content: number; item: number };
+type Sizes = { box: number; content: number; item: number; isRtl: boolean };
 
-const NO_SIZES: Sizes = { box: 0, content: 0, item: 0 };
-
-// A still marquee shows the start of its content, so only the far edge fades.
-const FADE_EDGES: Record<'x' | 'y', { moving: Side[]; still: Side[] }> = {
-    x: { moving: ['left', 'right'], still: ['right'] },
-    y: { moving: ['top', 'bottom'], still: ['bottom'] },
-};
+const NO_SIZES: Sizes = { box: 0, content: 0, item: 0, isRtl: false };
 
 /**
  * Moves content that is too long for its box, so a person can read all of it. The copies of a loop render the same
  * children, and they share hover, press and text selection styles with the original.
  */
 export default function Marquee({
-    direction = 'left',
+    direction = 'start',
     motion = 'loop',
     fill = false,
     play = 'auto',
@@ -91,7 +88,6 @@ export default function Marquee({
         ? { start: restShare }
         : { start: restShare / 2, end: restShare / 2 };
     const easing = holdEasing(isLoop ? 'linear' : 'ease-in-out', hold);
-    const fadeEdges = FADE_EDGES[axis];
 
     useCopies(trackRef, copies > 0);
 
@@ -110,6 +106,7 @@ export default function Marquee({
                 box: lengthOf(root),
                 content: lengthOf(content),
                 item: lengthOf(item),
+                isRtl: getComputedStyle(root).direction === 'rtl',
             };
             setSizes((previous) => (isSame(previous, next) ? previous : next));
         };
@@ -142,7 +139,10 @@ export default function Marquee({
         if (moving || !root || !track || !from) return;
 
         // A loop looks the same one item along, so it goes to the nearer of the two.
-        const to = isLoop && Math.abs(from) > distance / 2 ? -distance : 0;
+        const to =
+            isLoop && Math.abs(from) > distance / 2
+                ? Math.sign(from) * distance
+                : 0;
         const time = getComputedStyle(root).getPropertyValue(
             '--transition-duration-default'
         );
@@ -167,15 +167,18 @@ export default function Marquee({
 
     return (
         <FadeBox
+            // The text decides its own direction, so a right-to-left title moves the other way.
+            dir="auto"
             {...props}
             ref={rootRef}
             className={clsx('marquee', className)}
             enabled={!fits || moving}
             depth={fadeDepth}
-            edges={moving ? fadeEdges.moving : fadeEdges.still}
+            edges={findFadeEdges(axis, sizes.isRtl, moving)}
             data-direction={direction}
             data-motion={motion}
             data-axis={axis}
+            data-rtl={sizes.isRtl || undefined}
             data-play={start}
             data-moving={moving || undefined}
             style={{
@@ -235,7 +238,23 @@ export default function Marquee({
 }
 
 function isSame(a: Sizes, b: Sizes) {
-    return a.box === b.box && a.content === b.content && a.item === b.item;
+    return (
+        a.box === b.box &&
+        a.content === b.content &&
+        a.item === b.item &&
+        a.isRtl === b.isRtl
+    );
+}
+
+// A still marquee shows the start of its content, so only the edge at the end of the text, or the bottom, fades.
+function findFadeEdges(
+    axis: 'x' | 'y',
+    isRtl: boolean,
+    moving: boolean
+): Side[] {
+    if (axis === 'y') return moving ? ['top', 'bottom'] : ['bottom'];
+    if (moving) return ['left', 'right'];
+    return [isRtl ? 'left' : 'right'];
 }
 
 function toTranslate(offset: number, axis: 'x' | 'y') {

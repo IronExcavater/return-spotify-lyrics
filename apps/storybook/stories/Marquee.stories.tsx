@@ -13,7 +13,7 @@ const meta = {
     // The component defaults give every control a value. The delay and the rest depend on other props, so they start empty.
     args: {
         children: 'Paper Satellites (Northern Static Remix) · The Quiet Hours',
-        direction: 'left',
+        direction: 'start',
         motion: 'loop',
         fill: false,
         play: 'auto',
@@ -97,6 +97,26 @@ export const Fill: Story = {
         );
         const [original] = canvas.getAllByText(String(args.children));
         await expectToMove(original!);
+    },
+};
+
+/** Right-to-left text reads on to the left, so the loop moves right, and a bounce starts at the right. */
+export const RightToLeft: Story = {
+    args: { children: 'שירים על המים בלילה, ואורות הנמל עד הבוקר' },
+    play: async ({ canvas, args }) => {
+        await waitFor(() =>
+            expect(canvas.getAllByText(String(args.children))).toHaveLength(2)
+        );
+        const [original] = canvas.getAllByText(String(args.children));
+        const start = original!.getBoundingClientRect().x;
+        // The delay before the first pass is a second, so a move can take a little longer than that.
+        await waitFor(
+            () =>
+                expect(original!.getBoundingClientRect().x).toBeGreaterThan(
+                    start + 2
+                ),
+            { timeout: 3000 }
+        );
     },
 };
 
