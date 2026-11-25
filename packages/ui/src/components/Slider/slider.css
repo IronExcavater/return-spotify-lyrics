@@ -1,0 +1,114 @@
+/* Defaults live in @layer components so that a consumer className always wins. */
+@layer components {
+    .slider {
+        --slider-thickness: 4px;
+        --slider-thumb-size: 12px;
+
+        display: grid;
+        gap: 8px;
+
+        > [data-part='label'] {
+            @apply font-bold;
+        }
+
+        /* The control is taller than the track, so a pointer finds it more easily. */
+        > [data-part='control'] {
+            display: flex;
+            align-items: center;
+            padding-block: 6px;
+            cursor: pointer;
+            touch-action: none;
+            user-select: none;
+        }
+
+        [data-part='track'] {
+            position: relative;
+            width: 100%;
+            height: var(--slider-thickness);
+            border-radius: 9999px;
+            background-color: var(--background-color-tint-strong);
+        }
+
+        [data-part='indicator'] {
+            border-radius: inherit;
+            background-color: var(--background-color-inverse);
+            transition-property: background-color;
+            transition-duration: var(--transition-duration-fast);
+        }
+
+        [data-part='mark'] {
+            position: absolute;
+            top: 50%;
+            left: var(--slider-mark);
+            width: var(--slider-thickness);
+            height: var(--slider-thickness);
+            border-radius: 9999px;
+            background-color: var(--background-color-default);
+            translate: -50% -50%;
+        }
+
+        /* The thumb shows on hover, focus and drag, as in Spotify's player, so a still bar stays quiet. */
+        [data-part='thumb'] {
+            width: var(--slider-thumb-size);
+            height: var(--slider-thumb-size);
+            border-radius: 9999px;
+            background-color: var(--background-color-inverse);
+            box-shadow: var(--shadow-overlay);
+            opacity: 0;
+            transition-property: opacity;
+            transition-duration: var(--transition-duration-fast);
+
+            &:has(:focus-visible) {
+                opacity: 1;
+                outline: var(--focus-width) solid var(--outline-color-focus);
+                outline-offset: var(--focus-offset);
+            }
+        }
+
+        &:not([data-disabled]):is(:hover, [data-hover], [data-dragging]) {
+            [data-part='indicator'] {
+                background-color: var(--background-color-accent);
+            }
+
+            [data-part='thumb'] {
+                opacity: 1;
+            }
+        }
+
+        /* A vertical slider fills the height of its parent, and the control takes what the label leaves. */
+        &[data-orientation='vertical'] {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100%;
+
+            > [data-part='control'] {
+                flex: 1;
+                flex-direction: column;
+                padding-block: 0;
+                padding-inline: 6px;
+            }
+
+            [data-part='track'] {
+                width: var(--slider-thickness);
+                height: 100%;
+            }
+
+            [data-part='mark'] {
+                top: auto;
+                bottom: var(--slider-mark);
+                left: 50%;
+                translate: -50% 50%;
+            }
+        }
+
+        &[data-disabled] {
+            cursor: not-allowed;
+            opacity: var(--opacity-disabled);
+
+            > [data-part='control'] {
+                cursor: not-allowed;
+            }
+        }
+    }
+}
