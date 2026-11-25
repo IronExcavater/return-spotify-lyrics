@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { expect, waitFor } from 'storybook/test';
 
-import { BadgeCheck, Music } from '@return-spotify-lyrics/icons';
+import { BadgeCheck } from '@return-spotify-lyrics/icons';
 import Text from '@return-spotify-lyrics/ui/Text';
 
 // The first formatted story loads the formatter chunk, which can take more than a second on a cold server.
@@ -23,75 +23,76 @@ const UNSAFE =
 const LYRIC =
     'Paper boats in the harbour, lights on the water, and we sail until the morning while the city falls asleep around us';
 
+const DOC = {
+    type: 'doc',
+    content: [
+        {
+            type: 'paragraph',
+            content: [
+                { type: 'text', text: 'Lights on the ' },
+                { type: 'text', text: 'water', marks: [{ type: 'italic' }] },
+            ],
+        },
+    ],
+};
+
 const meta = {
     title: 'Text',
     component: Text,
-    // Size, weight and tone default to the variant's, so they start empty.
     args: {
         children: 'Paper Satellites',
-        variant: 'body',
+        inline: false,
     },
     argTypes: {
         children: { control: 'text' },
         render: { control: false },
     },
-    render: (args) => (
-        <div className="w-72">
-            <Text {...args} />
-        </div>
-    ),
 } satisfies Meta<typeof Text>;
 
 export default meta;
 
 type Story = StoryObj<typeof meta>;
 
-// The docs page takes its controls from the first story, so it uses the args.
-export const Body: Story = {};
+export const Plain: Story = {};
 
-export const Variants: Story = {
-    render: () => (
-        <div className="grid w-72 gap-2">
-            <Text variant="title">Paper Satellites</Text>
-            <Text variant="heading">Popular tracks</Text>
-            <Text variant="body">The Quiet Hours</Text>
-            <Text variant="caption">Album · 2026 · 11 songs</Text>
-        </div>
-    ),
+/** Text has no typography props, so classes set the size, weight and colour case by case. */
+export const WithClasses: Story = {
+    args: { className: 'text-x-large font-bold text-subdued' },
     play: async ({ canvas }) => {
-        // A title and a heading are real headings, so the page outline works.
+        const text = canvas.getByText('Paper Satellites');
+        await expect(text).toHaveStyle({ fontSize: '24px', fontWeight: '700' });
+    },
+};
+
+export const AsHeading: Story = {
+    args: {
+        render: <h2 />,
+        className: 'text-x-large font-bold',
+        children: 'Made for you',
+    },
+    play: async ({ canvas }) => {
         await expect(
-            canvas.getByRole('heading', { level: 1, name: 'Paper Satellites' })
-        ).toBeInTheDocument();
-        await expect(
-            canvas.getByRole('heading', { level: 2, name: 'Popular tracks' })
+            canvas.getByRole('heading', { level: 2, name: 'Made for you' })
         ).toBeInTheDocument();
     },
 };
 
-export const Tones: Story = {
-    render: () => (
-        <div className="grid w-72 gap-1">
-            {(
-                [
-                    'default',
-                    'subdued',
-                    'accent',
-                    'negative',
-                    'warning',
-                    'info',
-                ] as const
-            ).map((tone) => (
-                <Text key={tone} tone={tone}>
-                    {tone}
-                </Text>
-            ))}
+// The parent sets a colour, so the story can show that Text takes it.
+export const TakesParentColour: Story = {
+    render: (args) => (
+        <div data-testid="parent" className="text-accent">
+            <Text {...args} />
         </div>
     ),
+    play: async ({ canvas }) => {
+        await expect(
+            getComputedStyle(canvas.getByText('Paper Satellites')).color
+        ).toBe(getComputedStyle(canvas.getByTestId('parent')).color);
+    },
 };
 
-export const LineClamp: Story = {
-    args: { children: LYRIC, lineClamp: 2, variant: 'body' },
+export const MaxLines: Story = {
+    args: { children: LYRIC, maxLines: 2, className: 'w-72' },
     play: async ({ canvas }) => {
         const text = canvas.getByText(LYRIC);
         // The text is cut on screen, but the element still holds all of it.
@@ -102,7 +103,7 @@ export const LineClamp: Story = {
 
 export const InlineIcons: Story = {
     args: {
-        variant: 'heading',
+        className: 'text-x-large font-bold',
         children: (
             <>
                 The Quiet Hours{' '}
@@ -122,7 +123,7 @@ export const InlineIcons: Story = {
 };
 
 export const RightToLeft: Story = {
-    args: { children: 'שירים על המים בלילה', variant: 'heading' },
+    args: { children: 'שירים על המים בלילה' },
     play: async ({ canvas }) => {
         const text = canvas.getByText('שירים על המים בלילה');
         await expect(text).toHaveAttribute('dir', 'auto');
@@ -131,41 +132,17 @@ export const RightToLeft: Story = {
 };
 
 export const LiteralStrings: Story = {
-    render: () => (
-        <div className="grid w-72 gap-1">
-            <Text>*NSYNC</Text>
-            <Text>Sunn O)))</Text>
-            <Text>
-                <Music aria-hidden /> **Not bold** and _not italic_
-            </Text>
-        </div>
-    ),
+    args: { children: '*NSYNC, Sunn O))) and **not bold**' },
     play: async ({ canvas }) => {
         // Plain text is never parsed, so names with markdown characters stay as they are.
-        await expect(canvas.getByText('*NSYNC')).toBeInTheDocument();
-        await expect(canvas.getByText('Sunn O)))')).toBeInTheDocument();
-    },
-};
-
-export const AsHeading: Story = {
-    args: {
-        render: <h3 />,
-        variant: 'heading',
-        children: 'Made for you',
-    },
-    play: async ({ canvas }) => {
         await expect(
-            canvas.getByRole('heading', { level: 3, name: 'Made for you' })
+            canvas.getByText('*NSYNC, Sunn O))) and **not bold**')
         ).toBeInTheDocument();
     },
 };
 
 export const Markdown: Story = {
-    render: () => (
-        <Text format="markdown" className="w-72">
-            {BIO}
-        </Text>
-    ),
+    args: { format: 'markdown', children: BIO, className: 'w-72' },
     play: async ({ canvas }) => {
         // The formatter loads lazily, so the formatted text arrives a moment later.
         const link = await canvas.findByRole(
@@ -185,11 +162,11 @@ export const Markdown: Story = {
 };
 
 export const Html: Story = {
-    render: () => (
-        <Text format="html" tone="subdued" className="w-72">
-            {DESCRIPTION}
-        </Text>
-    ),
+    args: {
+        format: 'html',
+        children: DESCRIPTION,
+        className: 'w-72 text-subdued',
+    },
     play: async ({ canvas }) => {
         await expect(
             await canvas.findByRole('link', { name: /Ada Vale/ }, LAZY_LOAD)
@@ -199,11 +176,9 @@ export const Html: Story = {
 };
 
 export const UnsafeHtml: Story = {
-    render: () => (
-        <Text format="html" className="w-72" data-testid="unsafe">
-            {UNSAFE}
-        </Text>
-    ),
+    args: { format: 'html', children: UNSAFE },
+    // The root has no role, so the story gives it a test id.
+    render: (args) => <Text {...args} data-testid="unsafe" />,
     play: async ({ canvas }) => {
         const text = canvas.getByTestId('unsafe');
         await waitFor(() =>
@@ -215,28 +190,9 @@ export const UnsafeHtml: Story = {
     },
 };
 
-export const RichContent: Story = {
-    render: () => (
-        <Text
-            className="w-72"
-            content={{
-                type: 'doc',
-                content: [
-                    {
-                        type: 'paragraph',
-                        content: [
-                            { type: 'text', text: 'Lights on the ' },
-                            {
-                                type: 'text',
-                                text: 'water',
-                                marks: [{ type: 'italic' }],
-                            },
-                        ],
-                    },
-                ],
-            }}
-        />
-    ),
+// A document takes the place of the children and the format of meta.
+export const Doc: StoryObj<typeof Text> = {
+    args: { doc: DOC, children: undefined, format: undefined },
     play: async ({ canvas }) => {
         await expect(
             (await canvas.findByText('water', {}, LAZY_LOAD)).tagName
@@ -244,18 +200,23 @@ export const RichContent: Story = {
     },
 };
 
-export const Label: Story = {
-    render: () => (
-        <div data-testid="control" className="text-accent">
-            <Text variant="label">Follow</Text>
-        </div>
-    ),
+/** The name of a control keeps only inline formatting, so a link becomes text and blocks join into one line. */
+export const Inline: Story = {
+    args: {
+        inline: true,
+        format: 'markdown',
+        children:
+            'Follow **Daft Punk**\n\non [Spotify](https://open.spotify.com)',
+    },
+    // The root has no role, so the story gives it a test id.
+    render: (args) => <Text {...args} data-testid="inline" />,
     play: async ({ canvas }) => {
-        // A label sits in a control, so it takes the colour of the control.
-        const label = canvas.getByText('Follow');
-        await expect(getComputedStyle(label).color).toBe(
-            getComputedStyle(canvas.getByTestId('control')).color
-        );
-        await expect(label).toHaveStyle({ fontWeight: '700' });
+        // The formatter loads lazily, and the bold text shows that it has.
+        await canvas.findByText('Daft Punk', { selector: 'strong' }, LAZY_LOAD);
+        const text = canvas.getByTestId('inline');
+        await expect(text).toHaveTextContent('Follow Daft Punk on Spotify');
+        await expect(text.tagName).toBe('SPAN');
+        await expect(text.querySelector('p, div')).toBeNull();
+        await expect(canvas.queryByRole('link')).not.toBeInTheDocument();
     },
 };

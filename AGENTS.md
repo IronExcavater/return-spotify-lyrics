@@ -105,10 +105,10 @@ In `packages/ui/src`:
 - **Keep native behaviour.** When a component takes over a native action, like a link click, the native props that change that action still work. Link gives a click with `target` or `download` back to the browser.
 - **State and variants** are `data-*` attributes, like `data-dragging` or `data-placement`. Inner elements get a `data-part`, like `data-part="handle"`. Settings that CSS uses are CSS variables, like `--fade-size`. Then a consumer can restyle any of them from outside.
 - **Every prop has a default** in the parameter list, so that the docs and the story controls show it.
-- **Text goes through Text.** A component shows its text with `Text`, and a control's label with `<Text variant="label">`. Its CSS sets no font size, line height or weight. Then typography, inline icons and nouns work the same everywhere.
+- **Text goes through Text.** A component shows its text with `Text`, and a control's name with `<Text inline>`. Text has no typography of its own, so the component sets it in its CSS with the theme's utilities, like `@apply text-small font-bold`. Then formatting, inline icons and nouns work the same everywhere.
 - **Lengths** take a number for pixels or a string for any CSS length. Use the `CssLength` type and `toCssSize`.
 - **Names describe meaning, not looks:** `tone="negative"`, not `color="red"`.
-- **Write a JSDoc line** for the component, and for each exported prop whose name doesn't say everything. The docs page shows them, so a component without one has an empty page.
+- **Write a JSDoc line** for the component, and for each exported prop whose name doesn't say everything. The Controls panel in Storybook and the editor's hover show them.
 - **Base UI first.** Build on Base UI for anything with keyboard and focus rules: menus, dialogs, lists, sliders and popups. Build your own only for layout, visuals and motion, where Base UI has nothing.
 
 ## Styling
@@ -181,7 +181,7 @@ Every story is a test. It runs in Chromium, Firefox and WebKit, and it fails on 
 ### Story tests
 
 - In a story file, `meta` holds the shared args and the render function, and each story sets only what's different.
-- Every component gets a docs page from its JSDoc, its prop types and its stories. The page takes its controls from the first story, so that story renders from the args.
+- Storybook has no docs page for each component, because the stories show the component and the Controls panel shows its props.
 - Controls come from the prop types. Set a control in `argTypes` only when a type can't give it, like `CssLength` or `Direction`.
 - Each story shows one state or one prop that matters, and its name says which, like `FixedAspectRatio`.
 - Add a `play` function when the component does something after input: a key, a pointer, a focus change or a new value.
