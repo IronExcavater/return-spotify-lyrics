@@ -13,6 +13,7 @@ import useCopies from '../../hooks/useCopies';
 import useReducedMotion from '../../hooks/useReducedMotion';
 import FadeBox from '../FadeBox/FadeBox';
 import Separator, { type SeparatorProps } from '../Separator/Separator';
+import Text from '../Text/Text';
 
 export type MarqueeProps = ComponentProps<'div'> & {
     /**
@@ -219,7 +220,10 @@ export default function Marquee({
                         data-copy={index > 0 || undefined}
                         aria-hidden={index > 0 || undefined}
                     >
-                        <div data-part="content">{children}</div>
+                        {/* Text puts an icon on the line. The root reads the direction from this content, so it has no dir. */}
+                        <Text data-part="content" dir={undefined}>
+                            {children}
+                        </Text>
                         {copies > 0 && (
                             <Separator
                                 {...separator}

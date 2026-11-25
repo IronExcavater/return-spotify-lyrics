@@ -1,6 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { expect, waitFor, within } from 'storybook/test';
 
+import { BadgeCheck, Headphones } from '@return-spotify-lyrics/icons';
+import Badge from '@return-spotify-lyrics/ui/Badge';
 import Link from '@return-spotify-lyrics/ui/Link';
 import Marquee from '@return-spotify-lyrics/ui/Marquee';
 import Text from '@return-spotify-lyrics/ui/Text';
@@ -215,5 +217,56 @@ export const SharedStates: Story = {
                 expect(CSS.highlights.get('copy-selection')?.size).toBe(1)
             );
         });
+    },
+};
+
+/**
+ * The worst case: a link, an icon, a Badge, emoji, combining marks, CJK and right-to-left text in one loop. The copies
+ * stay hidden, so a person reaches the link once, and the marquee stays in its row.
+ */
+export const WackyContent: Story = {
+    args: {
+        children: (
+            <>
+                <Headphones aria-hidden />{' '}
+                <Link href="https://open.spotify.com/artist/sigur-ros">
+                    Sigur Rós
+                </Link>{' '}
+                – Hoppípolla (Live at 坂本龍一&apos;s 港の夜){' '}
+                <BadgeCheck role="img" aria-label="Verified artist" /> · שירים
+                על המים · ليلة في الميناء · 👩‍👩‍👧‍👦🏳️‍🌈 · Z̷̢a̶͙l̸̨g̵̣o̷͚ <Badge>Explicit</Badge>
+            </>
+        ),
+    },
+    argTypes: { children: { control: false } },
+    play: async ({ canvas, userEvent, step }) => {
+        const marquee = canvas.getByTestId('marquee');
+        const link = await canvas.findByRole('link', { name: /Sigur Rós/ });
+
+        await step('A person finds one link and one icon', async () => {
+            await expect(canvas.getAllByRole('link')).toHaveLength(1);
+            await expect(
+                canvas.getAllByRole('img', { name: 'Verified artist' })
+            ).toHaveLength(1);
+        });
+
+        await step('Tab reaches the link once', async () => {
+            await userEvent.tab();
+            await expect(link).toHaveFocus();
+            await userEvent.tab();
+            await expect(marquee).not.toContainElement(
+                document.activeElement as HTMLElement
+            );
+        });
+
+        await step('It stays on one line in its row', async () => {
+            const row = marquee.parentElement!.getBoundingClientRect();
+            const { width, height } = marquee.getBoundingClientRect();
+            const line = parseFloat(getComputedStyle(marquee).lineHeight);
+            await expect(width).toBeLessThanOrEqual(row.width + 1);
+            await expect(height).toBeLessThan(line * 1.5);
+        });
+
+        await step('It moves', () => expectToMove(link));
     },
 };
