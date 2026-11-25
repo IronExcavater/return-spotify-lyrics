@@ -1,0 +1,66 @@
+/* Defaults live in @layer components so that a consumer className always wins. */
+@layer components {
+    .segmented-control {
+        position: relative;
+        display: inline-flex;
+        padding: 4px;
+        border-radius: 9999px;
+        background-color: var(--background-color-tint);
+
+        /* The pill slides under the chosen segment, and the duration token is 0s with reduced motion. */
+        > [data-part='indicator'] {
+            position: absolute;
+            top: 4px;
+            bottom: 4px;
+            left: 0;
+            width: var(--segment-width, 0);
+            border-radius: 9999px;
+            background-color: var(--background-color-inverse);
+            opacity: 0;
+            translate: var(--segment-x, 0) 0;
+            transition-property: translate, width;
+            transition-duration: var(--transition-duration-default);
+        }
+
+        &[data-placed] > [data-part='indicator'] {
+            opacity: 1;
+        }
+
+        /* A segment is positioned, so it paints above the pill. */
+        > [data-part='item'] {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 9999px;
+            color: var(--text-color-subdued);
+            cursor: pointer;
+            transition-property: color;
+            transition-duration: var(--transition-duration-fast);
+            @apply text-small font-bold;
+
+            &:is(:hover, [data-hover]) {
+                color: var(--text-color-default);
+            }
+
+            &[data-pressed] {
+                color: var(--text-color-inverse);
+            }
+
+            &:has(> [data-part='icon']:only-child) {
+                padding: 6px;
+            }
+
+            > [data-part='icon'] {
+                display: grid;
+                place-items: center;
+
+                > svg {
+                    width: 16px;
+                    height: 16px;
+                }
+            }
+        }
+    }
+}
