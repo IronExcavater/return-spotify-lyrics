@@ -111,10 +111,6 @@ export const AllEdges: Story = {
     },
 };
 
-export const Inset: Story = {
-    args: { handlePlacement: 'inset' },
-};
-
 export const WithLimits: Story = {
     args: {
         minSize: { width: 200, height: 120 },

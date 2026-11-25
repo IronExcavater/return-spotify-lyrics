@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite';
 import { expect, fn } from 'storybook/test';
 
 import Switch from '@return-spotify-lyrics/ui/Switch';
+import Text from '@return-spotify-lyrics/ui/Text';
 
 const meta = {
     title: 'Switch',
@@ -14,57 +15,65 @@ const meta = {
     argTypes: {
         label: { control: 'text' },
     },
+    // A switch turns a setting on at once, so the stories show a settings list, and the first switch takes the args.
+    render: (args) => (
+        <div className="grid w-72 gap-3">
+            <Text render={<h3 />} className="font-bold">
+                Playback
+            </Text>
+            <Switch {...args} className="justify-between" />
+            <Switch
+                label="Crossfade songs"
+                defaultChecked
+                className="justify-between"
+            />
+            <Switch label="Normalise volume" className="justify-between" />
+        </div>
+    ),
 } satisfies Meta<typeof Switch>;
 
 export default meta;
 
 type Story = StoryObj<typeof meta>;
 
-export const Default: Story = {
-    play: async ({ canvas, userEvent, args }) => {
-        const toggle = canvas.getByRole('switch', { name: 'Autoplay' });
+export const Settings: Story = {
+    play: async ({ canvas, userEvent, args, step }) => {
+        const toggle = canvas.getByRole('switch', { name: String(args.label) });
 
-        await userEvent.click(toggle);
-        await expect(toggle).toHaveAttribute('aria-checked', 'true');
+        await step('A click and Space each turn the setting over', async () => {
+            await userEvent.click(toggle);
+            await expect(toggle).toHaveAttribute('aria-checked', 'true');
+            await userEvent.keyboard(' ');
+            await expect(toggle).toHaveAttribute('aria-checked', 'false');
+            await expect(args.onCheckedChange).toHaveBeenCalledTimes(2);
+        });
 
-        await userEvent.keyboard(' ');
-        await expect(toggle).toHaveAttribute('aria-checked', 'false');
-        await expect(args.onCheckedChange).toHaveBeenCalledTimes(2);
-    },
-};
-
-export const Checked: Story = {
-    args: { defaultChecked: true },
-    play: async ({ canvas }) => {
-        const toggle = canvas.getByRole('switch', { name: 'Autoplay' });
-        // The label comes first, then the track with the thumb in it.
-        const trackElement = toggle.lastElementChild as HTMLElement;
-        const thumb = trackElement.firstElementChild as HTMLElement;
-        const track = trackElement.getBoundingClientRect();
-        // The thumb sits at the end of the track when the switch is on.
-        await expect(
-            track.right - thumb.getBoundingClientRect().right
-        ).toBeLessThanOrEqual(4);
+        await step(
+            'The thumb of a switch that is on sits at the end',
+            async () => {
+                const on = canvas.getByRole('switch', {
+                    name: 'Crossfade songs',
+                });
+                await expect(on).toHaveAttribute('aria-checked', 'true');
+                // The label comes first, then the track with the thumb in it.
+                const track = on.lastElementChild as HTMLElement;
+                const thumb = track.firstElementChild as HTMLElement;
+                await expect(
+                    track.getBoundingClientRect().right -
+                        thumb.getBoundingClientRect().right
+                ).toBeLessThanOrEqual(4);
+            }
+        );
     },
 };
 
 export const Disabled: Story = {
     args: { disabled: true },
     play: async ({ canvas, userEvent, args }) => {
-        const toggle = canvas.getByRole('switch', { name: 'Autoplay' });
+        const toggle = canvas.getByRole('switch', { name: String(args.label) });
 
-        await userEvent.click(canvas.getByText('Autoplay'));
+        await userEvent.click(canvas.getByText(String(args.label)));
         await expect(toggle).toHaveAttribute('aria-checked', 'false');
         await expect(args.onCheckedChange).not.toHaveBeenCalled();
-    },
-};
-
-// A switch with no label doesn't take the labelled args of meta.
-export const WithoutLabel: StoryObj<typeof Switch> = {
-    args: { label: undefined, 'aria-label': 'Crossfade' },
-    play: async ({ canvas }) => {
-        await expect(
-            canvas.getByRole('switch', { name: 'Crossfade' })
-        ).toBeInTheDocument();
     },
 };

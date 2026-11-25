@@ -14,10 +14,12 @@ import {
     Shuffle,
     Trash2,
 } from '@return-spotify-lyrics/icons';
+import Button from '@return-spotify-lyrics/ui/Button';
 import Portal from '@return-spotify-lyrics/ui/Portal';
+import Text from '@return-spotify-lyrics/ui/Text';
 import usePortalSlot from '@return-spotify-lyrics/ui/usePortalSlot';
 
-import { ICON_BUTTON, Surface, TRACKS } from './shared';
+import { Surface, TRACKS } from './shared';
 
 type PageProps = {
     actions: HTMLElement | null;
@@ -32,25 +34,27 @@ function QueuePage({ actions }: PageProps) {
             <ul aria-label="Queue" className="divide-y">
                 {tracks.map((track) => (
                     <li key={track.title} className="py-2">
-                        {track.title}
-                        <div className="text-small text-subdued">
+                        <Text className="block">{track.title}</Text>
+                        <Text className="block text-small text-subdued">
                             {track.artist}
-                        </div>
+                        </Text>
                     </li>
                 ))}
             </ul>
             {tracks.length === 0 && (
-                <p className="text-subdued">The queue is empty.</p>
+                <Text render={<p />} className="text-subdued">
+                    The queue is empty.
+                </Text>
             )}
             {actions && (
                 <Portal container={actions}>
-                    <button
+                    <Button
+                        variant="tertiary"
+                        size="small"
+                        icon={<Trash2 />}
                         aria-label="Clear the queue"
-                        className={ICON_BUTTON}
                         onClick={() => setTracks([])}
-                    >
-                        <Trash2 aria-hidden className="size-4" />
-                    </button>
+                    />
                 </Portal>
             )}
         </>
@@ -65,21 +69,22 @@ function LyricsPage({ actions }: PageProps) {
             <div
                 className={`grid gap-2 ${large ? 'text-xx-large' : 'text-x-large'}`}
             >
-                <p>Lights on the water</p>
-                <p>Paper boats in the harbour</p>
-                <p>We sail until the morning</p>
-                <p>And the city falls asleep</p>
+                <Text render={<p />}>Lights on the water</Text>
+                <Text render={<p />}>Paper boats in the harbour</Text>
+                <Text render={<p />}>We sail until the morning</Text>
+                <Text render={<p />}>And the city falls asleep</Text>
             </div>
             {actions && (
                 <Portal container={actions}>
-                    <button
+                    <Button
+                        variant="tertiary"
+                        size="small"
+                        icon={<AArrowUp />}
                         aria-label="Larger text"
                         aria-pressed={large}
-                        className={ICON_BUTTON}
                         onClick={() => setLarge(!large)}
-                    >
-                        <AArrowUp aria-hidden className="size-4" />
-                    </button>
+                        className="aria-pressed:text-accent aria-[current=page]:text-accent"
+                    />
                 </Portal>
             )}
         </>
@@ -101,15 +106,16 @@ function PageActionsDemo() {
         <>
             <nav aria-label="Pages" className="flex">
                 {pages.map(({ page: target, label, Icon }) => (
-                    <button
+                    <Button
+                        variant="tertiary"
+                        size="small"
+                        icon={<Icon />}
                         key={target}
                         aria-label={label}
                         aria-current={page === target ? 'page' : undefined}
-                        className={ICON_BUTTON}
                         onClick={() => setPage(target)}
-                    >
-                        <Icon aria-hidden className="size-4" />
-                    </button>
+                        className="aria-pressed:text-accent aria-[current=page]:text-accent"
+                    />
                 ))}
             </nav>
             <div ref={setActions} className="ml-auto flex" />
@@ -143,24 +149,26 @@ function Controls({ route, onRouteChange }: ControlsProps) {
                     { route: 'lyrics', label: 'Lyrics', Icon: MicVocal },
                 ] as const
             ).map(({ route: target, label, Icon }) => (
-                <button
+                <Button
+                    variant="tertiary"
+                    size="small"
+                    icon={<Icon />}
                     key={target}
                     aria-label={label}
                     aria-current={route === target ? 'page' : undefined}
-                    className={ICON_BUTTON}
                     onClick={() => onRouteChange(target)}
-                >
-                    <Icon aria-hidden className="size-4" />
-                </button>
+                    className="aria-pressed:text-accent aria-[current=page]:text-accent"
+                />
             ))}
-            <button
+            <Button
+                variant="tertiary"
+                size="small"
+                icon={<Shuffle />}
                 aria-label="Shuffle"
                 aria-pressed={shuffle}
-                className={ICON_BUTTON}
                 onClick={() => setShuffle(!shuffle)}
-            >
-                <Shuffle aria-hidden className="size-4" />
-            </button>
+                className="aria-pressed:text-accent aria-[current=page]:text-accent"
+            />
         </nav>
     );
 }
@@ -177,7 +185,7 @@ function SharedControlsDemo() {
     const bars: Record<Route, ReactNode> = {
         home: (
             <>
-                <strong className="text-large">Good evening</strong>
+                <Text className="text-large font-bold">Good evening</Text>
                 {slots.home}
             </>
         ),
@@ -193,7 +201,7 @@ function SharedControlsDemo() {
         ),
         lyrics: (
             <>
-                <span className="min-w-0 truncate">{TRACKS[0]?.title}</span>
+                <Text className="min-w-0 truncate">{TRACKS[0]?.title}</Text>
                 {slots.lyrics}
             </>
         ),
@@ -202,10 +210,10 @@ function SharedControlsDemo() {
     return (
         <>
             <Surface bar={bars[route]}>
-                <p className="text-subdued">
+                <Text render={<p />} className="text-subdued">
                     The {route} page. The buttons in the app bar keep their
                     state and focus when the route changes the bar.
-                </p>
+                </Text>
             </Surface>
             {portal}
         </>
@@ -231,21 +239,21 @@ function Player({ position, onMove }: PlayerProps) {
             aria-label="Player"
             className="flex w-full items-center gap-1"
         >
-            <button
+            <Button
+                variant="tertiary"
+                size="small"
+                icon={<PlayIcon />}
                 aria-label={playing ? 'Pause' : 'Play'}
-                className={ICON_BUTTON}
                 onClick={() => setPlaying(!playing)}
-            >
-                <PlayIcon aria-hidden className="size-4" />
-            </button>
-            <span className="min-w-0 flex-1 truncate">{TRACKS[1]?.title}</span>
-            <button
+            />
+            <Text className="min-w-0 flex-1 truncate">{TRACKS[1]?.title}</Text>
+            <Button
+                variant="tertiary"
+                size="small"
+                icon={<ArrowDownUp />}
                 aria-label={`Move the player to the ${other}`}
-                className={ICON_BUTTON}
                 onClick={onMove}
-            >
-                <ArrowDownUp aria-hidden className="size-4" />
-            </button>
+            />
         </div>
     );
 }
@@ -267,10 +275,10 @@ function PlayerPositionDemo() {
                 <ul aria-label="Queue" className="divide-y">
                     {TRACKS.map((track) => (
                         <li key={track.title} className="py-2">
-                            {track.title}
-                            <div className="text-small text-subdued">
+                            <Text className="block">{track.title}</Text>
+                            <Text className="block text-small text-subdued">
                                 {track.artist}
-                            </div>
+                            </Text>
                         </li>
                     ))}
                 </ul>
