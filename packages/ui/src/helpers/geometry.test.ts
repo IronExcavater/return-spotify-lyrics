@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { axisRange, fitSize, keepsAspectRatio } from './geometry';
+import { findAxisRange, fitSize, keepsAspectRatio } from './geometry';
 
 describe('keepsAspectRatio', () => {
     const limits = { minAspectRatio: 1, maxAspectRatio: 2 };
@@ -27,7 +27,7 @@ describe('keepsAspectRatio', () => {
     });
 });
 
-describe('axisRange', () => {
+describe('findAxisRange', () => {
     it('passes the limits of the other axis through the aspect ratios', () => {
         const limits = {
             minSize: { height: 100 },
@@ -35,9 +35,9 @@ describe('axisRange', () => {
             minAspectRatio: 1,
             maxAspectRatio: 2,
         };
-        expect(axisRange('width', limits)).toEqual([100, 400]);
+        expect(findAxisRange('width', limits)).toEqual([100, 400]);
         // Without a ratio, a width limit does not limit the height.
-        expect(axisRange('height', { maxSize: { width: 300 } })).toEqual([
+        expect(findAxisRange('height', { maxSize: { width: 300 } })).toEqual([
             0,
             Infinity,
         ]);
