@@ -1,0 +1,60 @@
+/* Defaults live in @layer components so that a consumer className always wins. */
+@layer components {
+    .checkbox {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        cursor: pointer;
+
+        > [data-part='box'] {
+            display: grid;
+            flex: none;
+            place-items: center;
+            width: 16px;
+            height: 16px;
+            border: 1px solid var(--border-color-default);
+            border-radius: var(--radius-small);
+            color: var(--text-color-inverse);
+            transition-property: background-color, border-color;
+            transition-duration: var(--transition-duration-fast);
+
+            > [data-part='indicator'] > svg {
+                display: block;
+                width: 12px;
+                height: 12px;
+                stroke-width: 3;
+            }
+        }
+
+        &:is([data-checked], [data-indeterminate]) > [data-part='box'] {
+            border-color: var(--border-color-accent);
+            background-color: var(--background-color-accent);
+        }
+
+        /* The label is part of the control, so the ring goes around the box only. */
+        &:focus-visible {
+            outline: none;
+
+            > [data-part='box'] {
+                outline: var(--focus-width) solid var(--outline-color-focus);
+                outline-offset: var(--focus-offset);
+            }
+        }
+
+        /* Hover also matches the mark of a Marquee copy, so a copy shares the style. */
+        &:not([data-disabled]):is(:hover, [data-hover]) {
+            &[data-unchecked]:not([data-indeterminate]) > [data-part='box'] {
+                border-color: var(--border-color-strong);
+            }
+
+            &:is([data-checked], [data-indeterminate]) > [data-part='box'] {
+                background-color: var(--background-color-accent-strong);
+            }
+        }
+
+        &[data-disabled] {
+            cursor: not-allowed;
+            opacity: var(--opacity-disabled);
+        }
+    }
+}
