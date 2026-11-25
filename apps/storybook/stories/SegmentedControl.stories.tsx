@@ -101,12 +101,24 @@ function paintBehind(element: HTMLElement) {
 
 /** A click or the keyboard chooses a view, and a press on the chosen view keeps it chosen. */
 export const Library: Story = {
-    play: async ({ canvas, userEvent, args, step }) => {
+    play: async ({ canvas, canvasElement, userEvent, args, step }) => {
         const group = within(
             canvas.getByRole('group', { name: 'Library view' })
         );
         const list = group.getByRole('button', { name: 'List' });
         const grid = group.getByRole('button', { name: 'Grid' });
+
+        await step(
+            'The pill starts under the chosen view, with no slide',
+            async () => {
+                const transitions = canvasElement
+                    .getAnimations({ subtree: true })
+                    .filter((animation) => animation instanceof CSSTransition)
+                    .map((transition) => transition.transitionProperty);
+                await expect(transitions).toEqual([]);
+                await expect(paintBehind(list)).toBe('rgb(255, 255, 255)');
+            }
+        );
 
         await step('A click chooses the grid', async () => {
             await userEvent.click(grid);
