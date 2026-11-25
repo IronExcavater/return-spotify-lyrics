@@ -1,6 +1,1 @@
 @import '@return-spotify-lyrics/ui/theme.css';
-
-/* Docs pages show each story on a light panel, but the theme is dark, so the panel takes the page colours. */
-.docs-story {
-    @apply bg-default text-medium text-default;
-}

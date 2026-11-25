@@ -9,15 +9,13 @@ import { themes } from 'storybook/theming';
 import '@return-spotify-lyrics/ui/font';
 import './preview.css';
 
-// The toolbar switch sets the Storybook UI, so the docs pages follow it here.
+// The toolbar switch sets the Storybook UI, so the Tokens page follows it here.
 function ThemedDocsContainer(props: DocsContainerProps) {
     const theme = useDarkMode() ? themes.dark : themes.light;
     return <DocsContainer {...props} theme={theme} />;
 }
 
 const preview: Preview = {
-    // Every component gets a docs page from its JSDoc, prop types and stories.
-    tags: ['autodocs'],
     parameters: {
         docs: { container: ThemedDocsContainer },
         // An accessibility violation fails the story test, in the Storybook UI and in CI.
