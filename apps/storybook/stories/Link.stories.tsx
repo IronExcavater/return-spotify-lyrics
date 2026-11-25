@@ -19,7 +19,30 @@ function RouterDemo(props: LinkProps) {
         <TextProvider navigate={setRoute} resolveHref={toHashHref}>
             <div className="grid gap-2 text-medium text-subdued">
                 <Link {...props} />
-                <p role="status">Route: {route}</p>
+                <Text render={<p />} role="status">
+                    Route: {route}
+                </Text>
+            </div>
+        </TextProvider>
+    );
+}
+
+// The browser opens a new tab or a download itself, so the router must leave both alone.
+function BrowserLinks(props: LinkProps) {
+    const [route, setRoute] = useState('/home');
+
+    return (
+        <TextProvider navigate={setRoute} resolveHref={toHashHref}>
+            <div className="grid gap-2 text-medium text-subdued">
+                <Link {...props} target="_blank">
+                    Open the album in a new tab
+                </Link>
+                <Link {...props} download>
+                    Download the cover
+                </Link>
+                <Text render={<p />} role="status">
+                    Route: {route}
+                </Text>
             </div>
         </TextProvider>
     );
@@ -56,31 +79,27 @@ export const Internal: Story = {
     },
 };
 
-export const NewTabTarget: Story = {
-    args: { target: '_blank' },
-    play: async ({ canvas, userEvent }) => {
-        // The test stops the new tab after the link handles the click, so no window opens.
-        window.addEventListener('click', (event) => event.preventDefault(), {
-            once: true,
-        });
-        await userEvent.click(
-            canvas.getByRole('link', { name: 'Paper Satellites' })
-        );
-        await expect(canvas.getByRole('status')).toHaveTextContent('/home');
-    },
-};
-
-export const Download: Story = {
-    args: { download: true },
-    play: async ({ canvas, userEvent }) => {
-        // The test stops the download after the link handles the click, so no file saves.
-        window.addEventListener('click', (event) => event.preventDefault(), {
-            once: true,
-        });
-        await userEvent.click(
-            canvas.getByRole('link', { name: 'Paper Satellites' })
-        );
-        await expect(canvas.getByRole('status')).toHaveTextContent('/home');
+/** A new tab or a download goes to the browser, not the router, so the route stays the same. */
+export const OpensElsewhere: Story = {
+    render: (args) => <BrowserLinks {...args} />,
+    play: async ({ canvas, userEvent, step }) => {
+        for (const name of [
+            'Open the album in a new tab',
+            'Download the cover',
+        ]) {
+            await step(name, async () => {
+                // The test stops the browser after the link handles the click, so no tab opens and no file saves.
+                window.addEventListener(
+                    'click',
+                    (event) => event.preventDefault(),
+                    { once: true }
+                );
+                await userEvent.click(canvas.getByRole('link', { name }));
+                await expect(canvas.getByRole('status')).toHaveTextContent(
+                    '/home'
+                );
+            });
+        }
     },
 };
 
