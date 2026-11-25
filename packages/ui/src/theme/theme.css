@@ -4,12 +4,14 @@
 @import '../components/FadeBox/fade-box.css';
 @import '../components/Link/link.css';
 @import '../components/Marquee/marquee.css';
+@import '../components/Popover/popover.css';
 @import '../components/Portal/portal-slot.css';
 @import '../components/Radio/radio.css';
 @import '../components/ResizeBox/resize-box.css';
 @import '../components/Spinner/spinner.css';
 @import '../components/Switch/switch.css';
 @import '../components/Text/text.css';
+@import '../components/Tooltip/tooltip.css';
 @source '../**/*.tsx';
 
 /* A Marquee marks the element in each copy that matches the hovered or pressed one, so every copy shares the style. */

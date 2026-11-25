@@ -1,0 +1,49 @@
+/* Defaults live in @layer components so that a consumer className always wins. */
+@layer components {
+    .tooltip-positioner {
+        z-index: var(--z-index-top);
+    }
+
+    .tooltip {
+        max-width: min(240px, var(--available-width));
+        padding: 4px 8px;
+        border-radius: var(--radius-small);
+        background-color: var(--background-color-overlay);
+        box-shadow: var(--shadow-overlay);
+        color: var(--text-color-default);
+        transform-origin: var(--transform-origin);
+        transition-property: opacity, scale;
+        transition-duration: var(--transition-duration-fast);
+        @apply text-small;
+
+        /* The tooltip grows from the trigger as it opens, and the duration token is 0s with reduced motion. */
+        &:is([data-starting-style], [data-ending-style]) {
+            opacity: 0;
+            scale: 0.96;
+        }
+
+        /* The arrow is a turned square in the colour of the tooltip, half hidden behind its edge. */
+        > [data-part='arrow'] {
+            width: 8px;
+            height: 8px;
+            background-color: inherit;
+            rotate: 45deg;
+
+            &[data-side='top'] {
+                bottom: -4px;
+            }
+
+            &[data-side='bottom'] {
+                top: -4px;
+            }
+
+            &[data-side='left'] {
+                right: -4px;
+            }
+
+            &[data-side='right'] {
+                left: -4px;
+            }
+        }
+    }
+}

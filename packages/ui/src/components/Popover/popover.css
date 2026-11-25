@@ -1,0 +1,54 @@
+/* Defaults live in @layer components so that a consumer className always wins. */
+@layer components {
+    .popover-positioner {
+        z-index: var(--z-index-overlay);
+    }
+
+    .popover {
+        max-width: min(320px, var(--available-width));
+        padding: 12px 16px;
+        border-radius: var(--radius-medium);
+        background-color: var(--background-color-overlay);
+        box-shadow: var(--shadow-overlay);
+        color: var(--text-color-default);
+        transform-origin: var(--transform-origin);
+        transition-property: opacity, scale;
+        transition-duration: var(--transition-duration-fast);
+
+        /* The popup grows from the trigger as it opens, and the duration token is 0s with reduced motion. */
+        &:is([data-starting-style], [data-ending-style]) {
+            opacity: 0;
+            scale: 0.96;
+        }
+
+        > [data-part='title'] {
+            display: block;
+            margin-block-end: 8px;
+            @apply font-bold;
+        }
+
+        /* The arrow is a turned square in the colour of the popup, half hidden behind its edge. */
+        > [data-part='arrow'] {
+            width: 10px;
+            height: 10px;
+            background-color: inherit;
+            rotate: 45deg;
+
+            &[data-side='top'] {
+                bottom: -5px;
+            }
+
+            &[data-side='bottom'] {
+                top: -5px;
+            }
+
+            &[data-side='left'] {
+                right: -5px;
+            }
+
+            &[data-side='right'] {
+                left: -5px;
+            }
+        }
+    }
+}
