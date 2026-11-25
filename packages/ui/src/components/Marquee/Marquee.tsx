@@ -7,58 +7,61 @@ import {
     type ReactNode,
 } from 'react';
 import clsx from 'clsx';
-import { toCssSize, type CssLength } from '../../helpers/css';
-import FadeBox from '../FadeBox/FadeBox';
-import {
-    clearSelection,
-    hideCopies,
-    markMatches,
-    mirrorSelection,
-} from './mirror';
-import {
-    countCopies,
-    restEasing,
-    toMilliseconds,
-    type MarqueeMode,
-} from './motion';
+import { toCssSize, toMilliseconds, type CssLength } from '../../helpers/css';
+import type { Side } from '../../helpers/geometry';
+import { countCopies, holdEasing } from '../../helpers/motion';
+import useCopies from '../../hooks/useCopies';
 import useReducedMotion from '../../hooks/useReducedMotion';
+import FadeBox from '../FadeBox/FadeBox';
 
 export type MarqueeProps = ComponentProps<'div'> & {
-    /** How the content moves: in a loop to the left or the right, or back and forth. */
-    mode?: MarqueeMode;
-    /** When a loop moves: only when the content is wider than the box, or always, with copies to fill the box. A bounce moves only when the content is wider. */
-    scroll?: 'overflow' | 'always';
+    /** The way the content moves. Up and down need a height on the marquee. A bounce starts at the start of the content either way. */
+    direction?: 'left' | 'right' | 'up' | 'down';
+    /** A loop moves on and on, with copies after the content. A bounce moves back and forth across the overflow. */
+    motion?: 'loop' | 'bounce';
+    /** Moves a loop even when the content fits, with copies that fill the box. A bounce moves only when the content overflows. */
+    fill?: boolean;
     /** What starts the motion: nothing, or a pointer or focus on the marquee. With reduced motion, a pointer or focus always starts it. */
-    trigger?: 'auto' | 'hover';
+    play?: 'auto' | 'hover';
     /** The speed in pixels a second. */
     speed?: number;
-    /** How long the content rests at the start of each pass, in milliseconds. */
+    /** How long the content waits before it first moves, in milliseconds. */
+    delay?: number;
+    /** How long the content rests at each end of a bounce, or at the start of each pass of a loop, in milliseconds. */
     rest?: number;
     /** The node between two copies in a loop. */
     separator?: ReactNode;
     /** The space on each side of the separator. */
     gap?: CssLength;
     /** How far the edges fade. */
-    fade?: CssLength;
+    fadeDepth?: CssLength;
 };
 
 type Sizes = { box: number; content: number; item: number };
 
 const NO_SIZES: Sizes = { box: 0, content: 0, item: 0 };
 
+// A still marquee shows the start of its content, so only the far edge fades.
+const FADE_EDGES: Record<'x' | 'y', { moving: Side[]; still: Side[] }> = {
+    x: { moving: ['left', 'right'], still: ['right'] },
+    y: { moving: ['top', 'bottom'], still: ['bottom'] },
+};
+
 /**
- * Moves content that is too wide for its box, so a person can read all of it. The copies of a loop render the same
+ * Moves content that is too long for its box, so a person can read all of it. The copies of a loop render the same
  * children, and they share hover, press and text selection styles with the original.
  */
 export default function Marquee({
-    mode = 'left',
-    scroll = 'overflow',
-    trigger = 'auto',
+    direction = 'left',
+    motion = 'loop',
+    fill = false,
+    play = 'auto',
     speed = 40,
-    rest = 1000,
+    delay = play === 'hover' ? 0 : 1000,
+    rest = motion === 'bounce' ? 1000 : 0,
     separator = '•',
     gap = 24,
-    fade = 24,
+    fadeDepth = 24,
     className,
     style,
     children,
@@ -73,19 +76,27 @@ export default function Marquee({
     const rewindFrom = useRef<number | null>(null);
     const [sizes, setSizes] = useState(NO_SIZES);
     const [engaged, setEngaged] = useState(false);
-    const start = useReducedMotion() ? 'hover' : trigger;
+    const start = useReducedMotion() ? 'hover' : play;
 
-    const isLoop = mode !== 'bounce';
+    const axis = direction === 'up' || direction === 'down' ? 'y' : 'x';
+    const isLoop = motion === 'loop';
     const overflow = sizes.content - sizes.box;
-    // Browsers round sub-pixel widths differently, so content within half a pixel of the box fits.
+    // Browsers round sub-pixel sizes differently, so content within half a pixel of the box fits.
     const fits = overflow <= 0.5;
-    const canMove = isLoop && scroll === 'always' ? sizes.content > 0 : !fits;
+    const canMove = isLoop && fill ? sizes.content > 0 : !fits;
     const moving = canMove && (start === 'auto' || engaged);
     const copies = isLoop && canMove ? countCopies(sizes.box, sizes.item) : 0;
     const distance = isLoop ? sizes.item : Math.max(overflow, 0);
-    const pause = rest / 1000;
-    const duration = distance / speed + pause;
-    const easing = restEasing(mode, duration > 0 ? pause / duration : 0);
+    const duration = distance / speed + rest / 1000;
+    const restShare = duration > 0 ? rest / 1000 / duration : 0;
+    // A bounce plays every other pass backwards, so half the rest goes at each end of a pass.
+    const hold = isLoop
+        ? { start: restShare }
+        : { start: restShare / 2, end: restShare / 2 };
+    const easing = holdEasing(isLoop ? 'linear' : 'ease-in-out', hold);
+    const fadeEdges = FADE_EDGES[axis];
+
+    useCopies(trackRef, copies > 0);
 
     useLayoutEffect(() => {
         const root = rootRef.current;
@@ -93,18 +104,22 @@ export default function Marquee({
         const content = item?.firstElementChild;
         if (!root || !item || !content) return;
 
+        const lengthOf = (element: Element) => {
+            const { width, height } = element.getBoundingClientRect();
+            return axis === 'y' ? height : width;
+        };
         const measure = () => {
             const next = {
-                box: root.getBoundingClientRect().width,
-                content: content.getBoundingClientRect().width,
-                item: item.getBoundingClientRect().width,
+                box: lengthOf(root),
+                content: lengthOf(content),
+                item: lengthOf(item),
             };
             setSizes((previous) => (isSame(previous, next) ? previous : next));
         };
         const observer = new ResizeObserver(measure);
         for (const element of [root, item, content]) observer.observe(element);
         return () => observer.disconnect();
-    }, []);
+    }, [axis]);
 
     // The observer sets the attribute itself, so a scroll causes no render.
     useEffect(() => {
@@ -121,54 +136,6 @@ export default function Marquee({
         };
     }, [moving]);
 
-    useEffect(() => {
-        const root = rootRef.current;
-        const track = trackRef.current;
-        if (!root || !track || copies === 0) return;
-
-        const ranges = new Set<Range>();
-        const hover = (event: PointerEvent) => {
-            const target =
-                event.type === 'pointerout'
-                    ? event.relatedTarget
-                    : event.target;
-            markMatches(track, target, 'data-hover');
-        };
-        const press = (event: PointerEvent) => {
-            const target = event.type === 'pointerdown' ? event.target : null;
-            markMatches(track, target, 'data-active');
-        };
-        const select = () => {
-            root.toggleAttribute(
-                'data-selecting',
-                mirrorSelection(track, ranges)
-            );
-        };
-        const observer = new MutationObserver(() => hideCopies(track));
-
-        hideCopies(track);
-        observer.observe(track, { childList: true, subtree: true });
-        track.addEventListener('pointerover', hover);
-        track.addEventListener('pointerout', hover);
-        track.addEventListener('pointerdown', press);
-        window.addEventListener('pointerup', press);
-        window.addEventListener('pointercancel', press);
-        document.addEventListener('selectionchange', select);
-        return () => {
-            observer.disconnect();
-            track.removeEventListener('pointerover', hover);
-            track.removeEventListener('pointerout', hover);
-            track.removeEventListener('pointerdown', press);
-            window.removeEventListener('pointerup', press);
-            window.removeEventListener('pointercancel', press);
-            document.removeEventListener('selectionchange', select);
-            markMatches(track, null, 'data-hover');
-            markMatches(track, null, 'data-active');
-            clearSelection(ranges);
-            root.removeAttribute('data-selecting');
-        };
-    }, [copies]);
-
     // A stop leaves the track part way, so it slides back to where the content starts.
     useLayoutEffect(() => {
         const root = rootRef.current;
@@ -182,11 +149,14 @@ export default function Marquee({
         const time = getComputedStyle(root).getPropertyValue(
             '--transition-duration-default'
         );
-        track.animate([{ translate: `${from}px` }, { translate: `${to}px` }], {
-            duration: toMilliseconds(time),
-            easing: 'ease-out',
-        });
-    }, [moving, isLoop, distance]);
+        track.animate(
+            [
+                { translate: toTranslate(from, axis) },
+                { translate: toTranslate(to, axis) },
+            ],
+            { duration: toMilliseconds(time), easing: 'ease-out' }
+        );
+    }, [moving, isLoop, distance, axis]);
 
     const engage = () => {
         if (start === 'hover') setEngaged(true);
@@ -194,7 +164,7 @@ export default function Marquee({
     const release = () => {
         const track = trackRef.current;
         if (start !== 'hover' || !track) return;
-        rewindFrom.current = parseFloat(getComputedStyle(track).translate) || 0;
+        rewindFrom.current = readOffset(track, axis);
         setEngaged(false);
     };
 
@@ -204,14 +174,17 @@ export default function Marquee({
             ref={rootRef}
             className={clsx('marquee', className)}
             enabled={!fits || moving}
-            depth={fade}
-            edges={moving ? ['left', 'right'] : ['right']}
-            data-mode={mode}
-            data-start={start}
+            depth={fadeDepth}
+            edges={moving ? fadeEdges.moving : fadeEdges.still}
+            data-direction={direction}
+            data-motion={motion}
+            data-axis={axis}
+            data-play={start}
             data-moving={moving || undefined}
             style={{
                 '--marquee-distance': `${distance}px`,
                 '--marquee-duration': `${duration}s`,
+                '--marquee-delay': `${delay}ms`,
                 '--marquee-easing': easing,
                 '--marquee-gap': toCssSize(gap),
                 ...style,
@@ -262,4 +235,16 @@ export default function Marquee({
 
 function isSame(a: Sizes, b: Sizes) {
     return a.box === b.box && a.content === b.content && a.item === b.item;
+}
+
+function toTranslate(offset: number, axis: 'x' | 'y') {
+    return axis === 'y' ? `0 ${offset}px` : `${offset}px`;
+}
+
+// The computed translate is `none`, `x` or `x y`, so a missing part is 0.
+function readOffset(track: HTMLElement, axis: 'x' | 'y') {
+    const [x = 0, y = 0] = getComputedStyle(track)
+        .translate.split(' ')
+        .map((part) => parseFloat(part) || 0);
+    return axis === 'y' ? y : x;
 }

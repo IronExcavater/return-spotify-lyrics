@@ -1,13 +1,15 @@
-/* A loop moves the track by one item, and a bounce moves it by the overflow. */
+/* A loop moves the track by one item, and a bounce moves it by the overflow, along the marquee's axis. */
 @keyframes marquee-move {
     to {
-        translate: calc(-1 * var(--marquee-distance));
+        translate: var(--marquee-to);
     }
 }
 
 /* Defaults live in @layer components so that a consumer className always wins. */
 @layer components {
     .marquee {
+        --marquee-to: calc(-1 * var(--marquee-distance)) 0;
+
         min-width: 0;
 
         > [data-part='track'] {
@@ -26,34 +28,52 @@
             padding-inline: calc(var(--marquee-gap) / 2);
         }
 
+        /* Up and down stack the copies, and the lines wrap in the width of the marquee. */
+        &[data-axis='y'] {
+            --marquee-to: 0 calc(-1 * var(--marquee-distance));
+
+            min-height: 0;
+
+            > [data-part='track'] {
+                flex-direction: column;
+                width: auto;
+                white-space: normal;
+            }
+
+            > [data-part='track'] > [data-part='item'] {
+                flex-direction: column;
+            }
+
+            > [data-part='track']
+                > [data-part='item']
+                > [data-part='separator'] {
+                padding-block: calc(var(--marquee-gap) / 2);
+                padding-inline: 0;
+            }
+        }
+
+        /* The delay applies once, before the first pass. */
         &[data-moving] > [data-part='track'] {
             animation: marquee-move var(--marquee-duration)
-                var(--marquee-easing) infinite;
+                var(--marquee-easing) var(--marquee-delay) infinite;
             will-change: translate;
         }
 
-        &[data-mode='right'] > [data-part='track'] {
+        &:is([data-direction='right'], [data-direction='down'])
+            > [data-part='track'] {
             animation-direction: reverse;
         }
 
-        &[data-mode='bounce'] > [data-part='track'] {
+        /* A bounce starts at the start of the content, so it alternates the same way in every direction. */
+        &[data-motion='bounce'] > [data-part='track'] {
             animation-direction: alternate;
         }
 
         /* A person who points at, focuses or selects the content needs it to keep still. */
-        &:is(
-                [data-start='auto']:is(:hover, :focus-within),
-                [data-offscreen],
-                [data-selecting]
-            )
-            > [data-part='track'] {
+        &:is([data-play='auto']:is(:hover, :focus-within), [data-offscreen])
+            > [data-part='track'],
+        > [data-part='track'][data-selecting] {
             animation-play-state: paused;
         }
-    }
-
-    /* The copies of a selection use the theme's selection colours, so they look the same as the selection itself. */
-    ::highlight(marquee-selection) {
-        background-color: var(--background-color-accent);
-        color: var(--text-color-inverse);
     }
 }
