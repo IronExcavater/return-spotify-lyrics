@@ -140,6 +140,12 @@
         color: var(--text-color-inverse);
     }
 
+    /* useCopies shows a selection in the copies of a repeated item, so they look the same as the selection itself. */
+    ::highlight(copy-selection) {
+        background-color: var(--background-color-accent);
+        color: var(--text-color-inverse);
+    }
+
     @media (prefers-reduced-motion: reduce) {
         :root {
             --transition-duration-fast: 0s;

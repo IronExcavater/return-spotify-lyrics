@@ -115,7 +115,7 @@ In `packages/ui/src`:
 
 - A component's own styles go in the CSS file in its folder, like `FadeBox/fade-box.css`, inside `@layer components`, and `theme.css` imports the file. The layer lets a consumer's Tailwind class win without `!important`.
 - Use Tailwind classes in JSX for layout and one-off styles.
-- Write hover and press styles with Tailwind's `hover:` and `active:`, or in CSS with `:is(:hover, [data-hover])` and `:is(:active, [data-active])`. A Marquee marks its copies with those attributes, so the copies share the styles.
+- Write hover and press styles with Tailwind's `hover:` and `active:`, or in CSS with `:is(:hover, [data-hover])` and `:is(:active, [data-active])`. The `useCopies` hook marks the copies of repeated content, like a Marquee loop, with those attributes, so the copies share the styles.
 - Use only the theme tokens, like `bg-raised`, `text-subdued` and `rounded-medium`. The theme removes Tailwind's colours, text sizes, radii and shadows, so a class like `text-red-500` makes no CSS. The Tokens page in Storybook lists every token and what it's for.
 - Use `style` only for values that change at run time, and pass them as CSS variables. Never use `!important`.
 - Both surfaces are narrow, so change a layout with container queries, like `@xs:` on a parent with `@container`, not with viewport breakpoints.

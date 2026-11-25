@@ -14,6 +14,8 @@ type SharedProps = Omit<
     BaseButton.Props,
     'className' | 'style' | 'children' | 'render'
 > & {
+    /** The shape: a filled pill, an outlined pill, or text. With an icon and no label, every variant is a circle. */
+    variant?: 'primary' | 'secondary' | 'tertiary';
     /** The height and text size. */
     size?: 'small' | 'medium' | 'large';
     /** The colour intent: white and grey, the accent green, or red for a destructive action. */
@@ -33,20 +35,17 @@ type SharedProps = Omit<
 };
 
 type LabelledProps = SharedProps & {
-    /** The shape: a filled pill, an outlined pill, text, or a circle with an icon. */
-    variant?: 'primary' | 'secondary' | 'tertiary';
     children: ReactNode;
 };
 
 // An icon-only button has no visible text, so its type requires a label.
-type IconProps = SharedProps & {
-    variant: 'icon';
+type IconOnlyProps = SharedProps & {
     icon: ReactNode;
     'aria-label': string;
     children?: undefined;
 };
 
-export type ButtonProps = LabelledProps | IconProps;
+export type ButtonProps = LabelledProps | IconOnlyProps;
 
 /** A button for text, an icon or both, on Base UI's `Button`. */
 export default function Button({
@@ -72,6 +71,7 @@ export default function Button({
         'data-variant': variant,
         'data-size': size,
         'data-tone': tone,
+        'data-icon-only': children === undefined || undefined,
         'data-loading': loading || undefined,
         'aria-busy': loading || undefined,
         children: (
