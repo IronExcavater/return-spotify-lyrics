@@ -6,18 +6,12 @@ import Marquee from '@return-spotify-lyrics/ui/Marquee';
 
 import { lengthControl } from './controls';
 
-const LONG = 'Paper Satellites (Northern Static Remix) · The Quiet Hours';
-
-// The links have an underline, because a link in text needs more than colour to stand out.
-const LINK = 'underline underline-offset-2 hover:text-accent';
-const SHORT = 'Slow Orbit';
-
 const meta = {
     title: 'Marquee',
     component: Marquee,
     // The component defaults give every control a value. The delay and the rest depend on other props, so they start empty.
     args: {
-        children: LONG,
+        children: 'Paper Satellites (Northern Static Remix) · The Quiet Hours',
         direction: 'left',
         motion: 'loop',
         fill: false,
@@ -44,41 +38,48 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
-// The delay before the first pass is a second, so a move can take a little longer than that.
-const MOVE_TIMEOUT = { timeout: 3000 };
-
 function expectToMove(element: HTMLElement) {
     const start = element.getBoundingClientRect();
-    return waitFor(() => {
-        const { x, y } = element.getBoundingClientRect();
-        expect(Math.hypot(x - start.x, y - start.y)).toBeGreaterThan(2);
-    }, MOVE_TIMEOUT);
+    // The delay before the first pass is a second, so a move can take a little longer than that.
+    return waitFor(
+        () => {
+            const { x, y } = element.getBoundingClientRect();
+            expect(Math.hypot(x - start.x, y - start.y)).toBeGreaterThan(2);
+        },
+        { timeout: 3000 }
+    );
 }
 
 export const Overflow: Story = {
-    play: async ({ canvas }) => {
+    play: async ({ canvas, args }) => {
         // The copy is hidden from assistive technology, so a person hears the text once.
-        await waitFor(() => expect(canvas.getAllByText(LONG)).toHaveLength(2));
-        const [original] = canvas.getAllByText(LONG);
+        await waitFor(() =>
+            expect(canvas.getAllByText(String(args.children))).toHaveLength(2)
+        );
+        const [original] = canvas.getAllByText(String(args.children));
         await expectToMove(original!);
     },
 };
 
 export const Fits: Story = {
-    args: { children: SHORT },
-    play: async ({ canvas }) => {
-        await expect(canvas.getAllByText(SHORT)).toHaveLength(1);
+    args: { children: 'Slow Orbit' },
+    play: async ({ canvas, args }) => {
+        await expect(canvas.getAllByText(String(args.children))).toHaveLength(
+            1
+        );
     },
 };
 
 export const AlwaysLoop: Story = {
-    args: { children: SHORT, fill: true },
-    play: async ({ canvas }) => {
+    args: { children: 'Slow Orbit', fill: true },
+    play: async ({ canvas, args }) => {
         // Short content needs several copies to fill the box with no gap.
         await waitFor(() =>
-            expect(canvas.getAllByText(SHORT).length).toBeGreaterThan(2)
+            expect(
+                canvas.getAllByText(String(args.children)).length
+            ).toBeGreaterThan(2)
         );
-        const [original] = canvas.getAllByText(SHORT);
+        const [original] = canvas.getAllByText(String(args.children));
         await expectToMove(original!);
     },
 };
@@ -90,9 +91,11 @@ export const MovesRight: Story = {
 /** Up and down move the content through the height of the marquee, like lyrics. */
 export const Vertical: Story = {
     args: { direction: 'up', className: 'h-5' },
-    play: async ({ canvas }) => {
-        await waitFor(() => expect(canvas.getAllByText(LONG)).toHaveLength(2));
-        const [original] = canvas.getAllByText(LONG);
+    play: async ({ canvas, args }) => {
+        await waitFor(() =>
+            expect(canvas.getAllByText(String(args.children))).toHaveLength(2)
+        );
+        const [original] = canvas.getAllByText(String(args.children));
         await expectToMove(original!);
     },
 };
@@ -100,17 +103,19 @@ export const Vertical: Story = {
 /** A bounce rests at each end, and a loop waits only once before it starts. */
 export const Bounce: Story = {
     args: { motion: 'bounce' },
-    play: async ({ canvas }) => {
-        const text = canvas.getByText(LONG);
+    play: async ({ canvas, args }) => {
+        const text = canvas.getByText(String(args.children));
         await expectToMove(text);
-        await expect(canvas.getAllByText(LONG)).toHaveLength(1);
+        await expect(canvas.getAllByText(String(args.children))).toHaveLength(
+            1
+        );
     },
 };
 
 export const StartOnHover: Story = {
     args: { play: 'hover' },
-    play: async ({ canvas, userEvent }) => {
-        const [original] = await canvas.findAllByText(LONG);
+    play: async ({ canvas, userEvent, args }) => {
+        const [original] = await canvas.findAllByText(String(args.children));
         await userEvent.hover(canvas.getByTestId('marquee'));
         await expectToMove(original!);
     },
@@ -118,7 +123,7 @@ export const StartOnHover: Story = {
 
 export const SeparatorNode: Story = {
     args: {
-        children: SHORT,
+        children: 'Slow Orbit',
         fill: true,
         separator: <Music aria-hidden className="size-3 text-subdued" />,
     },
@@ -128,12 +133,19 @@ export const SharedStates: Story = {
     args: {
         children: (
             <>
-                <a href="#track" className={LINK}>
+                {/* A link in text needs more than colour to stand out, so the links have an underline. */}
+                <a
+                    href="#track"
+                    className="underline underline-offset-2 hover:text-accent"
+                >
                     Paper Satellites
                 </a>{' '}
                 <span>(Northern Static Remix)</span>
                 {' · '}
-                <a href="#artist" className={`text-subdued ${LINK}`}>
+                <a
+                    href="#artist"
+                    className="text-subdued underline underline-offset-2 hover:text-accent"
+                >
                     The Quiet Hours
                 </a>
             </>

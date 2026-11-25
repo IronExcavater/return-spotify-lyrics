@@ -19,13 +19,6 @@ import usePortalSlot from '@return-spotify-lyrics/ui/usePortalSlot';
 
 import { ICON_BUTTON, Surface, TRACKS } from './shared';
 
-const LYRICS = [
-    'Lights on the water',
-    'Paper boats in the harbour',
-    'We sail until the morning',
-    'And the city falls asleep',
-];
-
 type PageProps = {
     actions: HTMLElement | null;
 };
@@ -72,9 +65,10 @@ function LyricsPage({ actions }: PageProps) {
             <div
                 className={`grid gap-2 ${large ? 'text-xx-large' : 'text-x-large'}`}
             >
-                {LYRICS.map((line) => (
-                    <p key={line}>{line}</p>
-                ))}
+                <p>Lights on the water</p>
+                <p>Paper boats in the harbour</p>
+                <p>We sail until the morning</p>
+                <p>And the city falls asleep</p>
             </div>
             {actions && (
                 <Portal container={actions}>
@@ -92,22 +86,21 @@ function LyricsPage({ actions }: PageProps) {
     );
 }
 
-const PAGES = [
-    { page: 'queue', label: 'Queue', Icon: ListMusic, Page: QueuePage },
-    { page: 'lyrics', label: 'Lyrics', Icon: MicVocal, Page: LyricsPage },
-] as const;
-
-type Page = (typeof PAGES)[number]['page'];
+type Page = 'queue' | 'lyrics';
 
 function PageActionsDemo() {
     const [page, setPage] = useState<Page>('queue');
     const [actions, setActions] = useState<HTMLElement | null>(null);
-    const { Page } = PAGES.find((item) => item.page === page) ?? PAGES[0];
+    const pages = [
+        { page: 'queue', label: 'Queue', Icon: ListMusic, Page: QueuePage },
+        { page: 'lyrics', label: 'Lyrics', Icon: MicVocal, Page: LyricsPage },
+    ] as const;
+    const { Page } = pages.find((item) => item.page === page) ?? pages[0];
 
     const bar = (
         <>
             <nav aria-label="Pages" className="flex">
-                {PAGES.map(({ page: target, label, Icon }) => (
+                {pages.map(({ page: target, label, Icon }) => (
                     <button
                         key={target}
                         aria-label={label}
@@ -130,15 +123,7 @@ function PageActionsDemo() {
     );
 }
 
-const ROUTES = ['home', 'search', 'lyrics'] as const;
-
-type Route = (typeof ROUTES)[number];
-
-const NAV = [
-    { route: 'home', label: 'Home', Icon: House },
-    { route: 'search', label: 'Search', Icon: Search },
-    { route: 'lyrics', label: 'Lyrics', Icon: MicVocal },
-] as const;
+type Route = 'home' | 'search' | 'lyrics';
 
 type ControlsProps = {
     route: Route;
@@ -151,7 +136,13 @@ function Controls({ route, onRouteChange }: ControlsProps) {
 
     return (
         <nav aria-label="Main" className="ml-auto flex">
-            {NAV.map(({ route: target, label, Icon }) => (
+            {(
+                [
+                    { route: 'home', label: 'Home', Icon: House },
+                    { route: 'search', label: 'Search', Icon: Search },
+                    { route: 'lyrics', label: 'Lyrics', Icon: MicVocal },
+                ] as const
+            ).map(({ route: target, label, Icon }) => (
                 <button
                     key={target}
                     aria-label={label}
@@ -177,7 +168,7 @@ function Controls({ route, onRouteChange }: ControlsProps) {
 function SharedControlsDemo() {
     const [route, setRoute] = useState<Route>('home');
     const { slots, portal } = usePortalSlot(
-        ROUTES,
+        ['home', 'search', 'lyrics'],
         route,
         <Controls route={route} onRouteChange={setRoute} />
     );
@@ -221,9 +212,7 @@ function SharedControlsDemo() {
     );
 }
 
-const POSITIONS = ['top', 'bottom'] as const;
-
-type Position = (typeof POSITIONS)[number];
+type Position = 'top' | 'bottom';
 
 type PlayerProps = {
     position: Position;
@@ -264,7 +253,7 @@ function Player({ position, onMove }: PlayerProps) {
 function PlayerPositionDemo() {
     const [position, setPosition] = useState<Position>('bottom');
     const { slots, portal } = usePortalSlot(
-        POSITIONS,
+        ['top', 'bottom'],
         position,
         <Player
             position={position}

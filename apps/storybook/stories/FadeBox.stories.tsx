@@ -58,8 +58,6 @@ function expectFades(box: HTMLElement, faded: readonly Edge[]) {
     });
 }
 
-const SIDES: readonly Edge[] = ['top', 'right', 'bottom', 'left'];
-
 export const LeftAndRight: Story = {
     play: ({ canvas }) =>
         expectFades(canvas.getByTestId('fade-box'), ['left', 'right']),
@@ -68,12 +66,24 @@ export const LeftAndRight: Story = {
 export const AllSides: Story = {
     args: { edges: 'all' },
     // A corner fades on its own only when its two sides don't.
-    play: ({ canvas }) => expectFades(canvas.getByTestId('fade-box'), SIDES),
+    play: ({ canvas }) =>
+        expectFades(canvas.getByTestId('fade-box'), [
+            'top',
+            'right',
+            'bottom',
+            'left',
+        ]),
 };
 
 export const SquareCorners: Story = {
     args: { edges: 'all', roundCorners: false },
-    play: ({ canvas }) => expectFades(canvas.getByTestId('fade-box'), SIDES),
+    play: ({ canvas }) =>
+        expectFades(canvas.getByTestId('fade-box'), [
+            'top',
+            'right',
+            'bottom',
+            'left',
+        ]),
 };
 
 export const SingleCorner: Story = {
@@ -84,7 +94,13 @@ export const SingleCorner: Story = {
 
 export const LinearEasing: Story = {
     args: { edges: 'all', easing: 'linear' },
-    play: ({ canvas }) => expectFades(canvas.getByTestId('fade-box'), SIDES),
+    play: ({ canvas }) =>
+        expectFades(canvas.getByTestId('fade-box'), [
+            'top',
+            'right',
+            'bottom',
+            'left',
+        ]),
 };
 
 export const Disabled: Story = {
