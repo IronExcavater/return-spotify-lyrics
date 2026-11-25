@@ -1,0 +1,17 @@
+/* Defaults live in @layer components so that a consumer className always wins. */
+@layer components {
+    .separator {
+        flex: none;
+        background-color: var(--border-color-faint);
+
+        &[data-orientation='horizontal'] {
+            width: 100%;
+            height: 1px;
+        }
+
+        &[data-orientation='vertical'] {
+            align-self: stretch;
+            width: 1px;
+        }
+    }
+}

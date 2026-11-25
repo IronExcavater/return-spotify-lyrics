@@ -7,6 +7,7 @@ import {
 import { Button as BaseButton } from '@base-ui/react/button';
 import { useRender } from '@base-ui/react/use-render';
 import clsx from 'clsx';
+import Badge from '../Badge/Badge';
 import Spinner from '../Spinner/Spinner';
 import Text from '../Text/Text';
 
@@ -26,7 +27,7 @@ type SharedProps = Omit<
     loading?: boolean;
     /** What a screen reader says while the button loads. */
     loadingLabel?: string;
-    /** A small mark in the top-right corner, like a count. */
+    /** A mark in the top-right corner, like `<Badge dot />`. A number shows as a small count Badge. */
     badge?: ReactNode;
     /** Another element to render, like `<a href="…" />` for a link with button styles. A link can't be disabled. */
     render?: ReactElement | undefined;
@@ -63,6 +64,12 @@ export default function Button({
     children,
     ...props
 }: ButtonProps) {
+    const badgeNode =
+        typeof badge === 'number' ? (
+            <Badge count={badge} size="small" />
+        ) : (
+            badge
+        );
     // Base UI's Button gives any element the button role, so a link renders on its own to stay a link.
     const isNative =
         nativeButton ?? (!isValidElement(render) || render.type === 'button');
@@ -86,7 +93,9 @@ export default function Button({
                         {children}
                     </Text>
                 )}
-                {badge !== undefined && <span data-part="badge">{badge}</span>}
+                {badge !== undefined && (
+                    <span data-part="badge">{badgeNode}</span>
+                )}
                 {loading && (
                     <Spinner data-part="spinner" label={loadingLabel} />
                 )}

@@ -1,0 +1,51 @@
+/* Defaults live in @layer components so that a consumer className always wins. */
+@layer components {
+    .badge {
+        --badge-height: 20px;
+
+        display: inline-flex;
+        flex: none;
+        align-items: center;
+        justify-content: center;
+        min-width: var(--badge-height);
+        height: var(--badge-height);
+        padding-inline: 6px;
+        border-radius: 9999px;
+        white-space: nowrap;
+        @apply text-small font-bold;
+
+        &[data-size='small'] {
+            --badge-height: 16px;
+
+            padding-inline: 4px;
+        }
+
+        &[data-tone='accent'] {
+            background-color: var(--background-color-accent);
+            color: var(--text-color-inverse);
+        }
+
+        &[data-tone='neutral'] {
+            background-color: var(--background-color-inverse);
+            color: var(--text-color-inverse);
+        }
+
+        &[data-tone='negative'] {
+            background-color: var(--background-color-negative);
+            color: var(--text-color-default);
+        }
+
+        /* A dot has no text, so it is a small circle. */
+        &[data-dot] {
+            --badge-height: 8px;
+
+            min-width: 0;
+            width: var(--badge-height);
+            padding: 0;
+        }
+
+        &[data-dot][data-size='small'] {
+            --badge-height: 6px;
+        }
+    }
+}
