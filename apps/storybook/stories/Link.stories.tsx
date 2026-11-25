@@ -113,14 +113,17 @@ export const WithIcon: Story = {
     },
 };
 
+/** A link in a sentence needs an underline, so it doesn't stand out by colour alone. */
 export const InText: Story = {
-    render: () => (
-        <Text className="w-72 text-subdued">
-            Lyrics come from{' '}
-            <Link href="https://lrclib.net" underline="always">
-                LRCLIB
-            </Link>
-            , a free and open lyrics database.
+    args: {
+        href: 'https://lrclib.net',
+        children: 'LRCLIB',
+        underline: 'always',
+    },
+    render: (args) => (
+        <Text render={<p />} className="w-72 text-subdued">
+            Lyrics come from <Link {...args} />, a free and open lyrics
+            database.
         </Text>
     ),
 };

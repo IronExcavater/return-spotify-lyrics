@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { textOfDoc, toPlainText } from './markup';
+import { stripDoc, stripMarkup } from './markup';
 
-describe('toPlainText', () => {
+describe('stripMarkup', () => {
     it('removes markdown syntax and keeps the words', () => {
         expect(
-            toPlainText(
+            stripMarkup(
                 'markdown',
                 '## New **single** _out_ now — [listen](https://open.spotify.com) `today`'
             )
@@ -12,22 +12,22 @@ describe('toPlainText', () => {
     });
 
     it('removes list and quote markers at the start of a line', () => {
-        expect(toPlainText('markdown', '- one\n> two\n1. three')).toBe(
+        expect(stripMarkup('markdown', '- one\n> two\n1. three')).toBe(
             'one\ntwo\nthree'
         );
     });
 
     it('removes HTML tags and decodes common entities', () => {
         expect(
-            toPlainText('html', '<p>Rock &amp; roll <a href="/x">hits</a></p>')
+            stripMarkup('html', '<p>Rock &amp; roll <a href="/x">hits</a></p>')
         ).toBe('Rock & roll hits');
     });
 });
 
-describe('textOfDoc', () => {
+describe('stripDoc', () => {
     it('joins the text of a document', () => {
         expect(
-            textOfDoc({
+            stripDoc({
                 type: 'doc',
                 content: [
                     {
