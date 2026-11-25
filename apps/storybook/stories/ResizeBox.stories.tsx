@@ -13,7 +13,7 @@ const meta = {
     parameters: { layout: 'padded' },
     // The component defaults give every control a value, and an empty aspect ratio means no limit.
     args: {
-        value: { width: 320, height: 200 },
+        defaultValue: { width: 320, height: 200 },
         minSize: {},
         maxSize: {},
         edges: edgesControl.options,
@@ -149,14 +149,22 @@ export const AspectRatioLimits: Story = {
 
 export const FixedAspectRatio: Story = {
     args: {
-        value: { width: 320, height: 180 },
+        defaultValue: { width: 320, height: 180 },
         minAspectRatio: 16 / 9,
         maxAspectRatio: 16 / 9,
     },
-    play: async ({ canvas, userEvent }) => {
+    play: async ({ canvas, userEvent, step }) => {
         const right = await focusHandle({ canvas, userEvent }, 'Resize right');
 
-        await userEvent.keyboard('{Shift>}{ArrowRight}{/Shift}');
-        await expectSize(right, 370, (370 * 9) / 16);
+        await step('The height follows the width', async () => {
+            await userEvent.keyboard('{Shift>}{ArrowRight}{/Shift}');
+            await expectSize(right, 370, (370 * 9) / 16);
+        });
+
+        // The content doesn't push back, so the ratio holds exactly, the same in every browser.
+        await step('The ratio holds down to a small size', async () => {
+            await userEvent.keyboard('{Shift>}{ArrowLeft>5/}{/Shift}');
+            await expectSize(right, 120, (120 * 9) / 16);
+        });
     },
 };
