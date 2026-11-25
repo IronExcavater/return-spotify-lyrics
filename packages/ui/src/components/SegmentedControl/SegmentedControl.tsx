@@ -8,6 +8,7 @@ import {
 import { Toggle } from '@base-ui/react/toggle';
 import { ToggleGroup } from '@base-ui/react/toggle-group';
 import clsx from 'clsx';
+import useLabelFallback from '../../hooks/useLabelFallback';
 import Text from '../Text/Text';
 
 export type SegmentedOption<Value extends string> = {
@@ -83,6 +84,13 @@ export default function SegmentedControl<Value extends string = string>({
         return () => observer.disconnect();
     }, [current, options]);
 
+    // Every segment needs an icon to fall back on, so the segments all change together.
+    useLabelFallback(
+        rootRef,
+        options.every((option) => option.icon !== undefined),
+        options
+    );
+
     const choose = (groupValue: string[]) => {
         // A press on the chosen segment empties the group, but one segment always stays chosen.
         const next = options.find((option) => option.value === groupValue[0]);
@@ -113,7 +121,9 @@ export default function SegmentedControl<Value extends string = string>({
                         </span>
                     )}
                     {option.label !== undefined && (
-                        <Text inline>{option.label}</Text>
+                        <Text inline data-part="label">
+                            {option.label}
+                        </Text>
                     )}
                 </Toggle>
             ))}

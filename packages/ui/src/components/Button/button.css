@@ -6,7 +6,10 @@
 
         position: relative;
         display: inline-flex;
-        flex: none;
+        /* A button can shrink to fit its row, and its label cuts off. */
+        flex: 0 1 auto;
+        min-width: 0;
+        max-width: 100%;
         align-items: center;
         justify-content: center;
         gap: 8px;
@@ -83,9 +86,22 @@
         }
 
         /* An icon with no label makes a circle, so this comes after the padding of each variant. */
-        &[data-icon-only] {
+        /* A compact button shows its icon alone, because its label had too little room. */
+        &:is([data-icon-only], [data-compact]) {
+            flex: none;
             width: var(--button-height);
             padding: 0;
+        }
+
+        > [data-part='label'] {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* The hidden label still names the button for assistive technology. */
+        &[data-compact] > [data-part='label'] {
+            @apply sr-only;
         }
 
         > [data-part='icon'] {

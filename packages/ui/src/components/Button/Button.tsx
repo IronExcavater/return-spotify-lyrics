@@ -1,12 +1,16 @@
 import {
     isValidElement,
+    useCallback,
+    useRef,
     type CSSProperties,
     type ReactElement,
     type ReactNode,
+    type Ref,
 } from 'react';
 import { Button as BaseButton } from '@base-ui/react/button';
 import { useRender } from '@base-ui/react/use-render';
 import clsx from 'clsx';
+import useLabelFallback from '../../hooks/useLabelFallback';
 import Badge from '../Badge/Badge';
 import Spinner from '../Spinner/Spinner';
 import Text from '../Text/Text';
@@ -66,8 +70,24 @@ export default function Button({
     disabled = false,
     className,
     children,
+    ref,
     ...props
 }: ButtonProps) {
+    const rootRef = useRef<HTMLElement | null>(null);
+    // The button needs its own element to measure the label, and the caller's ref still gets it.
+    const setRefs = useCallback(
+        (node: HTMLButtonElement | null) => {
+            rootRef.current = node;
+            setRef(ref, node);
+        },
+        [ref]
+    );
+    // A label with an icon can give way to the icon, and a label alone cuts off.
+    useLabelFallback(
+        rootRef,
+        icon !== undefined && children !== undefined,
+        children
+    );
     const badgeNode =
         typeof badge === 'number' ? (
             <Badge count={badge} size="small" />
@@ -109,12 +129,14 @@ export default function Button({
     const link = useRender({
         render,
         enabled: !isNative,
+        ref: setRefs,
         props: { ...props, ...shared },
     });
     const button = link ?? (
         <BaseButton
             {...props}
             {...shared}
+            ref={setRefs}
             render={render}
             nativeButton
             disabled={disabled || loading}
@@ -125,4 +147,12 @@ export default function Button({
     if (!tooltipLabel) return button;
 
     return <Tooltip label={tooltipLabel}>{button}</Tooltip>;
+}
+
+function setRef<T>(ref: Ref<T> | undefined, node: T | null) {
+    if (typeof ref === 'function') {
+        ref(node);
+        return;
+    }
+    if (ref) ref.current = node;
 }

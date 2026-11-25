@@ -3,6 +3,8 @@
     .segmented-control {
         position: relative;
         display: inline-flex;
+        /* The control can shrink to fit its row, and its labels cut off. */
+        max-width: 100%;
         padding: 4px;
         border-radius: 9999px;
         background-color: var(--background-color-tint);
@@ -30,6 +32,7 @@
         > [data-part='item'] {
             position: relative;
             display: inline-flex;
+            min-width: 0;
             align-items: center;
             gap: 6px;
             padding: 6px 14px;
@@ -54,12 +57,29 @@
 
             > [data-part='icon'] {
                 display: grid;
+                flex: none;
                 place-items: center;
 
                 > svg {
                     width: 16px;
                     height: 16px;
                 }
+            }
+
+            > [data-part='label'] {
+                min-width: 0;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+        }
+
+        /* A compact control shows its icons alone, and the hidden labels still name the segments. */
+        &[data-compact] > [data-part='item'] {
+            padding: 6px;
+
+            > [data-part='label'] {
+                @apply sr-only;
             }
         }
     }
