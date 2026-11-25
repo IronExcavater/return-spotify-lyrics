@@ -68,10 +68,11 @@ export const ShareTrack: Story = {
 
         await step('Escape closes it and focus goes back', async () => {
             await userEvent.keyboard('{Escape}');
+            // The panel stays in the page while it fades out, so the trigger's state shows that it closed.
             await waitFor(() =>
-                expect(page.queryByRole('dialog')).not.toBeInTheDocument()
+                expect(trigger).toHaveAttribute('aria-expanded', 'false')
             );
-            await expect(trigger).toHaveFocus();
+            await waitFor(() => expect(trigger).toHaveFocus());
         });
     },
 };
