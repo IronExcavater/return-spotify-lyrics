@@ -15,22 +15,22 @@ const SHORT = 'Slow Orbit';
 const meta = {
     title: 'Marquee',
     component: Marquee,
-    // The component defaults give every control a value.
+    // The component defaults give every control a value. The delay and the rest depend on other props, so they start empty.
     args: {
         children: LONG,
-        mode: 'left',
-        scroll: 'overflow',
-        trigger: 'auto',
+        direction: 'left',
+        motion: 'loop',
+        fill: false,
+        play: 'auto',
         speed: 40,
-        rest: 1000,
         gap: 24,
-        fade: 24,
+        fadeDepth: 24,
     },
     argTypes: {
         children: { control: 'text' },
         separator: { control: false },
         gap: lengthControl,
-        fade: lengthControl,
+        fadeDepth: lengthControl,
     },
     render: (args) => (
         <div className="w-60 rounded-medium bg-raised px-3 py-2 text-medium">
@@ -44,18 +44,15 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
-// The rest at the start of a pass is a second, so a move can take a little longer than that.
+// The delay before the first pass is a second, so a move can take a little longer than that.
 const MOVE_TIMEOUT = { timeout: 3000 };
 
 function expectToMove(element: HTMLElement) {
-    const start = element.getBoundingClientRect().x;
-    return waitFor(
-        () =>
-            expect(
-                Math.abs(element.getBoundingClientRect().x - start)
-            ).toBeGreaterThan(2),
-        MOVE_TIMEOUT
-    );
+    const start = element.getBoundingClientRect();
+    return waitFor(() => {
+        const { x, y } = element.getBoundingClientRect();
+        expect(Math.hypot(x - start.x, y - start.y)).toBeGreaterThan(2);
+    }, MOVE_TIMEOUT);
 }
 
 export const Overflow: Story = {
@@ -75,7 +72,7 @@ export const Fits: Story = {
 };
 
 export const AlwaysLoop: Story = {
-    args: { children: SHORT, scroll: 'always', rest: 0 },
+    args: { children: SHORT, fill: true },
     play: async ({ canvas }) => {
         // Short content needs several copies to fill the box with no gap.
         await waitFor(() =>
@@ -87,11 +84,22 @@ export const AlwaysLoop: Story = {
 };
 
 export const MovesRight: Story = {
-    args: { mode: 'right' },
+    args: { direction: 'right' },
 };
 
+/** Up and down move the content through the height of the marquee, like lyrics. */
+export const Vertical: Story = {
+    args: { direction: 'up', className: 'h-5' },
+    play: async ({ canvas }) => {
+        await waitFor(() => expect(canvas.getAllByText(LONG)).toHaveLength(2));
+        const [original] = canvas.getAllByText(LONG);
+        await expectToMove(original!);
+    },
+};
+
+/** A bounce rests at each end, and a loop waits only once before it starts. */
 export const Bounce: Story = {
-    args: { mode: 'bounce' },
+    args: { motion: 'bounce' },
     play: async ({ canvas }) => {
         const text = canvas.getByText(LONG);
         await expectToMove(text);
@@ -100,7 +108,7 @@ export const Bounce: Story = {
 };
 
 export const StartOnHover: Story = {
-    args: { trigger: 'hover', rest: 0 },
+    args: { play: 'hover' },
     play: async ({ canvas, userEvent }) => {
         const [original] = await canvas.findAllByText(LONG);
         await userEvent.hover(canvas.getByTestId('marquee'));
@@ -111,7 +119,7 @@ export const StartOnHover: Story = {
 export const SeparatorNode: Story = {
     args: {
         children: SHORT,
-        scroll: 'always',
+        fill: true,
         separator: <Music aria-hidden className="size-3 text-subdued" />,
     },
 };
@@ -172,7 +180,7 @@ export const SharedStates: Story = {
                 { keys: '[/MouseLeft]' },
             ]);
             await waitFor(() =>
-                expect(CSS.highlights.get('marquee-selection')?.size).toBe(1)
+                expect(CSS.highlights.get('copy-selection')?.size).toBe(1)
             );
         });
     },
