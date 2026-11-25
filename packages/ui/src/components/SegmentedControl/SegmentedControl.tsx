@@ -61,7 +61,7 @@ export default function SegmentedControl<Value extends string = string>({
     );
     const current = value ?? innerValue;
 
-    // The pill follows the place and size of the chosen segment, which change with its text and the box.
+    // The pill follows the place and size of the chosen segment, which change with the options, their text and the box.
     useLayoutEffect(() => {
         const root = rootRef.current;
         if (!root) return;
@@ -79,8 +79,9 @@ export default function SegmentedControl<Value extends string = string>({
         place();
         const observer = new ResizeObserver(place);
         observer.observe(root);
+        for (const item of root.children) observer.observe(item);
         return () => observer.disconnect();
-    }, [current]);
+    }, [current, options]);
 
     const choose = (groupValue: string[]) => {
         // A press on the chosen segment empties the group, but one segment always stays chosen.

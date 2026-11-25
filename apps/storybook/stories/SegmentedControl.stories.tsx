@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { expect, fn, within } from 'storybook/test';
+import { expect, fn, waitFor, within } from 'storybook/test';
 
 import {
     ArrowDownNarrowWide,
@@ -8,6 +8,7 @@ import {
     LayoutGrid,
     List,
 } from '@return-spotify-lyrics/icons';
+import Switch from '@return-spotify-lyrics/ui/Switch';
 import SegmentedControl, {
     type SegmentedControlProps,
 } from '@return-spotify-lyrics/ui/SegmentedControl';
@@ -18,12 +19,21 @@ import { TRACKS } from './shared';
 // The control switches a real library between a list and a grid, so a person sees what each segment does.
 function LibraryView(props: SegmentedControlProps) {
     const [view, setView] = useState('list');
+    const [isGridFirst, setGridFirst] = useState(false);
     const isGrid = view === 'grid';
+    const options = isGridFirst ? [...props.options].reverse() : props.options;
 
     return (
         <div className="grid w-80 gap-4">
+            <Switch
+                label="Grid first"
+                checked={isGridFirst}
+                onCheckedChange={setGridFirst}
+                className="justify-self-start text-small"
+            />
             <SegmentedControl
                 {...props}
+                options={options}
                 value={view}
                 onValueChange={(next) => {
                     props.onValueChange?.(next);
@@ -80,6 +90,15 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
+// The colour that shows behind an element: the background of the first thing under its centre that isn't part of it.
+function paintBehind(element: HTMLElement) {
+    const { x, y, width, height } = element.getBoundingClientRect();
+    const under = element.ownerDocument
+        .elementsFromPoint(x + width / 2, y + height / 2)
+        .find((item) => item !== element && !element.contains(item));
+    return under ? getComputedStyle(under).backgroundColor : '';
+}
+
 /** A click or the keyboard chooses a view, and a press on the chosen view keeps it chosen. */
 export const Library: Story = {
     play: async ({ canvas, userEvent, args, step }) => {
@@ -107,6 +126,19 @@ export const Library: Story = {
             await userEvent.keyboard('{Enter}');
             await expect(list).toHaveAttribute('aria-pressed', 'true');
         });
+
+        await step(
+            'The pill follows its segment when the order changes',
+            async () => {
+                await userEvent.click(
+                    canvas.getByRole('switch', { name: 'Grid first' })
+                );
+                // The white pill shows through behind the chosen segment, and the pill takes a moment to slide.
+                await waitFor(() =>
+                    expect(paintBehind(list)).toBe('rgb(255, 255, 255)')
+                );
+            }
+        );
     },
 };
 
