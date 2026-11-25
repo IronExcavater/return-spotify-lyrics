@@ -41,6 +41,12 @@ const meta = {
         trigger: { control: false },
         children: { control: false },
     },
+    parameters: {
+        // In Safari, Base UI traps focus with hidden spans that pass focus on at once, which this rule reads as a fault.
+        a11y: {
+            config: { rules: [{ id: 'aria-hidden-focus', enabled: false }] },
+        },
+    },
 } satisfies Meta<typeof Popover>;
 
 export default meta;
