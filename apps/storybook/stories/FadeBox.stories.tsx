@@ -4,23 +4,23 @@ import { expect, waitFor } from 'storybook/test';
 import FadeBox from '@return-spotify-lyrics/ui/FadeBox';
 import { EDGES, type Edge } from '@return-spotify-lyrics/ui/geometry';
 
-import { directionControl, lengthControl } from './controls';
+import { edgesControl, lengthControl } from './controls';
 import { Placeholder } from './shared';
 
 const meta = {
     title: 'FadeBox',
     component: FadeBox,
-    // The component defaults give every control a value, but the size is larger so that the fade shows.
+    // The component defaults give every control a value, but the depth is larger so that the fade shows.
     args: {
         enabled: true,
-        size: 32,
-        direction: ['left', 'right'],
-        corners: true,
+        depth: 32,
+        edges: ['left', 'right'],
+        roundCorners: true,
         easing: 'ease-in-out',
     },
     argTypes: {
-        direction: directionControl,
-        size: lengthControl,
+        edges: edgesControl,
+        depth: lengthControl,
         easing: {
             control: 'select',
             options: [
@@ -66,28 +66,28 @@ export const LeftAndRight: Story = {
 };
 
 export const AllSides: Story = {
-    args: { direction: 'all' },
+    args: { edges: 'all' },
     // A corner fades on its own only when its two sides don't.
     play: ({ canvas }) => expectFades(canvas.getByTestId('fade-box'), SIDES),
 };
 
 export const SquareCorners: Story = {
-    args: { direction: 'all', corners: false },
+    args: { edges: 'all', roundCorners: false },
     play: ({ canvas }) => expectFades(canvas.getByTestId('fade-box'), SIDES),
 };
 
 export const SingleCorner: Story = {
-    args: { direction: ['top-right'] },
+    args: { edges: ['top-right'] },
     play: ({ canvas }) =>
         expectFades(canvas.getByTestId('fade-box'), ['top-right']),
 };
 
 export const LinearEasing: Story = {
-    args: { direction: 'all', easing: 'linear' },
+    args: { edges: 'all', easing: 'linear' },
     play: ({ canvas }) => expectFades(canvas.getByTestId('fade-box'), SIDES),
 };
 
 export const Disabled: Story = {
-    args: { direction: 'all', enabled: false },
+    args: { edges: 'all', enabled: false },
     play: ({ canvas }) => expectFades(canvas.getByTestId('fade-box'), []),
 };

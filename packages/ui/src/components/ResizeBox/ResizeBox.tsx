@@ -15,14 +15,14 @@ import { flushSync } from 'react-dom';
 import clsx from 'clsx';
 import { toCssSize, type CssLength } from '../../helpers/css';
 import {
-    axisRange,
+    findAxisRange,
     fitSize,
     keepsAspectRatio,
     resolveEdges,
     type Axis,
-    type Direction,
+    type EdgeSet,
     type Edge,
-    type EdgeInfo,
+    type EdgeVector,
     type Point,
     type Size,
     type SizeLimits,
@@ -34,27 +34,27 @@ export type HandlePlacement = 'overlap' | 'inset';
 export type ResizeBoxProps = Omit<ComponentPropsWithoutRef<'div'>, 'onChange'> &
     SizeLimits & {
         /** The size in pixels. A new value moves the box to it. */
-        size: Size;
+        value: Size;
         /** The edges that get a handle: `all`, `none` or a list of sides and corners. */
-        direction?: Direction;
+        edges?: EdgeSet;
         /** Show a grip icon on each handle. */
-        showIndicator?: boolean;
+        showGrip?: boolean;
         /** How wide each handle is. */
-        thickness?: CssLength;
+        handleSize?: CssLength;
         /** Put the handles over the content, or in a padding around it. */
-        placement?: HandlePlacement;
+        handlePlacement?: HandlePlacement;
         /** Arrow key step in pixels. Shift moves five steps. */
-        step?: number;
+        keyStep?: number;
         /** Accessible name for each handle. */
-        handleLabel?: (edge: Edge) => string;
+        getHandleLabel?: (edge: Edge) => string;
         /** Called for each size change during a resize. */
-        onChange?: (size: Size) => void;
+        onValueChange?: (value: Size) => void;
         /** Called once when a resize ends, so the caller can save the size. */
-        onChangeEnd?: (size: Size) => void;
+        onValueCommitted?: (value: Size) => void;
     };
 
 type Drag = {
-    edge: EdgeInfo;
+    edge: EdgeVector;
     pointerId: number;
     start: Point;
     from: Size;
@@ -67,23 +67,23 @@ const ARROW_KEYS: Record<string, Point> = {
     ArrowDown: { x: 0, y: 1 },
 };
 
-const defaultHandleLabel = (edge: Edge) => `Resize ${edge.replace('-', ' ')}`;
+const nameHandle = (edge: Edge) => `Resize ${edge.replace('-', ' ')}`;
 
 /** A box that a person resizes from handles on its edges, with a pointer or the arrow keys. */
 export default function ResizeBox({
-    size,
+    value,
     minSize,
     maxSize,
     minAspectRatio,
     maxAspectRatio,
-    direction = 'all',
-    showIndicator = true,
-    thickness = 14,
-    placement = 'overlap',
-    step = 10,
-    handleLabel = defaultHandleLabel,
-    onChange,
-    onChangeEnd,
+    edges = 'all',
+    showGrip = true,
+    handleSize = 14,
+    handlePlacement = 'overlap',
+    keyStep = 10,
+    getHandleLabel = nameHandle,
+    onValueChange,
+    onValueCommitted,
     className,
     style,
     children,
@@ -91,15 +91,15 @@ export default function ResizeBox({
 }: ResizeBoxProps) {
     const boxRef = useRef<HTMLDivElement>(null);
     const drag = useRef<Drag | null>(null);
-    const [current, setCurrent] = useState<Size>(size);
+    const [current, setCurrent] = useState<Size>(value);
     const [dragEdge, setDragEdge] = useState<Edge | null>(null);
 
     useEffect(
-        () => setCurrent({ width: size.width, height: size.height }),
-        [size.width, size.height]
+        () => setCurrent({ width: value.width, height: value.height }),
+        [value.width, value.height]
     );
 
-    const edges = resolveEdges(direction);
+    const handles = resolveEdges(edges);
     const limits = { minSize, maxSize, minAspectRatio, maxAspectRatio };
     // The props can change the limits after a resize, so each render fits the size again.
     const fitted = fitSize(current, 'width', limits);
@@ -116,7 +116,7 @@ export default function ResizeBox({
         return keepsAspectRatio(renderedSize(), limits);
     };
 
-    const resize = (edge: EdgeInfo, from: Size, delta: Point) => {
+    const resize = (edge: EdgeVector, from: Size, delta: Point) => {
         const lead = leadAxis(edge, from, delta);
         const requested = {
             width: from.width + delta.x * edge.x,
@@ -131,12 +131,15 @@ export default function ResizeBox({
             tryResize(sizeAt(findStep((step) => tryResize(sizeAt(step)))));
         }
 
-        onChange?.(renderedSize());
+        onValueChange?.(renderedSize());
     };
 
-    const endResize = () => onChangeEnd?.(renderedSize());
+    const endResize = () => onValueCommitted?.(renderedSize());
 
-    const startDrag = (event: PointerEvent<HTMLDivElement>, edge: EdgeInfo) => {
+    const startDrag = (
+        event: PointerEvent<HTMLDivElement>,
+        edge: EdgeVector
+    ) => {
         if (event.button !== 0) return;
 
         event.preventDefault();
@@ -172,7 +175,7 @@ export default function ResizeBox({
         endResize();
     };
 
-    const resizeWithKey = (event: KeyboardEvent, edge: EdgeInfo) => {
+    const resizeWithKey = (event: KeyboardEvent, edge: EdgeVector) => {
         const arrow = ARROW_KEYS[event.key];
         if (!arrow) return;
 
@@ -181,7 +184,7 @@ export default function ResizeBox({
         if (!movesEdge) return;
 
         event.preventDefault();
-        const distance = event.shiftKey ? step * 5 : step;
+        const distance = event.shiftKey ? keyStep * 5 : keyStep;
         const delta = { x: arrow.x * distance, y: arrow.y * distance };
         resize(edge, renderedSize(), delta);
         endResize();
@@ -192,23 +195,23 @@ export default function ResizeBox({
             {...props}
             ref={boxRef}
             className={clsx('resize-box', className)}
-            data-placement={placement}
+            data-placement={handlePlacement}
             style={{
                 ...style,
                 ...fitted,
-                '--handle-thickness': toCssSize(thickness),
+                '--handle-thickness': toCssSize(handleSize),
             }}
         >
             <div data-part="content">{children}</div>
 
-            {edges.map((edge) => {
+            {handles.map((edge) => {
                 const Grip = gripIcon(edge);
                 return (
                     <div
                         key={edge.name}
                         role="separator"
                         tabIndex={0}
-                        aria-label={handleLabel(edge.name)}
+                        aria-label={getHandleLabel(edge.name)}
                         {...separatorAria(edge, fitted, limits)}
                         data-part="handle"
                         data-edge={edge.name}
@@ -220,7 +223,7 @@ export default function ResizeBox({
                         onLostPointerCapture={endDrag}
                         onKeyDown={(event) => resizeWithKey(event, edge)}
                     >
-                        {showIndicator && <Grip aria-hidden data-part="grip" />}
+                        {showGrip && <Grip aria-hidden data-part="grip" />}
                     </div>
                 );
             })}
@@ -229,9 +232,9 @@ export default function ResizeBox({
 }
 
 // Handles follow the ARIA window splitter pattern.
-function separatorAria(edge: EdgeInfo, size: Size, limits: SizeLimits) {
+function separatorAria(edge: EdgeVector, size: Size, limits: SizeLimits) {
     const axis = edge.x ? 'width' : 'height';
-    const [min, max] = axisRange(axis, limits);
+    const [min, max] = findAxisRange(axis, limits);
     // A separator takes one value, so a corner gives its width as the value and both sides as text.
     const isCorner = edge.x !== 0 && edge.y !== 0;
     return {
@@ -246,7 +249,7 @@ function separatorAria(edge: EdgeInfo, size: Size, limits: SizeLimits) {
 }
 
 // A corner moves both axes, so the axis that moves more, for its size, leads.
-function leadAxis(edge: EdgeInfo, from: Size, delta: Point): Axis {
+function leadAxis(edge: EdgeVector, from: Size, delta: Point): Axis {
     if (!edge.y) return 'width';
     if (!edge.x) return 'height';
 
@@ -274,7 +277,7 @@ function findStep(passes: (step: number) => boolean): number {
     return pass;
 }
 
-function gripIcon(edge: EdgeInfo) {
+function gripIcon(edge: EdgeVector) {
     if (edge.x && edge.y) return GripCorner;
     if (edge.y) return GripHorizontal;
     return GripVertical;

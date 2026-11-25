@@ -217,7 +217,7 @@ Names and comments follow [ASD-STE100 Simplified Technical English](https://www.
 - Use simple words, and the same word for the same thing every time.
 - Keep names to three words or fewer. Functions start with a verb, like `resolveEdges`.
 - Name an event handler for what it does, like `endDrag`, not for the event, like `handlePointerUp`.
-- Name a boolean so that it reads as yes or no, like `enabled`, `showIndicator` or `isCorner`.
+- Name a boolean so that it reads as yes or no, like `enabled`, `showGrip` or `isCorner`.
 - Name files after their default export: `FadeBox.tsx`, `useResize.ts`. CSS files use kebab case, like `fade-box.css`.
 - Comment only to explain why, never what.
 - A comment is one sentence on one line: 20 words or fewer, present tense, active voice, and no `-ing` verbs.

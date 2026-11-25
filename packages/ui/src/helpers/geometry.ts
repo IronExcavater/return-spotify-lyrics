@@ -13,18 +13,18 @@ export type Corner = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
 export type Edge = Side | Corner;
 
 /** The edges that a component acts on. Two adjacent sides also bring their corner. */
-export type Direction = 'all' | 'none' | readonly Edge[];
+export type EdgeSet = 'all' | 'none' | readonly Edge[];
 
 export type Sign = -1 | 0 | 1;
 
 /** An edge and the direction it faces: -1 is left or top, 1 is right or bottom. */
-export type EdgeInfo = {
+export type EdgeVector = {
     name: Edge;
     x: Sign;
     y: Sign;
 };
 
-export const EDGES: readonly EdgeInfo[] = [
+export const EDGES: readonly EdgeVector[] = [
     { name: 'top', x: 0, y: -1 },
     { name: 'bottom', x: 0, y: 1 },
     { name: 'left', x: -1, y: 0 },
@@ -40,20 +40,20 @@ export function isCorner(edge: Edge): edge is Corner {
 }
 
 /** The two sides of a corner: the top or bottom side, then the left or right side. */
-export function cornerSides(corner: Corner): [Side, Side] {
+export function splitCorner(corner: Corner): [Side, Side] {
     return corner.split('-') as [Side, Side];
 }
 
-export function resolveEdges(direction: Direction): readonly EdgeInfo[] {
-    if (direction === 'all') return EDGES;
-    if (direction === 'none') return [];
+export function resolveEdges(edges: EdgeSet): readonly EdgeVector[] {
+    if (edges === 'all') return EDGES;
+    if (edges === 'none') return [];
 
     return EDGES.filter(({ name }) => {
-        if (direction.includes(name)) return true;
+        if (edges.includes(name)) return true;
         if (!isCorner(name)) return false;
 
-        const [vertical, horizontal] = cornerSides(name);
-        return direction.includes(vertical) && direction.includes(horizontal);
+        const [vertical, horizontal] = splitCorner(name);
+        return edges.includes(vertical) && edges.includes(horizontal);
     });
 }
 
@@ -70,7 +70,10 @@ export type SizeLimits = {
 };
 
 /** The range of one axis. The aspect ratios also apply the limits of the other axis to it. */
-export function axisRange(axis: Axis, limits: SizeLimits): [number, number] {
+export function findAxisRange(
+    axis: Axis,
+    limits: SizeLimits
+): [number, number] {
     const {
         minSize = {},
         maxSize = {},
@@ -97,7 +100,7 @@ export function axisRange(axis: Axis, limits: SizeLimits): [number, number] {
 /** Fits a size inside its limits. The other axis changes first, and the lead axis changes only when it must. */
 export function fitSize(size: Size, lead: Axis, limits: SizeLimits): Size {
     const follow = lead === 'width' ? 'height' : 'width';
-    const leadValue = clamp(size[lead], ...axisRange(lead, limits));
+    const leadValue = clamp(size[lead], ...findAxisRange(lead, limits));
 
     // A fixed lead axis leaves the other axis only the values that the aspect ratios allow.
     const fixed = {
@@ -105,7 +108,7 @@ export function fitSize(size: Size, lead: Axis, limits: SizeLimits): Size {
         minSize: { ...limits.minSize, [lead]: leadValue },
         maxSize: { ...limits.maxSize, [lead]: leadValue },
     };
-    const followValue = clamp(size[follow], ...axisRange(follow, fixed));
+    const followValue = clamp(size[follow], ...findAxisRange(follow, fixed));
 
     return lead === 'width'
         ? { width: leadValue, height: followValue }

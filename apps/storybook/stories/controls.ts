@@ -1,7 +1,7 @@
 import { EDGES } from '@return-spotify-lyrics/ui/geometry';
 
 /** Checkboxes, so that the control always sends a list of edges. */
-export const directionControl = {
+export const edgesControl = {
     control: 'inline-check',
     options: EDGES.map((edge) => edge.name),
 } as const;

@@ -1,11 +1,7 @@
 import type { ComponentProps } from 'react';
 import clsx from 'clsx';
 import { toCssSize, type CssLength } from '../../helpers/css';
-import {
-    resolveEdges,
-    type Direction,
-    type Side,
-} from '../../helpers/geometry';
+import { resolveEdges, type EdgeSet, type Side } from '../../helpers/geometry';
 import { easeStops, reverseEasing, type Easing } from '../../helpers/gradient';
 
 const SIDES: readonly Side[] = ['top', 'right', 'bottom', 'left'];
@@ -13,11 +9,11 @@ const SIDES: readonly Side[] = ['top', 'right', 'bottom', 'left'];
 export type FadeBoxProps = ComponentProps<'div'> & {
     enabled?: boolean;
     /** How far the fade goes in from each faded edge. */
-    size?: CssLength;
+    depth?: CssLength;
     /** The edges that fade: `all`, `none` or a list of sides and corners. */
-    direction?: Direction;
+    edges?: EdgeSet;
     /** Round the corner where two faded sides meet. */
-    corners?: boolean;
+    roundCorners?: boolean;
     /** How the fade changes from clear at the edge to solid. */
     easing?: Easing;
 };
@@ -25,16 +21,16 @@ export type FadeBoxProps = ComponentProps<'div'> & {
 /** Fades its content out at the edges with a CSS mask, so that it blends into what is behind it. */
 export default function FadeBox({
     enabled = true,
-    size = 4,
-    direction = ['left', 'right'],
-    corners = true,
+    depth = 4,
+    edges = ['left', 'right'],
+    roundCorners = true,
     easing = 'ease-in-out',
     className,
     style,
     ...props
 }: FadeBoxProps) {
-    const edges = resolveEdges(direction).map((edge) => edge.name);
-    const fadeSize = enabled ? toCssSize(size) : '0px';
+    const fadedEdges = resolveEdges(edges).map((edge) => edge.name);
+    const fadeSize = enabled ? toCssSize(depth) : '0px';
     // A square corner multiplies two full-size layers, so each side needs stops at its own size.
     const sideStops = Object.fromEntries(
         SIDES.map((side) => [
@@ -53,8 +49,8 @@ export default function FadeBox({
         <div
             {...props}
             className={clsx('fade-box', className)}
-            data-fade={edges.join(' ')}
-            data-corners={corners ? 'round' : 'square'}
+            data-fade={fadedEdges.join(' ')}
+            data-corners={roundCorners ? 'round' : 'square'}
             style={{
                 '--fade-size': fadeSize,
                 '--fade-stops': stops,
