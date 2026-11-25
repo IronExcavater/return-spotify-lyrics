@@ -4,6 +4,7 @@ import clsx from 'clsx';
 
 import ResizeBox from '@return-spotify-lyrics/ui/ResizeBox';
 import TextProvider from '@return-spotify-lyrics/ui/TextProvider';
+import TooltipProvider from '@return-spotify-lyrics/ui/TooltipProvider';
 import type { Size } from '@return-spotify-lyrics/ui/geometry';
 
 import { useSurface } from '../surface/SurfaceProvider';
@@ -47,18 +48,24 @@ export default function AppShell() {
 
     const content = (
         <TextProvider navigate={navigate} resolveHref={toHashHref}>
-            <div
-                className={clsx(
-                    'flex h-full min-h-0 flex-col',
-                    surface === 'popup' && 'overflow-hidden'
-                )}
-            >
-                <AppBar policy={resize.bar} />
-                {/* Safari can't scroll a region with the keyboard unless the region can take focus. */}
-                <main tabIndex={0} className="min-h-0 flex-1 overflow-y-auto">
-                    <Outlet />
-                </main>
-            </div>
+            {/* One provider groups every tooltip, so the next one along a row opens at once. */}
+            <TooltipProvider>
+                <div
+                    className={clsx(
+                        'flex h-full min-h-0 flex-col',
+                        surface === 'popup' && 'overflow-hidden'
+                    )}
+                >
+                    <AppBar policy={resize.bar} />
+                    {/* Safari can't scroll a region with the keyboard unless the region can take focus. */}
+                    <main
+                        tabIndex={0}
+                        className="min-h-0 flex-1 overflow-y-auto"
+                    >
+                        <Outlet />
+                    </main>
+                </div>
+            </TooltipProvider>
         </TextProvider>
     );
 
