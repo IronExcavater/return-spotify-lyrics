@@ -11,15 +11,12 @@
         transition-duration: var(--transition-duration-fast);
 
         /* Only a card that does something reacts to a pointer, so a plain card doesn't look clickable. */
+        /* A press changes only the content that asks for it, so the card doesn't flash like a button. */
         &:is(a[href], button) {
             cursor: pointer;
 
             &:is(:hover, [data-hover]) {
                 background-color: var(--background-color-overlay);
-            }
-
-            &:is(:active, [data-active]) {
-                background-color: var(--background-color-default);
             }
         }
     }
