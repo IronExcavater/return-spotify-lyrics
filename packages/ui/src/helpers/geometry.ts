@@ -136,12 +136,14 @@ export function orderRatios(limits: SizeLimits): SizeLimits {
  */
 export function fitCorner(size: Size, limits: SizeLimits): Size {
     const { minAspectRatio = 0, maxAspectRatio = Infinity } = limits;
-    const ratio = size.width / size.height;
+    // A drag past the start makes the height zero or less, so the check multiplies and never divides by it.
+    const isTooWide =
+        Number.isFinite(maxAspectRatio) &&
+        size.width > maxAspectRatio * size.height;
+    const isTooTall = size.width < minAspectRatio * size.height;
     let onRatio = size;
-    if (ratio > maxAspectRatio)
-        onRatio = projectOntoRatio(size, maxAspectRatio);
-    if (ratio < minAspectRatio)
-        onRatio = projectOntoRatio(size, minAspectRatio);
+    if (isTooWide) onRatio = projectOntoRatio(size, maxAspectRatio);
+    if (isTooTall) onRatio = projectOntoRatio(size, minAspectRatio);
     return fitSize(onRatio, 'width', limits);
 }
 

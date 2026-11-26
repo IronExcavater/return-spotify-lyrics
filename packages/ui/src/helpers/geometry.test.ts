@@ -98,6 +98,14 @@ describe('fitCorner', () => {
         expect(Math.abs(below.width - above.width)).toBeLessThan(2);
     });
 
+    it('changes the size only a little when the pointer drags the height past zero', () => {
+        const atZero = fitCorner({ width: 320, height: 0 }, limits);
+        const pastZero = fitCorner({ width: 320, height: -1 }, limits);
+        expect(atZero).toEqual({ width: 256, height: 128 });
+        expect(Math.abs(atZero.width - pastZero.width)).toBeLessThan(1);
+        expect(Math.abs(atZero.height - pastZero.height)).toBeLessThan(1);
+    });
+
     it('keeps the size limits after the ratio', () => {
         const small = fitCorner(
             { width: 500, height: 200 },
