@@ -9,6 +9,7 @@ import { Toggle } from '@base-ui/react/toggle';
 import { ToggleGroup } from '@base-ui/react/toggle-group';
 import clsx from 'clsx';
 import useLabelFallback from '../../hooks/useLabelFallback';
+import useReady from '../../hooks/useReady';
 import Text from '../Text/Text';
 
 export type SegmentedOption<Value extends string> = {
@@ -90,6 +91,8 @@ export default function SegmentedControl<Value extends string = string>({
         options.every((option) => Boolean(option.icon)),
         options
     );
+
+    useReady(rootRef);
 
     const choose = (groupValue: string[]) => {
         // A press on the chosen segment empties the group, but one segment always stays chosen.

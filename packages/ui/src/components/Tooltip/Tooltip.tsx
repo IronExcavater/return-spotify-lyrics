@@ -5,10 +5,10 @@ import type { FloatingProps } from '../../helpers/floating';
 import Text from '../Text/Text';
 
 export type TooltipProps = FloatingProps & {
-    /** The text that the tooltip shows. A tooltip only shows, so the trigger needs an accessible name that matches it. */
-    label: ReactNode;
-    /** The element that the tooltip belongs to, like an icon Button. */
-    children: ReactElement;
+    /** The text that the tooltip shows. Without it, the tooltip shows the element's `aria-label`, so the two always match. */
+    label?: ReactNode;
+    /** The element that the tooltip wraps and belongs to, like an icon Button. */
+    children: ReactElement<{ 'aria-label'?: string | undefined }>;
     /** How long a pointer rests on the trigger before the tooltip opens, in milliseconds. Without it, the TooltipProvider's delay applies. Focus opens it at once. */
     delay?: number | undefined;
     /** How long the tooltip stays after the pointer leaves, in milliseconds. Without it, the TooltipProvider's delay applies. */
@@ -21,10 +21,13 @@ export type TooltipProps = FloatingProps & {
     style?: CSSProperties | undefined;
 };
 
-/** A short hint that shows when a person points at or focuses an element, on Base UI's `Tooltip`. */
+/**
+ * A short hint that shows when a person points at or focuses the element that it wraps, on Base UI's `Tooltip`. A
+ * tooltip only shows, so the element needs an accessible name that says the same thing.
+ */
 export default function Tooltip({
-    label,
     children,
+    label = children.props['aria-label'],
     // The delays have no default here, so a TooltipProvider can set them for every tooltip inside it.
     delay,
     closeDelay,

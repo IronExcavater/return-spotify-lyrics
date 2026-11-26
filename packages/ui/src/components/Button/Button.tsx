@@ -14,7 +14,6 @@ import useLabelFallback from '../../hooks/useLabelFallback';
 import Badge from '../Badge/Badge';
 import Spinner from '../Spinner/Spinner';
 import Text from '../Text/Text';
-import Tooltip from '../Tooltip/Tooltip';
 
 type SharedProps = Omit<
     BaseButton.Props,
@@ -34,8 +33,6 @@ type SharedProps = Omit<
     loadingLabel?: string;
     /** A mark in the top-right corner, like a Badge. A number shows as a small count Badge. Put a count in the name too. */
     badge?: ReactNode;
-    /** A Tooltip with this text. `true` shows the button's `aria-label`, so an icon button shows its name on hover and focus. */
-    tooltip?: ReactNode;
     /** Another element to render, like `<a href="…" />` for a link with button styles. A link can't be disabled. */
     render?: ReactElement | undefined;
     className?: string | undefined;
@@ -64,7 +61,6 @@ export default function Button({
     loading = false,
     loadingLabel = 'Loading',
     badge,
-    tooltip = false,
     render,
     nativeButton,
     disabled = false,
@@ -126,19 +122,17 @@ export default function Button({
         ref: setRefs,
         props: { ...props, ...shared },
     });
-    const button = link ?? (
-        <BaseButton
-            {...props}
-            {...shared}
-            ref={setRefs}
-            render={render}
-            nativeButton
-            disabled={disabled || loading}
-            focusableWhenDisabled={loading}
-        />
+    return (
+        link ?? (
+            <BaseButton
+                {...props}
+                {...shared}
+                ref={setRefs}
+                render={render}
+                nativeButton
+                disabled={disabled || loading}
+                focusableWhenDisabled={loading}
+            />
+        )
     );
-    const tooltipLabel = tooltip === true ? props['aria-label'] : tooltip;
-    if (!tooltipLabel) return button;
-
-    return <Tooltip label={tooltipLabel}>{button}</Tooltip>;
 }

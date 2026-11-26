@@ -1,26 +1,60 @@
-/* A loop moves the track by one item, and a bounce moves it by the overflow, along the marquee's axis. */
+/* How far a pass has gone, from 0 to 1. The track and the fades both follow it, so they stay in step. */
+@property --marquee-progress {
+    syntax: '<number>';
+    inherits: true;
+    initial-value: 0;
+}
+
+/* How far the first pass of a loop has gone. It stays at 1 after that pass. */
+@property --marquee-first-pass {
+    syntax: '<number>';
+    inherits: false;
+    initial-value: 0;
+}
+
+/* The keyframes hold plain numbers, because Firefox doesn't animate a custom property to a var(). */
 @keyframes marquee-move {
     to {
-        translate: var(--marquee-to);
+        --marquee-progress: 1;
+    }
+}
+
+@keyframes marquee-first-pass {
+    to {
+        --marquee-first-pass: 1;
     }
 }
 
 /* Defaults live in @layer components so that a consumer className always wins. */
 @layer components {
     .marquee {
-        --marquee-to: calc(-1 * var(--marquee-distance)) 0;
+        /* A loop moves by one item, and a bounce moves by the overflow, away from the start of the text. */
+        --marquee-offset: calc(
+            var(--marquee-progress) * var(--marquee-distance)
+        );
+        --marquee-x: -1;
+        --marquee-y: 0;
+        /* An edge fades only as far as content hides past it. A still marquee hides content only at the end of its text. */
+        --marquee-start-fade: 0px;
+        --marquee-end-fade: var(--fade-size);
+        --fade-left-size: var(--marquee-start-fade);
+        --fade-right-size: var(--marquee-end-fade);
 
         min-width: 0;
 
         /* Right-to-left text reads on to the left, so the track moves right to show it. */
         &[data-rtl][data-axis='x'] {
-            --marquee-to: var(--marquee-distance) 0;
+            --marquee-x: 1;
+            --fade-left-size: var(--marquee-end-fade);
+            --fade-right-size: var(--marquee-start-fade);
         }
 
         > [data-part='track'] {
             display: flex;
             width: max-content;
             white-space: nowrap;
+            translate: calc(var(--marquee-offset) * var(--marquee-x))
+                calc(var(--marquee-offset) * var(--marquee-y));
         }
 
         > [data-part='track'] > [data-part='item'] {
@@ -31,7 +65,12 @@
 
         /* Up and down stack the copies, and the lines wrap in the width of the marquee. */
         &[data-axis='y'] {
-            --marquee-to: 0 calc(-1 * var(--marquee-distance));
+            --marquee-x: 0;
+            --marquee-y: -1;
+            --fade-left-size: 0px;
+            --fade-right-size: 0px;
+            --fade-top-size: var(--marquee-start-fade);
+            --fade-bottom-size: var(--marquee-end-fade);
 
             min-height: 0;
 
@@ -46,27 +85,54 @@
             }
         }
 
-        /* The delay applies once, before the first pass. */
-        &[data-moving] > [data-part='track'] {
+        /* The first layout sets the fades, so they appear at once. */
+        &:not([data-ready]) {
+            transition-property: none;
+        }
+
+        /* The delay applies once, before the first pass. The motion sets the fades in each frame, so they don't transition. */
+        &[data-moving] {
             animation: marquee-move var(--marquee-duration)
                 var(--marquee-easing) var(--marquee-delay) infinite;
-            will-change: translate;
-        }
+            transition-property: none;
 
-        &:is([data-direction='end'], [data-direction='down'])
             > [data-part='track'] {
-            animation-direction: reverse;
+                will-change: translate;
+            }
         }
 
-        /* A bounce starts at the start of the content, so it alternates the same way in every direction. */
-        &[data-motion='bounce'] > [data-part='track'] {
+        /* Copies follow the content, so the end always fades. The start fades in once, as the first pass moves out under it. */
+        &[data-moving][data-motion='loop'] {
+            --marquee-start-fade: min(
+                var(--fade-size),
+                var(--marquee-first-pass) * var(--marquee-distance)
+            );
+
+            animation:
+                marquee-move var(--marquee-duration) var(--marquee-easing)
+                    var(--marquee-delay) infinite,
+                marquee-first-pass var(--marquee-duration) var(--marquee-easing)
+                    var(--marquee-delay) forwards;
+        }
+
+        &[data-moving]:is([data-direction='end'], [data-direction='down']) {
+            animation-direction: reverse, normal;
+        }
+
+        /* A bounce starts at the start of the content and alternates the same way in every direction. Each end fades only while content hides past it. */
+        &[data-moving][data-motion='bounce'] {
+            --marquee-start-fade: min(var(--fade-size), var(--marquee-offset));
+            --marquee-end-fade: min(
+                var(--fade-size),
+                var(--marquee-distance) - var(--marquee-offset)
+            );
+
             animation-direction: alternate;
         }
 
         /* A person who points at, focuses or selects the content needs it to keep still. */
-        &:is([data-play='auto']:is(:hover, :focus-within), [data-offscreen])
-            > [data-part='track'],
-        > [data-part='track'][data-selecting] {
+        &:is([data-play='auto']:is(:hover, :focus-within), [data-offscreen]),
+        &:has(> [data-part='track'][data-selecting]) {
             animation-play-state: paused;
         }
     }

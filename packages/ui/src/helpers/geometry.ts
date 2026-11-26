@@ -115,14 +115,42 @@ export function fitSize(size: Size, lead: Axis, limits: SizeLimits): Size {
         : { width: followValue, height: leadValue };
 }
 
-/** Checks a drawn size against the aspect ratios. A pixel of rounding is allowed. */
-export function keepsAspectRatio(
-    { width, height }: Size,
-    { minAspectRatio = 0, maxAspectRatio = Infinity }: SizeLimits
-): boolean {
-    const tooTall = width < widthFor(height, minAspectRatio) - 1;
-    const tooWide = width > widthFor(height, maxAspectRatio) + 1;
-    return !tooTall && !tooWide;
+/** Puts the aspect ratios in order, so a lowest ratio above the highest one, like two controls set the wrong way round, still makes a range. */
+export function orderRatios(limits: SizeLimits): SizeLimits {
+    const { minAspectRatio, maxAspectRatio } = limits;
+    const isReversed =
+        minAspectRatio !== undefined &&
+        maxAspectRatio !== undefined &&
+        minAspectRatio > maxAspectRatio;
+    if (!isReversed) return limits;
+    return {
+        ...limits,
+        minAspectRatio: maxAspectRatio,
+        maxAspectRatio: minAspectRatio,
+    };
+}
+
+/**
+ * Fits a size from a corner drag inside its limits. A size outside the aspect ratios moves to the nearest size on the
+ * nearer ratio, so the size changes smoothly as the pointer moves, even across the line of a fixed ratio.
+ */
+export function fitCorner(size: Size, limits: SizeLimits): Size {
+    const { minAspectRatio = 0, maxAspectRatio = Infinity } = limits;
+    // A drag past the start makes the height zero or less, so the check multiplies and never divides by it.
+    const isTooWide =
+        Number.isFinite(maxAspectRatio) &&
+        size.width > maxAspectRatio * size.height;
+    const isTooTall = size.width < minAspectRatio * size.height;
+    let onRatio = size;
+    if (isTooWide) onRatio = projectOntoRatio(size, maxAspectRatio);
+    if (isTooTall) onRatio = projectOntoRatio(size, minAspectRatio);
+    return fitSize(onRatio, 'width', limits);
+}
+
+// The nearest size on the line where width is ratio times height, at the shortest distance from the size.
+function projectOntoRatio({ width, height }: Size, ratio: number): Size {
+    const scale = (width * ratio + height) / (ratio * ratio + 1);
+    return { width: scale * ratio, height: scale };
 }
 
 // Without these checks, a size of 0 and an open ratio give NaN, not "no limit".

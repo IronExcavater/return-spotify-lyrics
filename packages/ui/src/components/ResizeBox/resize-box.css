@@ -3,13 +3,9 @@
     .resize-box {
         position: relative;
         display: grid;
-        /* A 1fr track, not minmax(0, 1fr), keeps the min-content size of the content. */
-        grid-template: 1fr / 1fr;
+        /* The box takes the size that ResizeBox gives it, so the content can't push it out and break a ratio. */
+        grid-template: minmax(0, 1fr) / minmax(0, 1fr);
         box-sizing: border-box;
-        min-width: min-content;
-        min-height: min-content;
-        max-width: 100%;
-        max-height: 100%;
 
         /* On a very small box, opposite handles share the space and do not overlap. */
         --resize-leading: min(
@@ -34,19 +30,12 @@
             }
         }
 
-        /* An empty cell under the content keeps the box at least one handle in size. */
-        &::before {
-            content: '';
-            grid-area: 1 / 1;
-            width: var(--handle-thickness);
-            height: var(--handle-thickness);
-            pointer-events: none;
-        }
-
+        /* Content that is bigger than the box is cut at its edge, because the box keeps its size. */
         & > [data-part='content'] {
             grid-area: 1 / 1;
             display: grid;
-            grid-template: 1fr / 1fr;
+            grid-template: minmax(0, 1fr) / minmax(0, 1fr);
+            overflow: hidden;
         }
 
         & > [data-part='handle'] {
