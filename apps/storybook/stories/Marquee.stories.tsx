@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { expect, waitFor, within } from 'storybook/test';
 
+import type { Side } from '@return-spotify-lyrics/ui/geometry';
 import Link from '@return-spotify-lyrics/ui/Link';
 import Marquee from '@return-spotify-lyrics/ui/Marquee';
 import Text from '@return-spotify-lyrics/ui/Text';
@@ -61,14 +62,40 @@ function expectToMove(element: HTMLElement) {
     );
 }
 
+// Each edge has a registered size property, which is how far its fade goes in.
+function readFade(marquee: HTMLElement, side: Side) {
+    return getComputedStyle(marquee).getPropertyValue(`--fade-${side}-size`);
+}
+
+/** Before the title moves, only its end fades, and the start fades as the title moves out under it. */
 export const NowPlaying: Story = {
-    play: async ({ canvas, args }) => {
+    play: async ({ canvas, args, step }) => {
+        const marquee = canvas.getByTestId('marquee');
+        const depth = `${String(args.fadeDepth)}px`;
         // The copy is hidden from assistive technology, so a person hears the text once.
         await waitFor(() =>
             expect(canvas.getAllByText(String(args.children))).toHaveLength(2)
         );
         const [original] = canvas.getAllByText(String(args.children));
-        await expectToMove(original!);
+
+        await step('Only the end fades before it moves', async () => {
+            await expect(readFade(marquee, 'left')).toBe('0px');
+            await expect(readFade(marquee, 'right')).toBe(depth);
+        });
+
+        await step('The fade shows at once, with no transition', async () => {
+            const transitions = marquee
+                .getAnimations()
+                .filter((animation) => animation instanceof CSSTransition);
+            await expect(transitions).toHaveLength(0);
+        });
+
+        await step('The start fades once the title moves', async () => {
+            await expectToMove(original!);
+            await waitFor(() => expect(readFade(marquee, 'left')).toBe(depth), {
+                timeout: 3000,
+            });
+        });
     },
 };
 
@@ -104,8 +131,14 @@ export const Fill: Story = {
 export const RightToLeft: Story = {
     args: { children: 'שירים על המים בלילה, ואורות הנמל עד הבוקר' },
     play: async ({ canvas, args }) => {
+        const marquee = canvas.getByTestId('marquee');
         await waitFor(() =>
             expect(canvas.getAllByText(String(args.children))).toHaveLength(2)
+        );
+        // The text starts at the right, so only the left edge fades before it moves.
+        await expect(readFade(marquee, 'right')).toBe('0px');
+        await expect(readFade(marquee, 'left')).toBe(
+            `${String(args.fadeDepth)}px`
         );
         const [original] = canvas.getAllByText(String(args.children));
         const start = original!.getBoundingClientRect().x;
@@ -124,23 +157,43 @@ export const RightToLeft: Story = {
 export const Vertical: Story = {
     args: { direction: 'up', className: 'h-5' },
     play: async ({ canvas, args }) => {
+        const marquee = canvas.getByTestId('marquee');
         await waitFor(() =>
             expect(canvas.getAllByText(String(args.children))).toHaveLength(2)
+        );
+        // The first line shows at the top, so only the bottom edge fades before it moves.
+        await expect(readFade(marquee, 'top')).toBe('0px');
+        await expect(readFade(marquee, 'bottom')).toBe(
+            `${String(args.fadeDepth)}px`
         );
         const [original] = canvas.getAllByText(String(args.children));
         await expectToMove(original!);
     },
 };
 
-/** A bounce rests at each end, and a loop waits only once before it starts. */
+/** A bounce rests at each end, and a loop waits only once before it starts. An edge fades only while text hides past it. */
 export const Bounce: Story = {
     args: { motion: 'bounce' },
-    play: async ({ canvas, args }) => {
+    play: async ({ canvas, args, step }) => {
+        const marquee = canvas.getByTestId('marquee');
         const text = canvas.getByText(String(args.children));
-        await expectToMove(text);
-        await expect(canvas.getAllByText(String(args.children))).toHaveLength(
-            1
-        );
+        const depth = `${String(args.fadeDepth)}px`;
+
+        await step('At the start, only the end fades', async () => {
+            await waitFor(() => expect(readFade(marquee, 'right')).toBe(depth));
+            await expect(readFade(marquee, 'left')).toBe('0px');
+        });
+
+        await step('Both edges fade while it moves', async () => {
+            await expectToMove(text);
+            await waitFor(() => expect(readFade(marquee, 'left')).toBe(depth), {
+                timeout: 3000,
+            });
+            await expect(readFade(marquee, 'right')).toBe(depth);
+            await expect(
+                canvas.getAllByText(String(args.children))
+            ).toHaveLength(1);
+        });
     },
 };
 

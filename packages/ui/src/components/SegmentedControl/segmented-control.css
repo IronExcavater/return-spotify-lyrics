@@ -18,6 +18,10 @@
             background-color: var(--background-color-inverse);
             opacity: 0;
             translate: var(--segment-x, 0) 0;
+        }
+
+        /* The first place is at once, so the pill starts under its segment and doesn't slide in. */
+        &[data-ready] > [data-part='indicator'] {
             transition-property: translate, width;
             transition-duration: var(--transition-duration-default);
         }
