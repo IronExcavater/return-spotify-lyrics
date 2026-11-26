@@ -210,3 +210,56 @@ export const Inline: Story = {
         );
     },
 };
+
+/**
+ * The worst case: every format at once, in four scripts and both directions, with emoji, combining marks and a word
+ * that never breaks, in a narrow box. Nothing may spill out of the box.
+ */
+export const EverythingAtOnce: Story = {
+    args: {
+        format: 'markdown',
+        children: `## Ünïcödé · 歌词 · كلمات · מילים
+
+**Bold _and italic_ together**, ~~struck~~, \`inline code\`, and [a link with a name so long that it has to wrap](https://lrclib.net/search?q=the+quiet+hours+paper+satellites+northern+static+remix).
+
+Taumatawhakatangihangakoauauotamateaturipukakapikimaungahoronukupokaiwhenuakitanatahu is one word.
+
+The chorus goes שירים על המים בלילה, then ليلة في الميناء, then 港の夜 before it ends.
+
+👩‍👩‍👧‍👦 🏳️‍🌈 🧑🏽‍🚀 and Z̷̢a̶͙l̸̨g̵̣o̷͚ t̵̜e̴̙x̸̹t̶̲
+
+1. A list item with **bold**
+   - a nested item with \`code\`
+   - a nested item with a [link](https://lrclib.net)
+2. Another item
+
+> A quote long enough to wrap, with *emphasis* and ~~a strike~~ inside it.`,
+        className: 'w-64',
+    },
+    // The root has no role, so the story gives it a test id.
+    render: (args) => <Text {...args} data-testid="everything" />,
+    play: async ({ canvas, step }) => {
+        // The formatter loads lazily, and its first load can take more than a second on a cold server.
+        const link = await canvas.findByRole(
+            'link',
+            { name: /a name so long/ },
+            { timeout: 5000 }
+        );
+
+        await step('Every block renders', async () => {
+            await expect(link).toHaveAttribute('target', '_blank');
+            await expect(
+                canvas.getByRole('heading', { level: 2 })
+            ).toBeVisible();
+            await expect(canvas.getAllByRole('listitem')).toHaveLength(4);
+            await expect(canvas.getByRole('blockquote')).toBeVisible();
+        });
+
+        await step('Nothing spills out of the box', async () => {
+            const text = canvas.getByTestId('everything');
+            await expect(text.scrollWidth).toBeLessThanOrEqual(
+                text.clientWidth + 1
+            );
+        });
+    },
+};
