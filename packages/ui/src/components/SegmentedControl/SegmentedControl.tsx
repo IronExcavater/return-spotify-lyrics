@@ -84,10 +84,10 @@ export default function SegmentedControl<Value extends string = string>({
         return () => observer.disconnect();
     }, [current, options]);
 
-    // Every segment needs an icon to fall back on, so the segments all change together.
+    // Every segment needs a rendered icon to fall back on, so the segments all change together.
     useLabelFallback(
         rootRef,
-        options.every((option) => option.icon !== undefined),
+        options.every((option) => Boolean(option.icon)),
         options
     );
 

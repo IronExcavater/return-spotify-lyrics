@@ -200,7 +200,8 @@ function NarrowingToolbar() {
                 <Button variant="primary" tone="accent" icon={<Shuffle />}>
                     Shuffle play
                 </Button>
-                <Button>Follow The Quiet Hours</Button>
+                {/* A follow button shows a check only after a person follows, so its icon is empty here. */}
+                <Button icon={null}>Follow The Quiet Hours</Button>
                 <Button variant="tertiary" icon={<Share2 />}>
                     Share
                 </Button>
@@ -259,6 +260,13 @@ export const NarrowPanel: Story = {
             await expect(
                 canvas.getByRole('button', { name: 'Shuffle play' })
             ).toBe(shuffle);
+        });
+
+        await step('A button with an empty icon only cuts off', async () => {
+            const followButton = canvas.getByRole('button', {
+                name: 'Follow The Quiet Hours',
+            });
+            await expect(isCircle(followButton)).toBe(false);
         });
 
         await step('The labels come back when the panel grows', async () => {

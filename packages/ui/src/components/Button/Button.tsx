@@ -1,15 +1,15 @@
 import {
     isValidElement,
-    useCallback,
+    useMemo,
     useRef,
     type CSSProperties,
     type ReactElement,
     type ReactNode,
-    type Ref,
 } from 'react';
 import { Button as BaseButton } from '@base-ui/react/button';
 import { useRender } from '@base-ui/react/use-render';
 import clsx from 'clsx';
+import { composeRefs } from '../../helpers/ref';
 import useLabelFallback from '../../hooks/useLabelFallback';
 import Badge from '../Badge/Badge';
 import Spinner from '../Spinner/Spinner';
@@ -73,19 +73,13 @@ export default function Button({
     ref,
     ...props
 }: ButtonProps) {
-    const rootRef = useRef<HTMLElement | null>(null);
+    const rootRef = useRef<HTMLButtonElement | null>(null);
     // The button needs its own element to measure the label, and the caller's ref still gets it.
-    const setRefs = useCallback(
-        (node: HTMLButtonElement | null) => {
-            rootRef.current = node;
-            setRef(ref, node);
-        },
-        [ref]
-    );
-    // A label with an icon can give way to the icon, and a label alone cuts off.
+    const setRefs = useMemo(() => composeRefs(rootRef, ref), [ref]);
+    // A label with a rendered icon can give way to the icon, and a label alone cuts off.
     useLabelFallback(
         rootRef,
-        icon !== undefined && children !== undefined,
+        Boolean(icon) && children !== undefined,
         children
     );
     const badgeNode =
@@ -147,12 +141,4 @@ export default function Button({
     if (!tooltipLabel) return button;
 
     return <Tooltip label={tooltipLabel}>{button}</Tooltip>;
-}
-
-function setRef<T>(ref: Ref<T> | undefined, node: T | null) {
-    if (typeof ref === 'function') {
-        ref(node);
-        return;
-    }
-    if (ref) ref.current = node;
 }
