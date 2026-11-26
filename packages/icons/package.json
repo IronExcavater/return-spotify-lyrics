@@ -12,15 +12,15 @@
         "lint": "oxlint src"
     },
     "dependencies": {
-        "lucide-react": "^0.550.0"
+        "lucide-react": "^1.80.0"
     },
     "peerDependencies": {
         "react": "^19.2.8"
     },
     "devDependencies": {
-        "@types/react": "^19.2.18",
-        "oxlint": "^1.78.0",
-        "react": "^19.2.8",
-        "typescript": "^5.9.3"
+        "@types/react": "^19.3.3",
+        "oxlint": "^1.95.0",
+        "react": "^19.3.1",
+        "typescript": "^7.0.2"
     }
 }
