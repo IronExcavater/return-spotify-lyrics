@@ -25,20 +25,34 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
-/** The label is part of the control, so a click on it toggles the box, and Space does too. */
+/** The label is part of the control, so a click on it toggles the box, and Space does too. The check doesn't move the line. */
 export const Default: Story = {
-    play: async ({ canvas, userEvent, args }) => {
+    play: async ({ canvas, canvasElement, userEvent, args, step }) => {
         const checkbox = canvas.getByRole('checkbox', {
             name: String(args.label),
         });
+        // The checkbox sits in a line of text, so a change to its baseline changes the height of its parent.
+        const parent = checkbox.parentElement!;
+        // A late font changes the line too, so the test measures after the fonts load.
+        await canvasElement.ownerDocument.fonts.ready;
+        const unchecked = parent.getBoundingClientRect().height;
 
-        await userEvent.click(canvas.getByText(String(args.label)));
-        await expect(checkbox).toHaveAttribute('aria-checked', 'true');
+        await step('A click on the label checks the box', async () => {
+            await userEvent.click(canvas.getByText(String(args.label)));
+            await expect(checkbox).toHaveAttribute('aria-checked', 'true');
+        });
 
-        await userEvent.keyboard(' ');
-        await expect(checkbox).toHaveAttribute('aria-checked', 'false');
-        await expect(checkbox).toHaveFocus();
-        await expect(args.onCheckedChange).toHaveBeenCalledTimes(2);
+        await step('The check keeps the line the same height', async () => {
+            const checked = parent.getBoundingClientRect().height;
+            await expect(Math.abs(checked - unchecked)).toBeLessThan(0.5);
+        });
+
+        await step('Space unchecks it and keeps the focus', async () => {
+            await userEvent.keyboard(' ');
+            await expect(checkbox).toHaveAttribute('aria-checked', 'false');
+            await expect(checkbox).toHaveFocus();
+            await expect(args.onCheckedChange).toHaveBeenCalledTimes(2);
+        });
     },
 };
 

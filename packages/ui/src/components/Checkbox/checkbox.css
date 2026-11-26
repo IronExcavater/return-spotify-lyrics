@@ -24,6 +24,12 @@
                 height: 12px;
                 stroke-width: 3;
             }
+
+            > [data-part='indicator'][data-unchecked]:not(
+                    [data-indeterminate]
+                ) {
+                visibility: hidden;
+            }
         }
 
         &:is([data-checked], [data-indeterminate]) > [data-part='box'] {
