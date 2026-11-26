@@ -28,7 +28,8 @@ export default function Checkbox({
             className={clsx('checkbox', className)}
         >
             <span data-part="box">
-                <BaseCheckbox.Indicator data-part="indicator">
+                {/* The mark stays in the box when unchecked, so the box's baseline and its line keep their place. */}
+                <BaseCheckbox.Indicator data-part="indicator" keepMounted>
                     {indeterminate ? (
                         <Minus aria-hidden />
                     ) : (

@@ -99,7 +99,8 @@ In `packages/ui/src`:
 ## Components in packages/ui
 
 - **One folder per component.** A component's folder is in `src/components`, has its name and holds its files: `FadeBox/FadeBox.tsx` and `FadeBox/fade-box.css`. A hook that belongs to a component goes in the same folder, like `Portal/usePortalSlot.tsx`, with its own entry in the package `exports`. Code that two or more components use goes in `src/helpers` or `src/hooks`.
-- **One tag first.** A component works as a single element. Named content goes in slot props, like `icon`, `label` or `trigger`, and the main content is `children`. Export parts, like `Menu.Item`, only when one tag can't make a layout.
+- **One tag first.** A component works as a single element. Named content goes in slot props, like `icon`, `label` or `content`, and the main content is `children`. Export parts, like `Menu.Item`, only when one tag can't make a layout.
+- **Floating parts wrap their element.** A Tooltip or Popover wraps the element that it belongs to, like `<Tooltip><Button aria-label="Shuffle" /></Tooltip>`. A component never takes a tooltip or popover prop, so any element can have one in the same way.
 - **The root element** has the component name in kebab case as its class, like `.fade-box`.
 - **Don't swallow props.** Spread the props you don't use onto the root element. Merge `className` with `clsx`, call the consumer's event handlers as well as your own, and let the consumer's `style` win, except for values the component must control, like the ResizeBox size.
 - **Keep native behaviour.** When a component takes over a native action, like a link click, the native props that change that action still work. Link gives a click with `target` or `download` back to the browser.

@@ -7,9 +7,9 @@ import {
 } from 'react';
 import clsx from 'clsx';
 import { toMilliseconds, type CssLength } from '../../helpers/css';
-import type { Side } from '../../helpers/geometry';
 import { countCopies, holdEasing } from '../../helpers/motion';
 import useCopies from '../../hooks/useCopies';
+import useReady from '../../hooks/useReady';
 import useReducedMotion from '../../hooks/useReducedMotion';
 import FadeBox from '../FadeBox/FadeBox';
 import Separator, { type SeparatorProps } from '../Separator/Separator';
@@ -111,10 +111,14 @@ export default function Marquee({
             };
             setSizes((previous) => (isSame(previous, next) ? previous : next));
         };
+        // The first measure is before the first paint, so the marquee never shows without its fades.
+        measure();
         const observer = new ResizeObserver(measure);
         for (const element of [root, item, content]) observer.observe(element);
         return () => observer.disconnect();
     }, [axis]);
+
+    useReady(rootRef, sizes !== NO_SIZES);
 
     // The observer sets the attribute itself, so a scroll causes no render.
     useEffect(() => {
@@ -175,7 +179,8 @@ export default function Marquee({
             className={clsx('marquee', className)}
             enabled={!fits || moving}
             depth={fadeDepth}
-            edges={findFadeEdges(axis, sizes.isRtl, moving)}
+            // The CSS sets each side's fade from how far the content has moved, so FadeBox sets none of them.
+            edges="none"
             data-direction={direction}
             data-motion={motion}
             data-axis={axis}
@@ -248,17 +253,6 @@ function isSame(a: Sizes, b: Sizes) {
         a.item === b.item &&
         a.isRtl === b.isRtl
     );
-}
-
-// A still marquee shows the start of its content, so only the edge at the end of the text, or the bottom, fades.
-function findFadeEdges(
-    axis: 'x' | 'y',
-    isRtl: boolean,
-    moving: boolean
-): Side[] {
-    if (axis === 'y') return moving ? ['top', 'bottom'] : ['bottom'];
-    if (moving) return ['left', 'right'];
-    return [isRtl ? 'left' : 'right'];
 }
 
 function toTranslate(offset: number, axis: 'x' | 'y') {

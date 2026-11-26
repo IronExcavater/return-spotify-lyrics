@@ -6,11 +6,13 @@ import Text from '../Text/Text';
 
 export type PopoverProps = Omit<
     BasePopover.Popup.Props,
-    'className' | 'style' | 'children' | 'render'
+    'className' | 'style' | 'children' | 'render' | 'content'
 > &
     FloatingProps & {
-        /** The element that opens the popover, like a Button. */
-        trigger: ReactElement;
+        /** The element that the popover wraps and that opens it, like a Button. */
+        children: ReactElement;
+        /** What the popover shows when it opens. */
+        content?: ReactNode;
         /** A heading that names the popover. Without one, give the popover an `aria-label`. */
         title?: ReactNode;
         /** Whether the popover is open, for a popover that the parent controls. */
@@ -19,17 +21,17 @@ export type PopoverProps = Omit<
         defaultOpen?: boolean;
         /** Called when the popover opens or closes. */
         onOpenChange?: ((open: boolean) => void) | undefined;
-        children?: ReactNode;
         className?: string | undefined;
         style?: CSSProperties | undefined;
     };
 
 /**
- * A floating panel that a trigger opens, on Base UI's `Popover`. Focus moves into it, Escape and a click outside close
- * it, and focus goes back to the trigger.
+ * A floating panel that the element it wraps opens, on Base UI's `Popover`. Focus moves into it, Escape and a click
+ * outside close it, and focus goes back to the element.
  */
 export default function Popover({
-    trigger,
+    children,
+    content,
     title,
     open,
     defaultOpen = false,
@@ -39,7 +41,6 @@ export default function Popover({
     gap = 8,
     showArrow = false,
     className,
-    children,
     ...props
 }: PopoverProps) {
     return (
@@ -48,7 +49,7 @@ export default function Popover({
             defaultOpen={defaultOpen}
             onOpenChange={(next) => onOpenChange?.(next)}
         >
-            <BasePopover.Trigger render={trigger} />
+            <BasePopover.Trigger render={children} />
             <BasePopover.Portal>
                 <BasePopover.Positioner
                     className="popover-positioner"
@@ -67,7 +68,7 @@ export default function Popover({
                                 <Text inline>{title}</Text>
                             </BasePopover.Title>
                         )}
-                        {children}
+                        {content}
                     </BasePopover.Popup>
                 </BasePopover.Positioner>
             </BasePopover.Portal>
