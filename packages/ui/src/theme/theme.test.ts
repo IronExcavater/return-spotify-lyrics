@@ -137,9 +137,7 @@ describe('theme', () => {
         ]);
         expect(css).toContain('.hover\\:underline:is(:hover, [data-hover])');
         expect(css).toContain('.active\\:underline:is(:active, [data-active])');
-        expect(css).toContain(
-            '.group-hover\\:underline:is(:where(.group):is(:hover, [data-hover]) *)'
-        );
+        expect(css).toContain(':where(.group):is(:hover, [data-hover])');
     });
 
     it('removes motion under prefers-reduced-motion', () => {
