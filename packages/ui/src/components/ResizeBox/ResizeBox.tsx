@@ -4,22 +4,20 @@ import {
     GripVertical,
 } from '@return-spotify-lyrics/icons';
 import {
-    useEffect,
     useRef,
     useState,
     type ComponentPropsWithoutRef,
     type KeyboardEvent,
     type PointerEvent,
 } from 'react';
-import { flushSync } from 'react-dom';
 import clsx from 'clsx';
 import { toCssSize, type CssLength } from '../../helpers/css';
 import {
     findAxisRange,
+    fitCorner,
     fitSize,
-    keepsAspectRatio,
+    orderRatios,
     resolveEdges,
-    type Axis,
     type EdgeSet,
     type Edge,
     type EdgeVector,
@@ -31,10 +29,15 @@ import {
 export type HandlePlacement = 'overlap' | 'inset';
 
 /** When a resize goes past an aspect ratio, the axis that the handle does not move follows it. */
-export type ResizeBoxProps = Omit<ComponentPropsWithoutRef<'div'>, 'onChange'> &
+export type ResizeBoxProps = Omit<
+    ComponentPropsWithoutRef<'div'>,
+    'onChange' | 'defaultValue'
+> &
     SizeLimits & {
-        /** The size in pixels. A new value moves the box to it. */
-        value: Size;
+        /** The size in pixels, for a box that the parent controls. A new value moves the box to it. */
+        value?: Size | undefined;
+        /** The size in pixels at first, for a box that keeps its own size. */
+        defaultValue?: Size;
         /** The edges that get a handle: `all`, `none` or a list of sides and corners. */
         edges?: EdgeSet;
         /** Show a grip icon on each handle. */
@@ -58,7 +61,11 @@ type Drag = {
     pointerId: number;
     start: Point;
     from: Size;
+    limits: SizeLimits;
+    last: Size;
 };
+
+const DEFAULT_SIZE: Size = { width: 320, height: 200 };
 
 const ARROW_KEYS: Record<string, Point> = {
     ArrowLeft: { x: -1, y: 0 },
@@ -69,9 +76,13 @@ const ARROW_KEYS: Record<string, Point> = {
 
 const nameHandle = (edge: Edge) => `Resize ${edge.replace('-', ' ')}`;
 
-/** A box that a person resizes from handles on its edges, with a pointer or the arrow keys. */
+/**
+ * A box that a person resizes from handles on its edges, with a pointer or the arrow keys. The size comes from the
+ * props and the limits alone, not from the content, so an aspect ratio holds exactly in every browser.
+ */
 export default function ResizeBox({
     value,
+    defaultValue = DEFAULT_SIZE,
     minSize,
     maxSize,
     minAspectRatio,
@@ -89,52 +100,60 @@ export default function ResizeBox({
     children,
     ...props
 }: ResizeBoxProps) {
-    const boxRef = useRef<HTMLDivElement>(null);
     const drag = useRef<Drag | null>(null);
-    const [current, setCurrent] = useState<Size>(value);
+    const [ownValue, setOwnValue] = useState(defaultValue);
+    // The size during a resize shows at once, even when the parent sets its value later.
+    const [liveSize, setLiveSize] = useState<Size | null>(null);
     const [dragEdge, setDragEdge] = useState<Edge | null>(null);
 
-    useEffect(
-        () => setCurrent({ width: value.width, height: value.height }),
-        [value.width, value.height]
-    );
-
     const handles = resolveEdges(edges);
-    const limits = { minSize, maxSize, minAspectRatio, maxAspectRatio };
-    // The props can change the limits after a resize, so each render fits the size again.
-    const fitted = fitSize(current, 'width', limits);
+    const limits = orderRatios({
+        minSize,
+        maxSize,
+        minAspectRatio,
+        maxAspectRatio,
+    });
+    // The props can change the limits at any time, so each render fits the size again.
+    const fitted = fitSize(liveSize ?? value ?? ownValue, 'width', limits);
 
-    // Handles exist only while the box is mounted, so the ref is always set here.
-    const renderedSize = (): Size => {
-        const { width, height } = boxRef.current!.getBoundingClientRect();
-        return { width, height };
+    // The box must stay big enough for one handle, so the handle's own size joins the minimum.
+    const limitsFor = (handle: HTMLElement): SizeLimits => {
+        const { width, height } = handle.getBoundingClientRect();
+        const thickness = Math.min(width, height);
+        return {
+            ...limits,
+            minSize: {
+                width: Math.max(limits.minSize?.width ?? 0, thickness),
+                height: Math.max(limits.minSize?.height ?? 0, thickness),
+            },
+        };
     };
 
-    // Sets a size, then checks that the browser draws it inside the aspect ratios.
-    const tryResize = (size: Size) => {
-        flushSync(() => setCurrent(size));
-        return keepsAspectRatio(renderedSize(), limits);
-    };
-
-    const resize = (edge: EdgeVector, from: Size, delta: Point) => {
-        const lead = leadAxis(edge, from, delta);
+    const resize = (
+        edge: EdgeVector,
+        from: Size,
+        delta: Point,
+        resizeLimits: SizeLimits
+    ): Size => {
         const requested = {
             width: from.width + delta.x * edge.x,
             height: from.height + delta.y * edge.y,
         };
-        // Step 0 is the requested size, and step 1 is the last size, which keeps the ratios.
-        const sizeAt = (step: number) =>
-            fitSize(mixSize(requested, fitted, step), lead, limits);
-
-        // CSS can grow an axis to fit the content, so a size that breaks a ratio moves back.
-        if (!tryResize(sizeAt(0))) {
-            tryResize(sizeAt(findStep((step) => tryResize(sizeAt(step)))));
-        }
-
-        onValueChange?.(renderedSize());
+        // A corner moves both axes, and a side moves one axis that leads while the other follows.
+        const isCorner = edge.x !== 0 && edge.y !== 0;
+        const next = isCorner
+            ? fitCorner(requested, resizeLimits)
+            : fitSize(requested, edge.x ? 'width' : 'height', resizeLimits);
+        setLiveSize(next);
+        onValueChange?.(next);
+        return next;
     };
 
-    const endResize = () => onValueCommitted?.(renderedSize());
+    const commit = (size: Size) => {
+        setOwnValue(size);
+        setLiveSize(null);
+        onValueCommitted?.(size);
+    };
 
     const startDrag = (
         event: PointerEvent<HTMLDivElement>,
@@ -145,12 +164,13 @@ export default function ResizeBox({
         event.preventDefault();
         event.currentTarget.setPointerCapture(event.pointerId);
         // A popup window moves its left edge as it grows, so page coordinates move but screen coordinates do not.
-        const start = { x: event.screenX, y: event.screenY };
         drag.current = {
             edge,
             pointerId: event.pointerId,
-            start,
-            from: renderedSize(),
+            start: { x: event.screenX, y: event.screenY },
+            from: fitted,
+            limits: limitsFor(event.currentTarget),
+            last: fitted,
         };
         setDragEdge(edge.name);
     };
@@ -164,18 +184,22 @@ export default function ResizeBox({
             x: event.screenX - active.start.x,
             y: event.screenY - active.start.y,
         };
-        resize(active.edge, active.from, delta);
+        active.last = resize(active.edge, active.from, delta, active.limits);
     };
 
     const endDrag = () => {
-        if (!drag.current) return;
+        const active = drag.current;
+        if (!active) return;
 
         drag.current = null;
         setDragEdge(null);
-        endResize();
+        commit(active.last);
     };
 
-    const resizeWithKey = (event: KeyboardEvent, edge: EdgeVector) => {
+    const resizeWithKey = (
+        event: KeyboardEvent<HTMLDivElement>,
+        edge: EdgeVector
+    ) => {
         const arrow = ARROW_KEYS[event.key];
         if (!arrow) return;
 
@@ -186,14 +210,12 @@ export default function ResizeBox({
         event.preventDefault();
         const distance = event.shiftKey ? keyStep * 5 : keyStep;
         const delta = { x: arrow.x * distance, y: arrow.y * distance };
-        resize(edge, renderedSize(), delta);
-        endResize();
+        commit(resize(edge, fitted, delta, limitsFor(event.currentTarget)));
     };
 
     return (
         <div
             {...props}
-            ref={boxRef}
             className={clsx('resize-box', className)}
             data-placement={handlePlacement}
             style={{
@@ -246,35 +268,6 @@ function separatorAria(edge: EdgeVector, size: Size, limits: SizeLimits) {
             ? `${Math.round(size.width)} by ${Math.round(size.height)}`
             : undefined,
     } as const;
-}
-
-// A corner moves both axes, so the axis that moves more, for its size, leads.
-function leadAxis(edge: EdgeVector, from: Size, delta: Point): Axis {
-    if (!edge.y) return 'width';
-    if (!edge.x) return 'height';
-
-    const widthChange = Math.abs(delta.x / from.width);
-    const heightChange = Math.abs(delta.y / from.height);
-    return widthChange >= heightChange ? 'width' : 'height';
-}
-
-function mixSize(from: Size, to: Size, step: number): Size {
-    return {
-        width: from.width + (to.width - from.width) * step,
-        height: from.height + (to.height - from.height) * step,
-    };
-}
-
-// A binary search for the lowest step that passes, when step 0 fails and step 1 passes.
-function findStep(passes: (step: number) => boolean): number {
-    let fail = 0;
-    let pass = 1;
-    while (pass - fail > 1 / 256) {
-        const middle = (fail + pass) / 2;
-        if (passes(middle)) pass = middle;
-        else fail = middle;
-    }
-    return pass;
 }
 
 function gripIcon(edge: EdgeVector) {
