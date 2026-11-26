@@ -104,11 +104,11 @@ In `packages/ui/src`:
 - **Don't swallow props.** Spread the props you don't use onto the root element. Merge `className` with `clsx`, call the consumer's event handlers as well as your own, and let the consumer's `style` win, except for values the component must control, like the ResizeBox size.
 - **Keep native behaviour.** When a component takes over a native action, like a link click, the native props that change that action still work. Link gives a click with `target` or `download` back to the browser.
 - **State and variants** are `data-*` attributes, like `data-dragging` or `data-placement`. Inner elements get a `data-part`, like `data-part="handle"`. Settings that CSS uses are CSS variables, like `--fade-size`. Then a consumer can restyle any of them from outside.
-- **Every prop has a default** in the parameter list, so that the docs and the story controls show it.
+- **Every prop has a default** in the parameter list, so that a reader finds it next to the prop.
 - **Text goes through Text.** A component shows its text with `Text`, and a control's name with `<Text inline>`. Text has no typography of its own, so the component sets it in its CSS with the theme's utilities, like `@apply text-small font-bold`. Then formatting, inline icons and nouns work the same everywhere.
 - **Lengths** take a number for pixels or a string for any CSS length. Use the `CssLength` type and `toCssSize`.
 - **Names describe meaning, not looks:** `tone="negative"`, not `color="red"`.
-- **Write a JSDoc line** for the component, and for each exported prop whose name doesn't say everything. The Controls panel in Storybook and the editor's hover show them.
+- **Write a JSDoc line** for the component, and for each exported prop whose name doesn't say everything. The editor's hover shows them.
 - **Base UI first.** Build on Base UI for anything with keyboard and focus rules: menus, dialogs, lists, sliders and popups. Build your own only for layout, visuals and motion, where Base UI has nothing.
 
 ## Styling
@@ -182,9 +182,9 @@ Every story is a test. It runs in Chromium, Firefox and WebKit, and it fails on 
 
 - In a story file, `meta` holds the shared args and the render function, and each story sets only what's different.
 - A story file has no constants at the top. A story keeps its values in its args, and its `play` function reads them from `args`, so a value is written once. Fixtures that many files use go in `shared.tsx`.
-- Storybook has no docs page for each component, because the stories show the component and the Controls panel shows its props.
-- Controls come from the prop types. Set a control in `argTypes` only when a type can't give it, like `CssLength` or `Direction`.
-- A component has a few stories, and each is a real scene, like a settings list or a track list, with a name that says what it shows, like `SelectAll`. The Controls panel covers each prop, so a story that only shows another value of one prop adds nothing.
+- Storybook has no docs page for each component, because the stories show the component and the Controls panel shows its args.
+- Storybook reads no prop types, so a control comes from a value in the args. Give `meta` a value for each prop that a person should change. Set `argTypes` only when that value's control isn't enough, like `CssLength` or a choice of strings.
+- A component has a few stories, and each is a real scene, like a settings list or a track list, with a name that says what it shows, like `SelectAll`. The Controls panel covers each arg, so a story that only shows another value of one prop adds nothing.
 - Build a scene from the library's components, like Button, Text and Link, not from raw elements, so the stories also show how the parts fit together.
 - A story that checks more than one behaviour names each one with `step`.
 - Add a `play` function when the component does something after input: a key, a pointer, a focus change or a new value.
