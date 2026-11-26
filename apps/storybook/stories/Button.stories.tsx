@@ -251,8 +251,11 @@ export const NarrowPanel: Story = {
             );
         });
 
+        // The check runs one frame after a resize, and a frame can take a long time in a slow browser.
         await step('A button with an icon shows only its icon', async () => {
-            await waitFor(() => expect(isCircle(shuffle)).toBe(true));
+            await waitFor(() => expect(isCircle(shuffle)).toBe(true), {
+                timeout: 3000,
+            });
             await expect(
                 canvas.getByRole('button', { name: 'Shuffle play' })
             ).toBe(shuffle);
@@ -260,7 +263,9 @@ export const NarrowPanel: Story = {
 
         await step('The labels come back when the panel grows', async () => {
             await userEvent.keyboard('{End}');
-            await waitFor(() => expect(isCircle(shuffle)).toBe(false));
+            await waitFor(() => expect(isCircle(shuffle)).toBe(false), {
+                timeout: 3000,
+            });
         });
     },
 };

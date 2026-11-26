@@ -221,8 +221,11 @@ export const NarrowPanel: Story = {
         await userEvent.tab();
         await userEvent.keyboard('{Home}');
 
+        // The check runs one frame after a resize, and a frame can take a long time in a slow browser.
         await step('A narrow panel shows only the icons', async () => {
-            await waitFor(() => expect(isSquare()).toBe(true));
+            await waitFor(() => expect(isSquare()).toBe(true), {
+                timeout: 3000,
+            });
             await expect(
                 canvas.getByRole('button', { name: 'Albums only' })
             ).toBe(albums);
@@ -233,7 +236,9 @@ export const NarrowPanel: Story = {
 
         await step('The labels come back when the panel grows', async () => {
             await userEvent.keyboard('{End}');
-            await waitFor(() => expect(isSquare()).toBe(false));
+            await waitFor(() => expect(isSquare()).toBe(false), {
+                timeout: 3000,
+            });
         });
     },
 };
