@@ -5,13 +5,15 @@ import { expect, fn, waitFor, within } from 'storybook/test';
 import {
     ArrowDownNarrowWide,
     ArrowUpNarrowWide,
+    Disc3,
     LayoutGrid,
     List,
 } from '@return-spotify-lyrics/icons';
-import Switch from '@return-spotify-lyrics/ui/Switch';
 import SegmentedControl, {
     type SegmentedControlProps,
 } from '@return-spotify-lyrics/ui/SegmentedControl';
+import Slider from '@return-spotify-lyrics/ui/Slider';
+import Switch from '@return-spotify-lyrics/ui/Switch';
 import Text from '@return-spotify-lyrics/ui/Text';
 
 import { TRACKS } from './shared';
@@ -180,5 +182,77 @@ export const IconOnly: Story = {
         await expect(newest).toHaveAttribute('aria-pressed', 'true');
         const { width, height } = newest.getBoundingClientRect();
         await expect(Math.abs(width - height)).toBeLessThanOrEqual(1);
+    },
+};
+
+// The control sits in a panel that a person narrows with a slider, like a side panel.
+function NarrowingPanel(props: SegmentedControlProps) {
+    const [width, setWidth] = useState(320);
+
+    return (
+        <div className="grid w-80 gap-4">
+            <Slider
+                label="Panel width"
+                min={120}
+                max={320}
+                step={10}
+                value={width}
+                onValueChange={(next) => setWidth(Number(next))}
+            />
+            <div
+                data-testid="panel"
+                className="w-(--panel-width) rounded-medium bg-raised p-2"
+                style={{ '--panel-width': `${width}px` }}
+            >
+                <SegmentedControl {...props} />
+            </div>
+        </div>
+    );
+}
+
+/** When the panel is too narrow for the labels, every segment shows only its icon and keeps its label as its name. */
+export const NarrowPanel: Story = {
+    args: {
+        options: [
+            { value: 'list', label: 'List', icon: <List /> },
+            { value: 'grid', label: 'Grid', icon: <LayoutGrid /> },
+            { value: 'albums', label: 'Albums only', icon: <Disc3 /> },
+        ],
+    },
+    render: (args) => <NarrowingPanel {...args} />,
+    play: async ({ canvas, userEvent, step }) => {
+        const panel = canvas.getByTestId('panel');
+        const albums = canvas.getByRole('button', { name: 'Albums only' });
+        const isSquare = () => {
+            const { width, height } = albums.getBoundingClientRect();
+            return Math.abs(width - height) <= 1;
+        };
+
+        await step('A wide panel shows every label', async () => {
+            await expect(isSquare()).toBe(false);
+        });
+
+        await userEvent.tab();
+        await userEvent.keyboard('{Home}');
+
+        // The check runs one frame after a resize, and a frame can take a long time in a slow browser.
+        await step('A narrow panel shows only the icons', async () => {
+            await waitFor(() => expect(isSquare()).toBe(true), {
+                timeout: 3000,
+            });
+            await expect(
+                canvas.getByRole('button', { name: 'Albums only' })
+            ).toBe(albums);
+            await expect(panel.scrollWidth).toBeLessThanOrEqual(
+                panel.clientWidth + 1
+            );
+        });
+
+        await step('The labels come back when the panel grows', async () => {
+            await userEvent.keyboard('{End}');
+            await waitFor(() => expect(isSquare()).toBe(false), {
+                timeout: 3000,
+            });
+        });
     },
 };

@@ -1,8 +1,17 @@
+import { useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { expect, fn, within } from 'storybook/test';
+import { expect, fn, waitFor, within } from 'storybook/test';
 
-import { BadgeCheck, Bell, Ellipsis, Play } from '@return-spotify-lyrics/icons';
+import {
+    BadgeCheck,
+    Bell,
+    Ellipsis,
+    Play,
+    Share2,
+    Shuffle,
+} from '@return-spotify-lyrics/icons';
 import Button, { type ButtonProps } from '@return-spotify-lyrics/ui/Button';
+import Slider from '@return-spotify-lyrics/ui/Slider';
 import Text from '@return-spotify-lyrics/ui/Text';
 
 const meta = {
@@ -166,5 +175,105 @@ export const AsLink: Story = {
     play: async ({ canvas, args }) => {
         const link = canvas.getByRole('link', { name: String(args.children) });
         await expect(link).toHaveAttribute('href', '#playlist');
+    },
+};
+
+// A toolbar in a panel that a person narrows with a slider, like the player bar in a narrow side panel.
+function NarrowingToolbar() {
+    const [width, setWidth] = useState(600);
+
+    return (
+        <div className="grid w-150 gap-4">
+            <Slider
+                label="Panel width"
+                min={240}
+                max={600}
+                step={10}
+                value={width}
+                onValueChange={(next) => setWidth(Number(next))}
+            />
+            <div
+                data-testid="panel"
+                className="flex w-(--panel-width) items-center gap-2 rounded-medium bg-raised p-2"
+                style={{ '--panel-width': `${width}px` }}
+            >
+                <Button variant="primary" tone="accent" icon={<Shuffle />}>
+                    Shuffle play
+                </Button>
+                {/* A follow button shows a check only after a person follows, so its icon is empty here. */}
+                <Button icon={null}>Follow The Quiet Hours</Button>
+                <Button variant="tertiary" icon={<Share2 />}>
+                    Share
+                </Button>
+                <Button
+                    variant="tertiary"
+                    icon={<Ellipsis />}
+                    aria-label="More options"
+                />
+            </div>
+        </div>
+    );
+}
+
+function isCircle(element: HTMLElement) {
+    const { width, height } = element.getBoundingClientRect();
+    return Math.abs(width - height) <= 1;
+}
+
+/**
+ * When the panel narrows, a label cuts off with an ellipsis. A button with an icon shows only the icon once its label
+ * would show too little, and keeps the label as its name.
+ */
+export const NarrowPanel: Story = {
+    // The scene builds its own buttons, so the controls of meta don't reach it.
+    parameters: { controls: { disable: true } },
+    render: () => <NarrowingToolbar />,
+    play: async ({ canvas, userEvent, step }) => {
+        const panel = canvas.getByTestId('panel');
+        const shuffle = canvas.getByRole('button', { name: 'Shuffle play' });
+        const follow = canvas.getByText('Follow The Quiet Hours');
+
+        await step('A wide panel shows every label in full', async () => {
+            await expect(isCircle(shuffle)).toBe(false);
+            await expect(follow.scrollWidth).toBeLessThanOrEqual(
+                follow.clientWidth
+            );
+        });
+
+        await userEvent.tab();
+        await userEvent.keyboard('{Home}');
+
+        await step('A narrow panel cuts a label that has no icon', async () => {
+            await waitFor(() =>
+                expect(follow.scrollWidth).toBeGreaterThan(follow.clientWidth)
+            );
+            await expect(panel.scrollWidth).toBeLessThanOrEqual(
+                panel.clientWidth + 1
+            );
+        });
+
+        // The check runs one frame after a resize, and a frame can take a long time in a slow browser.
+        await step('A button with an icon shows only its icon', async () => {
+            await waitFor(() => expect(isCircle(shuffle)).toBe(true), {
+                timeout: 3000,
+            });
+            await expect(
+                canvas.getByRole('button', { name: 'Shuffle play' })
+            ).toBe(shuffle);
+        });
+
+        await step('A button with an empty icon only cuts off', async () => {
+            const followButton = canvas.getByRole('button', {
+                name: 'Follow The Quiet Hours',
+            });
+            await expect(isCircle(followButton)).toBe(false);
+        });
+
+        await step('The labels come back when the panel grows', async () => {
+            await userEvent.keyboard('{End}');
+            await waitFor(() => expect(isCircle(shuffle)).toBe(false), {
+                timeout: 3000,
+            });
+        });
     },
 };

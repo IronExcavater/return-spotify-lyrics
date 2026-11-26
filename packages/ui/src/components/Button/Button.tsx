@@ -1,5 +1,7 @@
 import {
     isValidElement,
+    useMemo,
+    useRef,
     type CSSProperties,
     type ReactElement,
     type ReactNode,
@@ -7,6 +9,8 @@ import {
 import { Button as BaseButton } from '@base-ui/react/button';
 import { useRender } from '@base-ui/react/use-render';
 import clsx from 'clsx';
+import { composeRefs } from '../../helpers/ref';
+import useLabelFallback from '../../hooks/useLabelFallback';
 import Badge from '../Badge/Badge';
 import Spinner from '../Spinner/Spinner';
 import Text from '../Text/Text';
@@ -62,8 +66,18 @@ export default function Button({
     disabled = false,
     className,
     children,
+    ref,
     ...props
 }: ButtonProps) {
+    const rootRef = useRef<HTMLButtonElement | null>(null);
+    // The button needs its own element to measure the label, and the caller's ref still gets it.
+    const setRefs = useMemo(() => composeRefs(rootRef, ref), [ref]);
+    // A label with a rendered icon can give way to the icon, and a label alone cuts off.
+    useLabelFallback(
+        rootRef,
+        Boolean(icon) && children !== undefined,
+        children
+    );
     const badgeNode =
         typeof badge === 'number' ? (
             <Badge count={badge} size="small" />
@@ -105,6 +119,7 @@ export default function Button({
     const link = useRender({
         render,
         enabled: !isNative,
+        ref: setRefs,
         props: { ...props, ...shared },
     });
     return (
@@ -112,6 +127,7 @@ export default function Button({
             <BaseButton
                 {...props}
                 {...shared}
+                ref={setRefs}
                 render={render}
                 nativeButton
                 disabled={disabled || loading}
