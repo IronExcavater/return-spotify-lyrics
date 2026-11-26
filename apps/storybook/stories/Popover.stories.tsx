@@ -11,13 +11,13 @@ const meta = {
     component: Popover,
     args: {
         title: 'Share Paper Satellites',
-        trigger: <Button>Share</Button>,
+        children: <Button>Share</Button>,
         side: 'bottom',
         align: 'center',
         gap: 8,
         showArrow: false,
         defaultOpen: false,
-        children: (
+        content: (
             <div className="grid gap-2">
                 <Text render={<p />} className="text-small text-subdued">
                     Send the track to a friend, or put it on a page.
@@ -38,8 +38,8 @@ const meta = {
     },
     argTypes: {
         title: { control: 'text' },
-        trigger: { control: false },
         children: { control: false },
+        content: { control: false },
     },
     parameters: {
         // In Safari, Base UI traps focus with hidden spans that pass focus on at once, which this rule reads as a fault.
@@ -90,7 +90,7 @@ export const ShareTrack: Story = {
 export const TrackDetails: Story = {
     args: {
         title: 'About this track',
-        trigger: (
+        children: (
             <Button
                 variant="tertiary"
                 icon={<Info />}
@@ -99,7 +99,7 @@ export const TrackDetails: Story = {
         ),
         side: 'right',
         showArrow: true,
-        children: (
+        content: (
             <div className="grid gap-1 text-small">
                 <Text>Written by Mara Hollis and Ada Vale</Text>
                 <Text className="text-subdued">Released 14 March 2026</Text>
