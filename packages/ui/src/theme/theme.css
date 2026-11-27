@@ -9,6 +9,7 @@
 @import '../components/Popover/popover.css';
 @import '../components/Portal/portal-slot.css';
 @import '../components/Radio/radio.css';
+@import '../components/RadioGroup/radio-group.css';
 @import '../components/ResizeBox/resize-box.css';
 @import '../components/SegmentedControl/segmented-control.css';
 @import '../components/Separator/separator.css';

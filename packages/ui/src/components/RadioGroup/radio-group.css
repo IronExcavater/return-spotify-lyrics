@@ -1,0 +1,23 @@
+/* Defaults live in @layer components so that a consumer className always wins. */
+@layer components {
+    .radio-group {
+        display: grid;
+        gap: 12px;
+
+        > [data-part='label'] {
+            @apply font-bold;
+        }
+
+        > [data-part='options'] {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        &[data-orientation='horizontal'] > [data-part='options'] {
+            flex-direction: row;
+            flex-wrap: wrap;
+            column-gap: 24px;
+        }
+    }
+}

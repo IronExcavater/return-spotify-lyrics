@@ -2,7 +2,7 @@ import type { ComponentProps, MouseEvent, ReactNode } from 'react';
 import clsx from 'clsx';
 import { ExternalLink } from '@return-spotify-lyrics/icons';
 import { findLinkKind } from './href';
-import { useTextSettings } from '../Text/TextProvider';
+import { useTextSettings } from '../TextProvider/TextProvider';
 
 export type LinkProps = ComponentProps<'a'> & {
     /** A route in the app, like `/album/1`, or a web address. */
