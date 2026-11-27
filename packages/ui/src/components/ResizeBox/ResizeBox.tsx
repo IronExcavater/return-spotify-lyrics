@@ -18,6 +18,7 @@ import {
     fitSize,
     orderRatios,
     resolveEdges,
+    type Axis,
     type EdgeSet,
     type Edge,
     type EdgeVector,
@@ -67,6 +68,9 @@ type Drag = {
 
 const DEFAULT_SIZE: Size = { width: 320, height: 200 };
 
+// A length that no real bound reaches, so a probe of this length finds the largest size that CSS allows.
+const PROBE_LENGTH = 100_000;
+
 const ARROW_KEYS: Record<string, Point> = {
     ArrowLeft: { x: -1, y: 0 },
     ArrowRight: { x: 1, y: 0 },
@@ -77,8 +81,10 @@ const ARROW_KEYS: Record<string, Point> = {
 const nameHandle = (edge: Edge) => `Resize ${edge.replace('-', ' ')}`;
 
 /**
- * A box that a person resizes from handles on its edges, with a pointer or the arrow keys. The size comes from the
- * props and the limits alone, not from the content, so an aspect ratio holds exactly in every browser.
+ * A box that a person resizes from handles on its edges, with a pointer or the arrow keys. A resize stops at the
+ * content's smallest size and at the parent's edge, and an aspect ratio holds exactly in every browser. To let the
+ * box grow past its parent, give it `max-w-none` or `max-h-none`. To let it shrink past its content, like content
+ * that scrolls, give it `contain-size`.
  */
 export default function ResizeBox({
     value,
@@ -100,6 +106,7 @@ export default function ResizeBox({
     children,
     ...props
 }: ResizeBoxProps) {
+    const boxRef = useRef<HTMLDivElement>(null);
     const drag = useRef<Drag | null>(null);
     const [ownValue, setOwnValue] = useState(defaultValue);
     // The size during a resize shows at once, even when the parent sets its value later.
@@ -116,15 +123,37 @@ export default function ResizeBox({
     // The props can change the limits at any time, so each render fits the size again.
     const fitted = fitSize(liveSize ?? value ?? ownValue, 'width', limits);
 
-    // The box must stay big enough for one handle, so the handle's own size joins the minimum.
+    // The box must hold one handle and its content, and stay inside its parent, so those join the limits.
     const limitsFor = (handle: HTMLElement): SizeLimits => {
+        const box = boxRef.current;
+        if (!box) return limits;
+
+        const bounds = measureBounds(box, fitted);
         const { width, height } = handle.getBoundingClientRect();
         const thickness = Math.min(width, height);
         return {
             ...limits,
             minSize: {
-                width: Math.max(limits.minSize?.width ?? 0, thickness),
-                height: Math.max(limits.minSize?.height ?? 0, thickness),
+                width: Math.max(
+                    limits.minSize?.width ?? 0,
+                    thickness,
+                    bounds.min.width
+                ),
+                height: Math.max(
+                    limits.minSize?.height ?? 0,
+                    thickness,
+                    bounds.min.height
+                ),
+            },
+            maxSize: {
+                width: Math.min(
+                    limits.maxSize?.width ?? Infinity,
+                    bounds.max.width
+                ),
+                height: Math.min(
+                    limits.maxSize?.height ?? Infinity,
+                    bounds.max.height
+                ),
             },
         };
     };
@@ -216,6 +245,7 @@ export default function ResizeBox({
     return (
         <div
             {...props}
+            ref={boxRef}
             className={clsx('resize-box', className)}
             data-placement={handlePlacement}
             style={{
@@ -251,6 +281,44 @@ export default function ResizeBox({
             })}
         </div>
     );
+}
+
+// ponytail: content height comes from the start width, so text that wraps more is cut; set minSize for it.
+// The CSS bounds apply only while this reads them, so they never push the box out of a ratio.
+function measureBounds(box: HTMLElement, from: Size): { min: Size; max: Size } {
+    const saved = box.style.cssText;
+    const lengthWith = (axis: Axis, length: string) => {
+        box.style.cssText = saved;
+        box.style[axis] = length;
+        return box.getBoundingClientRect()[axis];
+    };
+
+    box.dataset.measuring = '';
+    // Firefox ignores min-content in a height, and auto gives the same height for this box.
+    const min = {
+        width: lengthWith('width', 'min-content'),
+        height: lengthWith('height', 'auto'),
+    };
+    const max = {
+        width: lengthWith('width', `${PROBE_LENGTH}px`),
+        height: lengthWith('height', `${PROBE_LENGTH}px`),
+    };
+    box.style.cssText = saved;
+    delete box.dataset.measuring;
+
+    // A probe that CSS doesn't stop means no bound, and a bound never moves the box when a resize starts.
+    const toMax = (length: number, current: number) =>
+        length < PROBE_LENGTH ? Math.max(length, current) : Infinity;
+    return {
+        min: {
+            width: Math.min(min.width, from.width),
+            height: Math.min(min.height, from.height),
+        },
+        max: {
+            width: toMax(max.width, from.width),
+            height: toMax(max.height, from.height),
+        },
+    };
 }
 
 // Handles follow the ARIA window splitter pattern.

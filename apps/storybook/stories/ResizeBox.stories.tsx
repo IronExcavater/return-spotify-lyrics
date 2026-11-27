@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { expect, waitFor } from 'storybook/test';
 
+import Button from '@return-spotify-lyrics/ui/Button';
 import ResizeBox from '@return-spotify-lyrics/ui/ResizeBox';
 
 import { edgesControl, lengthControl } from './controls';
@@ -63,6 +64,26 @@ function expectSize(handle: HTMLElement, width: number, height: number) {
         const box = handle.parentElement!.getBoundingClientRect();
         expect(Math.abs(box.width - width)).toBeLessThanOrEqual(1);
         expect(Math.abs(box.height - height)).toBeLessThanOrEqual(1);
+    });
+}
+
+// A person sees each button whole, so the box must hold every button inside its edges.
+function expectButtonsInside(
+    canvas: PlayContext['canvas'],
+    handle: HTMLElement,
+    axis: 'width' | 'height',
+    smallerThan: number
+) {
+    return waitFor(() => {
+        const box = handle.parentElement!.getBoundingClientRect();
+        expect(box[axis]).toBeLessThan(smallerThan);
+        for (const button of canvas.getAllByRole('button')) {
+            const rect = button.getBoundingClientRect();
+            expect(rect.left).toBeGreaterThanOrEqual(box.left - 1);
+            expect(rect.right).toBeLessThanOrEqual(box.right + 1);
+            expect(rect.top).toBeGreaterThanOrEqual(box.top - 1);
+            expect(rect.bottom).toBeLessThanOrEqual(box.bottom + 1);
+        }
     });
 }
 
@@ -133,6 +154,51 @@ export const WithLimits: Story = {
     },
 };
 
+export const ContentAndParentLimits: Story = {
+    args: { edges: ['right', 'bottom'] },
+    // The panel is narrower than the box can grow, so the panel stops the width.
+    render: (args) => (
+        <div className="w-100">
+            <ResizeBox {...args}>
+                <div className="flex items-center justify-center gap-2 bg-raised p-4">
+                    <Button>Shuffle</Button>
+                    <Button>Play</Button>
+                    <Button>Repeat</Button>
+                </div>
+            </ResizeBox>
+        </div>
+    ),
+    play: async ({ canvas, userEvent, step, args }) => {
+        const right = await focusHandle({ canvas, userEvent }, 'Resize right');
+        const panel = right.parentElement!.parentElement!;
+        const height = args.defaultValue?.height ?? 0;
+
+        await step('The width stops at the panel', async () => {
+            await userEvent.keyboard('{Shift>}{ArrowRight>4/}{/Shift}');
+            await expectSize(right, panel.clientWidth, height);
+        });
+
+        await step('The width stops where the buttons still fit', async () => {
+            await userEvent.keyboard('{Shift>}{ArrowLeft>8/}{/Shift}');
+            await expectButtonsInside(
+                canvas,
+                right,
+                'width',
+                panel.clientWidth
+            );
+        });
+
+        await step('The height stops where the buttons still fit', async () => {
+            const bottom = await focusHandle(
+                { canvas, userEvent },
+                'Resize bottom'
+            );
+            await userEvent.keyboard('{Shift>}{ArrowUp>8/}{/Shift}');
+            await expectButtonsInside(canvas, bottom, 'height', height);
+        });
+    },
+};
+
 export const AspectRatioLimits: Story = {
     args: { minAspectRatio: 1, maxAspectRatio: 2 },
     play: async ({ canvas, userEvent }) => {
@@ -153,18 +219,25 @@ export const FixedAspectRatio: Story = {
         minAspectRatio: 16 / 9,
         maxAspectRatio: 16 / 9,
     },
-    play: async ({ canvas, userEvent, step }) => {
+    play: async ({ canvas, userEvent, step, args }) => {
         const right = await focusHandle({ canvas, userEvent }, 'Resize right');
+        const ratio = args.minAspectRatio ?? 1;
 
         await step('The height follows the width', async () => {
             await userEvent.keyboard('{Shift>}{ArrowRight}{/Shift}');
-            await expectSize(right, 370, (370 * 9) / 16);
+            await expectSize(right, 370, 370 / ratio);
         });
 
-        // The content doesn't push back, so the ratio holds exactly, the same in every browser.
-        await step('The ratio holds down to a small size', async () => {
+        // The keys ask for 120 px, but the text stops the box first, and the ratio still holds exactly.
+        await step('The ratio holds where the text stops the box', async () => {
             await userEvent.keyboard('{Shift>}{ArrowLeft>5/}{/Shift}');
-            await expectSize(right, 120, (120 * 9) / 16);
+            await waitFor(() => {
+                const box = right.parentElement!.getBoundingClientRect();
+                expect(box.width).toBeGreaterThan(120);
+                expect(
+                    Math.abs(box.width - box.height * ratio)
+                ).toBeLessThanOrEqual(1);
+            });
         });
     },
 };
