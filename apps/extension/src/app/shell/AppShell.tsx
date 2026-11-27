@@ -73,6 +73,8 @@ export default function AppShell() {
 
     return (
         <ResizeBox
+            // The popup window takes its size from this box, and its page scrolls, so neither body nor page stops it.
+            className="max-w-none contain-size"
             value={size}
             minSize={MIN_POPUP_SIZE}
             maxSize={MAX_POPUP_SIZE}
